@@ -1,0 +1,135 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,300;1,300;1,600&family=Bebas+Neue&display=swap');
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background: #e8e4dc;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* ── Book cover flip ── */
+.book-cover {
+  position: absolute;
+  width: 280px;
+  height: 188px;
+  top: 0;
+  left: 0;
+  transform-style: preserve-3d;
+  transform-origin: top center;
+  transition: transform 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 20;
+  cursor: pointer;
+}
+
+.book-cover.flipped {
+  transform: rotateX(-180deg);
+  pointer-events: none;
+}
+
+/* ── Trip page states ── */
+.trip-page {
+  position: absolute;
+  width: 280px;
+  height: 188px;
+  top: 0;
+  left: 0;
+  transform-style: preserve-3d;
+  transform-origin: top center;
+  transition: transform 0.72s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 1px;
+}
+
+.trip-page.no-transition {
+  transition: none !important;
+}
+
+.trip-page.state-waiting     { transform: rotateX(88deg);   z-index: 2; }
+.trip-page.state-active      { transform: rotateX(0deg);    z-index: 15; }
+.trip-page.state-flipping-up { transform: rotateX(-180deg); z-index: 16;
+                                transition: transform 0.72s cubic-bezier(0.4, 0, 0.2, 1); }
+.trip-page.state-past        { transform: rotateX(-180deg); z-index: 5; pointer-events: none; }
+.trip-page.state-incoming    { transform: rotateX(42deg);   z-index: 14;
+                                transition: transform 0.72s cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* ── Book footer ── */
+.book-footer {
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.45s ease 0.55s, transform 0.45s ease 0.55s;
+  pointer-events: none;
+}
+
+.book-footer.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: all;
+}
+
+/* ── Nav bar ── */
+.nav-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: rgba(255, 255, 255, 0.97);
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-around;
+  padding-top: 13px;
+  z-index: 200;
+  opacity: 0;
+  transition: opacity 0.45s ease 0.7s;
+}
+
+.nav-bar.visible {
+  opacity: 1;
+}
+
+/* ── Cover label ── */
+.cover-label {
+  margin-bottom: 24px;
+  font-size: 8px;
+  letter-spacing: 4px;
+  color: #ccc;
+  text-transform: uppercase;
+  text-align: center;
+  transition: opacity 0.4s;
+}
+
+.cover-label.hidden {
+  opacity: 0;
+}
+
+/* ── Page dots ── */
+.page-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #e0e0e0;
+  transition: all 0.25s;
+  cursor: pointer;
+}
+
+.page-dot.active {
+  background: #91040C;
+  transform: scale(1.2);
+}
