@@ -14,19 +14,19 @@
     "@expo-google-fonts/dm-sans": "^0.4.2",
     "@expo-google-fonts/playfair-display": "^0.4.2",
     "expo": "~54.0.33",
-    "expo-font": "^55.0.6",
-    "expo-status-bar": "~3.0.9",
-    "react": "19.1.0",
-    "react-native": "0.81.5",
-    "react-native-gesture-handler": "^2.31.1",
-    "react-native-reanimated": "^4.3.0",
-    "react-native-svg": "^15.15.4",
+    "expo-font": "~14.0.11",
+    "expo-status-bar": "~2.0.1",
+    "react": "18.3.1",
+    "react-native": "0.76.9",
+    "react-native-gesture-handler": "~2.21.2",
+    "react-native-reanimated": "~3.16.7",
+    "react-native-svg": "15.8.0",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
-    "@types/react": "~19.1.0",
-    "babel-preset-expo": "~13.0.0",
-    "typescript": "~5.9.2"
+    "@types/react": "~18.3.12",
+    "babel-preset-expo": "~54.0.10",
+    "typescript": "~5.3.3"
   },
   "private": true
 }

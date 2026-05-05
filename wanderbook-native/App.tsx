@@ -130,7 +130,7 @@ function WanderbookApp() {
 }
 
 export default function App() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     'PlayfairDisplay-Regular':       PlayfairDisplay_400Regular,
     'PlayfairDisplay-Italic':        PlayfairDisplay_400Regular_Italic,
     'PlayfairDisplay-Bold':          PlayfairDisplay_700Bold,
@@ -142,7 +142,7 @@ export default function App() {
     'CormorantGaramond-LightItalic': CormorantGaramond_300Light_Italic,
   });
 
-  if (!fontsLoaded) return null;
+  if (!fontsLoaded && !fontError) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
