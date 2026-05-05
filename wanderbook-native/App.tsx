@@ -1,9 +1,8 @@
 import { useRef, useState } from 'react';
 import {
   View, Text, TouchableOpacity, Animated,
-  PanResponder, StyleSheet, SafeAreaView, StatusBar,
+  PanResponder, StyleSheet, StatusBar,
 } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFonts } from 'expo-font';
 import {
   PlayfairDisplay_400Regular,
@@ -151,11 +150,9 @@ export default function App() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaView style={styles.root}>
-        <WanderbookApp />
-      </SafeAreaView>
-    </GestureHandlerRootView>
+    <View style={styles.root}>
+      <WanderbookApp />
+    </View>
   );
 }
 
