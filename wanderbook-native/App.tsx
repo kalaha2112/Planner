@@ -48,17 +48,14 @@ function WanderbookApp() {
     }).start();
   }
 
-  // Swipe on the book area
-  const startY = useRef(0);
+  // Swipe on the book area — don't claim on start so taps reach child components
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder:  (_, g) => Math.abs(g.dy) > 4,
-      onPanResponderGrant:   (_, g) => { startY.current = g.y0; },
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder:  (_, g) => Math.abs(g.dy) > 8,
       onPanResponderRelease: (_, g) => {
-        const dy = startY.current - g.moveY;
-        if      (dy >  SWIPE_THRESHOLD) goNext();
-        else if (dy < -SWIPE_THRESHOLD) goPrev();
+        if      (g.dy < -SWIPE_THRESHOLD) goNext();
+        else if (g.dy >  SWIPE_THRESHOLD) goPrev();
       },
     })
   ).current;

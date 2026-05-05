@@ -1,14 +1,14 @@
+import { View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 export default function BookOutline() {
   return (
+    <View pointerEvents="none" style={{ position: 'absolute', top: -2, left: -2, zIndex: 50 }}>
     <Svg
       width={284}
       height={192}
       viewBox="0 0 284 192"
       fill="none"
-      style={{ position: 'absolute', top: -2, left: -2, zIndex: 50 }}
-      pointerEvents="none"
     >
       {/* Main rectangle — hand-baked slightly irregular path */}
       <Path
@@ -27,5 +27,6 @@ export default function BookOutline() {
       <Path d="M 4 185 L 28 185" stroke="#1a1a1a" strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.35} />
       <Path d="M 4 165 L 4  185" stroke="#1a1a1a" strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.35} />
     </Svg>
+    </View>
   );
 }
