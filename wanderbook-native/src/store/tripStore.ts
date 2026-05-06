@@ -28,6 +28,13 @@ export interface Trip {
   customName?: string;
   customCountry?: string;
   notes?: string;
+  dateRange?: string;
+  daysAway?: string;
+  budgetTotal?: number;
+  budgetSpent?: number;
+  hotelLocation?: string;
+  hotelNights?: number;
+  itinerary?: string[][];
   elements: CardElement[];
 }
 
@@ -43,7 +50,11 @@ interface AppState {
   setAnimating: (v: boolean) => void;
   setPageState: (i: number, state: PageState) => void;
   setAllPageStates: (states: PageState[]) => void;
-  updateTrip: (id: string, patch: Partial<Pick<Trip, 'customName' | 'customCountry' | 'titleFont' | 'notes'>>) => void;
+  updateTrip: (id: string, patch: Partial<Pick<Trip,
+    'customName' | 'customCountry' | 'titleFont' | 'notes' |
+    'dateRange' | 'daysAway' | 'budgetTotal' | 'budgetSpent' |
+    'hotelLocation' | 'hotelNights' | 'itinerary'
+  >>) => void;
   addElement: (tripId: string, el: CardElement) => void;
   updateElement: (tripId: string, id: string, patch: Partial<CardElement>) => void;
   removeElement: (tripId: string, id: string) => void;
