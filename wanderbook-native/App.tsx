@@ -47,16 +47,22 @@ function WanderbookApp() {
     }).start();
   }
 
-  // Swipe handler — fires on vertical move in empty card areas
-  // (sticker elements claim on start and preempt this)
+  // Refs keep PanResponder callbacks up-to-date (avoids stale closure on first render)
+  const isOpenRef = useRef(isOpen);
+  const goNextRef = useRef(goNext);
+  const goPrevRef = useRef(goPrev);
+  isOpenRef.current = isOpen;
+  goNextRef.current = goNext;
+  goPrevRef.current = goPrev;
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder:        () => false,
       onStartShouldSetPanResponderCapture: () => false,
-      onMoveShouldSetPanResponder:         (_, g) => isOpen && Math.abs(g.dy) > 10,
+      onMoveShouldSetPanResponder:         (_, g) => isOpenRef.current && Math.abs(g.dy) > 10,
       onPanResponderRelease: (_, g) => {
-        if      (g.dy < -SWIPE_THRESHOLD) goNext();
-        else if (g.dy >  SWIPE_THRESHOLD) goPrev();
+        if      (g.dy < -SWIPE_THRESHOLD) goNextRef.current();
+        else if (g.dy >  SWIPE_THRESHOLD) goPrevRef.current();
       },
     })
   ).current;
@@ -172,6 +178,7 @@ const styles = StyleSheet.create({
   bookWrap: {
     position: 'absolute', top: 2, left: 2,
     width: 340, height: 228,
+    overflow: 'hidden',
   },
   footer:   { marginTop: 28, alignItems: 'center', gap: 14 },
   swipeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

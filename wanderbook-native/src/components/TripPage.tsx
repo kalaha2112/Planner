@@ -27,6 +27,8 @@ interface Props {
 }
 
 export default function TripPage({ index, trip, pageState, rotateAnim }: Props) {
+  if (pageState === 'waiting') return null;
+
   const Card = CARDS[trip.cardDesign];
 
   const rotateX = rotateAnim.interpolate({

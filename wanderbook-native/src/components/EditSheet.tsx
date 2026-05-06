@@ -4,6 +4,9 @@ import {
   TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Image, Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import * as Clipboard from 'expo-clipboard';
+import * as FileSystem from 'expo-file-system';
 import { Trip, CardElement, useTripStore } from '../store/tripStore';
 
 const FONTS = [
@@ -31,10 +34,10 @@ type Tab = 'text' | 'stickers';
 
 export default function EditSheet({ trip, visible, onClose }: Props) {
   const { updateTrip, addElement, removeElement } = useTripStore();
-  const [tab, setTab] = useState<Tab>('text');
-  const [name, setName] = useState('');
+  const [tab, setTab]         = useState<Tab>('text');
+  const [name, setName]       = useState('');
   const [country, setCountry] = useState('');
-  const [font, setFont] = useState('PlayfairDisplay-Black');
+  const [font, setFont]       = useState('PlayfairDisplay-Black');
 
   useEffect(() => {
     if (trip) {
@@ -57,9 +60,7 @@ export default function EditSheet({ trip, visible, onClose }: Props) {
   function handleReset() {
     if (!trip) return;
     updateTrip(trip.id, {
-      customName:    undefined,
-      customCountry: undefined,
-      titleFont:     trip.titleFont,
+      customName: undefined, customCountry: undefined, titleFont: trip.titleFont,
     });
     setName(trip.name);
     setCountry(trip.country);
@@ -75,42 +76,59 @@ export default function EditSheet({ trip, visible, onClose }: Props) {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: false,
-      quality: 0.8,
+      quality: 1,
     });
     if (!result.canceled && result.assets.length > 0) {
-      const asset = result.assets[0];
-      const el: CardElement = {
-        id: makeId(),
-        type: 'image',
-        x: 100, y: 60,
-        scale: 1,
-        rotation: 0,
-        uri: asset.uri,
-        width: 80,
-        height: 80,
-      };
-      addElement(trip.id, el);
+      // Convert to PNG for consistent rendering
+      const png = await manipulateAsync(result.assets[0].uri, [], {
+        format: SaveFormat.PNG,
+        compress: 1,
+      });
+      addElement(trip.id, {
+        id: makeId(), type: 'image',
+        x: 100, y: 60, scale: 1, rotation: 0,
+        uri: png.uri, width: 80, height: 80,
+      });
     }
   }
 
-  function handleAddText() {
+  async function handlePaste() {
     if (!trip) return;
-    const el: CardElement = {
-      id: makeId(),
-      type: 'text',
-      x: 40, y: 90,
-      scale: 1,
-      rotation: 0,
-      text: 'Label',
-      fontFamily: 'DMSans-Regular',
-      fontSize: 14,
-      color: '#1a1a1a',
-    };
-    addElement(trip.id, el);
+    try {
+      const img = await Clipboard.getImageAsync({ format: 'png' });
+      if (!img?.data) {
+        Alert.alert('No image', 'Copy an image first, then tap Paste.');
+        return;
+      }
+      const path = (FileSystem.cacheDirectory ?? '') + `paste_${Date.now()}.png`;
+      await FileSystem.writeAsStringAsync(path, img.data, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      addElement(trip.id, {
+        id: makeId(), type: 'image',
+        x: 100, y: 60, scale: 1, rotation: 0,
+        uri: path, width: 80, height: 80,
+      });
+    } catch {
+      Alert.alert('Paste failed', 'Could not read image from clipboard.');
+    }
   }
 
-  const previewText = name.trim() || trip?.name || 'City';
-  const elements = trip?.elements ?? [];
+  function handleAddLabel() {
+    if (!trip) return;
+    addElement(trip.id, {
+      id: makeId(), type: 'text',
+      x: 40, y: 90, scale: 1, rotation: 0,
+      text: 'Label',
+      fontFamily: font,
+      fontSize: 14,
+      color: '#1a1a1a',
+    });
+  }
+
+  const previewText    = name.trim() || trip?.name || 'City';
+  const imageElements  = (trip?.elements ?? []).filter((e) => e.type === 'image');
+  const textElements   = (trip?.elements ?? []).filter((e) => e.type === 'text');
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -119,7 +137,6 @@ export default function EditSheet({ trip, visible, onClose }: Props) {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.sheet}
         >
-          {/* Handle bar */}
           <View style={styles.handle} />
 
           <View style={styles.header}>
@@ -129,7 +146,7 @@ export default function EditSheet({ trip, visible, onClose }: Props) {
             </TouchableOpacity>
           </View>
 
-          {/* Tab row */}
+          {/* Tabs */}
           <View style={styles.tabRow}>
             <TouchableOpacity
               style={[styles.tabBtn, tab === 'text' && styles.tabBtnActive]}
@@ -145,9 +162,9 @@ export default function EditSheet({ trip, visible, onClose }: Props) {
             </TouchableOpacity>
           </View>
 
+          {/* ── TEXT TAB ── */}
           {tab === 'text' && (
-            <>
-              {/* City name */}
+            <ScrollView showsVerticalScrollIndicator={false}>
               <Text style={styles.label}>CITY</Text>
               <TextInput
                 style={styles.input}
@@ -158,7 +175,6 @@ export default function EditSheet({ trip, visible, onClose }: Props) {
                 returnKeyType="next"
               />
 
-              {/* Country */}
               <Text style={styles.label}>COUNTRY</Text>
               <TextInput
                 style={styles.input}
@@ -169,7 +185,6 @@ export default function EditSheet({ trip, visible, onClose }: Props) {
                 returnKeyType="done"
               />
 
-              {/* Font picker */}
               <Text style={styles.label}>FONT</Text>
               <ScrollView
                 horizontal
@@ -193,15 +208,12 @@ export default function EditSheet({ trip, visible, onClose }: Props) {
                       >
                         {previewText}
                       </Text>
-                      <Text style={[styles.fontLabel, active && styles.fontLabelActive]}>
-                        {f.label}
-                      </Text>
+                      <Text style={[styles.fontLabel, active && styles.fontLabelActive]}>{f.label}</Text>
                     </TouchableOpacity>
                   );
                 })}
               </ScrollView>
 
-              {/* Actions */}
               <View style={styles.actions}>
                 <TouchableOpacity style={styles.resetBtn} onPress={handleReset} hitSlop={8}>
                   <Text style={styles.resetBtnText}>reset</Text>
@@ -210,41 +222,65 @@ export default function EditSheet({ trip, visible, onClose }: Props) {
                   <Text style={styles.saveBtnText}>SAVE</Text>
                 </TouchableOpacity>
               </View>
-            </>
+
+              {/* ── Optional labels sub-section ── */}
+              <View style={styles.labelSection}>
+                <View style={styles.labelSectionHeader}>
+                  <Text style={styles.label}>LABELS ON CARD</Text>
+                  <TouchableOpacity onPress={handleAddLabel} hitSlop={8}>
+                    <Text style={styles.addLabelBtn}>+ add</Text>
+                  </TouchableOpacity>
+                </View>
+                {textElements.length === 0 && (
+                  <Text style={styles.emptyHint}>No labels. Tap + add to place text on the card.</Text>
+                )}
+                {textElements.map((el) => (
+                  <View key={el.id} style={styles.elementRow}>
+                    <View style={styles.elementThumbText}>
+                      <Text style={[styles.elementThumbTextLabel, { fontFamily: el.fontFamily }]}>T</Text>
+                    </View>
+                    <Text style={styles.elementDesc} numberOfLines={1}>{el.text ?? 'Label'}</Text>
+                    <TouchableOpacity
+                      onPress={() => trip && removeElement(trip.id, el.id)}
+                      hitSlop={10}
+                      style={styles.elementDeleteBtn}
+                    >
+                      <Text style={styles.elementDeleteText}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
           )}
 
+          {/* ── STICKERS TAB ── */}
           {tab === 'stickers' && (
             <>
-              {/* Add buttons */}
               <View style={styles.stickerAddRow}>
                 <TouchableOpacity style={styles.stickerAddBtn} onPress={handleAddPhoto} activeOpacity={0.7}>
                   <Text style={styles.stickerAddIcon}>🖼</Text>
                   <Text style={styles.stickerAddLabel}>Add Photo</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.stickerAddBtn} onPress={handleAddText} activeOpacity={0.7}>
-                  <Text style={styles.stickerAddIcon}>T</Text>
-                  <Text style={styles.stickerAddLabel}>Add Text</Text>
+                <TouchableOpacity style={styles.stickerAddBtn} onPress={handlePaste} activeOpacity={0.7}>
+                  <Text style={styles.stickerAddIcon}>📋</Text>
+                  <Text style={styles.stickerAddLabel}>Paste</Text>
                 </TouchableOpacity>
               </View>
 
               <Text style={styles.label}>ON THIS CARD</Text>
 
               <ScrollView style={styles.elementList} showsVerticalScrollIndicator={false}>
-                {elements.length === 0 && (
-                  <Text style={styles.emptyHint}>No stickers yet. Tap Add Photo or Add Text above.</Text>
+                {imageElements.length === 0 && (
+                  <Text style={styles.emptyHint}>No stickers yet.</Text>
                 )}
-                {elements.map((el) => (
+                {imageElements.map((el) => (
                   <View key={el.id} style={styles.elementRow}>
-                    {el.type === 'image' && el.uri ? (
+                    {el.uri ? (
                       <Image source={{ uri: el.uri }} style={styles.elementThumb} resizeMode="cover" />
                     ) : (
-                      <View style={styles.elementThumbText}>
-                        <Text style={styles.elementThumbTextLabel}>T</Text>
-                      </View>
+                      <View style={styles.elementThumb} />
                     )}
-                    <Text style={styles.elementDesc} numberOfLines={1}>
-                      {el.type === 'text' ? (el.text ?? 'Text') : 'Photo'}
-                    </Text>
+                    <Text style={styles.elementDesc} numberOfLines={1}>Photo</Text>
                     <TouchableOpacity
                       onPress={() => trip && removeElement(trip.id, el.id)}
                       hitSlop={10}
@@ -257,7 +293,7 @@ export default function EditSheet({ trip, visible, onClose }: Props) {
               </ScrollView>
 
               <Text style={styles.stickerHint}>
-                Tap a sticker on the card to select it. Drag to reposition.
+                Tap a sticker on the card to select · drag to reposition
               </Text>
             </>
           )}
@@ -268,236 +304,90 @@ export default function EditSheet({ trip, visible, onClose }: Props) {
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.32)',
-  },
+  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.32)' },
   sheet: {
     backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    paddingTop: 12,
+    borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    paddingHorizontal: 24, paddingBottom: 40, paddingTop: 12,
+    maxHeight: '90%',
   },
   handle: {
-    alignSelf: 'center',
-    width: 36, height: 4,
-    borderRadius: 2,
-    backgroundColor: '#e0e0e0',
-    marginBottom: 16,
+    alignSelf: 'center', width: 36, height: 4, borderRadius: 2,
+    backgroundColor: '#e0e0e0', marginBottom: 16,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16,
   },
-  title: {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 18,
-    color: '#1a1a1a',
-    letterSpacing: 0.2,
-  },
-  cancelBtn: {
-    fontFamily: 'DMSans-Regular',
-    fontSize: 12,
-    color: '#aaa',
-    letterSpacing: 0.5,
-  },
+  title:     { fontFamily: 'PlayfairDisplay-Bold', fontSize: 18, color: '#1a1a1a', letterSpacing: 0.2 },
+  cancelBtn: { fontFamily: 'DMSans-Regular', fontSize: 12, color: '#aaa', letterSpacing: 0.5 },
   tabRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    marginBottom: 4,
+    flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#f0f0f0', marginBottom: 4,
   },
   tabBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    marginRight: 20,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    paddingVertical: 8, paddingHorizontal: 4, marginRight: 20,
+    borderBottomWidth: 2, borderBottomColor: 'transparent',
   },
-  tabBtnActive: {
-    borderBottomColor: '#91040C',
-  },
-  tabBtnText: {
-    fontFamily: 'DMSans-Medium',
-    fontSize: 8,
-    letterSpacing: 2,
-    color: '#bbb',
-  },
-  tabBtnTextActive: {
-    color: '#91040C',
-  },
+  tabBtnActive:     { borderBottomColor: '#91040C' },
+  tabBtnText:       { fontFamily: 'DMSans-Medium', fontSize: 8, letterSpacing: 2, color: '#bbb' },
+  tabBtnTextActive: { color: '#91040C' },
   label: {
-    fontFamily: 'DMSans-Medium',
-    fontSize: 8,
-    letterSpacing: 2.5,
-    color: '#bbb',
-    marginBottom: 6,
-    marginTop: 12,
+    fontFamily: 'DMSans-Medium', fontSize: 8, letterSpacing: 2.5,
+    color: '#bbb', marginBottom: 6, marginTop: 12,
   },
   input: {
-    fontFamily: 'PlayfairDisplay-Regular',
-    fontSize: 22,
-    color: '#1a1a1a',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e8e8e8',
-    paddingVertical: 6,
-    letterSpacing: 0.5,
+    fontFamily: 'PlayfairDisplay-Regular', fontSize: 22, color: '#1a1a1a',
+    borderBottomWidth: 1, borderBottomColor: '#e8e8e8', paddingVertical: 6, letterSpacing: 0.5,
   },
-  fontScroll: {
-    marginTop: 4,
-  },
-  fontRow: {
-    gap: 8,
-    paddingRight: 8,
-  },
+  fontScroll: { marginTop: 4 },
+  fontRow:    { gap: 8, paddingRight: 8 },
   fontPill: {
-    width: 80,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e8e8e8',
-    alignItems: 'center',
+    width: 80, paddingVertical: 10, paddingHorizontal: 8,
+    borderRadius: 8, borderWidth: 1, borderColor: '#e8e8e8', alignItems: 'center',
   },
-  fontPillActive: {
-    borderColor: '#91040C',
-    backgroundColor: 'rgba(145,4,12,0.04)',
-  },
-  fontPreview: {
-    fontSize: 18,
-    color: '#1a1a1a',
-    marginBottom: 4,
-  },
-  fontPreviewActive: {
-    color: '#91040C',
-  },
-  fontLabel: {
-    fontFamily: 'DMSans-Regular',
-    fontSize: 7,
-    letterSpacing: 1,
-    color: '#bbb',
-    textTransform: 'uppercase',
-    textAlign: 'center',
-  },
-  fontLabelActive: {
-    color: '#91040C',
-  },
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 24,
-  },
-  resetBtn: {
-    paddingVertical: 6,
-  },
-  resetBtnText: {
-    fontFamily: 'DMSans-Regular',
-    fontSize: 11,
-    letterSpacing: 1,
-    color: '#ccc',
-    textTransform: 'uppercase',
-  },
-  saveBtn: {
-    backgroundColor: '#1a1a1a',
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    borderRadius: 4,
-  },
-  saveBtnText: {
-    fontFamily: 'DMSans-Medium',
-    fontSize: 11,
-    letterSpacing: 2.5,
-    color: '#fff',
-  },
+  fontPillActive:    { borderColor: '#91040C', backgroundColor: 'rgba(145,4,12,0.04)' },
+  fontPreview:       { fontSize: 18, color: '#1a1a1a', marginBottom: 4 },
+  fontPreviewActive: { color: '#91040C' },
+  fontLabel:         { fontFamily: 'DMSans-Regular', fontSize: 7, letterSpacing: 1, color: '#bbb', textTransform: 'uppercase', textAlign: 'center' },
+  fontLabelActive:   { color: '#91040C' },
+  actions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24 },
+  resetBtn:     { paddingVertical: 6 },
+  resetBtnText: { fontFamily: 'DMSans-Regular', fontSize: 11, letterSpacing: 1, color: '#ccc', textTransform: 'uppercase' },
+  saveBtn:      { backgroundColor: '#1a1a1a', paddingVertical: 12, paddingHorizontal: 32, borderRadius: 4 },
+  saveBtnText:  { fontFamily: 'DMSans-Medium', fontSize: 11, letterSpacing: 2.5, color: '#fff' },
+
+  // Labels sub-section
+  labelSection:       { marginTop: 20, paddingBottom: 8 },
+  labelSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  addLabelBtn:        { fontFamily: 'DMSans-Regular', fontSize: 10, color: '#91040C', letterSpacing: 1 },
+
   // Stickers tab
-  stickerAddRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 16,
-    marginBottom: 4,
-  },
+  stickerAddRow: { flexDirection: 'row', gap: 12, marginTop: 16, marginBottom: 4 },
   stickerAddBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#e8e8e8',
-    alignItems: 'center',
-    gap: 6,
+    flex: 1, paddingVertical: 14, borderRadius: 10,
+    borderWidth: 1, borderColor: '#e8e8e8', alignItems: 'center', gap: 6,
   },
-  stickerAddIcon: {
-    fontSize: 22,
-  },
-  stickerAddLabel: {
-    fontFamily: 'DMSans-Regular',
-    fontSize: 10,
-    letterSpacing: 0.5,
-    color: '#888',
-  },
-  elementList: {
-    maxHeight: 160,
-    marginTop: 4,
-  },
+  stickerAddIcon:  { fontSize: 22 },
+  stickerAddLabel: { fontFamily: 'DMSans-Regular', fontSize: 10, letterSpacing: 0.5, color: '#888' },
+  elementList:     { maxHeight: 160, marginTop: 4 },
   emptyHint: {
-    fontFamily: 'DMSans-Regular',
-    fontSize: 11,
-    color: '#ccc',
-    paddingVertical: 16,
-    textAlign: 'center',
+    fontFamily: 'DMSans-Regular', fontSize: 11, color: '#ccc',
+    paddingVertical: 16, textAlign: 'center',
   },
   elementRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f5f5f5',
-    gap: 10,
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#f5f5f5', gap: 10,
   },
-  elementThumb: {
-    width: 36,
-    height: 36,
-    borderRadius: 4,
-    backgroundColor: '#f0f0f0',
-  },
+  elementThumb: { width: 36, height: 36, borderRadius: 4, backgroundColor: '#f0f0f0' },
   elementThumbText: {
-    width: 36,
-    height: 36,
-    borderRadius: 4,
-    backgroundColor: '#f5f5f5',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 36, height: 36, borderRadius: 4,
+    backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center',
   },
-  elementThumbTextLabel: {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 16,
-    color: '#aaa',
-  },
-  elementDesc: {
-    flex: 1,
-    fontFamily: 'DMSans-Regular',
-    fontSize: 12,
-    color: '#555',
-  },
-  elementDeleteBtn: {
-    padding: 4,
-  },
-  elementDeleteText: {
-    fontFamily: 'DMSans-Regular',
-    fontSize: 12,
-    color: '#ccc',
-  },
+  elementThumbTextLabel: { fontSize: 16, color: '#aaa' },
+  elementDesc:       { flex: 1, fontFamily: 'DMSans-Regular', fontSize: 12, color: '#555' },
+  elementDeleteBtn:  { padding: 4 },
+  elementDeleteText: { fontFamily: 'DMSans-Regular', fontSize: 12, color: '#ccc' },
   stickerHint: {
-    fontFamily: 'DMSans-Regular',
-    fontSize: 9,
-    letterSpacing: 0.3,
-    color: '#ccc',
-    textAlign: 'center',
-    marginTop: 12,
+    fontFamily: 'DMSans-Regular', fontSize: 9, letterSpacing: 0.3,
+    color: '#ccc', textAlign: 'center', marginTop: 12,
   },
 });
