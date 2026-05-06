@@ -1,14 +1,16 @@
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 
 interface CardProps {
   customName?: string;
   customCountry?: string;
   titleFont?: string;
+  onTitlePress?: () => void;
 }
 
 export default function ParisCard({
   customName,
   titleFont = 'PlayfairDisplay-Black',
+  onTitlePress,
 }: CardProps) {
   return (
     <View style={styles.card}>
@@ -17,9 +19,16 @@ export default function ParisCard({
         style={styles.eiffel}
         resizeMode="contain"
       />
-      <Text style={[styles.name, { fontFamily: titleFont }]}>
-        {customName ?? 'PARIS'}
-      </Text>
+      <TouchableOpacity
+        style={styles.nameTouch}
+        onPress={onTitlePress}
+        activeOpacity={0.7}
+        disabled={!onTitlePress}
+      >
+        <Text style={[styles.name, { fontFamily: titleFont }]}>
+          {customName ?? 'PARIS'}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -32,8 +41,10 @@ const styles = StyleSheet.create({
     opacity: 0.9,
     zIndex: 2,
   },
-  name: {
+  nameTouch: {
     position: 'absolute', bottom: 5, left: 27, zIndex: 3,
+  },
+  name: {
     fontSize: 95, lineHeight: 95,
     letterSpacing: -2,
     color: '#1a1a1a',

@@ -1,26 +1,49 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
 interface CardProps {
   customName?: string;
   customCountry?: string;
   titleFont?: string;
+  onTitlePress?: () => void;
 }
 
 export default function LisbonCard({
   customName,
   customCountry,
   titleFont = 'BebasNeue',
+  onTitlePress,
 }: CardProps) {
   return (
     <View style={styles.card}>
       {customName ? (
-        <Text style={[styles.customName, { fontFamily: titleFont }]}>
-          {customName}
-        </Text>
+        <TouchableOpacity
+          style={styles.customNameTouch}
+          onPress={onTitlePress}
+          activeOpacity={0.7}
+          disabled={!onTitlePress}
+        >
+          <Text style={[styles.customName, { fontFamily: titleFont }]}>
+            {customName}
+          </Text>
+        </TouchableOpacity>
       ) : (
         <>
-          <Text style={styles.lis}>LIS</Text>
-          <Text style={styles.bon}>bon</Text>
+          <TouchableOpacity
+            style={styles.lisTouch}
+            onPress={onTitlePress}
+            activeOpacity={0.7}
+            disabled={!onTitlePress}
+          >
+            <Text style={styles.lis}>LIS</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.bonTouch}
+            onPress={onTitlePress}
+            activeOpacity={0.7}
+            disabled={!onTitlePress}
+          >
+            <Text style={styles.bon}>bon</Text>
+          </TouchableOpacity>
         </>
       )}
 
@@ -37,8 +60,10 @@ export default function LisbonCard({
 
 const styles = StyleSheet.create({
   card: { position: 'absolute', width: 340, height: 228, backgroundColor: '#fff', overflow: 'hidden' },
-  lis: {
+  lisTouch: {
     position: 'absolute', top: 19, right: 29, zIndex: 3,
+  },
+  lis: {
     fontFamily: 'BebasNeue',
     fontSize: 95, lineHeight: 95,
     letterSpacing: 2,
@@ -49,15 +74,19 @@ const styles = StyleSheet.create({
     position: 'absolute', top: 114, left: 0, right: 0,
     height: 2, backgroundColor: '#23140C', zIndex: 5,
   },
-  bon: {
+  bonTouch: {
     position: 'absolute', bottom: 19, left: 29, zIndex: 3,
+  },
+  bon: {
     fontFamily: 'PlayfairDisplay-BoldItalic',
     fontSize: 87, lineHeight: 87,
     letterSpacing: -1,
     color: '#1a1a1a',
   },
-  customName: {
+  customNameTouch: {
     position: 'absolute', top: 19, left: 29, zIndex: 3,
+  },
+  customName: {
     fontSize: 82, lineHeight: 79,
     letterSpacing: -1,
     color: '#1a1a1a',

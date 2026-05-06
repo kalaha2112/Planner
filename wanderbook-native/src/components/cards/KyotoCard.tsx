@@ -1,23 +1,32 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
 interface CardProps {
   customName?: string;
   customCountry?: string;
   titleFont?: string;
+  onTitlePress?: () => void;
 }
 
 export default function KyotoCard({
   customName,
   customCountry,
   titleFont = 'PlayfairDisplay-Black',
+  onTitlePress,
 }: CardProps) {
   return (
     <View style={styles.card}>
       <Text style={styles.ghost}>{'KY\nOTO'}</Text>
       <View style={styles.dot} />
-      <Text style={[styles.name, { fontFamily: titleFont }]}>
-        {customName ?? 'Kyoto'}
-      </Text>
+      <TouchableOpacity
+        style={styles.nameTouch}
+        onPress={onTitlePress}
+        activeOpacity={0.7}
+        disabled={!onTitlePress}
+      >
+        <Text style={[styles.name, { fontFamily: titleFont }]}>
+          {customName ?? 'Kyoto'}
+        </Text>
+      </TouchableOpacity>
       <Text style={styles.country}>{customCountry ?? 'Japan'}</Text>
     </View>
   );
@@ -37,8 +46,10 @@ const styles = StyleSheet.create({
     width: 8, height: 8, borderRadius: 4,
     backgroundColor: '#23140C',
   },
-  name: {
+  nameTouch: {
     position: 'absolute', top: 27, left: 29, zIndex: 4,
+  },
+  name: {
     fontSize: 65, lineHeight: 58,
     letterSpacing: -1.5,
     color: '#1a1a1a',

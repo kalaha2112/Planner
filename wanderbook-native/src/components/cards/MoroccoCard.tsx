@@ -1,30 +1,44 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Line } from 'react-native-svg';
 
 interface CardProps {
   customName?: string;
   customCountry?: string;
   titleFont?: string;
+  onTitlePress?: () => void;
 }
 
 export default function MoroccoCard({
   customName,
   customCountry,
   titleFont = 'BebasNeue',
+  onTitlePress,
 }: CardProps) {
   return (
     <View style={styles.card}>
       <Text style={styles.ghostM}>M</Text>
 
       {customName ? (
-        <Text style={[styles.customName, { fontFamily: titleFont }]}>
-          {customName}
-        </Text>
+        <TouchableOpacity
+          style={styles.customNameTouch}
+          onPress={onTitlePress}
+          activeOpacity={0.7}
+          disabled={!onTitlePress}
+        >
+          <Text style={[styles.customName, { fontFamily: titleFont }]}>
+            {customName}
+          </Text>
+        </TouchableOpacity>
       ) : (
-        <>
+        <TouchableOpacity
+          style={styles.defaultNameTouch}
+          onPress={onTitlePress}
+          activeOpacity={0.7}
+          disabled={!onTitlePress}
+        >
           <Text style={styles.mo}>MO</Text>
           <Text style={styles.rocco}>rocco</Text>
-        </>
+        </TouchableOpacity>
       )}
 
       <Svg style={StyleSheet.absoluteFillObject} width={340} height={228} viewBox="0 0 340 228">
@@ -45,22 +59,26 @@ const styles = StyleSheet.create({
     fontSize: 206, lineHeight: 206,
     color: 'rgba(0,0,0,0.03)',
   },
-  mo: {
+  defaultNameTouch: {
     position: 'absolute', top: 27, left: 29, zIndex: 4,
+  },
+  mo: {
     fontFamily: 'BebasNeue',
     fontSize: 65, lineHeight: 59,
     letterSpacing: 1,
     color: '#1a1a1a',
   },
   rocco: {
-    position: 'absolute', top: 78, left: 39, zIndex: 4,
+    marginLeft: 10,
     fontFamily: 'PlayfairDisplay-Italic',
     fontSize: 58, lineHeight: 52,
     letterSpacing: -0.5,
     color: '#1a1a1a',
   },
-  customName: {
+  customNameTouch: {
     position: 'absolute', top: 27, left: 29, zIndex: 4,
+  },
+  customName: {
     fontSize: 65, lineHeight: 61,
     letterSpacing: -1,
     color: '#1a1a1a',

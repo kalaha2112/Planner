@@ -1,21 +1,29 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
 interface CardProps {
   customName?: string;
   customCountry?: string;
   titleFont?: string;
+  onTitlePress?: () => void;
 }
 
 export default function BaliCard({
   customName,
   customCountry,
   titleFont = 'BebasNeue',
+  onTitlePress,
 }: CardProps) {
   return (
     <View style={styles.card}>
-      <Text style={[styles.name, { fontFamily: titleFont }]}>
-        {customName ?? 'BALI'}
-      </Text>
+      <TouchableOpacity
+        onPress={onTitlePress}
+        activeOpacity={0.7}
+        disabled={!onTitlePress}
+      >
+        <Text style={[styles.name, { fontFamily: titleFont }]}>
+          {customName ?? 'BALI'}
+        </Text>
+      </TouchableOpacity>
       <View style={styles.verticalWrap}>
         <Text style={styles.country}>{customCountry ?? 'Indonesia'}</Text>
       </View>

@@ -21,7 +21,8 @@ import BookCover   from './src/components/BookCover';
 import BookOutline from './src/components/BookOutline';
 import TripPage    from './src/components/TripPage';
 import PageDots    from './src/components/PageDots';
-import EditSheet   from './src/components/EditSheet';
+import EditSheet    from './src/components/EditSheet';
+import TripOverview from './src/components/TripOverview';
 
 const SWIPE_THRESHOLD = 38;
 
@@ -32,7 +33,8 @@ function WanderbookApp() {
     openBook, closeBook, goNext, goPrev, jumpTo,
   } = usePageFlip();
   const { trips } = useTripStore();
-  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [editingIdx, setEditingIdx]   = useState<number | null>(null);
+  const [overviewIdx, setOverviewIdx] = useState<number | null>(null);
 
   // Footer fades in when book opens
   const footerOpacity = useRef(new Animated.Value(0)).current;
@@ -95,6 +97,7 @@ function WanderbookApp() {
               trip={trip}
               pageState={pageStates[i]}
               rotateAnim={pageAnims[i]}
+              onTitlePress={pageStates[i] === 'active' ? () => setOverviewIdx(i) : undefined}
             />
           ))}
 
@@ -136,6 +139,12 @@ function WanderbookApp() {
         trip={editingIdx !== null ? trips[editingIdx] : null}
         visible={editingIdx !== null}
         onClose={() => setEditingIdx(null)}
+      />
+
+      <TripOverview
+        trip={overviewIdx !== null ? trips[overviewIdx] : null}
+        visible={overviewIdx !== null}
+        onClose={() => setOverviewIdx(null)}
       />
     </View>
   );

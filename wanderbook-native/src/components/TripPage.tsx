@@ -24,9 +24,10 @@ interface Props {
   trip: Trip;
   pageState: PageState;
   rotateAnim: Animated.Value;
+  onTitlePress?: () => void;
 }
 
-export default function TripPage({ index, trip, pageState, rotateAnim }: Props) {
+export default function TripPage({ index, trip, pageState, rotateAnim, onTitlePress }: Props) {
   if (pageState === 'waiting') return null;
 
   const Card = CARDS[trip.cardDesign];
@@ -69,6 +70,7 @@ export default function TripPage({ index, trip, pageState, rotateAnim }: Props) 
             customName={trip.customName}
             customCountry={trip.customCountry}
             titleFont={trip.titleFont}
+            onTitlePress={onTitlePress}
           />
           <StickerLayer trip={trip} />
           <Text style={styles.pageNum}>{String(index + 1).padStart(2, '0')}</Text>
