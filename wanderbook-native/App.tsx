@@ -26,7 +26,7 @@ import TripOverview from './src/components/TripOverview';
 
 const SWIPE_THRESHOLD = 38;
 
-function WanderbookApp() {
+function SuTravelBook() {
   const {
     isOpen, activeIdx, pageStates,
     coverAnim, pageAnims,
@@ -36,8 +36,9 @@ function WanderbookApp() {
   const [editingIdx, setEditingIdx]   = useState<number | null>(null);
   const [overviewIdx, setOverviewIdx] = useState<number | null>(null);
 
-  // Footer fades in when book opens
+  // Footer fades in when book opens; map preview fades in when book closes
   const footerOpacity = useRef(new Animated.Value(0)).current;
+  const mapOpacity    = useRef(new Animated.Value(1)).current;
   const prevOpen = useRef(false);
   if (isOpen !== prevOpen.current) {
     prevOpen.current = isOpen;
@@ -45,6 +46,12 @@ function WanderbookApp() {
       toValue: isOpen ? 1 : 0,
       duration: 450,
       delay: isOpen ? 550 : 0,
+      useNativeDriver: true,
+    }).start();
+    Animated.timing(mapOpacity, {
+      toValue: isOpen ? 0 : 1,
+      duration: 300,
+      delay: isOpen ? 0 : 600,
       useNativeDriver: true,
     }).start();
   }
@@ -73,22 +80,25 @@ function WanderbookApp() {
     <View style={styles.screen}>
       <StatusBar barStyle="dark-content" />
 
+      {/* App title — always visible */}
+      <Text style={styles.appTitle}>SU TRAVEL BOOK</Text>
+
+      {/* Cover label — fades when book opens */}
       <Animated.Text
         style={[
           styles.coverLabel,
           { opacity: coverAnim.interpolate({ inputRange: [0, 0.3], outputRange: [1, 0] }) },
         ]}
       >
-        your travel journal
+        your travel collection
       </Animated.Text>
 
       {/*
         bookContainer is 344×232 — 2px larger on each side than the book.
         bookWrap sits inside at top:2, left:2.
-        BookOutline (344×232) sits at 0,0 on top of everything, pointer-events:none.
+        BookOutline (344×232) sits at 0,0 on top, pointer-events:none.
       */}
       <View style={styles.bookContainer}>
-        {/* Pages + cover inside the tight 340×228 box */}
         <View style={styles.bookWrap} {...panResponder.panHandlers}>
           {trips.map((trip, i) => (
             <TripPage
@@ -100,40 +110,56 @@ function WanderbookApp() {
               onTitlePress={pageStates[i] === 'active' ? () => setOverviewIdx(i) : undefined}
             />
           ))}
-
-          {/* Disable cover touch when book is open so swipes aren't blocked */}
           <View pointerEvents={isOpen ? 'none' : 'auto'}>
             <BookCover coverAnim={coverAnim} onOpen={openBook} />
           </View>
         </View>
-
-        {/* Outline rendered last = on top, pointer-events:none */}
         <BookOutline />
       </View>
 
-      {/* Footer */}
-      <Animated.View
-        style={[styles.footer, { opacity: footerOpacity }]}
-        pointerEvents={isOpen ? 'auto' : 'none'}
-      >
-        <PageDots count={trips.length} activeIdx={activeIdx} onPress={jumpTo} />
+      {/*
+        Fixed-height area below the book.
+        Footer (when open) and map preview (when closed) share this space via cross-fade.
+      */}
+      <View style={styles.belowBook}>
+        {/* Footer */}
+        <Animated.View
+          style={[styles.footerInner, { opacity: footerOpacity }]}
+          pointerEvents={isOpen ? 'auto' : 'none'}
+        >
+          <PageDots count={trips.length} activeIdx={activeIdx} onPress={jumpTo} />
 
-        <View style={styles.swipeRow}>
-          <View style={styles.tick} />
-          <Text style={styles.swipeLabel}>swipe to turn page</Text>
-          <View style={styles.tick} />
-        </View>
+          <View style={styles.swipeRow}>
+            <View style={styles.tick} />
+            <Text style={styles.swipeLabel}>swipe to turn page</Text>
+            <View style={styles.tick} />
+          </View>
 
-        <View style={styles.footerActions}>
-          <TouchableOpacity onPress={() => setEditingIdx(activeIdx)} hitSlop={12}>
-            <Text style={styles.editBtn}>edit card</Text>
-          </TouchableOpacity>
-          <View style={styles.footerDivider} />
-          <TouchableOpacity onPress={closeBook} hitSlop={12}>
-            <Text style={styles.closeBtn}>close book</Text>
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
+          <View style={styles.footerActions}>
+            <TouchableOpacity onPress={() => setEditingIdx(activeIdx)} hitSlop={12}>
+              <Text style={styles.editBtn}>edit card</Text>
+            </TouchableOpacity>
+            <View style={styles.footerDivider} />
+            <TouchableOpacity onPress={closeBook} hitSlop={12}>
+              <Text style={styles.closeBtn}>close book</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+
+        {/* Map preview */}
+        <Animated.View
+          style={[styles.mapInner, { opacity: mapOpacity }]}
+          pointerEvents={isOpen ? 'none' : 'auto'}
+        >
+          <Text style={styles.mapLabel}>MY WORLD MAP</Text>
+          <View style={styles.mapCard}>
+            <Text style={styles.mapTripList} numberOfLines={1}>
+              {trips.map((t) => t.customName ?? t.name).join('  ·  ')}
+            </Text>
+            <Text style={styles.mapComingSoon}>interactive map — coming soon</Text>
+          </View>
+        </Animated.View>
+      </View>
 
       <EditSheet
         trip={editingIdx !== null ? trips[editingIdx] : null}
@@ -168,7 +194,7 @@ export default function App() {
 
   return (
     <View style={styles.root}>
-      <WanderbookApp />
+      <SuTravelBook />
     </View>
   );
 }
@@ -176,21 +202,42 @@ export default function App() {
 const styles = StyleSheet.create({
   root:   { flex: 1, backgroundColor: '#fff' },
   screen: { flex: 1, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
+
+  appTitle: {
+    fontFamily: 'DMSans-Medium',
+    fontSize: 9, letterSpacing: 4,
+    color: '#bbb', textTransform: 'uppercase',
+    marginBottom: 6,
+  },
   coverLabel: {
-    marginBottom: 24,
-    fontSize: 8, letterSpacing: 4,
-    color: '#ccc', textTransform: 'uppercase',
+    marginBottom: 18,
+    fontSize: 8, letterSpacing: 3.5,
+    color: '#ddd', textTransform: 'uppercase',
     fontFamily: 'DMSans-Regular',
   },
-  // 2px padding around the book so the outline isn't clipped
+
+  // 2px padding so the outline isn't clipped
   bookContainer: { width: 344, height: 232 },
-  // Actual book content sits 2px inset
   bookWrap: {
     position: 'absolute', top: 2, left: 2,
     width: 340, height: 228,
     overflow: 'hidden',
   },
-  footer:   { marginTop: 28, alignItems: 'center', gap: 14 },
+
+  // Fixed-height container — footer and map share this space via cross-fade
+  belowBook: {
+    width: 340,
+    height: 96,
+    marginTop: 24,
+  },
+
+  // Footer (absoluteFill inside belowBook)
+  footerInner: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 2,
+  },
   swipeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   tick:     { width: 18, height: 1, backgroundColor: '#ddd' },
   swipeLabel: {
@@ -209,5 +256,36 @@ const styles = StyleSheet.create({
     fontSize: 9, letterSpacing: 1.5,
     color: '#bbb', textTransform: 'uppercase',
     fontFamily: 'DMSans-Regular',
+  },
+
+  // Map preview (absoluteFill inside belowBook)
+  mapInner: {
+    ...StyleSheet.absoluteFillObject,
+    gap: 6,
+  },
+  mapLabel: {
+    fontFamily: 'DMSans-Medium',
+    fontSize: 7, letterSpacing: 2.5,
+    color: '#ccc', textTransform: 'uppercase',
+  },
+  mapCard: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ececec',
+    borderRadius: 6,
+    backgroundColor: '#faf9f7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 16,
+  },
+  mapTripList: {
+    fontFamily: 'CormorantGaramond-LightItalic',
+    fontSize: 12, color: '#aaa',
+  },
+  mapComingSoon: {
+    fontFamily: 'DMSans-Regular',
+    fontSize: 8, letterSpacing: 1.5,
+    color: '#ccc', textTransform: 'uppercase',
   },
 });

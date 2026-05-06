@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "wanderbook-native",
-    "slug": "wanderbook-native",
+    "name": "Su Travel Book",
+    "slug": "su-travel-book",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

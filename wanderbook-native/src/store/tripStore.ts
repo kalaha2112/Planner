@@ -35,6 +35,10 @@ export interface Trip {
   hotelLocation?: string;
   hotelNights?: number;
   itinerary?: string[][];
+  flightFrom?: string;
+  flightTo?: string;
+  flightDate?: string;
+  flightNumber?: string;
   elements: CardElement[];
 }
 
@@ -53,7 +57,8 @@ interface AppState {
   updateTrip: (id: string, patch: Partial<Pick<Trip,
     'customName' | 'customCountry' | 'titleFont' | 'notes' |
     'dateRange' | 'daysAway' | 'budgetTotal' | 'budgetSpent' |
-    'hotelLocation' | 'hotelNights' | 'itinerary'
+    'hotelLocation' | 'hotelNights' | 'itinerary' |
+    'flightFrom' | 'flightTo' | 'flightDate' | 'flightNumber'
   >>) => void;
   addElement: (tripId: string, el: CardElement) => void;
   updateElement: (tripId: string, id: string, patch: Partial<CardElement>) => void;

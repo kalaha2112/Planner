@@ -45,6 +45,10 @@ export default function EditSheet({ trip, visible, onClose }: Props) {
   const [budgetSpent, setBudgetSpent]     = useState('');
   const [hotelLocation, setHotelLocation] = useState('');
   const [hotelNights, setHotelNights]     = useState('');
+  const [flightFrom, setFlightFrom]       = useState('');
+  const [flightTo, setFlightTo]           = useState('');
+  const [flightDate, setFlightDate]       = useState('');
+  const [flightNumber, setFlightNumber]   = useState('');
 
   useEffect(() => {
     if (trip) {
@@ -57,6 +61,10 @@ export default function EditSheet({ trip, visible, onClose }: Props) {
       setBudgetSpent(trip.budgetSpent != null ? String(trip.budgetSpent) : '');
       setHotelLocation(trip.hotelLocation ?? '');
       setHotelNights(trip.hotelNights != null ? String(trip.hotelNights) : '');
+      setFlightFrom(trip.flightFrom   ?? '');
+      setFlightTo(trip.flightTo       ?? '');
+      setFlightDate(trip.flightDate   ?? '');
+      setFlightNumber(trip.flightNumber ?? '');
     }
   }, [trip?.id]);
 
@@ -79,6 +87,10 @@ export default function EditSheet({ trip, visible, onClose }: Props) {
       budgetSpent:   budgetSpent          ? Number(budgetSpent)          : undefined,
       hotelLocation: hotelLocation.trim() || undefined,
       hotelNights:   hotelNights          ? parseInt(hotelNights, 10)    : undefined,
+      flightFrom:    flightFrom.trim()    || undefined,
+      flightTo:      flightTo.trim()      || undefined,
+      flightDate:    flightDate.trim()    || undefined,
+      flightNumber:  flightNumber.trim()  || undefined,
     });
     onClose();
   }
@@ -348,6 +360,46 @@ export default function EditSheet({ trip, visible, onClose }: Props) {
                 placeholder="e.g. 7"
                 placeholderTextColor="#ccc"
                 keyboardType="numeric"
+                returnKeyType="done"
+              />
+
+              <Text style={styles.label}>FLIGHT FROM</Text>
+              <TextInput
+                style={styles.input}
+                value={flightFrom}
+                onChangeText={setFlightFrom}
+                placeholder="e.g. SYD"
+                placeholderTextColor="#ccc"
+                returnKeyType="next"
+              />
+
+              <Text style={styles.label}>FLIGHT TO</Text>
+              <TextInput
+                style={styles.input}
+                value={flightTo}
+                onChangeText={setFlightTo}
+                placeholder="e.g. DPS"
+                placeholderTextColor="#ccc"
+                returnKeyType="next"
+              />
+
+              <Text style={styles.label}>FLIGHT DATE</Text>
+              <TextInput
+                style={styles.input}
+                value={flightDate}
+                onChangeText={setFlightDate}
+                placeholder="e.g. May 15, 2026"
+                placeholderTextColor="#ccc"
+                returnKeyType="next"
+              />
+
+              <Text style={styles.label}>FLIGHT NUMBER</Text>
+              <TextInput
+                style={styles.input}
+                value={flightNumber}
+                onChangeText={setFlightNumber}
+                placeholder="e.g. QF43"
+                placeholderTextColor="#ccc"
                 returnKeyType="done"
               />
 
