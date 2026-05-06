@@ -47,12 +47,13 @@ function WanderbookApp() {
     }).start();
   }
 
-  // Swipe handler — only activates on vertical move, so taps reach child components
+  // Swipe handler — fires on vertical move in empty card areas
+  // (sticker elements claim on start and preempt this)
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder:        () => false,
       onStartShouldSetPanResponderCapture: () => false,
-      onMoveShouldSetPanResponder:         (_, g) => Math.abs(g.dy) > 8,
+      onMoveShouldSetPanResponder:         (_, g) => isOpen && Math.abs(g.dy) > 10,
       onPanResponderRelease: (_, g) => {
         if      (g.dy < -SWIPE_THRESHOLD) goNext();
         else if (g.dy >  SWIPE_THRESHOLD) goPrev();
@@ -74,12 +75,12 @@ function WanderbookApp() {
       </Animated.Text>
 
       {/*
-        bookContainer is 284×192 — 2px larger on each side than the book.
+        bookContainer is 344×232 — 2px larger on each side than the book.
         bookWrap sits inside at top:2, left:2.
-        BookOutline (284×192) sits at 0,0 on top of everything, pointer-events:none.
+        BookOutline (344×232) sits at 0,0 on top of everything, pointer-events:none.
       */}
       <View style={styles.bookContainer}>
-        {/* Pages + cover inside the tight 280×188 box */}
+        {/* Pages + cover inside the tight 340×228 box */}
         <View style={styles.bookWrap} {...panResponder.panHandlers}>
           {trips.map((trip, i) => (
             <TripPage
@@ -166,11 +167,11 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans-Regular',
   },
   // 2px padding around the book so the outline isn't clipped
-  bookContainer: { width: 284, height: 192 },
+  bookContainer: { width: 344, height: 232 },
   // Actual book content sits 2px inset
   bookWrap: {
     position: 'absolute', top: 2, left: 2,
-    width: 280, height: 188,
+    width: 340, height: 228,
   },
   footer:   { marginTop: 28, alignItems: 'center', gap: 14 },
   swipeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

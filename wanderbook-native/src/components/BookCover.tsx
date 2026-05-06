@@ -1,29 +1,23 @@
 import { Animated, TouchableWithoutFeedback, View, Text, StyleSheet } from 'react-native';
 
 interface BookCoverProps {
-  coverAnim: Animated.Value;  // 0 = closed, 1 = open
+  coverAnim: Animated.Value;
   onOpen: () => void;
 }
 
 export default function BookCover({ coverAnim, onOpen }: BookCoverProps) {
-  // Front face: rotates from 0 → -180deg as coverAnim goes 0 → 1
   const frontRotateX = coverAnim.interpolate({
     inputRange:  [0, 1],
     outputRange: ['0deg', '-180deg'],
   });
-
-  // Front face fades out at the halfway point
   const frontOpacity = coverAnim.interpolate({
     inputRange:  [0, 0.48, 0.5, 1],
     outputRange: [1, 1, 0, 0],
   });
-
-  // Back face fades in at the halfway point and mirrors the rotation
   const backOpacity = coverAnim.interpolate({
     inputRange:  [0, 0.5, 0.52, 1],
     outputRange: [0, 0, 1, 1],
   });
-
   const backRotateX = coverAnim.interpolate({
     inputRange:  [0, 1],
     outputRange: ['180deg', '0deg'],
@@ -32,7 +26,6 @@ export default function BookCover({ coverAnim, onOpen }: BookCoverProps) {
   return (
     <TouchableWithoutFeedback onPress={onOpen}>
       <View style={styles.container}>
-        {/* Front face */}
         <Animated.View
           style={[
             styles.face,
@@ -40,9 +33,9 @@ export default function BookCover({ coverAnim, onOpen }: BookCoverProps) {
               opacity: frontOpacity,
               transform: [
                 { perspective: 1400 },
-                { translateY: -94 },
+                { translateY: -114 },
                 { rotateX: frontRotateX },
-                { translateY: 94 },
+                { translateY: 114 },
               ],
             },
           ]}
@@ -55,7 +48,6 @@ export default function BookCover({ coverAnim, onOpen }: BookCoverProps) {
           </View>
         </Animated.View>
 
-        {/* Back face (underside — off-white) */}
         <Animated.View
           style={[
             styles.face,
@@ -64,9 +56,9 @@ export default function BookCover({ coverAnim, onOpen }: BookCoverProps) {
               opacity: backOpacity,
               transform: [
                 { perspective: 1400 },
-                { translateY: -94 },
+                { translateY: -114 },
                 { rotateX: backRotateX },
-                { translateY: 94 },
+                { translateY: 114 },
               ],
             },
           ]}
@@ -78,12 +70,12 @@ export default function BookCover({ coverAnim, onOpen }: BookCoverProps) {
 
 const styles = StyleSheet.create({
   container: {
-    width: 280, height: 188,
+    width: 340, height: 228,
     position: 'absolute', top: 0, left: 0,
     zIndex: 20,
   },
   face: {
-    position: 'absolute', width: 280, height: 188,
+    position: 'absolute', width: 340, height: 228,
     top: 0, left: 0,
   },
   front: {
@@ -99,11 +91,11 @@ const styles = StyleSheet.create({
   },
   coverText: {
     fontFamily: 'CormorantGaramond-LightItalic',
-    fontSize: 16,
+    fontSize: 19,
     color: '#1a1a1a',
     textAlign: 'center',
-    lineHeight: 26,
-    paddingHorizontal: 24,
+    lineHeight: 30,
+    paddingHorizontal: 28,
   },
   tapWord: {
     borderBottomWidth: 1,

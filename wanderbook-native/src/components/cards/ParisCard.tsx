@@ -25,16 +25,16 @@ export default function ParisCard({
 }
 
 const styles = StyleSheet.create({
-  card: { position: 'absolute', top: 0, left: 0, width: 280, height: 188, backgroundColor: '#fff', overflow: 'hidden' },
+  card: { position: 'absolute', top: 0, left: 0, width: 340, height: 228, backgroundColor: '#fff', overflow: 'hidden' },
   eiffel: {
-    position: 'absolute', right: -6, top: -24,
-    height: 206, width: 120,
+    position: 'absolute', right: -7, top: -29,
+    height: 250, width: 145,
     opacity: 0.9,
     zIndex: 2,
   },
   name: {
-    position: 'absolute', bottom: 4, left: 22, zIndex: 3,
-    fontSize: 78, lineHeight: 78,
+    position: 'absolute', bottom: 5, left: 27, zIndex: 3,
+    fontSize: 95, lineHeight: 95,
     letterSpacing: -2,
     color: '#1a1a1a',
   },

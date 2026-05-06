@@ -25,28 +25,28 @@ export default function BaliCard({
 
 const styles = StyleSheet.create({
   card: {
-    position: 'absolute', width: 280, height: 188,
+    position: 'absolute', width: 340, height: 228,
     backgroundColor: '#fff', overflow: 'hidden',
     alignItems: 'center', justifyContent: 'center',
   },
   name: {
-    fontSize: 100, lineHeight: 100,
+    fontSize: 121, lineHeight: 121,
     letterSpacing: 4,
     color: '#1a1a1a',
-    marginTop: -8,
+    marginTop: -10,
   },
   verticalWrap: {
-    position: 'absolute', right: 22, top: 0, bottom: 0,
+    position: 'absolute', right: 27, top: 0, bottom: 0,
     zIndex: 4,
     alignItems: 'center', justifyContent: 'center',
   },
   country: {
     fontFamily: 'DMSans-Regular',
-    fontSize: 7, letterSpacing: 3,
+    fontSize: 8, letterSpacing: 3,
     color: '#91040C',
     textTransform: 'uppercase',
     transform: [{ rotate: '90deg' }],
-    width: 80,
+    width: 97,
     textAlign: 'center',
   },
 });

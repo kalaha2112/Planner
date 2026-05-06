@@ -5,8 +5,11 @@ import KyotoCard   from './cards/KyotoCard';
 import BaliCard    from './cards/BaliCard';
 import MoroccoCard from './cards/MoroccoCard';
 import LisbonCard  from './cards/LisbonCard';
+import StickerLayer from './StickerLayer';
 
 const CARDS = [ParisCard, KyotoCard, BaliCard, MoroccoCard, LisbonCard];
+
+const HALF_H = 114;
 
 const Z: Record<PageState, number> = {
   'waiting':     2,
@@ -31,7 +34,15 @@ export default function TripPage({ index, trip, pageState, rotateAnim }: Props) 
     outputRange: ['-180deg', '0deg', '88deg'],
   });
 
-  const HALF_H = 94;
+  const frontOpacity = rotateAnim.interpolate({
+    inputRange:  [-180, -92, -88, 88],
+    outputRange: [0, 0, 1, 1],
+  });
+
+  const backOpacity = rotateAnim.interpolate({
+    inputRange:  [-180, -92, -88, 88],
+    outputRange: [1, 1, 0, 0],
+  });
 
   return (
     <Animated.View
@@ -48,24 +59,29 @@ export default function TripPage({ index, trip, pageState, rotateAnim }: Props) 
         },
       ]}
     >
-      <View style={styles.inner}>
-        <View style={styles.topEdge} />
+      {/* Front face */}
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: frontOpacity }]}>
+        <View style={styles.inner}>
+          <View style={styles.topEdge} />
+          <Card
+            customName={trip.customName}
+            customCountry={trip.customCountry}
+            titleFont={trip.titleFont}
+          />
+          <StickerLayer trip={trip} />
+          <Text style={styles.pageNum}>{String(index + 1).padStart(2, '0')}</Text>
+        </View>
+      </Animated.View>
 
-        <Card
-          customName={trip.customName}
-          customCountry={trip.customCountry}
-          titleFont={trip.titleFont}
-        />
-
-        <Text style={styles.pageNum}>{String(index + 1).padStart(2, '0')}</Text>
-      </View>
+      {/* Back face — off-white blank */}
+      <Animated.View style={[StyleSheet.absoluteFill, styles.backFace, { opacity: backOpacity }]} />
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   page: {
-    position: 'absolute', width: 280, height: 188, top: 0, left: 0,
+    position: 'absolute', width: 340, height: 228, top: 0, left: 0,
   },
   inner: {
     flex: 1,
@@ -77,6 +93,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 20,
     elevation: 4,
+  },
+  backFace: {
+    backgroundColor: '#f5f3ef',
+    borderRadius: 1,
   },
   topEdge: {
     position: 'absolute', top: 0, left: 0, right: 0,
