@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { Trip, useTripStore } from '../store/tripStore';
 import { useBookDimensions } from '../hooks/useBookDimensions';
-import EditSheet    from './EditSheet';
+import CardEditor   from './CardEditor';
 import ParisCard    from './cards/ParisCard';
 import KyotoCard    from './cards/KyotoCard';
 import BaliCard     from './cards/BaliCard';
@@ -582,7 +582,7 @@ export default function TripOverview({ trip, index, visible, onClose }: Props) {
         />
       )}
 
-      <EditSheet
+      <CardEditor
         trip={trip}
         visible={showEdit}
         onClose={() => setShowEdit(false)}

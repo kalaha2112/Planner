@@ -4,18 +4,32 @@ export type PageState = 'waiting' | 'active' | 'flipping-up' | 'past' | 'incomin
 
 export interface CardElement {
   id: string;
-  type: 'image' | 'text';
+  type: 'image' | 'text' | 'path';
   x: number;
   y: number;
   scale: number;
   rotation: number;
+  zIndex?: number;
+  // image
   uri?: string;
   width?: number;
   height?: number;
+  // text
   text?: string;
   fontFamily?: string;
   fontSize?: number;
   color?: string;
+  // path
+  pathD?: string;
+  strokeColor?: string;
+  strokeWidth?: number;
+  strokeOpacity?: number;
+  draggable?: boolean;  // true = brush (movable/scalable), false = pen/highlighter (fixed)
+}
+
+export interface StickerTemplate {
+  id: string;
+  uri: string;
 }
 
 export interface Trip {
@@ -48,6 +62,7 @@ interface AppState {
   isAnimating: boolean;
   pageStates: PageState[];
   trips: Trip[];
+  stickerTemplates: StickerTemplate[];
 
   setOpen: (v: boolean) => void;
   setActiveIdx: (i: number) => void;
@@ -63,6 +78,9 @@ interface AppState {
   addElement: (tripId: string, el: CardElement) => void;
   updateElement: (tripId: string, id: string, patch: Partial<CardElement>) => void;
   removeElement: (tripId: string, id: string) => void;
+  setElements: (tripId: string, elements: CardElement[]) => void;
+  addStickerTemplate: (t: StickerTemplate) => void;
+  removeStickerTemplate: (id: string) => void;
 }
 
 const TRIPS: Trip[] = [
@@ -74,11 +92,12 @@ const TRIPS: Trip[] = [
 ];
 
 export const useTripStore = create<AppState>((set) => ({
-  isOpen:      false,
-  activeIdx:   1,
-  isAnimating: false,
-  pageStates:  ['waiting', 'waiting', 'waiting', 'waiting', 'waiting'],
-  trips:       TRIPS,
+  isOpen:           false,
+  activeIdx:        1,
+  isAnimating:      false,
+  pageStates:       ['waiting', 'waiting', 'waiting', 'waiting', 'waiting'],
+  trips:            TRIPS,
+  stickerTemplates: [],
 
   setOpen:      (v) => set({ isOpen: v }),
   setActiveIdx: (i) => set({ activeIdx: i }),
@@ -120,4 +139,15 @@ export const useTripStore = create<AppState>((set) => ({
         t.id === tripId ? { ...t, elements: t.elements.filter((e) => e.id !== id) } : t
       ),
     })),
+
+  setElements: (tripId, elements) =>
+    set((s) => ({
+      trips: s.trips.map((t) => (t.id === tripId ? { ...t, elements } : t)),
+    })),
+
+  addStickerTemplate: (t) =>
+    set((s) => ({ stickerTemplates: [...s.stickerTemplates, t] })),
+
+  removeStickerTemplate: (id) =>
+    set((s) => ({ stickerTemplates: s.stickerTemplates.filter((t) => t.id !== id) })),
 }));

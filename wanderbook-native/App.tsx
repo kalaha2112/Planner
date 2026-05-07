@@ -24,6 +24,7 @@ import TripPage    from './src/components/TripPage';
 import PageDots    from './src/components/PageDots';
 import EditSheet    from './src/components/EditSheet';
 import TripOverview from './src/components/TripOverview';
+import CardEditor   from './src/components/CardEditor';
 
 const SWIPE_THRESHOLD = 38;
 
@@ -174,7 +175,7 @@ function SuTravelBook() {
         </Animated.View>
       </View>
 
-      <EditSheet
+      <CardEditor
         trip={editingIdx !== null ? trips[editingIdx] : null}
         visible={editingIdx !== null}
         onClose={() => setEditingIdx(null)}
