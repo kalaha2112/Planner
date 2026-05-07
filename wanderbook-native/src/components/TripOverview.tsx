@@ -4,7 +4,12 @@ import {
   StyleSheet, Platform, StatusBar, ScrollView, Image,
 } from 'react-native';
 import { Trip, useTripStore } from '../store/tripStore';
-import EditSheet from './EditSheet';
+import EditSheet    from './EditSheet';
+import ParisCard    from './cards/ParisCard';
+import KyotoCard    from './cards/KyotoCard';
+import BaliCard     from './cards/BaliCard';
+import MoroccoCard  from './cards/MoroccoCard';
+import LisbonCard   from './cards/LisbonCard';
 
 type Section = 'itinerary' | 'ootd' | 'budget' | 'hotel' | 'flight';
 
@@ -308,13 +313,7 @@ function FlightDetail({ trip, onBack, onEdit }: { trip: Trip; onBack: () => void
 // ─────────────────────────────────────────────
 // Main overview content
 // ─────────────────────────────────────────────
-const CARDS = [
-  require('./cards/ParisCard').default,
-  require('./cards/KyotoCard').default,
-  require('./cards/BaliCard').default,
-  require('./cards/MoroccoCard').default,
-  require('./cards/LisbonCard').default,
-];
+const CARDS = [ParisCard, KyotoCard, BaliCard, MoroccoCard, LisbonCard];
 
 function OverviewContent({
   trip,
