@@ -66,9 +66,12 @@ function DraggableEl({
   // ── Main drag/tap PanResponder ──────────────────────────────────────────────
   const dragPan = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () =>
-        // Let TextInput handle its own touches when a text element is selected
-        !(R.current.isSelected && R.current.el.type === 'text'),
+      onStartShouldSetPanResponder: () => {
+        const { isSelected, el } = R.current;
+        // Let TextInput handle touches when text is selected or empty
+        if (el.type === 'text' && (isSelected || !el.text)) return false;
+        return true;
+      },
       onPanResponderGrant: () => {
         startPos.current = { x: R.current.el.x, y: R.current.el.y };
         moved.current = false;
@@ -155,7 +158,7 @@ function DraggableEl({
             </TouchableOpacity>
             <View style={[styles.actionBar, { position: 'absolute', top: ph + 4, left: 0 }]}>
               <TouchableOpacity style={styles.actionBtn} onPress={onDuplicate}>
-                <Text style={styles.actionBtnText}>⧉</Text>
+                <Text style={[styles.actionBtnText, styles.actionBtnDup]}>⧉</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.actionBtn} onPress={onBringFront}>
                 <Text style={styles.actionBtnText}>↑</Text>
@@ -198,10 +201,13 @@ function DraggableEl({
             strokeLinejoin="round"
           />
         </Svg>
-      ) : isSelected ? (
+      ) : (isSelected || !el.text) && el.type === 'text' ? (
         <TextInput
-          value={el.text}
+          value={el.text ?? ''}
           onChangeText={(t) => onUpdate({ text: t })}
+          placeholder="T"
+          placeholderTextColor="#1a1a1a"
+          autoFocus={!el.text}
           style={{
             fontFamily: el.fontFamily ?? 'DMSans-Regular',
             fontSize:   (el.fontSize  ?? 14) * el.scale,
@@ -232,7 +238,7 @@ function DraggableEl({
 
           {/* Rotate handle — top center, above element — shows ↻ */}
           <View
-            style={[styles.rotateHandle, { position: 'absolute', top: -28, left: w / 2 - 11 }]}
+            style={[styles.rotateHandle, { position: 'absolute', top: -21, left: w / 2 - 8 }]}
             {...rotatePan.panHandlers}
           >
             <Text style={styles.rotateHandleText}>↻</Text>
@@ -240,7 +246,7 @@ function DraggableEl({
 
           {/* Resize handle — bottom-right corner */}
           <View
-            style={[styles.resizeHandle, { position: 'absolute', bottom: -8, right: -8 }]}
+            style={[styles.resizeHandle, { position: 'absolute', bottom: -6, right: -6 }]}
             {...resizePan.panHandlers}
           />
 
@@ -252,7 +258,7 @@ function DraggableEl({
           {/* Action bar — below element */}
           <View style={[styles.actionBar, { position: 'absolute', top: h + 4, left: 0 }]}>
             <TouchableOpacity style={styles.actionBtn} onPress={onDuplicate}>
-              <Text style={styles.actionBtnText}>⧉</Text>
+              <Text style={[styles.actionBtnText, styles.actionBtnDup]}>⧉</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionBtn} onPress={onBringFront}>
               <Text style={styles.actionBtnText}>↑</Text>
@@ -358,8 +364,8 @@ const styles = StyleSheet.create({
   },
 
   rotateHandle: {
-    width: 22, height: 22,
-    borderRadius: 11,
+    width: 16, height: 16,
+    borderRadius: 8,
     backgroundColor: '#fff',
     borderWidth: 1.5,
     borderColor: '#1a1a1a',
@@ -372,13 +378,13 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   rotateHandleText: {
-    fontSize: 13, color: '#1a1a1a',
-    lineHeight: 16, marginTop: -1,
+    fontSize: 10, color: '#1a1a1a',
+    lineHeight: 12, marginTop: -1,
   },
 
   resizeHandle: {
-    width: 16, height: 16,
-    borderRadius: 4,
+    width: 12, height: 12,
+    borderRadius: 3,
     backgroundColor: '#fff',
     borderWidth: 1.5,
     borderColor: '#1a1a1a',
@@ -407,6 +413,7 @@ const styles = StyleSheet.create({
   },
   actionBtn:     { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 4 },
   actionBtnText: { color: '#1a1a1a', fontSize: 11, fontFamily: 'DMSans-Regular' },
+  actionBtnDup:  { marginTop: 2 },
 
   textSizeBar: {
     flexDirection: 'row', gap: 1,

@@ -53,6 +53,8 @@ export interface Trip {
   flightTo?: string;
   flightDate?: string;
   flightNumber?: string;
+  countries?: string[];   // up to 4
+  cities?: string[][];    // [countryIdx][cityIdx], up to 4×2
   elements: CardElement[];
 }
 
@@ -73,7 +75,8 @@ interface AppState {
     'customName' | 'customCountry' | 'titleFont' | 'notes' |
     'dateRange' | 'daysAway' | 'budgetTotal' | 'budgetSpent' |
     'hotelLocation' | 'hotelNights' | 'itinerary' |
-    'flightFrom' | 'flightTo' | 'flightDate' | 'flightNumber'
+    'flightFrom' | 'flightTo' | 'flightDate' | 'flightNumber' |
+    'countries' | 'cities'
   >>) => void;
   addElement: (tripId: string, el: CardElement) => void;
   updateElement: (tripId: string, id: string, patch: Partial<CardElement>) => void;

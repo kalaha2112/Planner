@@ -25,8 +25,19 @@ const TOOLS: { id: Tool; icon: string; label: string }[] = [
   { id: 'trip',    icon: '✦',  label: 'Trip'    },
 ];
 
-const PALETTE      = ['#1a1a1a', '#ffffff', '#91040C', '#2563eb', '#16a34a', '#d97706', '#ec4899', '#71717a'];
-const BRUSH_SIZES  = [3, 6, 10, 16, 24];
+const PALETTE        = ['#1a1a1a', '#ffffff', '#91040C', '#2563eb', '#16a34a', '#d97706', '#ec4899', '#71717a'];
+const BRUSH_PALETTE  = ['#1a1a1a', '#ffffff', '#91040C', '#2563eb', '#16a34a', '#d97706', '#facc15', '#ef4444'];
+const BRUSH_PASTEL   = [
+  'rgba(250,204,21,0.45)',  // yellow
+  'rgba(239,68,68,0.45)',   // red
+  'rgba(37,99,235,0.45)',   // blue
+  'rgba(22,163,74,0.45)',   // green
+  'rgba(217,119,6,0.45)',   // orange
+  'rgba(20,184,166,0.45)',  // teal
+  'rgba(147,51,234,0.45)',  // purple
+  'rgba(236,72,153,0.45)',  // pink
+];
+const BRUSH_SIZES    = [3, 6, 10, 16, 24];
 
 function makeId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -58,6 +69,7 @@ function DrawPanel({
 
   const activeColor   = brush === 'pen' ? penColor : brushColor;
   const onActiveColor = brush === 'pen' ? onPenColor : onBrushColor;
+  const solidPalette  = brush === 'brush' ? BRUSH_PALETTE : PALETTE;
 
   return (
     <View style={styles.panel}>
@@ -80,9 +92,9 @@ function DrawPanel({
         <Text style={styles.panelHint}>Swipe over any element to erase it. A cursor shows your path.</Text>
       ) : (
         <>
-          {/* Color palette */}
+          {/* Solid color row */}
           <View style={styles.panelRow}>
-            {PALETTE.map((c) => (
+            {solidPalette.map((c) => (
               <TouchableOpacity
                 key={c}
                 style={[
@@ -95,7 +107,24 @@ function DrawPanel({
             ))}
           </View>
 
-          {/* Brush thickness — only for brush tool */}
+          {/* Pastel semi-transparent row — brush only */}
+          {brush === 'brush' && (
+            <View style={styles.panelRow}>
+              {BRUSH_PASTEL.map((c) => (
+                <TouchableOpacity
+                  key={c}
+                  style={[
+                    styles.colorDot,
+                    { backgroundColor: c, borderColor: '#e0e0e0' },
+                    activeColor === c && styles.colorDotActive,
+                  ]}
+                  onPress={() => onActiveColor(c)}
+                />
+              ))}
+            </View>
+          )}
+
+          {/* Brush thickness */}
           {brush === 'brush' && (
             <View style={styles.thicknessRow}>
               <Text style={styles.thicknessLabel}>SIZE</Text>
@@ -140,53 +169,44 @@ function TextPanel({ onAddText }: { onAddText: () => void }) {
 
 // ─── Trip details panel ───────────────────────────────────────────────────────
 function TripPanel({ trip }: { trip: Trip }) {
-  const { updateTrip, addElement } = useTripStore();
-  const [name,     setName]     = useState(trip.customName    ?? trip.name);
-  const [days,     setDays]     = useState(trip.daysAway      ?? '');
-  const [dateRange, setDateRange] = useState(trip.dateRange   ?? '');
-  const [budget,   setBudget]   = useState(trip.budgetTotal != null ? String(trip.budgetTotal) : '');
-  const [spent,    setSpent]    = useState(trip.budgetSpent   != null ? String(trip.budgetSpent) : '');
-  const [hotel,    setHotel]    = useState(trip.hotelLocation ?? '');
-  const [nights,   setNights]   = useState(trip.hotelNights   != null ? String(trip.hotelNights) : '');
-  const [fFrom,    setFFrom]    = useState(trip.flightFrom    ?? '');
-  const [fTo,      setFTo]      = useState(trip.flightTo      ?? '');
-  const [fDate,    setFDate]    = useState(trip.flightDate    ?? '');
-  const [fNum,     setFNum]     = useState(trip.flightNumber  ?? '');
+  const { updateTrip } = useTripStore();
+  const [name,      setName]      = useState(trip.customName ?? trip.name);
+  const [dateRange, setDateRange] = useState(trip.dateRange  ?? '');
+  const [countries, setCountries] = useState<string[]>(() => {
+    const a = trip.countries ?? [];
+    return [a[0] ?? '', a[1] ?? '', a[2] ?? '', a[3] ?? ''];
+  });
+  const [cities, setCities] = useState<string[][]>(() => {
+    const a = trip.cities ?? [];
+    return [0, 1, 2, 3].map((i) => [a[i]?.[0] ?? '', a[i]?.[1] ?? '']);
+  });
 
   function save() {
     updateTrip(trip.id, {
-      customName:    name.trim()    || undefined,
-      daysAway:      days.trim()    || undefined,
+      customName:    name.trim()      || undefined,
       dateRange:     dateRange.trim() || undefined,
-      budgetTotal:   budget ? Number(budget) : undefined,
-      budgetSpent:   spent  ? Number(spent)  : undefined,
-      hotelLocation: hotel.trim()   || undefined,
-      hotelNights:   nights ? parseInt(nights, 10) : undefined,
-      flightFrom:    fFrom.trim()   || undefined,
-      flightTo:      fTo.trim()     || undefined,
-      flightDate:    fDate.trim()   || undefined,
-      flightNumber:  fNum.trim()    || undefined,
+      customCountry: countries.filter(Boolean).join(', ') || undefined,
+      countries,
+      cities,
     });
   }
 
-  function stamp(text: string) {
-    if (!text.trim()) return;
-    addElement(trip.id, {
-      id: makeId(), type: 'text',
-      x: 20, y: 170, scale: 1, rotation: 0,
-      text: text.trim(),
-      fontFamily: trip.titleFont,
-      fontSize: 14,
-      color: '#1a1a1a',
-      zIndex: 100,
-    });
+  function setCountry(i: number, v: string) {
+    setCountries((c) => { const n = [...c]; n[i] = v; return n; });
+  }
+  function setCity(ci: number, cj: number, v: string) {
+    setCities((c) => { const n = c.map((r) => [...r]); n[ci][cj] = v; return n; });
   }
 
   return (
-    <ScrollView style={styles.tripScroll} showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled">
-      <View style={styles.tripRow}>
-        <View style={styles.tripField}>
+    <ScrollView
+      style={styles.tripScroll}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
+      {/* ── Full-width top fields ── */}
+      <View style={styles.tripFullRow}>
+        <View style={styles.tripHalf}>
           <Text style={styles.tripLabel}>TRIP NAME</Text>
           <TextInput
             style={styles.tripInput}
@@ -196,67 +216,60 @@ function TripPanel({ trip }: { trip: Trip }) {
             returnKeyType="done"
           />
         </View>
-        <TouchableOpacity style={styles.stampBtn} onPress={() => stamp(name)}>
-          <Text style={styles.stampBtnText}>→ card</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.tripRow}>
-        <View style={styles.tripField}>
-          <Text style={styles.tripLabel}>DAYS AWAY</Text>
+        <View style={styles.tripHalf}>
+          <Text style={styles.tripLabel}>DATE RANGE</Text>
           <TextInput
             style={styles.tripInput}
-            value={days}
-            onChangeText={setDays}
+            value={dateRange}
+            onChangeText={setDateRange}
             onBlur={save}
-            placeholder="e.g. 7 days away"
+            placeholder="May 15 – 22"
             placeholderTextColor="#ccc"
             returnKeyType="done"
           />
         </View>
-        <TouchableOpacity style={styles.stampBtn} onPress={() => stamp(days)}>
-          <Text style={styles.stampBtnText}>→ card</Text>
-        </TouchableOpacity>
       </View>
 
-      <Text style={styles.tripLabel} >DATE RANGE</Text>
-      <TextInput style={styles.tripInput} value={dateRange} onChangeText={setDateRange} onBlur={save}
-        placeholder="May 15 – 22, 2026" placeholderTextColor="#ccc" returnKeyType="done" />
-
-      <View style={styles.halfRow}>
-        <View style={styles.halfField}>
-          <Text style={styles.tripLabel}>BUDGET</Text>
-          <TextInput style={styles.tripInput} value={budget} onChangeText={setBudget} onBlur={save}
-            keyboardType="numeric" placeholder="5000" placeholderTextColor="#ccc" returnKeyType="done" />
+      {/* ── Country + Cities rows ── */}
+      {[0, 1, 2, 3].map((i) => (
+        <View key={i} style={styles.tripCountryRow}>
+          {/* Left: country */}
+          <View style={styles.tripCountryCol}>
+            <Text style={styles.tripLabel}>COUNTRY {i + 1}</Text>
+            <TextInput
+              style={styles.tripInput}
+              value={countries[i]}
+              onChangeText={(v) => setCountry(i, v)}
+              onBlur={save}
+              placeholder={`Country ${i + 1}`}
+              placeholderTextColor="#ddd"
+              returnKeyType="done"
+            />
+          </View>
+          {/* Right: 2 cities (sub-input) */}
+          <View style={styles.tripCitiesCol}>
+            <Text style={styles.tripLabel}>CITIES</Text>
+            <TextInput
+              style={styles.tripInput}
+              value={cities[i][0]}
+              onChangeText={(v) => setCity(i, 0, v)}
+              onBlur={save}
+              placeholder="City 1"
+              placeholderTextColor="#ddd"
+              returnKeyType="next"
+            />
+            <TextInput
+              style={[styles.tripInput, { marginTop: 3 }]}
+              value={cities[i][1]}
+              onChangeText={(v) => setCity(i, 1, v)}
+              onBlur={save}
+              placeholder="City 2"
+              placeholderTextColor="#ddd"
+              returnKeyType="done"
+            />
+          </View>
         </View>
-        <View style={styles.halfField}>
-          <Text style={styles.tripLabel}>SPENT</Text>
-          <TextInput style={styles.tripInput} value={spent} onChangeText={setSpent} onBlur={save}
-            keyboardType="numeric" placeholder="1200" placeholderTextColor="#ccc" returnKeyType="done" />
-        </View>
-      </View>
-
-      <Text style={styles.tripLabel}>HOTEL</Text>
-      <TextInput style={styles.tripInput} value={hotel} onChangeText={setHotel} onBlur={save}
-        placeholder="Hotel name / location" placeholderTextColor="#ccc" returnKeyType="done" />
-
-      <Text style={styles.tripLabel}>NIGHTS</Text>
-      <TextInput style={styles.tripInput} value={nights} onChangeText={setNights} onBlur={save}
-        keyboardType="numeric" placeholder="7" placeholderTextColor="#ccc" returnKeyType="done" />
-
-      <Text style={styles.tripLabel}>FLIGHT</Text>
-      <View style={styles.halfRow}>
-        <TextInput style={[styles.tripInput, styles.halfField]} value={fFrom} onChangeText={setFFrom} onBlur={save}
-          placeholder="From" placeholderTextColor="#ccc" returnKeyType="next" />
-        <TextInput style={[styles.tripInput, styles.halfField]} value={fTo} onChangeText={setFTo} onBlur={save}
-          placeholder="To" placeholderTextColor="#ccc" returnKeyType="next" />
-      </View>
-      <View style={styles.halfRow}>
-        <TextInput style={[styles.tripInput, styles.halfField]} value={fDate} onChangeText={setFDate} onBlur={save}
-          placeholder="Date" placeholderTextColor="#ccc" returnKeyType="next" />
-        <TextInput style={[styles.tripInput, styles.halfField]} value={fNum} onChangeText={setFNum} onBlur={save}
-          placeholder="Flight no." placeholderTextColor="#ccc" returnKeyType="done" />
-      </View>
+      ))}
 
       <View style={{ height: 24 }} />
     </ScrollView>
@@ -307,7 +320,7 @@ export default function CardEditor({ trip: tripProp, visible, onClose }: Props) 
     addElement(trip.id, {
       id: makeId(), type: 'text',
       x: 100, y: 90, scale: 1, rotation: 0,
-      text: 'Label',
+      text: '',
       fontFamily: 'DMSans-Regular',
       fontSize: 14,
       color: '#1a1a1a',
@@ -579,26 +592,18 @@ const styles = StyleSheet.create({
 
   // Trip panel
   tripScroll: { flex: 1 },
-  tripRow:    { flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginBottom: 8 },
-  tripField:  { flex: 1 },
   tripLabel: {
     fontFamily: 'DMSans-Medium', fontSize: 8, letterSpacing: 2,
-    color: '#bbb', marginBottom: 4, marginTop: 10, textTransform: 'uppercase',
+    color: '#bbb', marginBottom: 3, marginTop: 10, textTransform: 'uppercase',
   },
   tripInput: {
-    fontFamily: 'DMSans-Regular', fontSize: 14, color: '#1a1a1a',
+    fontFamily: 'DMSans-Regular', fontSize: 13, color: '#1a1a1a',
     borderBottomWidth: 1, borderBottomColor: '#e8e8e8',
-    paddingVertical: 4,
+    paddingVertical: 3,
   },
-  stampBtn: {
-    paddingVertical: 6, paddingHorizontal: 12,
-    backgroundColor: 'rgba(145,4,12,0.08)',
-    borderRadius: 4, marginBottom: 1,
-  },
-  stampBtnText: {
-    fontFamily: 'DMSans-Regular', fontSize: 9,
-    color: '#91040C', letterSpacing: 0.5,
-  },
-  halfRow:   { flexDirection: 'row', gap: 12 },
-  halfField: { flex: 1 },
+  tripFullRow:    { flexDirection: 'row', gap: 12 },
+  tripHalf:       { flex: 1 },
+  tripCountryRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  tripCountryCol: { flex: 1 },
+  tripCitiesCol:  { flex: 1 },
 });

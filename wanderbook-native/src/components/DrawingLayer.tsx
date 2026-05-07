@@ -180,7 +180,7 @@ export default function DrawingLayer({
           pointerEvents="none"
           style={[
             styles.eraserCursor,
-            { left: eraserPos.x - 10, top: eraserPos.y - 6 },
+            { left: eraserPos.x - 5, top: eraserPos.y - 3 },
           ]}
         />
       )}
@@ -191,8 +191,8 @@ export default function DrawingLayer({
 const styles = StyleSheet.create({
   eraserCursor: {
     position: 'absolute',
-    width: 20, height: 12,
-    borderRadius: 2,
+    width: 10, height: 6,
+    borderRadius: 1,
     backgroundColor: '#d0d0d0',
     borderWidth: 1,
     borderColor: '#999',
