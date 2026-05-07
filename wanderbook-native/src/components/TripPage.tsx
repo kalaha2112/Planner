@@ -6,6 +6,7 @@ import BaliCard    from './cards/BaliCard';
 import MoroccoCard from './cards/MoroccoCard';
 import LisbonCard  from './cards/LisbonCard';
 import StickerLayer from './StickerLayer';
+import { useBookDimensions } from '../hooks/useBookDimensions';
 
 const CARDS = [ParisCard, KyotoCard, BaliCard, MoroccoCard, LisbonCard];
 
@@ -28,6 +29,7 @@ interface Props {
 }
 
 export default function TripPage({ index, trip, pageState, rotateAnim, onTitlePress }: Props) {
+  const { bookScale } = useBookDimensions();
   if (pageState === 'waiting') return null;
 
   const Card = CARDS[trip.cardDesign];
@@ -72,7 +74,7 @@ export default function TripPage({ index, trip, pageState, rotateAnim, onTitlePr
             titleFont={trip.titleFont}
             onTitlePress={onTitlePress}
           />
-          <StickerLayer trip={trip} />
+          <StickerLayer trip={trip} bookScale={bookScale} />
           <Text style={styles.pageNum}>{String(index + 1).padStart(2, '0')}</Text>
         </View>
       </Animated.View>

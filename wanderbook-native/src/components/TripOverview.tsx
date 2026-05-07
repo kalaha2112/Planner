@@ -4,6 +4,7 @@ import {
   StyleSheet, Platform, StatusBar, ScrollView, Image,
 } from 'react-native';
 import { Trip, useTripStore } from '../store/tripStore';
+import { useBookDimensions } from '../hooks/useBookDimensions';
 import EditSheet    from './EditSheet';
 import ParisCard    from './cards/ParisCard';
 import KyotoCard    from './cards/KyotoCard';
@@ -329,6 +330,7 @@ function OverviewContent({
   onEdit: () => void;
 }) {
   const [activeDay, setActiveDay] = useState(0);
+  const { isTablet } = useBookDimensions();
 
   const displayName = trip.customName    ?? trip.name;
   const displayCtry = trip.customCountry ?? trip.country;
@@ -352,7 +354,7 @@ function OverviewContent({
       </TouchableOpacity>
 
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, isTablet && styles.scrollTablet]}
         showsVerticalScrollIndicator={false}
       >
         {/* ── Hero ── */}
@@ -537,7 +539,7 @@ function OverviewContent({
       </ScrollView>
 
       <TouchableOpacity
-        style={styles.editFab}
+        style={[styles.editFab, isTablet && styles.editFabTablet]}
         onPress={onEdit}
         activeOpacity={0.8}
       >
@@ -609,6 +611,7 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
     gap: 12,
   },
+  scrollTablet: { paddingHorizontal: 48 },
 
   // ── Card shell ──
   card: {
@@ -745,6 +748,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     alignItems: 'center',
   },
+  editFabTablet: { left: 48, right: 48 },
   editFabText: {
     fontFamily: 'DMSans-Regular', fontSize: 10, letterSpacing: 2.5,
     color: '#fff', textTransform: 'uppercase',

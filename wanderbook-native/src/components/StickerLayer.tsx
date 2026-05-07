@@ -25,11 +25,12 @@ interface ElementProps {
   onSelect: () => void;
   onUpdate: (patch: Partial<CardElement>) => void;
   onRemove: () => void;
+  bookScale: number;
 }
 
-function DraggableEl({ el, isSelected, onSelect, onUpdate, onRemove }: ElementProps) {
-  const refs = useRef({ el, isSelected, onSelect, onUpdate, onRemove });
-  refs.current = { el, isSelected, onSelect, onUpdate, onRemove };
+function DraggableEl({ el, isSelected, onSelect, onUpdate, onRemove, bookScale }: ElementProps) {
+  const refs = useRef({ el, isSelected, onSelect, onUpdate, onRemove, bookScale });
+  refs.current = { el, isSelected, onSelect, onUpdate, onRemove, bookScale };
 
   const startPos   = useRef({ x: 0, y: 0 });
   const moved      = useRef(false);
@@ -50,17 +51,19 @@ function DraggableEl({ el, isSelected, onSelect, onUpdate, onRemove }: ElementPr
           moved.current = true;
           if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
         }
+        const bs = refs.current.bookScale;
         refs.current.onUpdate({
-          x: startPos.current.x + g.dx,
-          y: startPos.current.y + g.dy,
+          x: startPos.current.x + g.dx / bs,
+          y: startPos.current.y + g.dy / bs,
         });
       },
       onPanResponderRelease: (_, g) => {
         if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
+        const bs = refs.current.bookScale;
         if (!moved.current) refs.current.onSelect();
         else refs.current.onUpdate({
-          x: startPos.current.x + g.dx,
-          y: startPos.current.y + g.dy,
+          x: startPos.current.x + g.dx / bs,
+          y: startPos.current.y + g.dy / bs,
         });
       },
     })
@@ -109,9 +112,9 @@ function DraggableEl({ el, isSelected, onSelect, onUpdate, onRemove }: ElementPr
   );
 }
 
-interface Props { trip: Trip; }
+interface Props { trip: Trip; bookScale?: number; }
 
-export default function StickerLayer({ trip }: Props) {
+export default function StickerLayer({ trip, bookScale = 1 }: Props) {
   const { updateElement, removeElement } = useTripStore();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -132,6 +135,7 @@ export default function StickerLayer({ trip }: Props) {
           onSelect={() => setSelectedId((p) => (p === el.id ? null : el.id))}
           onUpdate={(patch) => updateElement(trip.id, el.id, patch)}
           onRemove={() => { removeElement(trip.id, el.id); setSelectedId(null); }}
+          bookScale={bookScale}
         />
       ))}
 

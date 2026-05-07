@@ -3,6 +3,7 @@ import {
   Modal, View, Text, TextInput, ScrollView,
   TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Image, Alert,
 } from 'react-native';
+import { useBookDimensions } from '../hooks/useBookDimensions';
 import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import * as Clipboard from 'expo-clipboard';
@@ -34,6 +35,7 @@ type Tab = 'text' | 'trip' | 'stickers';
 
 export default function EditSheet({ trip, visible, onClose }: Props) {
   const { updateTrip, addElement, removeElement } = useTripStore();
+  const { isTablet } = useBookDimensions();
   const [tab, setTab]         = useState<Tab>('text');
   const [name, setName]       = useState('');
   const [country, setCountry] = useState('');
@@ -173,7 +175,7 @@ export default function EditSheet({ trip, visible, onClose }: Props) {
       <View style={styles.overlay}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.sheet}
+          style={[styles.sheet, isTablet && styles.sheetTablet]}
         >
           <View style={styles.handle} />
 
@@ -470,6 +472,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24, paddingBottom: 40, paddingTop: 12,
     maxHeight: '90%',
   },
+  sheetTablet: { maxWidth: 560, alignSelf: 'center', width: '100%' },
   handle: {
     alignSelf: 'center', width: 36, height: 4, borderRadius: 2,
     backgroundColor: '#e0e0e0', marginBottom: 16,

@@ -17,6 +17,7 @@ import { CormorantGaramond_300Light_Italic } from '@expo-google-fonts/cormorant-
 
 import { usePageFlip } from './src/hooks/usePageFlip';
 import { useTripStore } from './src/store/tripStore';
+import { useBookDimensions } from './src/hooks/useBookDimensions';
 import BookCover   from './src/components/BookCover';
 import BookOutline from './src/components/BookOutline';
 import TripPage    from './src/components/TripPage';
@@ -33,6 +34,9 @@ function SuTravelBook() {
     openBook, closeBook, goNext, goPrev, jumpTo,
   } = usePageFlip();
   const { trips } = useTripStore();
+  const { bookW, bookH } = useBookDimensions();
+  const outerW = bookW + 4;
+  const outerH = bookH + 4;
   const [editingIdx, setEditingIdx]   = useState<number | null>(null);
   const [overviewIdx, setOverviewIdx] = useState<number | null>(null);
 
@@ -94,34 +98,43 @@ function SuTravelBook() {
       </Animated.Text>
 
       {/*
-        bookContainer is 344×232 — 2px larger on each side than the book.
-        bookWrap sits inside at top:2, left:2.
-        BookOutline (344×232) sits at 0,0 on top, pointer-events:none.
+        Outer container scales dynamically (outerW×outerH).
+        Inner 344×232 View is scale-transformed to fill it.
+        bookWrap and BookOutline stay in 340×228 / 344×232 coordinate space.
       */}
-      <View style={styles.bookContainer}>
-        <View style={styles.bookWrap} {...panResponder.panHandlers}>
-          {trips.map((trip, i) => (
-            <TripPage
-              key={trip.id}
-              index={i}
-              trip={trip}
-              pageState={pageStates[i]}
-              rotateAnim={pageAnims[i]}
-              onTitlePress={pageStates[i] === 'active' ? () => setOverviewIdx(i) : undefined}
-            />
-          ))}
-          <View pointerEvents={isOpen ? 'none' : 'auto'}>
-            <BookCover coverAnim={coverAnim} onOpen={openBook} />
+      <View style={{ width: outerW, height: outerH }}>
+        <View style={{
+          position: 'absolute', width: 344, height: 232, top: 0, left: 0,
+          transform: [
+            { translateX: (outerW - 344) / 2 },
+            { translateY: (outerH - 232) / 2 },
+            { scale: outerW / 344 },
+          ],
+        }}>
+          <View style={styles.bookWrap} {...panResponder.panHandlers}>
+            {trips.map((trip, i) => (
+              <TripPage
+                key={trip.id}
+                index={i}
+                trip={trip}
+                pageState={pageStates[i]}
+                rotateAnim={pageAnims[i]}
+                onTitlePress={pageStates[i] === 'active' ? () => setOverviewIdx(i) : undefined}
+              />
+            ))}
+            <View pointerEvents={isOpen ? 'none' : 'auto'}>
+              <BookCover coverAnim={coverAnim} onOpen={openBook} />
+            </View>
           </View>
+          <BookOutline />
         </View>
-        <BookOutline />
       </View>
 
       {/*
         Fixed-height area below the book.
         Footer (when open) and map preview (when closed) share this space via cross-fade.
       */}
-      <View style={styles.belowBook}>
+      <View style={[styles.belowBook, { width: bookW }]}>
         {/* Footer */}
         <Animated.View
           style={[styles.footerInner, { opacity: footerOpacity }]}
@@ -216,8 +229,6 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans-Regular',
   },
 
-  // 2px padding so the outline isn't clipped
-  bookContainer: { width: 344, height: 232 },
   bookWrap: {
     position: 'absolute', top: 2, left: 2,
     width: 340, height: 228,
@@ -226,7 +237,6 @@ const styles = StyleSheet.create({
 
   // Fixed-height container — footer and map share this space via cross-fade
   belowBook: {
-    width: 340,
     height: 96,
     marginTop: 24,
   },
