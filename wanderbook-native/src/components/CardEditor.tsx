@@ -19,10 +19,10 @@ type Tool = 'select' | 'draw' | 'text' | 'sticker' | 'trip';
 
 const TOOLS: { id: Tool; icon: string; label: string }[] = [
   { id: 'select',  icon: '↖',  label: 'Select'  },
-  { id: 'draw',    icon: '✏️',  label: 'Draw'    },
+  { id: 'draw',    icon: '✎',  label: 'Draw'    },
   { id: 'text',    icon: 'T',   label: 'Text'    },
-  { id: 'sticker', icon: '⭐',  label: 'Sticker' },
-  { id: 'trip',    icon: '✈️',  label: 'Trip'    },
+  { id: 'sticker', icon: '◈',  label: 'Sticker' },
+  { id: 'trip',    icon: '✦',  label: 'Trip'    },
 ];
 
 const PALETTE       = ['#1a1a1a', '#ffffff', '#91040C', '#2563eb', '#16a34a', '#d97706', '#ec4899', '#71717a'];
@@ -507,15 +507,15 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#bbb',
     transform: [{ rotate: '-15deg' }],
     flexDirection: 'row',
   },
-  eraserPink:  { width: 18, backgroundColor: '#f4a0b0' },
-  eraserCream: { flex: 1,   backgroundColor: '#fdf3e3' },
+  eraserPink:  { width: 18, backgroundColor: '#c8c8c8' },
+  eraserCream: { flex: 1,   backgroundColor: '#f0f0f0' },
   eraserStripe: {
     position: 'absolute', left: 18, top: 0, bottom: 0,
-    width: 1.5, backgroundColor: '#d0b090',
+    width: 1.5, backgroundColor: '#aaa',
   },
 
   // Text panel

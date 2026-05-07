@@ -351,14 +351,14 @@ const styles = StyleSheet.create({
   bbox: {
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: '#91040C',
+    borderColor: '#333',
     borderRadius: 2,
   },
 
   rotateHandle: {
     width: 16, height: 16,
     borderRadius: 8,
-    backgroundColor: '#91040C',
+    backgroundColor: '#1a1a1a',
     borderWidth: 2,
     borderColor: '#fff',
     shadowColor: '#000',
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
   resizeHandle: {
     width: 14, height: 14,
     borderRadius: 3,
-    backgroundColor: '#91040C',
+    backgroundColor: '#1a1a1a',
     borderWidth: 2,
     borderColor: '#fff',
     shadowColor: '#000',
@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   textBarBtn:       { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  textBarBtnActive: { backgroundColor: '#91040C' },
+  textBarBtnActive: { backgroundColor: '#1a1a1a' },
   textBarText:      { fontFamily: 'DMSans-Regular', fontSize: 9, color: '#888' },
   textBarTextActive: { color: '#fff' },
 });
