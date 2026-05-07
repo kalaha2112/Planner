@@ -230,15 +230,17 @@ function DraggableEl({
             style={[styles.bbox, { position: 'absolute', top: 0, left: 0, width: w, height: h }]}
           />
 
-          {/* Rotate handle — top center, above element */}
+          {/* Rotate handle — top center, above element — shows ↻ */}
           <View
-            style={[styles.rotateHandle, { position: 'absolute', top: -26, left: w / 2 - 8 }]}
+            style={[styles.rotateHandle, { position: 'absolute', top: -28, left: w / 2 - 11 }]}
             {...rotatePan.panHandlers}
-          />
+          >
+            <Text style={styles.rotateHandleText}>↻</Text>
+          </View>
 
           {/* Resize handle — bottom-right corner */}
           <View
-            style={[styles.resizeHandle, { position: 'absolute', bottom: -7, right: -7 }]}
+            style={[styles.resizeHandle, { position: 'absolute', bottom: -8, right: -8 }]}
             {...resizePan.panHandlers}
           />
 
@@ -356,27 +358,33 @@ const styles = StyleSheet.create({
   },
 
   rotateHandle: {
-    width: 16, height: 16,
-    borderRadius: 8,
-    backgroundColor: '#1a1a1a',
-    borderWidth: 2,
-    borderColor: '#fff',
+    width: 22, height: 22,
+    borderRadius: 11,
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#1a1a1a',
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.15,
     shadowRadius: 2,
     elevation: 3,
   },
+  rotateHandleText: {
+    fontSize: 13, color: '#1a1a1a',
+    lineHeight: 16, marginTop: -1,
+  },
 
   resizeHandle: {
-    width: 14, height: 14,
-    borderRadius: 3,
-    backgroundColor: '#1a1a1a',
-    borderWidth: 2,
-    borderColor: '#fff',
+    width: 16, height: 16,
+    borderRadius: 4,
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#1a1a1a',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.15,
     shadowRadius: 2,
     elevation: 3,
   },
@@ -391,28 +399,31 @@ const styles = StyleSheet.create({
   deleteBadgeText: { color: '#fff', fontSize: 7, fontFamily: 'DMSans-Regular' },
 
   actionBar: {
-    flexDirection: 'row', gap: 2,
-    backgroundColor: 'rgba(26,26,26,0.82)',
+    flexDirection: 'row', gap: 1,
+    backgroundColor: '#fff',
     borderRadius: 6, padding: 3,
+    borderWidth: 1, borderColor: '#1a1a1a',
     zIndex: 20,
   },
   actionBtn:     { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 4 },
-  actionBtnText: { color: '#ddd', fontSize: 11, fontFamily: 'DMSans-Regular' },
+  actionBtnText: { color: '#1a1a1a', fontSize: 11, fontFamily: 'DMSans-Regular' },
 
   textSizeBar: {
-    flexDirection: 'row', gap: 2,
-    backgroundColor: 'rgba(26,26,26,0.82)',
+    flexDirection: 'row', gap: 1,
+    backgroundColor: '#fff',
     borderRadius: 6, padding: 3,
+    borderWidth: 1, borderColor: '#1a1a1a',
     zIndex: 20,
   },
   textFontBar: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 2,
-    backgroundColor: 'rgba(26,26,26,0.82)',
+    flexDirection: 'row', flexWrap: 'wrap', gap: 1,
+    backgroundColor: '#fff',
     borderRadius: 6, padding: 3,
+    borderWidth: 1, borderColor: '#1a1a1a',
     zIndex: 20,
   },
-  textBarBtn:       { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  textBarBtnActive: { backgroundColor: '#1a1a1a' },
-  textBarText:      { fontFamily: 'DMSans-Regular', fontSize: 9, color: '#888' },
+  textBarBtn:        { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  textBarBtnActive:  { backgroundColor: '#1a1a1a' },
+  textBarText:       { fontFamily: 'DMSans-Regular', fontSize: 9, color: '#555' },
   textBarTextActive: { color: '#fff' },
 });

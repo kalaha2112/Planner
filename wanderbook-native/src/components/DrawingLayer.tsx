@@ -3,7 +3,7 @@ import { View, PanResponder, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { CardElement, useTripStore } from '../store/tripStore';
 
-export type DrawBrush = 'pen' | 'brush' | 'highlighter' | 'eraser';
+export type DrawBrush = 'pen' | 'brush' | 'eraser';
 
 interface Point { x: number; y: number; }
 
@@ -12,6 +12,7 @@ interface Props {
   elements: CardElement[];
   brush: DrawBrush;
   strokeColor: string;
+  brushWidth: number;
   onBeforeDraw: () => void;
   onNextZIndex: () => number;
 }
@@ -47,24 +48,25 @@ function makeId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
 
+// pen is draggable too — both pen and brush produce movable strokes
 const BRUSH_PARAMS: Record<DrawBrush, { width: number; opacity: number; draggable: boolean }> = {
-  pen:         { width: 2,  opacity: 1.0, draggable: false },
-  brush:       { width: 10, opacity: 1.0, draggable: true  },
-  highlighter: { width: 20, opacity: 0.4, draggable: false },
-  eraser:      { width: 0,  opacity: 0,   draggable: false },
+  pen:    { width: 2,  opacity: 1.0, draggable: true },
+  brush:  { width: 10, opacity: 1.0, draggable: true },
+  eraser: { width: 0,  opacity: 0,   draggable: false },
 };
 
 export default function DrawingLayer({
-  tripId, elements, brush, strokeColor, onBeforeDraw, onNextZIndex,
+  tripId, elements, brush, strokeColor, brushWidth, onBeforeDraw, onNextZIndex,
 }: Props) {
   const { addElement } = useTripStore();
-  const [livePathD, setLivePathD] = useState('');
+  const [livePathD,  setLivePathD]  = useState('');
+  const [eraserPos,  setEraserPos]  = useState<{ x: number; y: number } | null>(null);
+
   const points = useRef<Point[]>([]);
   const hasPushedHistory = useRef(false);
 
-  // Stable refs — PanResponder is created once but must read current prop values
-  const R = useRef({ brush, strokeColor, onBeforeDraw, onNextZIndex, elements });
-  R.current = { brush, strokeColor, onBeforeDraw, onNextZIndex, elements };
+  const R = useRef({ brush, strokeColor, brushWidth, onBeforeDraw, onNextZIndex, elements });
+  R.current = { brush, strokeColor, brushWidth, onBeforeDraw, onNextZIndex, elements };
 
   const panResponder = useRef(
     PanResponder.create({
@@ -77,6 +79,7 @@ export default function DrawingLayer({
         hasPushedHistory.current = false;
 
         if (b === 'eraser') {
+          setEraserPos({ x, y });
           const { removeElement } = useTripStore.getState();
           els.forEach((el) => {
             const elW = (el.width  ?? (el.type === 'text' ? 80 : 40)) * el.scale;
@@ -100,6 +103,7 @@ export default function DrawingLayer({
         const { brush: b, elements: els, onBeforeDraw: before } = R.current;
 
         if (b === 'eraser') {
+          setEraserPos({ x, y });
           const { removeElement } = useTripStore.getState();
           els.forEach((el) => {
             const elW = (el.width  ?? (el.type === 'text' ? 80 : 40)) * el.scale;
@@ -117,7 +121,8 @@ export default function DrawingLayer({
       },
 
       onPanResponderRelease: () => {
-        const { brush: b, strokeColor: color, onNextZIndex: nextZ } = R.current;
+        setEraserPos(null);
+        const { brush: b, strokeColor: color, brushWidth: bw, onNextZIndex: nextZ } = R.current;
 
         if (b === 'eraser' || points.current.length < 2) {
           setLivePathD('');
@@ -126,7 +131,9 @@ export default function DrawingLayer({
         }
 
         const params = BRUSH_PARAMS[b];
-        const { pathD, x, y, w, h } = normalizePath(points.current, params.width);
+        // brush uses user-selected width; pen uses fixed 2px
+        const effectiveWidth = b === 'brush' ? bw : params.width;
+        const { pathD, x, y, w, h } = normalizePath(points.current, effectiveWidth);
 
         addElement(tripId, {
           id:            makeId(),
@@ -135,7 +142,7 @@ export default function DrawingLayer({
           zIndex:        nextZ(),
           pathD,
           strokeColor:   color,
-          strokeWidth:   params.width,
+          strokeWidth:   effectiveWidth,
           strokeOpacity: params.opacity,
           draggable:     params.draggable,
           width: w, height: h,
@@ -147,16 +154,18 @@ export default function DrawingLayer({
     })
   ).current;
 
-  const params = BRUSH_PARAMS[brush];
+  const params        = BRUSH_PARAMS[brush];
+  const liveWidth     = brush === 'brush' ? brushWidth : params.width;
 
   return (
     <View style={StyleSheet.absoluteFill} {...panResponder.panHandlers}>
+      {/* Live stroke being drawn */}
       {livePathD ? (
         <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
           <Path
             d={livePathD}
             stroke={strokeColor}
-            strokeWidth={params.width}
+            strokeWidth={liveWidth}
             strokeOpacity={params.opacity}
             fill="none"
             strokeLinecap="round"
@@ -164,6 +173,34 @@ export default function DrawingLayer({
           />
         </Svg>
       ) : null}
+
+      {/* Eraser cursor — follows the touch position while erasing */}
+      {brush === 'eraser' && eraserPos && (
+        <View
+          pointerEvents="none"
+          style={[
+            styles.eraserCursor,
+            { left: eraserPos.x - 10, top: eraserPos.y - 6 },
+          ]}
+        />
+      )}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  eraserCursor: {
+    position: 'absolute',
+    width: 20, height: 12,
+    borderRadius: 2,
+    backgroundColor: '#d0d0d0',
+    borderWidth: 1,
+    borderColor: '#999',
+    transform: [{ rotate: '-10deg' }],
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+});

@@ -25,8 +25,8 @@ const TOOLS: { id: Tool; icon: string; label: string }[] = [
   { id: 'trip',    icon: '✦',  label: 'Trip'    },
 ];
 
-const PALETTE       = ['#1a1a1a', '#ffffff', '#91040C', '#2563eb', '#16a34a', '#d97706', '#ec4899', '#71717a'];
-const HILITE_PALETTE = ['#fef08a', '#fca5a5', '#a5f3fc', '#86efac', '#fdba74', '#e9d5ff', '#fbcfe8', '#a3e635'];
+const PALETTE      = ['#1a1a1a', '#ffffff', '#91040C', '#2563eb', '#16a34a', '#d97706', '#ec4899', '#71717a'];
+const BRUSH_SIZES  = [3, 6, 10, 16, 24];
 
 function makeId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -43,26 +43,25 @@ function DrawPanel({
   brush, onBrush,
   penColor, onPenColor,
   brushColor, onBrushColor,
-  hiliteColor, onHiliteColor,
+  brushWidth, onBrushWidth,
 }: {
   brush: DrawBrush; onBrush: (b: DrawBrush) => void;
-  penColor: string;    onPenColor:    (c: string) => void;
-  brushColor: string;  onBrushColor:  (c: string) => void;
-  hiliteColor: string; onHiliteColor: (c: string) => void;
+  penColor: string;   onPenColor:   (c: string) => void;
+  brushColor: string; onBrushColor: (c: string) => void;
+  brushWidth: number; onBrushWidth: (n: number) => void;
 }) {
   const BRUSHES: { id: DrawBrush; label: string }[] = [
-    { id: 'pen',         label: 'Pen'    },
-    { id: 'brush',       label: 'Brush'  },
-    { id: 'highlighter', label: 'Hi-lite'},
-    { id: 'eraser',      label: 'Eraser' },
+    { id: 'pen',    label: 'Pen'    },
+    { id: 'brush',  label: 'Brush'  },
+    { id: 'eraser', label: 'Eraser' },
   ];
 
-  const activeColor   = brush === 'pen' ? penColor : brush === 'brush' ? brushColor : hiliteColor;
-  const onActiveColor = brush === 'pen' ? onPenColor : brush === 'brush' ? onBrushColor : onHiliteColor;
-  const palette       = brush === 'highlighter' ? HILITE_PALETTE : PALETTE;
+  const activeColor   = brush === 'pen' ? penColor : brushColor;
+  const onActiveColor = brush === 'pen' ? onPenColor : onBrushColor;
 
   return (
     <View style={styles.panel}>
+      {/* Tool selector */}
       <View style={styles.panelRow}>
         {BRUSHES.map((b) => (
           <TouchableOpacity
@@ -78,33 +77,51 @@ function DrawPanel({
       </View>
 
       {brush === 'eraser' ? (
-        <View style={styles.eraserDisplay}>
-          <View style={styles.eraserShape}>
-            <View style={styles.eraserPink} />
-            <View style={styles.eraserCream} />
-            <View style={styles.eraserStripe} />
-          </View>
-          <Text style={styles.panelHint}>Swipe over any element to erase it.</Text>
-        </View>
+        <Text style={styles.panelHint}>Swipe over any element to erase it. A cursor shows your path.</Text>
       ) : (
-        <View style={styles.panelRow}>
-          {palette.map((c) => (
-            <TouchableOpacity
-              key={c}
-              style={[
-                styles.colorDot,
-                { backgroundColor: c, borderColor: c === '#ffffff' ? '#e8e8e8' : c },
-                activeColor === c && styles.colorDotActive,
-              ]}
-              onPress={() => onActiveColor(c)}
-            />
-          ))}
-        </View>
-      )}
+        <>
+          {/* Color palette */}
+          <View style={styles.panelRow}>
+            {PALETTE.map((c) => (
+              <TouchableOpacity
+                key={c}
+                style={[
+                  styles.colorDot,
+                  { backgroundColor: c, borderColor: c === '#ffffff' ? '#e8e8e8' : c },
+                  activeColor === c && styles.colorDotActive,
+                ]}
+                onPress={() => onActiveColor(c)}
+              />
+            ))}
+          </View>
 
-      {brush === 'pen'         && <Text style={styles.panelHint}>Pen strokes are fixed. Switch to Brush for movable strokes.</Text>}
-      {brush === 'brush'       && <Text style={styles.panelHint}>Brush strokes can be moved and scaled after drawing.</Text>}
-      {brush === 'highlighter' && <Text style={styles.panelHint}>Highlighter is semi-transparent and fixed in place.</Text>}
+          {/* Brush thickness — only for brush tool */}
+          {brush === 'brush' && (
+            <View style={styles.thicknessRow}>
+              <Text style={styles.thicknessLabel}>SIZE</Text>
+              {BRUSH_SIZES.map((s) => {
+                const dotSize = Math.round(s * 0.9 + 4);
+                return (
+                  <TouchableOpacity
+                    key={s}
+                    style={styles.thicknessTap}
+                    onPress={() => onBrushWidth(s)}
+                  >
+                    <View style={[
+                      styles.thicknessDot,
+                      { width: dotSize, height: dotSize, borderRadius: dotSize / 2 },
+                      brushWidth === s && styles.thicknessDotActive,
+                    ]} />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+
+          {brush === 'pen'   && <Text style={styles.panelHint}>Pen strokes are draggable after drawing.</Text>}
+          {brush === 'brush' && <Text style={styles.panelHint}>Brush strokes are draggable and scalable.</Text>}
+        </>
+      )}
     </View>
   );
 }
@@ -249,16 +266,14 @@ function TripPanel({ trip }: { trip: Trip }) {
 // ─── Root CardEditor ──────────────────────────────────────────────────────────
 export default function CardEditor({ trip: tripProp, visible, onClose }: Props) {
   const { addElement, setElements } = useTripStore();
-  const [tool, setTool]             = useState<Tool>('select');
-  const [brush, setBrush]           = useState<DrawBrush>('pen');
-  const [penColor,    setPenColor]    = useState('#1a1a1a');
-  const [brushColor,  setBrushColor]  = useState('#1a1a1a');
-  const [hiliteColor, setHiliteColor] = useState('#fef08a');
-  const [history, setHistory]        = useState<CardElement[][]>([]);
+  const [tool,       setTool]      = useState<Tool>('select');
+  const [brush,      setBrush]     = useState<DrawBrush>('pen');
+  const [penColor,   setPenColor]  = useState('#1a1a1a');
+  const [brushColor, setBrushColor] = useState('#1a1a1a');
+  const [brushWidth, setBrushWidth] = useState(10);
+  const [history,    setHistory]   = useState<CardElement[][]>([]);
 
-  const activeColor = brush === 'pen' ? penColor
-                    : brush === 'brush' ? brushColor
-                    : hiliteColor;
+  const activeColor = brush === 'pen' ? penColor : brushColor;
 
   const { width: screenW } = useWindowDimensions();
   const canvasW     = Math.min(screenW - 32, 680);
@@ -328,9 +343,19 @@ export default function CardEditor({ trip: tripProp, visible, onClose }: Props) 
           <Text style={styles.topTitle} numberOfLines={1}>
             {trip.customName ?? trip.name}
           </Text>
-          <TouchableOpacity onPress={undo} disabled={history.length === 0} hitSlop={12}>
-            <Text style={[styles.topUndo, history.length === 0 && styles.topUndoDisabled]}>↩</Text>
-          </TouchableOpacity>
+          <View style={styles.topRight}>
+            {/* Undo — ↺ return symbol */}
+            <TouchableOpacity onPress={undo} disabled={history.length === 0} hitSlop={10}>
+              <Text style={[styles.topUndo, history.length === 0 && styles.topUndoDisabled]}>↺</Text>
+            </TouchableOpacity>
+            {/* Save — floppy disk shape */}
+            <TouchableOpacity onPress={onClose} hitSlop={10}>
+              <View style={styles.saveDisk}>
+                <View style={styles.saveDiskSlot} />
+                <View style={styles.saveDiskLabel} />
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* ── Card canvas ── */}
@@ -360,6 +385,7 @@ export default function CardEditor({ trip: tripProp, visible, onClose }: Props) 
                 elements={trip.elements}
                 brush={brush}
                 strokeColor={activeColor}
+                brushWidth={brushWidth}
                 onBeforeDraw={pushHistory}
                 onNextZIndex={nextZIndex}
               />
@@ -402,10 +428,10 @@ export default function CardEditor({ trip: tripProp, visible, onClose }: Props) 
           )}
           {tool === 'draw' && (
             <DrawPanel
-              brush={brush} onBrush={setBrush}
-              penColor={penColor}       onPenColor={setPenColor}
-              brushColor={brushColor}   onBrushColor={setBrushColor}
-              hiliteColor={hiliteColor} onHiliteColor={setHiliteColor}
+              brush={brush}        onBrush={setBrush}
+              penColor={penColor}  onPenColor={setPenColor}
+              brushColor={brushColor} onBrushColor={setBrushColor}
+              brushWidth={brushWidth} onBrushWidth={setBrushWidth}
             />
           )}
           {tool === 'text' && (
@@ -445,8 +471,30 @@ const styles = StyleSheet.create({
     fontFamily: 'PlayfairDisplay-Bold',
     fontSize: 15, color: '#1a1a1a', letterSpacing: 0.3,
   },
-  topUndo:         { fontFamily: 'DMSans-Regular', fontSize: 20, color: '#1a1a1a', width: 32, textAlign: 'right' },
+  topRight: { flexDirection: 'row', alignItems: 'center', gap: 14, width: 62, justifyContent: 'flex-end' },
+  topUndo:         { fontFamily: 'DMSans-Regular', fontSize: 18, color: '#1a1a1a' },
   topUndoDisabled: { color: '#ccc' },
+
+  // Save disk (floppy disk shape)
+  saveDisk: {
+    width: 18, height: 18,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 2,
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+    padding: 2,
+  },
+  saveDiskSlot: {
+    position: 'absolute', top: 2, left: 2,
+    width: 8, height: 6,
+    backgroundColor: '#666',
+    borderRadius: 1,
+  },
+  saveDiskLabel: {
+    height: 5,
+    backgroundColor: '#555',
+    borderRadius: 1,
+  },
 
   // ── Tool strip ──
   toolStrip: {
@@ -500,22 +548,23 @@ const styles = StyleSheet.create({
   },
   colorDotActive: { borderColor: '#91040C', transform: [{ scale: 1.2 }] },
 
-  // Eraser display
-  eraserDisplay: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  eraserShape: {
-    width: 44, height: 22,
-    borderRadius: 4,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#bbb',
-    transform: [{ rotate: '-15deg' }],
-    flexDirection: 'row',
+  // Brush thickness control
+  thicknessRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2,
   },
-  eraserPink:  { width: 18, backgroundColor: '#c8c8c8' },
-  eraserCream: { flex: 1,   backgroundColor: '#f0f0f0' },
-  eraserStripe: {
-    position: 'absolute', left: 18, top: 0, bottom: 0,
-    width: 1.5, backgroundColor: '#aaa',
+  thicknessLabel: {
+    fontFamily: 'DMSans-Medium', fontSize: 7, letterSpacing: 2,
+    color: '#bbb', textTransform: 'uppercase', marginRight: 4,
+  },
+  thicknessTap: {
+    width: 32, height: 32, alignItems: 'center', justifyContent: 'center',
+  },
+  thicknessDot: {
+    backgroundColor: '#aaa',
+  },
+  thicknessDotActive: {
+    backgroundColor: '#1a1a1a',
+    transform: [{ scale: 1.15 }],
   },
 
   // Text panel
