@@ -22,7 +22,6 @@ import BookCover   from './src/components/BookCover';
 import BookOutline from './src/components/BookOutline';
 import TripPage    from './src/components/TripPage';
 import PageDots    from './src/components/PageDots';
-import EditSheet    from './src/components/EditSheet';
 import TripOverview from './src/components/TripOverview';
 import CardEditor   from './src/components/CardEditor';
 

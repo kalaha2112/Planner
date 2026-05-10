@@ -5,12 +5,7 @@ import {
 } from 'react-native';
 import { Trip, useTripStore } from '../store/tripStore';
 import { useBookDimensions } from '../hooks/useBookDimensions';
-import CardEditor   from './CardEditor';
-import ParisCard    from './cards/ParisCard';
-import KyotoCard    from './cards/KyotoCard';
-import BaliCard     from './cards/BaliCard';
-import MoroccoCard  from './cards/MoroccoCard';
-import LisbonCard   from './cards/LisbonCard';
+import CardEditor from './CardEditor';
 
 type Section = 'itinerary' | 'ootd' | 'budget' | 'hotel' | 'flight';
 
@@ -314,8 +309,6 @@ function FlightDetail({ trip, onBack, onEdit }: { trip: Trip; onBack: () => void
 // ─────────────────────────────────────────────
 // Main overview content
 // ─────────────────────────────────────────────
-const CARDS = [ParisCard, KyotoCard, BaliCard, MoroccoCard, LisbonCard];
-
 function OverviewContent({
   trip,
   index,
