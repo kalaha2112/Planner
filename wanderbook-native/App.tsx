@@ -11,7 +11,7 @@ import {
   PlayfairDisplay_700Bold_Italic,
   PlayfairDisplay_900Black,
 } from '@expo-google-fonts/playfair-display';
-import { DM_Sans_400Regular, DM_Sans_500Medium } from '@expo-google-fonts/dm-sans';
+import { DMSans_400Regular, DMSans_500Medium } from '@expo-google-fonts/dm-sans';
 import { BebasNeue_400Regular } from '@expo-google-fonts/bebas-neue';
 import { CormorantGaramond_300Light_Italic } from '@expo-google-fonts/cormorant-garamond';
 
@@ -236,8 +236,8 @@ export default function App() {
     'PlayfairDisplay-BoldItalic':    PlayfairDisplay_700Bold_Italic,
     'PlayfairDisplay-Black':         PlayfairDisplay_900Black,
     'BebasNeue':                     BebasNeue_400Regular,
-    'DMSans-Regular':                DM_Sans_400Regular,
-    'DMSans-Medium':                 DM_Sans_500Medium,
+    'DMSans-Regular':                DMSans_400Regular,
+    'DMSans-Medium':                 DMSans_500Medium,
     'CormorantGaramond-LightItalic': CormorantGaramond_300Light_Italic,
   });
 
