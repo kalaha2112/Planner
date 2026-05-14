@@ -1,8 +1,8 @@
-# WanderBook — Session Handoff
+# Su Travel Book — Session Handoff
 
 ## Project overview
 
-**WanderBook** is a React Native / Expo travel scrapbook app. Users keep a small book of trip cards (max ~10), flip through them with a page-turn animation, and annotate each card with drawings, stickers, text labels, and trip details.
+**SuTravelBook** is a React Native / Expo travel scrapbook app. Users keep a small book of trip cards (max ~10), flip through them with a page-turn animation, and annotate each card with drawings, stickers, text labels, and trip details.
 
 Repo: `kalaha2112/project1`
 Active branch: `claude/create-wanderbook-project-NBHEC`
