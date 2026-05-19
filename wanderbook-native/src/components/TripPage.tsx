@@ -125,14 +125,14 @@ const styles = StyleSheet.create({
     fontSize: 10, color: '#ccc',
   },
   deleteBtn: {
-    position: 'absolute', top: 6, left: 8, zIndex: 4,
-    width: 20, height: 20, borderRadius: 10,
-    backgroundColor: 'rgba(0,0,0,0.08)',
+    position: 'absolute', top: 7, left: 9, zIndex: 4,
+    width: 16, height: 16, borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.06)',
     alignItems: 'center', justifyContent: 'center',
   },
   deleteBtnText: {
     fontFamily: 'DMSans-Regular',
-    fontSize: 13, color: '#aaa',
-    lineHeight: 18, marginTop: -1,
+    fontSize: 10, color: '#bbb',
+    lineHeight: 14, marginTop: -1,
   },
 });

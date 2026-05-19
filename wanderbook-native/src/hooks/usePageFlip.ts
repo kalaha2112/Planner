@@ -22,16 +22,11 @@ export function usePageFlip() {
 
   const n = trips.length;
 
-  // One Animated.Value per page; grows dynamically when trips are added
-  const pageAnims = useRef<Animated.Value[]>(
-    Array.from({ length: Math.max(n, 1) }, () => new Animated.Value(DEG.waiting))
-  ).current;
+  // Keep pageAnims exactly in sync with trip count (grow AND shrink)
+  const pageAnims = useRef<Animated.Value[]>([]).current;
+  while (pageAnims.length < n) pageAnims.push(new Animated.Value(DEG.waiting));
+  while (pageAnims.length > n) pageAnims.pop();
 
-  while (pageAnims.length < n) {
-    pageAnims.push(new Animated.Value(DEG.waiting));
-  }
-
-  // Cover flip: 0 = closed, 1 = open
   const coverAnim = useRef(new Animated.Value(0)).current;
 
   const animatePage = useCallback(
@@ -59,9 +54,17 @@ export function usePageFlip() {
   );
 
   const openBook = useCallback(() => {
-    if (isOpen || isAnimating) return;
+    if (isOpen || isAnimating || n === 0) return;
     setAnimating(true);
     setOpen(true);
+
+    // Show the most relevant page: first 'now', then first 'upcoming', then last
+    const nowIdx      = trips.findIndex((t) => t.status === 'now');
+    const upcomingIdx = trips.findIndex((t) => t.status === 'upcoming');
+    const startIdx    = nowIdx !== -1 ? nowIdx
+                      : upcomingIdx !== -1 ? upcomingIdx
+                      : n - 1;
+    setActiveIdx(startIdx);
 
     Animated.timing(coverAnim, {
       toValue: 1,
@@ -72,14 +75,14 @@ export function usePageFlip() {
 
     setTimeout(() => {
       for (let i = 0; i < n; i++) {
-        if (i < activeIdx)       animatePage(i, 'past');
-        else if (i === activeIdx) animatePage(i, 'active');
-        else                     animatePage(i, 'waiting');
+        if (i < startIdx)      animatePage(i, 'past');
+        else if (i === startIdx) animatePage(i, 'active');
+        else                   animatePage(i, 'waiting');
       }
     }, 200);
 
     setTimeout(() => setAnimating(false), OPEN_SETTLE_MS);
-  }, [isOpen, isAnimating, activeIdx, n, coverAnim, animatePage, setOpen, setAnimating]);
+  }, [isOpen, isAnimating, n, trips, coverAnim, animatePage, setOpen, setActiveIdx, setAnimating]);
 
   const closeBook = useCallback(() => {
     if (!isOpen || isAnimating) return;
@@ -100,6 +103,7 @@ export function usePageFlip() {
     setTimeout(() => {
       setActiveIdx(0);
       pageAnims.forEach((a) => a.setValue(DEG.waiting));
+      // pageAnims.length === n (kept in sync), so this matches trips.length exactly
       setAllPageStates(Array(pageAnims.length).fill('waiting') as PageState[]);
       setAnimating(false);
     }, CLOSE_MS);

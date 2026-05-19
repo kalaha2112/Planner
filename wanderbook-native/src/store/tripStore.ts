@@ -24,7 +24,7 @@ export interface CardElement {
   strokeColor?: string;
   strokeWidth?: number;
   strokeOpacity?: number;
-  draggable?: boolean;  // true = brush (movable/scalable), false = pen/highlighter (fixed)
+  draggable?: boolean;
 }
 
 export interface StickerTemplate {
@@ -53,8 +53,8 @@ export interface Trip {
   flightTo?: string;
   flightDate?: string;
   flightNumber?: string;
-  countries?: string[];   // up to 4
-  cities?: string[][];    // [countryIdx][cityIdx], up to 4×2
+  countries?: string[];
+  cities?: string[][];
   elements: CardElement[];
 }
 
@@ -88,20 +88,38 @@ interface AppState {
   removeTrip: (id: string) => void;
 }
 
-const TRIPS: Trip[] = [
-  { id: 'paris',   name: 'Paris',   country: 'France',    status: 'past',     cardDesign: 0, titleFont: 'PlayfairDisplay-Black', elements: [] },
-  { id: 'kyoto',   name: 'Kyoto',   country: 'Japan',     status: 'now',      cardDesign: 1, titleFont: 'PlayfairDisplay-Black', elements: [] },
-  { id: 'bali',    name: 'Bali',    country: 'Indonesia', status: 'upcoming', cardDesign: 2, titleFont: 'BebasNeue',             elements: [] },
-  { id: 'morocco', name: 'Morocco', country: 'Morocco',   status: 'upcoming', cardDesign: 3, titleFont: 'BebasNeue',             elements: [] },
-  { id: 'lisbon',  name: 'Lisbon',  country: 'Portugal',  status: 'upcoming', cardDesign: 4, titleFont: 'BebasNeue',             elements: [] },
-];
+// Parse a dateRange string like "May 15 – 22, 2026" into a sortable number.
+// Returns 0 if unparseable (sorts to front of its status group).
+function parseDateKey(dateRange?: string): number {
+  if (!dateRange) return 0;
+  const months = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+  const m = dateRange.match(/(\w+)\s+(\d+)/i);
+  const y = dateRange.match(/(\d{4})/);
+  if (!m || !y) return 0;
+  const mi = months.indexOf(m[1].toLowerCase().slice(0, 3));
+  if (mi === -1) return 0;
+  return parseInt(y[1]) * 10000 + (mi + 1) * 100 + parseInt(m[2]);
+}
+
+// Sort order: past first (most recent past first), then now, then upcoming (nearest first).
+function sortTrips(trips: Trip[]): Trip[] {
+  const statusRank = { past: 0, now: 1, upcoming: 2 };
+  return [...trips].sort((a, b) => {
+    const sr = statusRank[a.status] - statusRank[b.status];
+    if (sr !== 0) return sr;
+    const da = parseDateKey(a.dateRange);
+    const db = parseDateKey(b.dateRange);
+    // Past trips: most recent first (descending). Now/upcoming: nearest first (ascending).
+    return a.status === 'past' ? db - da : da - db;
+  });
+}
 
 export const useTripStore = create<AppState>((set) => ({
   isOpen:           false,
-  activeIdx:        1,
+  activeIdx:        0,
   isAnimating:      false,
-  pageStates:       ['waiting', 'waiting', 'waiting', 'waiting', 'waiting'],
-  trips:            TRIPS,
+  pageStates:       [],
+  trips:            [],
   stickerTemplates: [],
 
   setOpen:      (v) => set({ isOpen: v }),
@@ -157,20 +175,22 @@ export const useTripStore = create<AppState>((set) => ({
     set((s) => ({ stickerTemplates: s.stickerTemplates.filter((t) => t.id !== id) })),
 
   addTrip: (trip) =>
-    set((s) => ({
-      trips:      [...s.trips, trip],
-      pageStates: [...s.pageStates, 'waiting' as const],
-    })),
+    set((s) => {
+      const trips = sortTrips([...s.trips, trip]);
+      return {
+        trips,
+        pageStates: trips.map(() => 'waiting' as PageState),
+      };
+    }),
 
   removeTrip: (id) =>
     set((s) => {
-      const idx = s.trips.findIndex((t) => t.id === id);
-      if (idx === -1) return s;
-      const trips      = s.trips.filter((_, i) => i !== idx);
-      const pageStates = s.pageStates.filter((_, i) => i !== idx);
-      const activeIdx  = s.activeIdx > 0 && s.activeIdx >= idx
-        ? s.activeIdx - 1
-        : s.activeIdx;
-      return { trips, pageStates, activeIdx: Math.min(activeIdx, Math.max(trips.length - 1, 0)) };
+      const trips = sortTrips(s.trips.filter((t) => t.id !== id));
+      const activeIdx = Math.min(s.activeIdx, Math.max(trips.length - 1, 0));
+      return {
+        trips,
+        pageStates: trips.map(() => 'waiting' as PageState),
+        activeIdx,
+      };
     }),
 }));

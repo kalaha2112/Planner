@@ -16,6 +16,17 @@ interface Props {
   onClose: () => void;
 }
 
+const CARDS = [ParisCard, KyotoCard, BaliCard, MoroccoCard, LisbonCard];
+
+// Ghost font matches each card's primary large-letterform treatment
+const GHOST_FONTS: Record<number, string> = {
+  0: 'PlayfairDisplay-Black',
+  1: 'BebasNeue',
+  2: 'BebasNeue',
+  3: 'PlayfairDisplay-Black',
+  4: 'BebasNeue',
+};
+
 // ─────────────────────────────────────────────
 // Shared detail header
 // ─────────────────────────────────────────────
@@ -72,19 +83,21 @@ function ItineraryDetail({ trip, onBack }: { trip: Trip; onBack: () => void }) {
         <Text style={styles.mLabel}>DAY BY DAY</Text>
         <Text style={styles.detailTitle}>Itinerary</Text>
 
-        <View style={styles.dayPills}>
+        <View style={styles.dayNums}>
           {itinerary.map((_, i) => (
             <TouchableOpacity
               key={i}
-              style={[styles.dayPill, activeDay === i && styles.dayPillActive]}
+              style={styles.dayNum}
               onPress={() => setActiveDay(i)}
+              hitSlop={8}
             >
-              <Text style={[styles.dayPillText, activeDay === i && styles.dayPillTextActive]}>
-                Day {i + 1}
+              <Text style={[styles.dayNumText, activeDay === i && styles.dayNumTextActive]}>
+                {String(i + 1).padStart(2, '0')}
               </Text>
+              {activeDay === i && <View style={styles.dayNumLine} />}
             </TouchableOpacity>
           ))}
-          <TouchableOpacity style={styles.dayPillAdd} onPress={addDay}>
+          <TouchableOpacity style={styles.dayPillAdd} onPress={addDay} hitSlop={8}>
             <Text style={styles.dayPillAddText}>+ day</Text>
           </TouchableOpacity>
         </View>
@@ -151,9 +164,13 @@ function OOTDDetail({ trip, onBack, onEdit }: { trip: Trip; onBack: () => void; 
           </View>
         ) : (
           <View style={styles.ootdEmpty}>
-            <Text style={styles.ootdEmptyIcon}>👕</Text>
+            <View style={styles.ootdEmptyFrames}>
+              <View style={styles.ootdEmptyFrame} />
+              <View style={styles.ootdEmptyFrame} />
+              <View style={styles.ootdEmptyFrame} />
+            </View>
             <Text style={styles.ootdEmptyText}>
-              Add outfit photos via the Stickers section
+              add looks from the sticker editor
             </Text>
             <TouchableOpacity style={styles.editOutlineBtn} onPress={onEdit}>
               <Text style={styles.editOutlineBtnText}>open stickers</Text>
@@ -351,7 +368,12 @@ function OverviewContent({
         showsVerticalScrollIndicator={false}
       >
         {/* ── Hero ── */}
-        <View style={styles.card}>
+        <View style={styles.heroSection}>
+          <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, styles.ghostContainer]}>
+            <Text style={[styles.ghostCity, { fontFamily: GHOST_FONTS[trip.cardDesign] ?? 'PlayfairDisplay-Black' }]}>
+              {displayName.toUpperCase()}
+            </Text>
+          </View>
           <View style={styles.heroRow}>
             <View style={styles.heroLeft}>
               <Text style={styles.mLabel}>{displayCtry.toUpperCase()}</Text>
@@ -414,16 +436,18 @@ function OverviewContent({
             <Text style={styles.sectionTitle}>Itinerary</Text>
             <Text style={styles.chevron}>›</Text>
           </View>
-          <View style={styles.dayPills}>
+          <View style={styles.dayNums}>
             {Array.from({ length: numDays }, (_, i) => (
               <TouchableOpacity
                 key={i}
-                style={[styles.dayPill, activeDay === i && styles.dayPillActive]}
+                style={styles.dayNum}
                 onPress={(e) => { e.stopPropagation(); setActiveDay(i); }}
+                hitSlop={8}
               >
-                <Text style={[styles.dayPillText, activeDay === i && styles.dayPillTextActive]}>
-                  Day {i + 1}
+                <Text style={[styles.dayNumText, activeDay === i && styles.dayNumTextActive]}>
+                  {String(i + 1).padStart(2, '0')}
                 </Text>
+                {activeDay === i && <View style={styles.dayNumLine} />}
               </TouchableOpacity>
             ))}
           </View>
@@ -453,10 +477,10 @@ function OverviewContent({
               <Text style={[styles.sectionTitle, styles.ootdTitle]}>OOTD</Text>
               <Text style={styles.chevron}>›</Text>
             </View>
-            <View style={styles.ootdIcons}>
-              <Text style={styles.ootdIcon}>👕</Text>
-              <Text style={styles.ootdIcon}>👓</Text>
-              <Text style={styles.ootdIcon}>👜</Text>
+            <View style={styles.ootdFrames}>
+              <View style={styles.ootdFrame} />
+              <View style={styles.ootdFrame} />
+              <View style={styles.ootdFrame} />
             </View>
           </TouchableOpacity>
 
@@ -490,23 +514,20 @@ function OverviewContent({
 
         {/* ── Hotel ── */}
         <TouchableOpacity
-          style={[styles.card, styles.hotelCard]}
+          style={styles.card}
           onPress={() => onSection('hotel')}
           activeOpacity={0.85}
         >
-          <View>
-            <Text style={styles.mLabel}>
-              {hasHotel
-                ? [trip.hotelLocation?.toUpperCase(), trip.hotelNights ? `${trip.hotelNights} NIGHTS` : null].filter(Boolean).join(' · ')
-                : 'ACCOMMODATION'}
-            </Text>
-            <View style={styles.sectionTitleRow}>
-              <Text style={styles.sectionTitle}>Hotel</Text>
-              <Text style={styles.chevron}>›</Text>
-            </View>
-            {!hasHotel && <Text style={styles.emptyHint}>Tap to add hotel details.</Text>}
+          <Text style={styles.mLabel}>
+            {hasHotel
+              ? [trip.hotelLocation?.toUpperCase(), trip.hotelNights ? `${trip.hotelNights} NIGHTS` : null].filter(Boolean).join(' · ')
+              : 'ACCOMMODATION'}
+          </Text>
+          <View style={styles.sectionTitleRow}>
+            <Text style={styles.sectionTitle}>Hotel</Text>
+            <Text style={styles.chevron}>›</Text>
           </View>
-          <View style={styles.hotelPhoto} />
+          {!hasHotel && <Text style={styles.emptyHint}>Tap to add hotel details.</Text>}
         </TouchableOpacity>
 
         {/* ── Flight ── */}
@@ -606,11 +627,26 @@ const styles = StyleSheet.create({
   },
   scrollTablet: { paddingHorizontal: 48 },
 
-  // ── Card shell ──
+  // ── Hero (no card wrapper) ──
+  heroSection: {
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+  },
+  ghostContainer: {
+    overflow: 'hidden',
+  },
+  ghostCity: {
+    position: 'absolute',
+    fontSize: 160,
+    lineHeight: 160,
+    color: 'rgba(0,0,0,0.033)',
+    top: -24,
+    left: -10,
+  },
+
+  // ── Card shell (no border) ──
   card: {
     backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#1a1a1a',
     borderRadius: 8,
     padding: 20,
   },
@@ -646,7 +682,7 @@ const styles = StyleSheet.create({
   // ── Hero ──
   heroRow: { flexDirection: 'row', alignItems: 'flex-start' },
   heroLeft: { flex: 1, paddingRight: 8 },
-  heroCity: { fontSize: 52, lineHeight: 48, letterSpacing: -1.5, color: '#1a1a1a', marginBottom: 8 },
+  heroCity: { fontSize: 64, lineHeight: 60, letterSpacing: -1.5, color: '#1a1a1a', marginBottom: 8 },
   heroDate: {
     fontFamily: 'CormorantGaramond-LightItalic',
     fontSize: 16, color: '#666', marginBottom: 10,
@@ -681,18 +717,26 @@ const styles = StyleSheet.create({
   },
   polaroidEmpty: { backgroundColor: '#d8d5d0' },
 
-  // ── Day pills ──
-  dayPills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  dayPill: {
-    paddingHorizontal: 14, paddingVertical: 5,
-    borderWidth: 1, borderColor: '#ccc', borderRadius: 20,
+  // ── Day numerals ──
+  dayNums: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginBottom: 12 },
+  dayNum:  { alignItems: 'center', minWidth: 24 },
+  dayNumText: {
+    fontFamily: 'DMSans-Medium',
+    fontSize: 14,
+    color: '#ccc',
+    letterSpacing: 0.5,
   },
-  dayPillActive: { borderColor: '#91040C', backgroundColor: 'rgba(145,4,12,0.04)' },
-  dayPillText: { fontFamily: 'DMSans-Regular', fontSize: 11, color: '#aaa' },
-  dayPillTextActive: { color: '#91040C', fontFamily: 'DMSans-Medium' },
+  dayNumTextActive: { color: '#91040C' },
+  dayNumLine: {
+    height: 1,
+    width: '100%',
+    backgroundColor: '#91040C',
+    marginTop: 3,
+  },
   dayPillAdd: {
-    paddingHorizontal: 14, paddingVertical: 5,
+    paddingHorizontal: 10, paddingVertical: 4,
     borderWidth: 1, borderColor: '#e8e8e8', borderRadius: 20, borderStyle: 'dashed',
+    justifyContent: 'center',
   },
   dayPillAddText: { fontFamily: 'DMSans-Regular', fontSize: 11, color: '#ccc' },
 
@@ -705,9 +749,16 @@ const styles = StyleSheet.create({
   halfRow: { flexDirection: 'row', gap: 12 },
   halfCard: { flex: 1, padding: 16 },
 
-  // ── OOTD ──
-  ootdIcons: { flexDirection: 'row', gap: 6 },
-  ootdIcon:  { fontSize: 26 },
+  // ── OOTD polaroid frames (overview card) ──
+  ootdFrames: { flexDirection: 'row', gap: 8, marginTop: 4 },
+  ootdFrame: {
+    width: 38,
+    height: 48,
+    borderWidth: 1,
+    borderColor: '#e8e8e8',
+    borderRadius: 2,
+    backgroundColor: '#faf9f7',
+  },
 
   // ── Budget ──
   budgetAmount: {
@@ -722,11 +773,7 @@ const styles = StyleSheet.create({
     fontFamily: 'CormorantGaramond-LightItalic', fontSize: 14, color: '#91040C',
   },
 
-  // ── Hotel ──
-  hotelCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  hotelPhoto: { width: 88, height: 88, borderRadius: 4, backgroundColor: '#e4e1dc' },
-
-  // ── Flight ──
+  // ── Flight preview ──
   flightPreview: {
     fontFamily: 'CormorantGaramond-LightItalic', fontSize: 16, color: '#555',
   },
@@ -766,8 +813,8 @@ const styles = StyleSheet.create({
   },
   detailTitle: {
     fontFamily: 'PlayfairDisplay-BoldItalic',
-    fontSize: 42, lineHeight: 44, letterSpacing: -1,
-    color: '#1a1a1a', marginBottom: 20,
+    fontSize: 48, lineHeight: 50, letterSpacing: -1,
+    color: '#1a1a1a', marginTop: 8, marginBottom: 24,
   },
 
   // Itinerary detail
@@ -797,10 +844,19 @@ const styles = StyleSheet.create({
   // OOTD detail
   ootdGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 8 },
   ootdGridImg: { width: 100, height: 100, borderRadius: 4 },
-  ootdEmpty: { alignItems: 'center', paddingVertical: 48, gap: 12 },
-  ootdEmptyIcon: { fontSize: 48 },
+  ootdEmpty: { alignItems: 'center', paddingVertical: 48, gap: 16 },
+  ootdEmptyFrames: { flexDirection: 'row', gap: 14 },
+  ootdEmptyFrame: {
+    width: 56,
+    height: 70,
+    borderWidth: 1,
+    borderColor: '#e4e1dc',
+    borderRadius: 2,
+    backgroundColor: '#faf9f7',
+  },
   ootdEmptyText: {
-    fontFamily: 'DMSans-Regular', fontSize: 13, color: '#aaa',
+    fontFamily: 'CormorantGaramond-LightItalic',
+    fontSize: 15, color: '#aaa',
     textAlign: 'center', maxWidth: 220,
   },
 
@@ -818,7 +874,7 @@ const styles = StyleSheet.create({
   // Hotel / shared detail card
   hotelDetailCard: {
     borderWidth: 1, borderColor: '#e8e8e8', borderRadius: 6,
-    padding: 16, marginTop: 8, gap: 0,
+    padding: 16, marginTop: 8,
   },
   hotelDetailRow: {
     flexDirection: 'row', justifyContent: 'space-between',

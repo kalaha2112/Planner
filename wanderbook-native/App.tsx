@@ -46,7 +46,7 @@ function SuTravelBook() {
     const newIdx = trips.length;
     addTrip({
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
-      name: 'New Trip',
+      name: '',
       country: '',
       status: 'upcoming',
       cardDesign: design,
@@ -119,18 +119,10 @@ function SuTravelBook() {
     <View style={styles.screen}>
       <StatusBar barStyle="dark-content" />
 
-      {/* App title — always visible */}
-      <Text style={styles.appTitle}>SU TRAVEL BOOK</Text>
-
-      {/* Cover label — fades when book opens */}
-      <Animated.Text
-        style={[
-          styles.coverLabel,
-          { opacity: coverAnim.interpolate({ inputRange: [0, 0.3], outputRange: [1, 0] }) },
-        ]}
-      >
-        your travel collection
-      </Animated.Text>
+      <View style={styles.appTitleGroup}>
+        <Text style={styles.appTitleName}>Su</Text>
+        <Text style={styles.appTitleSub}>travel book</Text>
+      </View>
 
       {/*
         Outer container scales dynamically (outerW×outerH).
@@ -197,18 +189,23 @@ function SuTravelBook() {
           </View>
         </Animated.View>
 
-        {/* Map preview */}
+        {/* Destination strip */}
         <Animated.View
           style={[styles.mapInner, { opacity: mapOpacity }]}
           pointerEvents={isOpen ? 'none' : 'auto'}
         >
-          <Text style={styles.mapLabel}>MY WORLD MAP</Text>
-          <View style={styles.mapCard}>
-            <Text style={styles.mapTripList} numberOfLines={1}>
-              {trips.map((t) => t.customName ?? t.name).join('  ·  ')}
-            </Text>
-            <Text style={styles.mapComingSoon}>interactive map — coming soon</Text>
-          </View>
+          <Text style={styles.statusStrip} numberOfLines={2}>
+            {trips.map((t, i) => (
+              <Text key={t.id}>
+                {i > 0 ? <Text style={styles.statusDot}> · </Text> : null}
+                <Text style={[
+                  styles.statusName,
+                  t.status === 'past' && styles.statusPast,
+                  t.status === 'now' && styles.statusNow,
+                ]}>{(t.customName ?? t.name).toLowerCase()}</Text>
+              </Text>
+            ))}
+          </Text>
         </Animated.View>
       </View>
 
@@ -254,17 +251,22 @@ const styles = StyleSheet.create({
   root:   { flex: 1, backgroundColor: '#fff' },
   screen: { flex: 1, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
 
-  appTitle: {
-    fontFamily: 'DMSans-Medium',
-    fontSize: 9, letterSpacing: 4,
-    color: '#bbb', textTransform: 'uppercase',
-    marginBottom: 6,
-  },
-  coverLabel: {
+  appTitleGroup: {
+    alignItems: 'center',
     marginBottom: 18,
-    fontSize: 8, letterSpacing: 3.5,
-    color: '#ddd', textTransform: 'uppercase',
+  },
+  appTitleName: {
+    fontFamily: 'CormorantGaramond-LightItalic',
+    fontSize: 22,
+    color: '#1a1a1a',
+    lineHeight: 26,
+  },
+  appTitleSub: {
     fontFamily: 'DMSans-Regular',
+    fontSize: 7,
+    letterSpacing: 4,
+    color: '#bbb',
+    marginTop: 1,
   },
 
   bookWrap: {
@@ -296,44 +298,30 @@ const styles = StyleSheet.create({
   footerActions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   footerDivider: { width: 1, height: 10, backgroundColor: '#e0e0e0' },
   editBtn: {
-    fontSize: 9, letterSpacing: 1.5,
+    fontSize: 8, letterSpacing: 1.5,
     color: '#91040C', textTransform: 'uppercase',
     fontFamily: 'DMSans-Regular',
+    opacity: 0.8,
   },
   closeBtn: {
-    fontSize: 9, letterSpacing: 1.5,
+    fontSize: 8, letterSpacing: 1.5,
     color: '#bbb', textTransform: 'uppercase',
     fontFamily: 'DMSans-Regular',
   },
 
-  // Map preview (absoluteFill inside belowBook)
+  // Destination strip (absoluteFill inside belowBook)
   mapInner: {
     ...StyleSheet.absoluteFillObject,
-    gap: 6,
-  },
-  mapLabel: {
-    fontFamily: 'DMSans-Medium',
-    fontSize: 7, letterSpacing: 2.5,
-    color: '#ccc', textTransform: 'uppercase',
-  },
-  mapCard: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ececec',
-    borderRadius: 6,
-    backgroundColor: '#faf9f7',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 16,
   },
-  mapTripList: {
+  statusStrip: {
     fontFamily: 'CormorantGaramond-LightItalic',
-    fontSize: 12, color: '#aaa',
+    fontSize: 15,
+    textAlign: 'center',
   },
-  mapComingSoon: {
-    fontFamily: 'DMSans-Regular',
-    fontSize: 8, letterSpacing: 1.5,
-    color: '#ccc', textTransform: 'uppercase',
-  },
+  statusName:  { color: '#1a1a1a' },
+  statusPast:  { color: '#ccc' },
+  statusNow:   { color: '#91040C' },
+  statusDot:   { color: '#ddd' },
 });
