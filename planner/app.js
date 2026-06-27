@@ -30,6 +30,8 @@
         { text: 'Download offline maps', done: false }
       ]
     },
+    stickerStock: [],
+    placedStickers: [],
     active: 'centralEurope',
     trips: {
       centralEurope: {
@@ -131,7 +133,8 @@
     trash: '<path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>',
     check: '<path d="M20 6L9 17l-5-5"/>',
     grip: '<circle cx="3.5" cy="3" r="1.5"/><circle cx="8.5" cy="3" r="1.5"/><circle cx="3.5" cy="8" r="1.5"/><circle cx="8.5" cy="8" r="1.5"/><circle cx="3.5" cy="13" r="1.5"/><circle cx="8.5" cy="13" r="1.5"/>',
-    plus: '<path d="M12 5v14"/><path d="M5 12h14"/>'
+    plus: '<path d="M12 5v14"/><path d="M5 12h14"/>',
+    sticker: '<rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>'
   };
   const svg = (paths, opt = {}) => {
     const { w = 16, h = 16, sw = 2, fill = 'none', stroke = 'currentColor' } = opt;
@@ -160,6 +163,13 @@
       this._dragKey = null;
       this._plannerDrag = null;
       this._lastCoordKey = '';
+      this.stickerPanelOpen = false;
+      this._stockStickerDrag = null;
+      this._movingSticker = null;
+      this._resizingSticker = null;
+      this._dragCellImg = null;
+      this._onPM = null;
+      this._onPU = null;
       // persistent map node (survives re-renders)
       this.mapEl = document.createElement('div');
       this.mapEl.className = 'map';
@@ -209,9 +219,21 @@
         if (trip.travelers == null) trip.travelers = d.meta.travelers || 2;
         if (!Array.isArray(trip.closet)) trip.closet = [];
         (trip.stops || []).forEach(s => {
-          (s.itinerary || []).forEach(day => { if (day && !Array.isArray(day.outfits)) day.outfits = []; });
+          (s.itinerary || []).forEach(day => {
+            if (day && !Array.isArray(day.outfits)) day.outfits = [];
+            if (day && Array.isArray(day.outfits)) day.outfits = day.outfits.map(e => {
+              if (typeof e === 'string') { const o = (trip.closet || []).find(o => o.id === e); return { id: e, image: o ? o.image : '' }; }
+              return e;
+            });
+          });
           if (!s.accom || typeof s.accom !== 'object' || !Array.isArray(s.accom.options)) s.accom = { options: [] };
         });
+      });
+      if (!Array.isArray(d.stickerStock)) d.stickerStock = [];
+      if (!Array.isArray(d.placedStickers)) d.placedStickers = [];
+      d.placedStickers.forEach(ps => {
+        if (!ps.target) ps.target = 'page';
+        if (!ps.image) { const s = d.stickerStock.find(s => s.id === ps.stockId); if (s) ps.image = s.image; }
       });
     }
 
@@ -234,7 +256,6 @@
 
     /* ---------- map ---------- */
     ensureMap(tries) {
-      if (!SHOW_MAP) return;
       if (!this.mapEl.isConnected || !window.L) { if (tries < 80) setTimeout(() => this.ensureMap(tries + 1), 100); return; }
       if (this.leafletMap) return;
       const L = window.L;
@@ -367,24 +388,23 @@
     /* ---------- outfit closet ---------- */
     ensureCloset() { const t = this.currentTrip(); if (!Array.isArray(t.closet)) t.closet = []; return t.closet; }
     dayOutfits(stop, dayIdx) { this.ensureItinerary(stop); const d = stop.itinerary[dayIdx] || (stop.itinerary[dayIdx] = { items: [], outfits: [] }); if (!Array.isArray(d.outfits)) d.outfits = []; return d.outfits; }
-    toggleOutfitOnDay(id, stopIdx, dayIdx) { const arr = this.dayOutfits(this.currentTrip().stops[stopIdx], dayIdx); const i = arr.indexOf(id); if (i >= 0) arr.splice(i, 1); else arr.push(id); this.bump(); }
+    toggleOutfitOnDay(id, stopIdx, dayIdx) { const arr = this.dayOutfits(this.currentTrip().stops[stopIdx], dayIdx); const i = arr.findIndex(e => e.id === id); if (i >= 0) arr.splice(i, 1); this.bump(); }
     removeOutfitFromCloset(id) {
       const t = this.currentTrip();
       t.closet = (t.closet || []).filter(o => o.id !== id);
-      t.stops.forEach(s => (s.itinerary || []).forEach(d => { if (Array.isArray(d.outfits)) d.outfits = d.outfits.filter(x => x !== id); }));
       this.bump();
     }
     plannerDrop(targetStopIdx, targetDayIdx) {
       const drag = this._plannerDrag; if (!drag) return;
       if (drag.kind === 'closet') {
         const arr = this.dayOutfits(this.currentTrip().stops[targetStopIdx], targetDayIdx);
-        if (!arr.includes(drag.id)) arr.push(drag.id);
+        if (!arr.some(e => e.id === drag.id)) arr.push({ id: drag.id, image: drag.image });
       } else if (drag.kind === 'day') {
         if (drag.stopIdx === targetStopIdx && drag.dayIdx === targetDayIdx) { this._plannerDrag = null; return; }
         const fromArr = this.dayOutfits(this.currentTrip().stops[drag.stopIdx], drag.dayIdx);
-        const i = fromArr.indexOf(drag.id); if (i >= 0) fromArr.splice(i, 1);
+        const i = fromArr.findIndex(e => e.id === drag.id); if (i >= 0) fromArr.splice(i, 1);
         const toArr = this.dayOutfits(this.currentTrip().stops[targetStopIdx], targetDayIdx);
-        if (!toArr.includes(drag.id)) toArr.push(drag.id);
+        if (!toArr.some(e => e.id === drag.id)) toArr.push({ id: drag.id, image: drag.image });
       }
       this._plannerDrag = null; this.bump();
     }
@@ -398,7 +418,7 @@
       // auto-assign to the open day if any
       if (this.openStopIdx != null && this.activeDay != null) {
         const arr = this.dayOutfits(this.currentTrip().stops[this.openStopIdx], this.activeDay);
-        if (!arr.includes(id)) arr.push(id);
+        if (!arr.some(e => e.id === id)) arr.push({ id, image: dataUrl });
       }
       this.bump();
     }
@@ -427,6 +447,33 @@
         img.onerror = () => resolve(dataUrl);
         img.src = dataUrl;
       });
+    }
+
+    /* ---------- page stickers ---------- */
+    async addToStickerStock(files) {
+      for (const file of Array.from(files)) {
+        if (!file || !file.type.startsWith('image/')) continue;
+        const url = await new Promise(r => { const fr = new FileReader(); fr.onload = ev => r(ev.target.result); fr.readAsDataURL(file); });
+        const dataUrl = await this.autoCutout(url);
+        const id = 'sk' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        this.data.stickerStock.push({ id, image: dataUrl });
+      }
+      this.bump();
+    }
+    removeFromStickerStock(id) {
+      this.data.stickerStock = this.data.stickerStock.filter(s => s.id !== id);
+      this.bump();
+    }
+    placeSticker(stockId, x, y, target = 'page') {
+      const id = 'ps' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+      const stock = this.data.stickerStock.find(s => s.id === stockId);
+      if (!stock) return;
+      this.data.placedStickers.push({ id, stockId, image: stock.image, x: Math.round(x), y: Math.round(y), w: 80, target });
+      this.bump();
+    }
+    removePlacedSticker(id) {
+      this.data.placedStickers = this.data.placedStickers.filter(s => s.id !== id);
+      this.bump();
     }
 
     /* ---------- export / import ---------- */
@@ -512,7 +559,7 @@
       if (d) { const days = Math.max(0, Math.round((d.home - d.origin) / 86400000)); dateRangeStr = fmt(d.origin) + ' – ' + fmt(d.home) + ' · ' + days + ' days'; }
 
       const html = `
-        <div class="page">
+        <div class="page" style="position:relative">
           ${this.renderHeader(meta, dateRangeStr)}
           ${this.renderTabs()}
           ${this.renderMeta(trip, travelers)}
@@ -528,7 +575,9 @@
               ${this.renderTodos(meta)}
             </aside>
           </div>
+          <div class="placed-stickers-layer">${this.renderPlacedStickers()}</div>
         </div>
+        ${this.renderStickerPanel()}
         ${this.renderItineraryModal(trip, d, fmt)}
         ${this.renderAccomModal(trip, d, fmt)}
         ${this.renderBudgetModal(budget, travelers, nights)}
@@ -548,6 +597,7 @@
         <span class="saved" style="opacity:0">saved ✓</span>
         <div class="toolbar">
           <button class="tool-btn" data-act="reset" title="Reset route" aria-label="Reset route">${svg(I.reset)}</button>
+          <button class="tool-btn sticker-toggle-btn${this.stickerPanelOpen ? ' active' : ''}" data-act="toggle-stickers" title="Photo stickers" aria-label="Photo stickers">${svg(I.sticker)}</button>
           <button class="tool-btn" data-act="export" title="Export trip" aria-label="Export trip">${svg(I.download)}</button>
           <button class="tool-btn" data-act="import" title="Import trip" aria-label="Import trip">${svg(I.upload)}</button>
           <input type="file" accept="application/json" class="import-file" data-ch="import-file" style="display:none">
@@ -661,13 +711,47 @@
       </div>`;
     }
 
+    renderStickerPanel() {
+      if (!this.stickerPanelOpen) return '';
+      const stock = this.data.stickerStock || [];
+      const items = stock.map(s => `<div class="stock-item" draggable="true" data-drag="stock-sticker" data-id="${escA(s.id)}" title="Drag onto the page to place">
+        <img src="${escA(s.image)}" draggable="false">
+        <button class="stock-item__del" data-act="stock-delete" data-id="${escA(s.id)}" title="Remove from stock">−</button>
+      </div>`).join('');
+      return `<div class="sticker-panel">
+        <div class="sticker-panel__head">
+          <span class="eyebrow" style="font-size:11px;margin-bottom:0">Photo Stickers</span>
+          <button class="modal-x" style="padding:5px 9px;font-size:14px;line-height:1" data-act="close-stickers">✕</button>
+        </div>
+        <p class="sticker-panel__hint">Drag a photo onto the page to place it. Paste or drop images here too.</p>
+        <div class="sticker-panel__strip" data-drop="sticker-zone">
+          ${items}
+          <div class="add-outfit" data-act="sticker-panel-add" tabindex="0" title="Click, paste, or drop to add photos">
+            ${svg(I.plus, { w: 14, h: 14, sw: 2.2, stroke: '#C8901F' })}<span>Add</span>
+          </div>
+        </div>
+        <input type="file" accept="image/*" multiple class="sticker-file" data-ch="sticker-file" style="display:none">
+      </div>`;
+    }
+
+    renderPlacedStickers(target = 'page') {
+      return (this.data.placedStickers || []).filter(ps => (ps.target || 'page') === target).map(ps => {
+        const img = ps.image;
+        if (!img) return '';
+        return `<div class="placed-sticker" data-placed-id="${escA(ps.id)}" style="left:${ps.x}px;top:${ps.y}px;width:${ps.w || 80}px">
+          <img src="${escA(img)}" draggable="false">
+          <button class="placed-sticker__delete" data-act="placed-delete" data-id="${escA(ps.id)}" title="Remove">×</button>
+          <div class="placed-sticker__resize" title="Drag to resize"></div>
+        </div>`;
+      }).join('');
+    }
+
     /* ----- calendar + itinerary modal ----- */
     buildCalendar(startDate, nights, itinerary, activeDay, closet) {
       const key = d => d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
       const stayMap = {}; const stay = [];
       for (let i = 0; i < nights; i++) { const dt = new Date(startDate); dt.setDate(dt.getDate() + i); stay.push(dt); stayMap[key(dt)] = i; }
       const first = stay[0], last = stay[stay.length - 1];
-      const closetMap = {}; (closet || []).forEach(o => closetMap[o.id] = o.image);
       let months = '';
       let cur = new Date(first.getFullYear(), first.getMonth(), 1);
       const end = new Date(last.getFullYear(), last.getMonth(), 1);
@@ -682,8 +766,8 @@
           const date = new Date(y, m, dd); const idx = stayMap[key(date)];
           if (idx == null) { cells += `<div class="cal-off">${dd}</div>`; continue; }
           const active = idx === activeDay;
-          const ids = (itinerary[idx] && Array.isArray(itinerary[idx].outfits)) ? itinerary[idx].outfits : [];
-          const img = ids.map(id => closetMap[id]).filter(Boolean)[0];
+          const outfits = (itinerary[idx] && Array.isArray(itinerary[idx].outfits)) ? itinerary[idx].outfits : [];
+          const img = outfits[0] ? outfits[0].image : null;
           const hasOotd = !!img;
           cells += `<button class="cal-cell${active ? ' active' : ''}" data-act="cal-day" data-drop="cell" data-i="${idx}"${hasOotd ? ` draggable="true" data-drag="cell" data-i="${idx}"` : ''}>
             <span>${dd}</span>${img ? `<img src="${escA(img)}" draggable="false">` : ''}</button>`;
@@ -736,7 +820,7 @@
       }
 
       return `<div class="overlay" data-act="overlay-iti">
-        <div class="dialog iti-dialog" data-stop>
+        <div class="dialog iti-dialog" data-stop data-sticker-target="iti-${sIdx}">
           <div class="head">
             <div class="row">
               <div style="flex:1;min-width:0">
@@ -758,6 +842,7 @@
           </div>
           ${dayBlock}
         </div>
+        ${hasDay ? `<div class="placed-stickers-layer placed-stickers-layer--modal">${this.renderPlacedStickers('iti-' + sIdx + '-day-' + activeDay)}</div>` : ''}
       </div>`;
     }
 
@@ -782,7 +867,7 @@
         </div>
       </div>`).join('');
       return `<div class="overlay" data-act="overlay-accom">
-        <div class="dialog accom-dialog" data-stop>
+        <div class="dialog accom-dialog" data-stop data-sticker-target="accom-${idx}">
           <div class="head"><div class="row">
             <div style="flex:1;min-width:0">
               <div class="eyebrow">Accommodation Research</div>
@@ -797,6 +882,7 @@
             <button class="add-option" data-act="accom-add" style="width:100%">+</button>
           </div>
         </div>
+        <div class="placed-stickers-layer placed-stickers-layer--modal">${this.renderPlacedStickers('accom-' + idx)}</div>
       </div>`;
     }
 
@@ -841,6 +927,7 @@
       r.addEventListener('drop', (e) => this.onDrop(e));
       r.addEventListener('dragend', (e) => this.onDragEnd(e));
       r.addEventListener('paste', (e) => this.onPaste(e));
+      r.addEventListener('pointerdown', (e) => this.onPointerDown(e));
       // focus guard: disable ancestor drag while editing a field inside it
       r.addEventListener('focusin', (e) => {
         const t = e.target;
@@ -894,6 +981,11 @@
         case 'accom-choose': this.chooseAccomOption(this.accomOpenIdx, i); break;
         case 'accom-remove': this.removeAccomOption(this.accomOpenIdx, i); break;
         case 'accom-add': this.addAccomOption(this.accomOpenIdx); break;
+        case 'toggle-stickers': this.stickerPanelOpen = !this.stickerPanelOpen; this.bump(); break;
+        case 'close-stickers': this.stickerPanelOpen = false; this.bump(); break;
+        case 'sticker-panel-add': this.root.querySelector('.sticker-file').click(); break;
+        case 'stock-delete': this.removeFromStickerStock(id); break;
+        case 'placed-delete': e.stopPropagation(); this.removePlacedSticker(id); break;
       }
     }
 
@@ -925,6 +1017,7 @@
         case 'item-note': trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i].note = v; this.bump(); break;
         case 'item-cost': trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i].cost = v; this.bump(); break;
         case 'closet-file': { const f = e.target.files && e.target.files[0]; if (f) this.addClosetSticker(f); e.target.value = ''; break; }
+        case 'sticker-file': { const files = e.target.files; if (files && files.length) this.addToStickerStock(files); e.target.value = ''; break; }
         // accommodation modal
         case 'accom-name': trip.stops[this.accomOpenIdx].accom.options[i].name = v; this.bump(); break;
         case 'accom-link': trip.stops[this.accomOpenIdx].accom.options[i].link = v.trim(); this.bump(); break;
@@ -943,23 +1036,65 @@
       try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', t.dataset.key || t.dataset.id || t.dataset.i || ''); } catch (_) {}
       if (kind === 'trip') { this._dragKey = t.dataset.key; }
       else if (kind === 'stop') { this._dragStopIdx = Number(t.dataset.i); }
-      else if (kind === 'closet') { this._plannerDrag = { kind: 'closet', id: t.dataset.id }; }
+      else if (kind === 'closet') {
+        const o = this.ensureCloset().find(o => o.id === t.dataset.id);
+        this._plannerDrag = { kind: 'closet', id: t.dataset.id, image: o ? o.image : '' };
+      }
       else if (kind === 'cell') {
         const dayIdx = Number(t.dataset.i); const stop = this.currentTrip().stops[this.openStopIdx];
-        const ids = (stop.itinerary[dayIdx] && stop.itinerary[dayIdx].outfits) || [];
-        if (ids.length) this._plannerDrag = { kind: 'day', id: ids[0], stopIdx: this.openStopIdx, dayIdx };
+        const outfits = (stop.itinerary[dayIdx] && stop.itinerary[dayIdx].outfits) || [];
+        if (outfits.length) {
+          this._plannerDrag = { kind: 'day', id: outfits[0].id, image: outfits[0].image, stopIdx: this.openStopIdx, dayIdx };
+          const di = document.createElement('img');
+          di.src = outfits[0].image;
+          Object.assign(di.style, { position: 'fixed', top: '-200px', left: '-200px', width: '52px', height: '62px', objectFit: 'contain', borderRadius: '8px', filter: 'drop-shadow(0 4px 12px rgba(35,20,12,.3))' });
+          document.body.appendChild(di);
+          e.dataTransfer.setDragImage(di, 26, 31);
+          requestAnimationFrame(() => di.remove());
+          const cellImg = t.querySelector('img');
+          if (cellImg) { cellImg.style.opacity = '0'; this._dragCellImg = cellImg; }
+        }
+      }
+      else if (kind === 'stock-sticker') {
+        this._stockStickerDrag = t.dataset.id;
+        try { e.dataTransfer.effectAllowed = 'copy'; e.dataTransfer.setData('text/plain', t.dataset.id); } catch (_) {}
       }
     }
-    onDragOver(e) { const t = e.target.closest('[data-drop]'); if (t) e.preventDefault(); }
+    onDragOver(e) {
+      if (this._stockStickerDrag) { e.preventDefault(); return; }
+      const t = e.target.closest('[data-drop]'); if (t) e.preventDefault();
+    }
     onDrop(e) {
+      if (this._stockStickerDrag) {
+        e.preventDefault();
+        const dialogEl = e.target.closest('[data-sticker-target]');
+        if (dialogEl) {
+          let target = dialogEl.dataset.stickerTarget;
+          if (target.startsWith('iti-') && this.activeDay != null) target = target + '-day-' + this.activeDay;
+          this.placeSticker(this._stockStickerDrag, e.clientX - 40, e.clientY - 40, target);
+        } else {
+          const pageEl = this.root.querySelector('.page');
+          if (pageEl) {
+            const rect = pageEl.getBoundingClientRect();
+            this.placeSticker(this._stockStickerDrag, e.clientX - rect.left - 40, e.clientY - rect.top - 40, 'page');
+          }
+        }
+        this._stockStickerDrag = null;
+        return;
+      }
       const t = e.target.closest('[data-drop]'); if (!t) return;
       e.preventDefault(); const drop = t.dataset.drop;
       if (drop === 'trip') { this.reorderTrips(this._dragKey, t.dataset.key); this._dragKey = null; }
       else if (drop === 'stop') { if (this._dragStopIdx != null) this.reorderStop(this._dragStopIdx, Number(t.dataset.i)); this._dragStopIdx = null; }
       else if (drop === 'cell') { if (this.openStopIdx != null) this.plannerDrop(this.openStopIdx, Number(t.dataset.i)); }
       else if (drop === 'closet-zone') { const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if (f && f.type.startsWith('image/')) this.addClosetSticker(f); }
+      else if (drop === 'sticker-zone') {
+        const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (f && f.type.startsWith('image/')) this.addToStickerStock([f]);
+      }
     }
     onDragEnd(e) {
+      if (this._dragCellImg) { this._dragCellImg.style.opacity = ''; this._dragCellImg = null; }
       const t = e.target.closest('[data-drag]');
       // dragging an outfit out of a day cell without dropping on another cell → remove it from that day
       if (t && t.dataset.drag === 'cell' && this._plannerDrag && this._plannerDrag.kind === 'day') {
@@ -967,14 +1102,87 @@
         if (this._plannerDrag.stopIdx === this.openStopIdx && this._plannerDrag.dayIdx === dayIdx) this.toggleOutfitOnDay(this._plannerDrag.id, this._plannerDrag.stopIdx, dayIdx);
       }
       this._plannerDrag = null;
+      this._stockStickerDrag = null;
       if (this._dragStopIdx != null) { this._dragStopIdx = null; this.render(); }
       if (this._dragKey != null) { this._dragKey = null; this.render(); }
     }
     onPaste(e) {
-      const zone = e.target.closest('[data-drop="closet-zone"]'); if (!zone) return;
-      const items = (e.clipboardData && e.clipboardData.items) || [];
-      const img = [...items].find(it => it.type.startsWith('image/'));
-      if (img) { e.preventDefault(); this.addClosetSticker(img.getAsFile()); }
+      const closetZone = e.target.closest('[data-drop="closet-zone"]');
+      if (closetZone) {
+        const items = (e.clipboardData && e.clipboardData.items) || [];
+        const img = [...items].find(it => it.type.startsWith('image/'));
+        if (img) { e.preventDefault(); this.addClosetSticker(img.getAsFile()); }
+        return;
+      }
+      if (this.stickerPanelOpen) {
+        const items = (e.clipboardData && e.clipboardData.items) || [];
+        const img = [...items].find(it => it.type.startsWith('image/'));
+        if (img) { e.preventDefault(); this.addToStickerStock([img.getAsFile()]); }
+      }
+    }
+    onPointerDown(e) {
+      const sticker = e.target.closest('.placed-sticker');
+      if (!sticker) return;
+      if (e.target.closest('.placed-sticker__delete')) return;
+      e.preventDefault();
+      const id = sticker.dataset.placedId;
+      if (e.target.closest('.placed-sticker__resize')) {
+        this._resizingSticker = { id, el: sticker, startX: e.clientX, origW: parseFloat(sticker.style.width) || 80 };
+        this._onPM = ev => this._doStickerResize(ev);
+        this._onPU = ev => this._endStickerResize(ev);
+      } else {
+        this._movingSticker = { id, el: sticker, startX: e.clientX, startY: e.clientY, origLeft: parseFloat(sticker.style.left) || 0, origTop: parseFloat(sticker.style.top) || 0 };
+        this._onPM = ev => this._doStickerMove(ev);
+        this._onPU = ev => this._endStickerMove(ev);
+      }
+      document.addEventListener('pointermove', this._onPM);
+      document.addEventListener('pointerup', this._onPU, { once: true });
+    }
+    _doStickerMove(e) {
+      if (!this._movingSticker) return;
+      const { el, startX, startY, origLeft, origTop } = this._movingSticker;
+      el.style.left = (origLeft + e.clientX - startX) + 'px';
+      el.style.top = (origTop + e.clientY - startY) + 'px';
+    }
+    _endStickerMove(e) {
+      if (!this._movingSticker) return;
+      const { id, el } = this._movingSticker;
+      document.removeEventListener('pointermove', this._onPM);
+      this._movingSticker = null;
+      const ps = this.data.placedStickers.find(s => s.id === id);
+      if (!ps) return;
+      const x = Math.round(parseFloat(el.style.left) || 0);
+      const y = Math.round(parseFloat(el.style.top) || 0);
+      const w = parseFloat(el.style.width) || 80;
+      let outOfBounds;
+      if (ps.target === 'page') {
+        const pageEl = this.root.querySelector('.page');
+        const r = pageEl ? pageEl.getBoundingClientRect() : null;
+        outOfBounds = r && (x + w < 0 || y + 40 < 0 || x > r.width || y > r.height);
+      } else {
+        outOfBounds = x + w < 0 || y + 40 < 0 || x > window.innerWidth || y > window.innerHeight;
+      }
+      if (outOfBounds) {
+        this.data.placedStickers = this.data.placedStickers.filter(s => s.id !== id);
+        this.bump();
+        return;
+      }
+      ps.x = x; ps.y = y;
+      this.scheduleSave();
+    }
+    _doStickerResize(e) {
+      if (!this._resizingSticker) return;
+      const { el, startX, origW } = this._resizingSticker;
+      el.style.width = Math.max(32, origW + e.clientX - startX) + 'px';
+    }
+    _endStickerResize(e) {
+      if (!this._resizingSticker) return;
+      const { id, el } = this._resizingSticker;
+      const ps = this.data.placedStickers.find(s => s.id === id);
+      if (ps) ps.w = Math.max(32, Math.round(parseFloat(el.style.width) || 80));
+      document.removeEventListener('pointermove', this._onPM);
+      this._resizingSticker = null;
+      this.scheduleSave();
     }
   }
 
