@@ -5,7 +5,7 @@
 **WanderBook** is a React Native / Expo travel scrapbook app. Users keep a small book of trip cards (max ~10), flip through them with a page-turn animation, and annotate each card with drawings, stickers, text labels, and trip details.
 
 Repo: `kalaha2112/project1`
-Active branch: `claude/create-wanderbook-project-NBHEC`
+Active branch: `claude/summarize-handoff-plan-qSeCH`
 
 ---
 
@@ -37,7 +37,6 @@ Project1/
 │   │           ├── BaliCard.tsx         cardDesign 2
 │   │           ├── MoroccoCard.tsx      cardDesign 3
 │   │           └── LisbonCard.tsx       cardDesign 4
-└── wanderbook/          ← abandoned Next.js prototype (ignore)
 ```
 
 ---
@@ -103,21 +102,18 @@ The `CARDS = [ParisCard, KyotoCard, BaliCard, MoroccoCard, LisbonCard]` array is
 
 ## Known issues / next steps
 
-### 1. Missing npm packages (TS errors)
-`expo-image-picker`, `expo-image-manipulator`, `expo-clipboard`, `expo-file-system` are listed in `package.json` but are **not installed** in `node_modules`. Run:
-```bash
-cd wanderbook-native && npx expo install expo-image-picker expo-image-manipulator expo-clipboard expo-file-system
-```
-These are used by `StickerDrawer.tsx` and `CardEditor.tsx` for photo/paste sticker workflows. The app will crash on those actions until installed.
+All previously known issues have been resolved as of the `claude/summarize-handoff-plan-qSeCH` branch:
 
-### 2. `jumpTo` only steps one at a time
-`PageDots` lets the user tap any dot, but `jumpTo` in `usePageFlip` only calls `goNext`/`goPrev` once. Tapping a non-adjacent dot navigates only one step. Could be fixed by looping, or by implementing a direct `jumpTo(idx)` animation.
+- **npm packages** — `expo-image-picker`, `expo-image-manipulator`, `expo-clipboard`, `expo-file-system`, and `@react-native-async-storage/async-storage` are now installed.
+- **`jumpTo`** — Reimplemented in `usePageFlip.ts` to snap all non-destination pages instantly via `setValue`, then animate only the target page in from `incoming`. Tapping any dot jumps directly.
+- **Persistence** — Zustand store wrapped with `persist` middleware (AsyncStorage backend). `trips`, `stickerTemplates`, and `activeIdx` survive app restarts; transient UI state (`isOpen`, `isAnimating`, `pageStates`) resets on launch.
+- **`wanderbook/` prototype** — Deleted from the repo root.
 
-### 3. No persistence
-All trip data lives in Zustand in-memory. Closing the app resets everything. Adding `zustand/middleware` `persist` with AsyncStorage would fix this.
+### Possible next steps
 
-### 4. `wanderbook/` Next.js project
-The `wanderbook/` folder at the repo root is an earlier web prototype. It is unused and can be deleted when convenient.
+1. **OOTD tab in `TripOverview`** — The tab exists in the UI but has no data model fields; adding `outfitImages: string[]` to `Trip` and a photo-picker flow would complete it.
+2. **Trip-card limit enforcement** — The add-trip flow in `BookCover` currently has no hard cap; gating at 10 trips (per the product intent) avoids animation edge cases.
+3. **Image URIs and AsyncStorage** — Photos picked via `expo-image-picker` are stored as local `file://` URIs; these break after an app reinstall. Copying to a permanent app-documents directory (via `expo-file-system`) before persisting would fix this.
 
 ---
 
