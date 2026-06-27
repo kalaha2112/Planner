@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Europe — A Trip Planner</title>
+<!--
+  EUROPE TRIP PLANNER
+  An independent editorial trip-planner prototype.
+  Design language (type stack, colour tokens, white-on-paper aesthetic,
+  hand-drawn accents) is borrowed from the Wanderbook design system;
+  the product, structure, and data are its own.
+-->
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,500;1,300;1,600&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* ── colour tokens ── */
+  --bg:        #ffffff;
+  --ink:       #1a1a1a;
+  --ink-mid:   #3d3826;
+  --ink-soft:  #7a7260;
+  --ink-faint: #c8c2ae;
+  --hair:      #ece8df;
+  --brown:     #23140C;  /* structural marks, rules */
+  --red:       #91040C;  /* interactive, active */
+  --shell:     #e8e4dc;  /* outer page */
+
+  /* ── type ── */
+  --serif:  'Playfair Display', serif;
+  --script: 'Cormorant Garamond', serif;
+  --caps:   'Bebas Neue', sans-serif;
+  --sans:   'DM Sans', sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--shell);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  padding: 24px 0;
+}
+
+/* ══════════════════════════════
+   PHONE
+══════════════════════════════ */
+.phone {
+  width: 375px;
+  height: 812px;
+  background: var(--bg);
+  border-radius: 48px;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.06),
+    0 30px 80px rgba(0,0,0,0.18),
+    0 8px 24px rgba(0,0,0,0.08);
+}
+.phone::after {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: 48px;
+  border: 1px solid rgba(0,0,0,0.05);
+  pointer-events: none;
+  z-index: 999;
+}
+
+/* ══════════════════════════════
+   STATUS BAR
+══════════════════════════════ */
+.status {
+  position: absolute; top: 0; left: 0; right: 0;
+  z-index: 300;
+  height: 48px;
+  padding: 16px 30px 0;
+  display: flex; justify-content: space-between; align-items: center;
+  pointer-events: none;
+  background: linear-gradient(180deg, #fff 60%, rgba(255,255,255,0));
+}
+.s-time { font-size: 13px; font-weight: 600; color: var(--ink); letter-spacing: 0.3px; }
+.s-icons { display: flex; align-items: flex-end; gap: 5px; }
+.s-bars { display: flex; align-items: flex-end; gap: 2px; height: 11px; }
+.s-bar { width: 3px; background: var(--ink); border-radius: 1px; }
+.s-bat {
+  width: 22px; height: 11px; border: 1px solid var(--ink);
+  border-radius: 3px; position: relative; padding: 1.5px;
+}
+.s-bat::after {
+  content: ''; position: absolute; right: -3px; top: 3px;
+  width: 2px; height: 4px; background: var(--ink); border-radius: 0 1px 1px 0;
+}
+.s-bat span { display: block; height: 100%; width: 72%; background: var(--ink); border-radius: 1px; }
+
+/* ══════════════════════════════
+   SCROLL CONTAINER
+══════════════════════════════ */
+.scroll {
+  position: absolute; inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 48px 0 96px;
+  scrollbar-width: none;
+}
+.scroll::-webkit-scrollbar { display: none; }
+
+section { scroll-margin-top: 54px; }
+
+/* reveal-on-load */
+.reveal { opacity: 0; transform: translateY(14px); animation: rise 0.7s cubic-bezier(0.2,0.7,0.2,1) forwards; }
+.reveal.d1 { animation-delay: 0.05s; }
+.reveal.d2 { animation-delay: 0.13s; }
+.reveal.d3 { animation-delay: 0.22s; }
+.reveal.d4 { animation-delay: 0.32s; }
+@keyframes rise { to { opacity: 1; transform: translateY(0); } }
+
+/* ══════════════════════════════
+   HERO
+══════════════════════════════ */
+.hero {
+  position: relative;
+  padding: 26px 24px 22px;
+  overflow: hidden;
+}
+.hero-ghost {
+  position: absolute;
+  top: 40px; left: -14px; right: 0;
+  font-family: var(--caps);
+  font-size: 150px; line-height: 0.8;
+  color: rgba(26,26,26,0.035);
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+}
+.hero > * { position: relative; z-index: 1; }
+
+.kicker {
+  font-family: var(--caps);
+  font-size: 12px; letter-spacing: 5px;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.kicker .star { color: var(--red); margin: 0 7px; }
+
+.masthead {
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 76px;
+  line-height: 0.86;
+  letter-spacing: -2px;
+  color: var(--ink);
+}
+.masthead em {
+  font-style: italic;
+  font-weight: 400;
+}
+.hero-sub {
+  font-family: var(--script);
+  font-style: italic;
+  font-weight: 300;
+  font-size: 19px;
+  color: var(--ink-mid);
+  margin-top: 12px;
+  line-height: 1.35;
+  max-width: 250px;
+}
+.hero-meta {
+  display: flex; align-items: center; gap: 9px;
+  margin-top: 18px;
+  font-family: var(--sans);
+  font-size: 9.5px; font-weight: 500;
+  letter-spacing: 1.6px; text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.hero-meta .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--ink-faint); }
+
+/* hand-drawn section rule (sketch nod) */
+.rule {
+  width: 100%; height: 14px;
+  margin: 4px 0 2px;
+  overflow: visible;
+}
+.rule path { stroke: var(--brown); stroke-width: 1.4; fill: none; stroke-linecap: round; opacity: 0.5; }
+
+/* section label */
+.sec-label {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 0 24px;
+  margin: 26px 0 16px;
+}
+.sec-label h2 {
+  font-family: var(--caps);
+  font-size: 15px; letter-spacing: 3px;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+.sec-label .idx {
+  font-family: var(--script);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--red);
+}
+.sec-label .fill { flex: 1; height: 1px; background: var(--hair); align-self: center; }
+
+/* ══════════════════════════════
+   ROUTE TIMELINE
+══════════════════════════════ */
+.route { padding: 0 24px; }
+.stop {
+  position: relative;
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  gap: 4px 12px;
+  padding: 11px 0;
+  cursor: pointer;
+  align-items: center;
+}
+/* connecting line */
+.stop::before {
+  content: '';
+  position: absolute;
+  left: 6px; top: 0; bottom: 0;
+  width: 1.4px;
+  background: var(--ink-faint);
+}
+.stop:first-child::before { top: 50%; }
+.stop:last-child::before  { bottom: 50%; }
+
+.stop-node {
+  position: relative; z-index: 2;
+  width: 13px; height: 13px; border-radius: 50%;
+  border: 1.6px solid var(--ink-faint);
+  background: var(--bg);
+  transition: all 0.25s ease;
+}
+.stop.on .stop-node {
+  border-color: var(--red);
+  background: var(--red);
+  box-shadow: 0 0 0 4px rgba(145,4,12,0.1);
+}
+.stop.done .stop-node { border-color: var(--ink-soft); background: var(--ink-soft); }
+
+.stop-main { grid-column: 2; min-width: 0; }
+.stop-city {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 21px;
+  line-height: 1;
+  color: var(--ink);
+  letter-spacing: -0.3px;
+  transition: color 0.2s;
+}
+.stop.on .stop-city { color: var(--red); }
+.stop-country {
+  font-family: var(--sans);
+  font-size: 8px; font-weight: 500;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-top: 3px;
+}
+.stop-dates {
+  grid-column: 3;
+  text-align: right;
+  font-family: var(--script);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.stop-nights {
+  display: block;
+  font-family: var(--sans);
+  font-style: normal;
+  font-size: 7.5px; font-weight: 500;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-top: 2px;
+}
+
+/* ══════════════════════════════
+   CITY ITINERARY
+══════════════════════════════ */
+.city { padding: 0 24px; }
+.city-head { margin-bottom: 4px; }
+.city-name {
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 46px;
+  line-height: 0.9;
+  letter-spacing: -1.5px;
+  color: var(--ink);
+}
+.city-tag {
+  font-family: var(--sans);
+  font-size: 9px; font-weight: 500;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-top: 8px;
+}
+.city-tag .sep { color: var(--ink-faint); margin: 0 6px; }
+.city-note {
+  font-family: var(--script);
+  font-style: italic;
+  font-weight: 300;
+  font-size: 17px;
+  line-height: 1.4;
+  color: var(--ink-mid);
+  margin-top: 11px;
+}
+
+/* day tabs */
+.day-tabs {
+  display: flex; gap: 8px;
+  margin: 20px 0 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.day-tabs::-webkit-scrollbar { display: none; }
+.day-tab {
+  flex-shrink: 0;
+  background: none; border: none; cursor: pointer;
+  font-family: var(--sans);
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--ink-faint);
+  padding: 6px 0;
+  border-bottom: 1.6px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+  white-space: nowrap;
+}
+.day-tab:not(:last-child) { margin-right: 6px; }
+.day-tab:hover { color: var(--ink-soft); }
+.day-tab.on { color: var(--red); border-bottom-color: var(--red); }
+
+.day-date {
+  font-family: var(--script);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin: 16px 0 2px;
+}
+
+/* itinerary list */
+.plan { list-style: none; }
+.plan.fade { animation: planfade 0.35s ease; }
+@keyframes planfade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.plan-item {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 13px 0;
+  border-top: 1px solid var(--hair);
+}
+.plan-item:last-child { border-bottom: 1px solid var(--hair); }
+.pi-time {
+  font-family: var(--script);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.1;
+}
+.pi-title {
+  font-family: var(--sans);
+  font-size: 13.5px; font-weight: 500;
+  color: var(--ink);
+  line-height: 1.25;
+}
+.pi-tag {
+  font-family: var(--sans);
+  font-size: 7.5px; font-weight: 600;
+  letter-spacing: 1.6px; text-transform: uppercase;
+  white-space: nowrap;
+}
+.k-move { color: var(--brown); }
+.k-eat  { color: var(--red); }
+.k-see  { color: var(--ink-soft); }
+.k-roam { color: var(--ink-mid); }
+.pi-tag::before { content: '· '; color: var(--ink-faint); }
+
+/* ══════════════════════════════
+   BUDGET
+══════════════════════════════ */
+.budget { padding: 0 24px; }
+.bg-figure { display: flex; align-items: baseline; gap: 10px; }
+.bg-total {
+  font-family: var(--caps);
+  font-size: 52px; line-height: 0.9;
+  letter-spacing: 1px;
+  color: var(--ink);
+}
+.bg-label {
+  font-family: var(--sans);
+  font-size: 9px; font-weight: 500;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.bg-sub {
+  font-family: var(--script);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink-soft);
+  margin-top: 4px;
+}
+.bg-sub b { color: var(--red); font-style: normal; font-family: var(--sans); font-weight: 600; font-size: 12px; }
+
+/* committed progress */
+.bg-track {
+  height: 5px; border-radius: 3px;
+  background: var(--hair);
+  margin: 16px 0 6px;
+  overflow: hidden;
+}
+.bg-fill {
+  height: 100%;
+  background: var(--red);
+  border-radius: 3px;
+  width: 0;
+  transition: width 1s cubic-bezier(0.2,0.7,0.2,1) 0.3s;
+}
+
+/* allocation bar */
+.bg-alloc {
+  display: flex;
+  height: 9px; border-radius: 3px; overflow: hidden;
+  margin-top: 22px;
+  gap: 1.5px;
+}
+.bg-seg { height: 100%; }
+
+.bg-legend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px 18px;
+  margin-top: 16px;
+}
+.lg {
+  display: flex; align-items: center; gap: 8px;
+}
+.lg-swatch { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.lg-name {
+  font-family: var(--sans);
+  font-size: 10px; font-weight: 500;
+  color: var(--ink-mid); flex: 1;
+}
+.lg-amt {
+  font-family: var(--sans);
+  font-size: 10px; font-weight: 600;
+  color: var(--ink);
+}
+
+.colophon {
+  text-align: center;
+  font-family: var(--script);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--ink-faint);
+  padding: 34px 24px 8px;
+}
+
+/* ══════════════════════════════
+   BOTTOM NAV
+══════════════════════════════ */
+.nav {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 78px;
+  background: rgba(255,255,255,0.96);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--hair);
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-start;
+  padding-top: 12px;
+  z-index: 200;
+}
+.ni {
+  background: none; border: none; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  opacity: 0.32;
+  transition: opacity 0.18s;
+  font-family: var(--sans);
+}
+.ni:hover { opacity: 0.6; }
+.ni.on { opacity: 1; }
+.ni-icon { font-size: 17px; line-height: 1; }
+.ni-label { font-size: 8.5px; font-weight: 500; letter-spacing: 0.4px; color: var(--ink-mid); }
+.ni.on .ni-label { color: var(--ink); font-weight: 600; }
+.ni-pip { width: 3px; height: 3px; border-radius: 50%; background: var(--red); opacity: 0; }
+.ni.on .ni-pip { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="phone">
+
+  <!-- Status bar -->
+  <div class="status">
+    <div class="s-time">9:16</div>
+    <div class="s-icons">
+      <div class="s-bars">
+        <div class="s-bar" style="height:4px"></div>
+        <div class="s-bar" style="height:6px"></div>
+        <div class="s-bar" style="height:8px"></div>
+        <div class="s-bar" style="height:11px"></div>
+      </div>
+      <div class="s-bat"><span></span></div>
+    </div>
+  </div>
+
+  <div class="scroll" id="scroll">
+
+    <!-- ══ HERO ══ -->
+    <section class="hero reveal d1" id="sec-plan">
+      <div class="hero-ghost">EUROPE</div>
+      <div class="kicker">The Grand Tour <span class="star">✦</span> 2026</div>
+      <h1 class="masthead">Eur<em>o</em>pe</h1>
+      <p class="hero-sub">A spring crossing of five cities, by rail and short hop.</p>
+      <div class="hero-meta">
+        <span>Apr 3 – 20</span><span class="dot"></span>
+        <span>5 Cities</span><span class="dot"></span>
+        <span>18 Days</span>
+      </div>
+    </section>
+
+    <!-- ══ ROUTE ══ -->
+    <section id="sec-route">
+      <div class="sec-label reveal d2">
+        <h2>The Route</h2><span class="idx">i.</span><span class="fill"></span>
+      </div>
+      <div class="route reveal d2" id="route"><!-- built by JS --></div>
+    </section>
+
+    <svg class="rule reveal d2" viewBox="0 0 327 14" preserveAspectRatio="none" style="margin:18px 24px 0; width:calc(100% - 48px)">
+      <path d="M2 8 C 60 4, 110 11, 165 6 S 270 3, 325 9"/>
+    </svg>
+
+    <!-- ══ CITY ITINERARY ══ -->
+    <section id="sec-city">
+      <div class="sec-label reveal d3">
+        <h2>Day By Day</h2><span class="idx">ii.</span><span class="fill"></span>
+      </div>
+      <div class="city reveal d3">
+        <div class="city-head">
+          <div class="city-name" id="cityName">Paris</div>
+          <div class="city-tag" id="cityTag"></div>
+          <div class="city-note" id="cityNote"></div>
+        </div>
+        <div class="day-tabs" id="dayTabs"></div>
+        <div class="day-date" id="dayDate"></div>
+        <ul class="plan" id="plan"></ul>
+      </div>
+    </section>
+
+    <!-- ══ BUDGET ══ -->
+    <section id="sec-budget">
+      <div class="sec-label reveal d4">
+        <h2>The Budget</h2><span class="idx">iii.</span><span class="fill"></span>
+      </div>
+      <div class="budget reveal d4">
+        <div class="bg-figure">
+          <div class="bg-total" id="bgTotal">€4,800</div>
+          <div class="bg-label">planned<br>total</div>
+        </div>
+        <div class="bg-sub" id="bgSub"></div>
+        <div class="bg-track"><div class="bg-fill" id="bgFill"></div></div>
+
+        <div class="bg-alloc" id="bgAlloc"></div>
+        <div class="bg-legend" id="bgLegend"></div>
+      </div>
+    </section>
+
+    <div class="colophon reveal d4">Buon viaggio · Bon voyage · Goede reis</div>
+
+  </div><!-- /scroll -->
+
+  <!-- Bottom nav -->
+  <div class="nav" id="nav">
+    <button class="ni on" data-target="sec-plan"><span class="ni-icon">🗓️</span><span class="ni-label">Plan</span><span class="ni-pip"></span></button>
+    <button class="ni" data-target="sec-route"><span class="ni-icon">🧭</span><span class="ni-label">Route</span><span class="ni-pip"></span></button>
+    <button class="ni" data-target="sec-city"><span class="ni-icon">📍</span><span class="ni-label">Cities</span><span class="ni-pip"></span></button>
+    <button class="ni" data-target="sec-budget"><span class="ni-icon">💶</span><span class="ni-label">Budget</span><span class="ni-pip"></span></button>
+  </div>
+
+</div><!-- /phone -->
+
+<script>
+/* ═══════════════════════════════════════
+   DATA — the trip
+═══════════════════════════════════════ */
+const TRIP = {
+  budget: {
+    currency: '€',
+    total: 4800,
+    booked: 2940,
+    categories: [
+      { name: 'Stays',     amount: 1800, color: '#23140C' },
+      { name: 'Transport', amount: 1000, color: '#7a7260' },
+      { name: 'Food',      amount: 1200, color: '#91040C' },
+      { name: 'Sights',    amount: 800,  color: '#c8c2ae' },
+    ],
+  },
+  cities: [
+    {
+      name: 'Paris', country: 'France', dates: 'Apr 3 – 6', nights: 3,
+      note: 'Open-air markets, the Marais, and long café mornings.',
+      days: [
+        { label: 'Day 1', date: 'Wednesday, Apr 3', items: [
+          { time: 'Morning',   title: 'Arrive Gare du Nord', tag: 'TRAIN' },
+          { time: 'Afternoon', title: 'Wander Le Marais & Place des Vosges', tag: 'WALK' },
+          { time: 'Evening',   title: 'Dinner at Chez Janou', tag: 'FOOD' },
+        ]},
+        { label: 'Day 2', date: 'Thursday, Apr 4', items: [
+          { time: 'Morning',   title: "Musée d'Orsay", tag: 'SIGHT' },
+          { time: 'Afternoon', title: 'Seine booksellers & Île de la Cité', tag: 'WALK' },
+          { time: 'Evening',   title: 'Wine bar on Canal St-Martin', tag: 'DRINK' },
+        ]},
+        { label: 'Day 3', date: 'Friday, Apr 5', items: [
+          { time: 'Morning',   title: "Marché d'Aligre", tag: 'MARKET' },
+          { time: 'Afternoon', title: 'Climb to Montmartre', tag: 'SIGHT' },
+          { time: 'Evening',   title: 'Jazz at Caveau de la Huchette', tag: 'NIGHT' },
+        ]},
+      ],
+    },
+    {
+      name: 'Amsterdam', country: 'Netherlands', dates: 'Apr 6 – 9', nights: 3,
+      note: 'Canals by bike, brown cafés by dusk.',
+      days: [
+        { label: 'Day 1', date: 'Saturday, Apr 6', items: [
+          { time: 'Midday',    title: 'Thalys to Amsterdam Centraal', tag: 'TRAIN' },
+          { time: 'Afternoon', title: 'Jordaan loop by bike', tag: 'BIKE' },
+          { time: 'Evening',   title: 'Brown café on Prinsengracht', tag: 'FOOD' },
+        ]},
+        { label: 'Day 2', date: 'Sunday, Apr 7', items: [
+          { time: 'Morning',   title: 'Rijksmuseum', tag: 'SIGHT' },
+          { time: 'Afternoon', title: 'Canal-belt walk', tag: 'WALK' },
+          { time: 'Evening',   title: 'Indonesian rijsttafel', tag: 'FOOD' },
+        ]},
+        { label: 'Day 3', date: 'Monday, Apr 8', items: [
+          { time: 'Morning',   title: 'Albert Cuyp Market', tag: 'MARKET' },
+          { time: 'Afternoon', title: 'Vondelpark', tag: 'PARK' },
+          { time: 'Evening',   title: 'Harbour sunset, NDSM ferry', tag: 'VIEW' },
+        ]},
+      ],
+    },
+    {
+      name: 'Berlin', country: 'Germany', dates: 'Apr 9 – 12', nights: 3,
+      note: 'Cold-war ghosts and warm late nights.',
+      days: [
+        { label: 'Day 1', date: 'Tuesday, Apr 9', items: [
+          { time: 'Midday',    title: 'ICE to Berlin Hauptbahnhof', tag: 'TRAIN' },
+          { time: 'Afternoon', title: 'Museum Island', tag: 'SIGHT' },
+          { time: 'Evening',   title: 'Dinner in Prenzlauer Berg', tag: 'FOOD' },
+        ]},
+        { label: 'Day 2', date: 'Wednesday, Apr 10', items: [
+          { time: 'Morning',   title: 'East Side Gallery', tag: 'WALK' },
+          { time: 'Afternoon', title: 'Tempelhofer Feld', tag: 'PARK' },
+          { time: 'Evening',   title: 'Kreuzberg street eats', tag: 'FOOD' },
+        ]},
+        { label: 'Day 3', date: 'Thursday, Apr 11', items: [
+          { time: 'Morning',   title: 'Flea market at Mauerpark', tag: 'MARKET' },
+          { time: 'Afternoon', title: 'Reichstag dome', tag: 'SIGHT' },
+          { time: 'Evening',   title: 'Late set, Friedrichshain', tag: 'NIGHT' },
+        ]},
+      ],
+    },
+    {
+      name: 'Rome', country: 'Italy', dates: 'Apr 12 – 16', nights: 4,
+      note: 'Ruins at golden hour, dinner after ten.',
+      days: [
+        { label: 'Day 1', date: 'Friday, Apr 12', items: [
+          { time: 'Morning',   title: 'Flight to Fiumicino', tag: 'FLIGHT' },
+          { time: 'Afternoon', title: 'Settle into Trastevere', tag: 'WALK' },
+          { time: 'Evening',   title: 'Cacio e pepe at Da Enzo', tag: 'FOOD' },
+        ]},
+        { label: 'Day 2', date: 'Saturday, Apr 13', items: [
+          { time: 'Morning',   title: 'Colosseum & Roman Forum', tag: 'SIGHT' },
+          { time: 'Afternoon', title: 'Palatine gardens', tag: 'PARK' },
+          { time: 'Evening',   title: "Campo de' Fiori for supper", tag: 'FOOD' },
+        ]},
+        { label: 'Day 3', date: 'Sunday, Apr 14', items: [
+          { time: 'Morning',   title: 'Vatican Museums & Sistine', tag: 'SIGHT' },
+          { time: 'Afternoon', title: 'Tiber-side walk to Castel', tag: 'WALK' },
+          { time: 'Evening',   title: 'Aperitivo in Monti', tag: 'DRINK' },
+        ]},
+        { label: 'Day 4', date: 'Monday, Apr 15', items: [
+          { time: 'Morning',   title: 'Testaccio Market', tag: 'MARKET' },
+          { time: 'Afternoon', title: 'Appian Way by bike', tag: 'BIKE' },
+          { time: 'Evening',   title: 'Last Roman supper', tag: 'FOOD' },
+        ]},
+      ],
+    },
+    {
+      name: 'Barcelona', country: 'Spain', dates: 'Apr 16 – 20', nights: 4,
+      note: 'Gaudí mornings, vermouth afternoons, the sea at your feet.',
+      days: [
+        { label: 'Day 1', date: 'Tuesday, Apr 16', items: [
+          { time: 'Morning',   title: 'Flight to El Prat', tag: 'FLIGHT' },
+          { time: 'Afternoon', title: 'Gothic Quarter', tag: 'WALK' },
+          { time: 'Evening',   title: 'Tapas crawl in El Born', tag: 'FOOD' },
+        ]},
+        { label: 'Day 2', date: 'Wednesday, Apr 17', items: [
+          { time: 'Morning',   title: 'Sagrada Família', tag: 'SIGHT' },
+          { time: 'Afternoon', title: 'Passeig de Gràcia', tag: 'WALK' },
+          { time: 'Evening',   title: 'Vermouth & anchovies', tag: 'DRINK' },
+        ]},
+        { label: 'Day 3', date: 'Thursday, Apr 18', items: [
+          { time: 'Morning',   title: 'Park Güell', tag: 'SIGHT' },
+          { time: 'Afternoon', title: 'Barceloneta beach', tag: 'BEACH' },
+          { time: 'Evening',   title: 'Seafood at the old port', tag: 'FOOD' },
+        ]},
+        { label: 'Day 4', date: 'Friday, Apr 19', items: [
+          { time: 'Morning',   title: 'La Boqueria', tag: 'MARKET' },
+          { time: 'Afternoon', title: 'Montjuïc & the cable car', tag: 'VIEW' },
+          { time: 'Evening',   title: 'Farewell flamenco', tag: 'NIGHT' },
+        ]},
+      ],
+    },
+  ],
+};
+
+/* tag → editorial colour kind */
+const TAG_KIND = {
+  TRAIN:'move', FLIGHT:'move', BIKE:'move', BOAT:'move',
+  FOOD:'eat', DRINK:'eat',
+  SIGHT:'see', MARKET:'see', NIGHT:'see', MUSEUM:'see',
+  WALK:'roam', PARK:'roam', BEACH:'roam', VIEW:'roam',
+};
+
+/* ═══════════════════════════════════════
+   STATE
+═══════════════════════════════════════ */
+let activeCity = 0;
+let activeDay  = 0;
+
+/* ═══════════════════════════════════════
+   RENDER — route
+═══════════════════════════════════════ */
+function renderRoute() {
+  const el = document.getElementById('route');
+  el.innerHTML = TRIP.cities.map((c, i) => `
+    <div class="stop ${i === activeCity ? 'on' : (i < activeCity ? 'done' : '')}" data-i="${i}">
+      <div class="stop-node"></div>
+      <div class="stop-main">
+        <div class="stop-city">${c.name}</div>
+        <div class="stop-country">${c.country}</div>
+      </div>
+      <div class="stop-dates">${c.dates}<span class="stop-nights">${c.nights} nights</span></div>
+    </div>
+  `).join('');
+
+  el.querySelectorAll('.stop').forEach(s => {
+    s.addEventListener('click', () => {
+      selectCity(+s.dataset.i);
+      document.getElementById('sec-city').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+}
+
+/* ═══════════════════════════════════════
+   RENDER — city + itinerary
+═══════════════════════════════════════ */
+function renderCity() {
+  const c = TRIP.cities[activeCity];
+  document.getElementById('cityName').textContent = c.name;
+  document.getElementById('cityTag').innerHTML =
+    `${c.country}<span class="sep">·</span>${c.nights} nights<span class="sep">·</span>${c.dates}`;
+  document.getElementById('cityNote').textContent = c.note;
+
+  // day tabs
+  const tabs = document.getElementById('dayTabs');
+  tabs.innerHTML = c.days.map((d, j) =>
+    `<button class="day-tab ${j === activeDay ? 'on' : ''}" data-j="${j}">${d.label}</button>`
+  ).join('');
+  tabs.querySelectorAll('.day-tab').forEach(t => {
+    t.addEventListener('click', () => { activeDay = +t.dataset.j; renderDay(); });
+  });
+
+  renderDay();
+}
+
+function renderDay() {
+  const c = TRIP.cities[activeCity];
+  const d = c.days[activeDay];
+
+  // sync tab active states
+  document.querySelectorAll('.day-tab').forEach((t, j) => t.classList.toggle('on', j === activeDay));
+
+  document.getElementById('dayDate').textContent = d.date;
+
+  const plan = document.getElementById('plan');
+  plan.innerHTML = d.items.map(it => {
+    const kind = TAG_KIND[it.tag] || 'see';
+    return `
+      <li class="plan-item">
+        <span class="pi-time">${it.time}</span>
+        <span class="pi-title">${it.title}</span>
+        <span class="pi-tag k-${kind}">${it.tag}</span>
+      </li>`;
+  }).join('');
+
+  // replay fade
+  plan.classList.remove('fade');
+  void plan.offsetWidth;
+  plan.classList.add('fade');
+}
+
+function selectCity(i) {
+  if (i === activeCity) return;
+  activeCity = i;
+  activeDay = 0;
+  renderRoute();
+  renderCity();
+}
+
+/* ═══════════════════════════════════════
+   RENDER — budget
+═══════════════════════════════════════ */
+function renderBudget() {
+  const b = TRIP.budget;
+  const fmt = n => b.currency + n.toLocaleString('en-US');
+
+  document.getElementById('bgTotal').textContent = fmt(b.total);
+  const toGo = b.total - b.booked;
+  document.getElementById('bgSub').innerHTML =
+    `<b>${fmt(b.booked)}</b> booked &nbsp;·&nbsp; ${fmt(toGo)} still to plan`;
+
+  // committed progress
+  requestAnimationFrame(() => {
+    document.getElementById('bgFill').style.width = (b.booked / b.total * 100) + '%';
+  });
+
+  // allocation bar
+  document.getElementById('bgAlloc').innerHTML = b.categories.map(cat =>
+    `<div class="bg-seg" style="width:${cat.amount / b.total * 100}%; background:${cat.color}"></div>`
+  ).join('');
+
+  // legend
+  document.getElementById('bgLegend').innerHTML = b.categories.map(cat => `
+    <div class="lg">
+      <span class="lg-swatch" style="background:${cat.color}"></span>
+      <span class="lg-name">${cat.name}</span>
+      <span class="lg-amt">${fmt(cat.amount)}</span>
+    </div>
+  `).join('');
+}
+
+/* ═══════════════════════════════════════
+   NAV — scroll-spy + tap-to-scroll
+═══════════════════════════════════════ */
+function initNav() {
+  const nav = document.getElementById('nav');
+  const scroll = document.getElementById('scroll');
+
+  nav.querySelectorAll('.ni').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const t = document.getElementById(btn.dataset.target);
+      if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  // map nav buttons by their target section
+  const order = ['sec-plan', 'sec-route', 'sec-city', 'sec-budget'];
+  const sections = order.map(id => document.getElementById(id));
+  const buttons = order.map(id => nav.querySelector(`[data-target="${id}"]`));
+
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const idx = sections.indexOf(e.target);
+        buttons.forEach((b, i) => b.classList.toggle('on', i === idx));
+      }
+    });
+  }, { root: scroll, rootMargin: '-45% 0px -45% 0px', threshold: 0 });
+
+  sections.forEach(s => io.observe(s));
+}
+
+/* ═══════════════════════════════════════
+   INIT
+═══════════════════════════════════════ */
+renderRoute();
+renderCity();
+renderBudget();
+initNav();
+</script>
+
+</body>
+</html>
