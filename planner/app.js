@@ -211,6 +211,13 @@
         this.renderItineraryModal(trip, d, fmt) +
         this.renderAccomModal(trip, d, fmt) +
         this.renderBudgetModal(budget, travelers, nights);
+      // modal-only re-render still has to (re)mount the per-day map node
+      this.mountDayMap();
+    }
+    // attach the persistent day-map node into the freshly-rendered modal and (re)init Leaflet
+    mountDayMap() {
+      const dayHolder = this.modalEl.querySelector('#day-map-holder');
+      if (dayHolder) { dayHolder.appendChild(this.dayMapEl); this.ensureDayMap(0); if (this.dayMap) this.dayMap.invalidateSize(); this.scheduleDayMap(); }
     }
     snapshot() { this._history.push(clone(this.data)); if (this._history.length > 20) this._history.shift(); }
     undo() { if (!this._history.length) return; this.data = this._history.pop(); this.migrate(); this._lastCoordKey = ''; this.bump(); }
@@ -714,8 +721,7 @@
       const holder = this.root.querySelector('#map-holder');
       if (holder) { holder.appendChild(this.mapEl); if (this.leafletMap) this.leafletMap.invalidateSize(); }
       // re-attach the per-day itinerary map (it lives inside the modal root)
-      const dayHolder = this.modalEl.querySelector('#day-map-holder');
-      if (dayHolder) { dayHolder.appendChild(this.dayMapEl); this.ensureDayMap(0); if (this.dayMap) this.dayMap.invalidateSize(); this.scheduleDayMap(); }
+      this.mountDayMap();
       this.paintSaved();
 
       // focus the city input of a newly inserted stop, then clear the flag
