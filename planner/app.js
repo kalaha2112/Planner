@@ -394,6 +394,9 @@
       this.dayMapEl.addEventListener('mouseenter', () => this.dayMap.scrollWheelZoom.enable());
       this.dayMapEl.addEventListener('mouseleave', () => this.dayMap.scrollWheelZoom.disable());
       this.renderDayMap();
+      // the modal animates in; recompute size once it settles so tiles aren't blank
+      requestAnimationFrame(() => { if (this.dayMap) this.dayMap.invalidateSize(); });
+      setTimeout(() => { if (this.dayMap) { this.dayMap.invalidateSize(); this.renderDayMap(); } }, 360);
     }
     scheduleDayMap() { if (!this.dayMap) return; clearTimeout(this._dayMapTimer); this._dayMapTimer = setTimeout(() => { this.dayMap.invalidateSize(); this.renderDayMap(); }, 200); }
     renderDayMap() {
