@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-06-29T17:23:42.397Z
+  Built: 2026-06-29T21:14:54.232Z
 -->
 
 <html lang="en">
@@ -1510,6 +1510,12 @@ a { color: inherit; }
 .sync-status.s-offline { color: var(--ink-mute); }
 .sync-when { font-family: var(--script); font-style: italic; font-size: 12.5px; color: var(--ink-mute); }
 .sync-note { font-family: var(--sans); font-size: 11.5px; line-height: 1.5; color: var(--ink-mute); margin: 4px 0 0; }
+.sync-steps { margin: 2px 0 4px; padding-left: 20px; display: flex; flex-direction: column; gap: 7px; }
+.sync-steps li { font-family: var(--sans); font-size: 13px; line-height: 1.45; color: var(--ink-soft); }
+.sync-steps b { color: var(--ink); font-weight: 600; }
+.sync-steps code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11.5px; background: var(--line-2); padding: 1px 5px; border-radius: 4px; color: var(--ink-mid); }
+.sync-link { color: var(--red); font-weight: 600; text-decoration: none; border-bottom: 1px solid color-mix(in oklch, var(--red) 40%, transparent); }
+.sync-link:hover { border-bottom-color: var(--red); }
 
 </style>
 </head>
@@ -2034,6 +2040,62 @@ a { color: inherit; }
       this.persistSyncRec(); this.setSyncStatus('off', ''); this.bumpModal();
     }
     syncNow() { this.pullCloud({ force: true }); }
+
+    // reconstruct a human endpoint URL from a "t-<key>" code (for display)
+    endpointUrl(code) {
+      const { be, id } = this.parseCode(code);
+      if (be && be.base && /textdb/.test(be.base)) return be.base + '/' + id;
+      return code;
+    }
+    // normalize whatever the user pasted (full textdb URL, page URL, or raw key)
+    // into our "t-<key>" code form
+    normalizeEndpoint(raw) {
+      let v = (raw || '').trim();
+      if (!v) return '';
+      let m = v.match(/textdb\.dev\/api\/data\/([^/\s?#]+)/i);
+      if (!m) m = v.match(/textdb\.dev\/(?:e\/)?([^/\s?#]+)/i);
+      if (m) return 't-' + m[1];
+      if (/^[a-z]-/i.test(v) && SYNC_BACKENDS[v[0].toLowerCase()]) return v;   // already a tagged code
+      return 't-' + v.replace(/[^\w-]/g, '');                                  // bare key
+    }
+    // Connect a user-created endpoint: load its trips if it already has some
+    // (2nd device), otherwise initialize it with this device's trips (1st device).
+    async connectEndpoint(raw) {
+      const code = this.normalizeEndpoint(raw);
+      if (!code || code === 't-') { this.setSyncStatus('error', 'Paste your textdb endpoint first.'); return; }
+      if (this._syncBusy) return;
+      this._syncBusy = true; this.setSyncStatus('syncing', 'Connecting…');
+      try {
+        let payload = null;
+        try { payload = await this.cloudGet(code); }
+        catch (e) { if (e.code !== 404) throw e; }   // 404/empty = brand-new endpoint
+        if (payload && this.validPayload(payload)) {
+          // endpoint already holds trips — adopt them
+          this.snapshot();
+          this.data = payload.data; this.migrate(); this._lastCoordKey = '';
+          this.sync.id = code; this.sync.rev = Number(payload.rev) || Date.now(); this.sync.lastSyncedAt = Date.now();
+          this.persistSyncRec(); this.saveLocalNow();
+          this._syncBusy = false; this._syncCodeDraft = '';
+          this.setSyncStatus('synced', 'Connected — trips loaded'); this.render(); this.bumpModal();
+        } else {
+          // empty endpoint — seed it with our current trips, then read back to confirm it stuck
+          if (!this.sync.rev) this.sync.rev = Date.now();
+          this.sync.id = code; this.persistSyncRec();
+          await this.cloudPut(code);
+          let check = null; try { check = await this.cloudGet(code); } catch (e) {}
+          if (!check || !this.validPayload(check)) {
+            this.sync.id = null; this.persistSyncRec();
+            throw new Error("Saved, but the endpoint didn't keep the data — double-check you pasted the API URL from textdb.dev (textdb.dev/api/data/…).");
+          }
+          this.sync.lastSyncedAt = Date.now(); this.persistSyncRec();
+          this._syncBusy = false; this._syncCodeDraft = '';
+          this.setSyncStatus('synced', 'Connected — endpoint set up'); this.render(); this.bumpModal();
+        }
+      } catch (e) {
+        this._syncBusy = false;
+        this.setSyncStatus('error', e.code === 404 ? 'Endpoint not found.' : this.netMsg(e)); this.bumpModal();
+      }
+    }
 
     /* ----- push / pull ----- */
     scheduleCloudPush() {
@@ -3143,11 +3205,12 @@ a { color: inherit; }
       const linked = this.isLinked();
       const statusCls = 's-' + (this._syncStatus || (linked ? 'synced' : 'off'));
       const when = this.sync.lastSyncedAt ? ('Last synced ' + this.relTime(this.sync.lastSyncedAt)) : '';
+      const endpoint = linked ? this.endpointUrl(this.sync.id) : '';
       const body = linked ? `
-        <p class="sync-lead">This planner is syncing. To see the same trips on another device, open this page there, tap <b>Sync</b> → <b>Link a code</b>, and enter the code below.</p>
-        <label class="sync-field-lbl">Your sync code</label>
+        <p class="sync-lead">Synced to your textdb endpoint. On your other device, open <b>Sync</b> and paste the <b>same</b> link below to load these trips.</p>
+        <label class="sync-field-lbl">Your endpoint (paste this on the other device)</label>
         <div class="sync-code-row">
-          <input class="sync-code-out" value="${escA(this.sync.id)}" readonly data-act="sync-select">
+          <input class="sync-code-out" value="${escA(endpoint)}" readonly data-act="sync-select">
           <button class="sync-btn" data-act="sync-copy">Copy</button>
         </div>
         <div class="sync-row">
@@ -3156,22 +3219,22 @@ a { color: inherit; }
         </div>
         <div class="sync-actions">
           <button class="sync-btn primary" data-act="sync-now"${this._syncBusy ? ' disabled' : ''}>Sync now</button>
-          <button class="sync-btn ghost" data-act="sync-unlink">Unlink this device</button>
+          <button class="sync-btn ghost" data-act="sync-unlink">Disconnect this device</button>
         </div>
-        <p class="sync-note">Trips are stored in a free public cloud bin. Anyone with this code can read or change them — treat it like a shared password. Offline edits upload automatically when you reconnect.</p>
+        <p class="sync-note">Trips live at this public endpoint. Anyone with the link can read or change them — treat it like a shared password. Offline edits upload automatically when you reconnect.</p>
       ` : `
-        <p class="sync-lead">Sync keeps your trips in step across phone and laptop. Create a code on one device, then link it on the other.</p>
-        <div class="sync-actions">
-          <button class="sync-btn primary" data-act="sync-create"${this._syncBusy ? ' disabled' : ''}>Create a sync code</button>
-        </div>
-        <div class="sync-or"><span>or link a code</span></div>
-        <label class="sync-field-lbl">Already have a code? Enter it here</label>
+        <p class="sync-lead">Create one free storage endpoint (no account, no email), then paste it on both devices. This device sets it up; the other one loads from it.</p>
+        <ol class="sync-steps">
+          <li>Open <a href="https://textdb.dev" target="_blank" rel="noopener" class="sync-link">textdb.dev ↗</a> and copy the <b>API URL</b> it shows (looks like <code>textdb.dev/api/data/…</code>).</li>
+          <li>Paste it below and tap <b>Connect</b>.</li>
+          <li>Do the same with the <b>same link</b> on your other device.</li>
+        </ol>
         <div class="sync-code-row">
-          <input class="sync-code-in" placeholder="Paste sync code" data-ch="sync-code-in" value="${escA(this._syncCodeDraft || '')}">
-          <button class="sync-btn" data-act="sync-link"${this._syncBusy ? ' disabled' : ''}>Link</button>
+          <input class="sync-code-in" placeholder="Paste your textdb endpoint / link" data-ch="sync-code-in" value="${escA(this._syncCodeDraft || '')}">
+          <button class="sync-btn primary" data-act="sync-connect"${this._syncBusy ? ' disabled' : ''}>Connect</button>
         </div>
         <div class="sync-row"><span class="sync-status ${statusCls}">${esc(this.syncStatusLabel())}</span></div>
-        <p class="sync-note">Your trips will be stored in a free public cloud bin so both devices can reach them. Anyone with the code can view or edit it, so keep it private.</p>
+        <p class="sync-note">Your trips are stored at this public endpoint so both devices can reach them. Anyone with the link can view or edit it, so keep it private.</p>
       `;
       return `<div class="overlay" data-act="overlay-sync">
         <div class="dialog sync-dialog" data-stop>
@@ -3259,6 +3322,7 @@ a { color: inherit; }
         case 'close-sync': this.syncOpen = false; this.bumpModal(); break;
         case 'overlay-sync': if (e.target === t) { this.syncOpen = false; this.bumpModal(); } break;
         case 'sync-create': this.createSync(); break;
+        case 'sync-connect': { const inp = this.modalEl.querySelector('.sync-code-in'); this.connectEndpoint(inp ? inp.value : this._syncCodeDraft); break; }
         case 'sync-link': { const inp = this.modalEl.querySelector('.sync-code-in'); this.linkSync(inp ? inp.value : this._syncCodeDraft); break; }
         case 'sync-now': this.syncNow(); break;
         case 'sync-unlink': if (confirm('Unlink this device? Your trips stay here but stop syncing with other devices.')) this.unlinkSync(); break;
