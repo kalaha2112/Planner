@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-06-29T21:27:48.842Z
+  Built: 2026-06-29T22:09:24.582Z
 -->
 
 <html lang="en">
@@ -778,13 +778,13 @@ a { color: inherit; }
 
 /* hand-drawn paper grain hint behind the column */
 .body-cols {
-  display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;
+  display: flex; flex-wrap: wrap; gap: 36px; align-items: flex-start;
 }
 
 /* ============================================================
    HEADER
    ============================================================ */
-.header { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 4px; }
+.header { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 28px; }
 
 .trip-title {
   font-family: var(--serif);
@@ -845,7 +845,7 @@ a { color: inherit; }
 /* ============================================================
    TRIP SWITCHER
    ============================================================ */
-.tabs-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 22px 0 22px; }
+.tabs-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 14px; }
 .tabs {
   display: inline-flex; gap: 3px;
   background: var(--line-2); border: 1px solid var(--line);
@@ -924,7 +924,7 @@ a { color: inherit; }
 
 /* leg */
 .leg { position: relative; padding: 0 0 0 40px; }
-.leg .inner { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 4px 0; }
+.leg .inner { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 7px 0; }
 .leg select {
   font-family: var(--sans); font-size: 12px; font-weight: 500;
   border: 1px solid var(--line); border-radius: var(--r-xs); padding: 5px 8px;
@@ -954,7 +954,7 @@ a { color: inherit; }
 }
 
 /* stop card */
-.stop { position: relative; padding: 1px 0 1px 40px; transition: opacity .15s; }
+.stop { position: relative; padding: 6px 0 4px 40px; transition: opacity .15s; }
 .stop .dot {
   position: absolute; left: 5px; top: 22px; width: 19px; height: 19px;
   border-radius: 50%; background: var(--red); border: 3px solid var(--shell);
@@ -985,7 +985,7 @@ a { color: inherit; }
   font-variant-numeric: tabular-nums;
 }
 .nights span { font-family: var(--sans); font-size: 10px; color: var(--ink-mute); }
-.stop .subdate { font-family: 'Jost', sans-serif; font-style: italic; font-weight: 300; font-size: 14px; color: var(--green); margin: 4px 0 6px; }
+.stop .subdate { font-family: 'Jost', sans-serif; font-style: italic; font-weight: 300; font-size: 14px; color: var(--green); margin: 1px 0 6px; }
 .accom-btn {
   display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
   border: none; background: transparent; border-radius: var(--r-xs);
@@ -2969,7 +2969,7 @@ a { color: inherit; }
               <span class="chev">›</span>
             </button>
             <div class="foot">
-              <div class="grip" data-grip-stop="${idx}" title="Drag to reorder"><svg width="12" height="18" viewBox="0 0 8 14" fill="currentColor" aria-hidden="true"><circle cx="1.6" cy="1.6" r="1.6"/><circle cx="6.4" cy="1.6" r="1.6"/><circle cx="1.6" cy="7" r="1.6"/><circle cx="6.4" cy="7" r="1.6"/><circle cx="1.6" cy="12.4" r="1.6"/><circle cx="6.4" cy="12.4" r="1.6"/></svg></div>
+              <div class="grip" data-grip-stop="${idx}" title="Drag to reorder"><svg width="9" height="9" viewBox="0 0 7 7" fill="currentColor" aria-hidden="true"><circle cx="1.4" cy="1.4" r="1.1"/><circle cx="5.6" cy="1.4" r="1.1"/><circle cx="1.4" cy="5.6" r="1.1"/><circle cx="5.6" cy="5.6" r="1.1"/></svg></div>
               <button class="trash" data-act="stop-delete" data-i="${idx}" title="Remove stop" aria-label="Remove stop">${svg(I.trash, { w: 14, h: 14, sw: 2.4 })}</button>
             </div>
           </div>

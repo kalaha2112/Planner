@@ -1444,7 +1444,7 @@
               <span class="chev">›</span>
             </button>
             <div class="foot">
-              <div class="grip" data-grip-stop="${idx}" title="Drag to reorder"><svg width="12" height="18" viewBox="0 0 8 14" fill="currentColor" aria-hidden="true"><circle cx="1.6" cy="1.6" r="1.6"/><circle cx="6.4" cy="1.6" r="1.6"/><circle cx="1.6" cy="7" r="1.6"/><circle cx="6.4" cy="7" r="1.6"/><circle cx="1.6" cy="12.4" r="1.6"/><circle cx="6.4" cy="12.4" r="1.6"/></svg></div>
+              <div class="grip" data-grip-stop="${idx}" title="Drag to reorder"><svg width="9" height="9" viewBox="0 0 7 7" fill="currentColor" aria-hidden="true"><circle cx="1.4" cy="1.4" r="1.1"/><circle cx="5.6" cy="1.4" r="1.1"/><circle cx="1.4" cy="5.6" r="1.1"/><circle cx="5.6" cy="5.6" r="1.1"/></svg></div>
               <button class="trash" data-act="stop-delete" data-i="${idx}" title="Remove stop" aria-label="Remove stop">${svg(I.trash, { w: 14, h: 14, sw: 2.4 })}</button>
             </div>
           </div>
