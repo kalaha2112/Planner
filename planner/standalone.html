@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-06-29T17:04:32.967Z
+  Built: 2026-06-29T17:10:54.038Z
 -->
 
 <html lang="en">
@@ -1534,19 +1534,70 @@ a { color: inherit; }
 
   const STORAGE_KEY = 'europe-trip-state-v1';
 
-  /* ---- cross-device cloud sync (kvdb.io — keyless public bucket) ----
-     Why kvdb.io and not a JSON-bin: every request here is a CORS
-     "simple request" (no custom headers → no preflight), and the new
-     bucket id comes back in the response BODY, so we never depend on a
-     CORS-exposed response header. That makes it work from a plain
-     https page across browsers/networks where header-/preflight-based
-     services silently fail with "Load failed" / "Failed to fetch". */
-  const SYNC_KEY      = 'europe-trip-sync-v1';        // local record of the link {id, rev, lastSyncedAt}
-  const SYNC_API      = 'https://kvdb.io';            // bucket store
-  const SYNC_KEYNAME  = 'state';                      // key within the bucket that holds our payload
-  const APP_TAG       = 'europe-trip-planner';        // payload marker so we only adopt our own data
+  /* ---- cross-device cloud sync (keyless, no-signup JSON stores) ----
+     No single free bin service is reliable across every network, so we
+     don't bet on one. `createSync` tries the backends in SYNC_ORDER and
+     keeps whichever answers; the chosen backend is recorded as a
+     one-letter prefix on the sync code (e.g. "e-AbC123") so link / push
+     / pull all hit the same store. Each `create` returns the code id;
+     `get` returns the stored JSON text; `put` overwrites it. */
+  const SYNC_KEY  = 'europe-trip-sync-v1';            // local record of the link {id, rev, lastSyncedAt}
+  const APP_TAG   = 'europe-trip-planner';            // payload marker so we only adopt our own data
   const SYNC_POLL_MS  = 20000;                        // how often to pull while the tab is visible
   const CLOUD_PUSH_DEBOUNCE_MS = 900;                 // coalesce rapid edits into one upload
+
+  const _notFound = () => { const e = new Error('No data found for that code.'); e.code = 404; return e; };
+  const _httpErr  = (name, status) => new Error('“' + name + '” error (HTTP ' + status + ').');
+
+  const SYNC_BACKENDS = {
+    // ExtendsClass JSON Storage — keyless, no signup, id returned in the body.
+    e: {
+      name: 'extendsclass',
+      base: 'https://json.extendsclass.com/bin',
+      async create(body) {
+        const res = await fetch(this.base, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+        if (!res.ok) throw _httpErr(this.name, res.status);
+        const j = await res.json(); const id = j && (j.id || j.Id);
+        if (!id) throw new Error('extendsclass returned no code.');
+        return id;
+      },
+      async get(id) {
+        const res = await fetch(this.base + '/' + encodeURIComponent(id), { method: 'GET', cache: 'no-store' });
+        if (res.status === 404) throw _notFound();
+        if (!res.ok) throw _httpErr(this.name, res.status);
+        return res.text();
+      },
+      async put(id, body) {
+        const res = await fetch(this.base + '/' + encodeURIComponent(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body });
+        if (res.status === 404) throw _notFound();
+        if (!res.ok) throw _httpErr(this.name, res.status);
+      },
+    },
+    // jsonblob — keyless, no signup, id returned in the X-jsonblob header.
+    j: {
+      name: 'jsonblob',
+      base: 'https://jsonblob.com/api/jsonBlob',
+      async create(body) {
+        const res = await fetch(this.base, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body });
+        if (!res.ok) throw _httpErr(this.name, res.status);
+        const id = res.headers.get('X-jsonblob') || ((res.headers.get('Location') || '').split('/').filter(Boolean).pop());
+        if (!id) throw new Error('jsonblob exposed no code.');
+        return id;
+      },
+      async get(id) {
+        const res = await fetch(this.base + '/' + encodeURIComponent(id), { method: 'GET', headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+        if (res.status === 404) throw _notFound();
+        if (!res.ok) throw _httpErr(this.name, res.status);
+        return res.text();
+      },
+      async put(id, body) {
+        const res = await fetch(this.base + '/' + encodeURIComponent(id), { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body });
+        if (res.status === 404) throw _notFound();
+        if (!res.ok) throw _httpErr(this.name, res.status);
+      },
+    },
+  };
+  const SYNC_ORDER = ['e', 'j'];   // create tries these in order
 
   const DEFAULT_STATE = {
     meta: {
@@ -1825,18 +1876,15 @@ a { color: inherit; }
     }
 
     /* ============================================================
-       CROSS-DEVICE CLOUD SYNC  (kvdb.io)
+       CROSS-DEVICE CLOUD SYNC  (multi-backend, keyless)
        ------------------------------------------------------------
        localStorage is per-device, so edits on a phone never reach a
-       laptop. Sync mirrors the planner state to a keyless public
-       bucket; both devices link the same short code (the bucket id)
-       and pull/push automatically. Conflict policy is simple
-       last-write-wins, keyed on a millisecond `rev` timestamp that
-       bumps on every local edit.
+       laptop. Sync mirrors the planner state to a keyless public JSON
+       store; both devices link the same short code and pull/push
+       automatically. Conflict policy is simple last-write-wins, keyed
+       on a millisecond `rev` timestamp that bumps on every local edit.
 
-       All requests below are deliberately CORS "simple requests":
-       no custom request headers (so no preflight), and the bucket id
-       is read from the response BODY (not a CORS-exposed header).
+       The code is "<backend>-<id>" (e.g. "e-AbC123"); see SYNC_BACKENDS.
        ============================================================ */
     loadSyncRec() {
       try { const v = localStorage.getItem(SYNC_KEY); if (v) return JSON.parse(v); } catch (e) {}
@@ -1846,53 +1894,37 @@ a { color: inherit; }
     isLinked() { return !!(this.sync && this.sync.id); }
     saveLocalNow() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data)); } catch (e) {} }
 
-    bucketUrl(id) { return SYNC_API + '/' + encodeURIComponent(id) + '/' + SYNC_KEYNAME; }
     cloudPayload() { return JSON.stringify({ app: APP_TAG, rev: this.sync.rev || Date.now(), data: this.data }); }
-    // a fetch that rejects (no response) means the host was unreachable —
-    // network block, offline, or a CORS failure. Surface that distinctly.
-    unreachable() {
-      const e = new Error(navigator.onLine === false
+    // parse "<tag>-<id>" (tolerating a pasted full URL) into a backend + id
+    parseCode(code) {
+      let c = (code || '').trim();
+      const url = c.match(/(?:jsonBlob|bin)\/([^/\s?#]+)/i);     // full URL paste
+      if (url) c = url[1];
+      const m = c.match(/^([a-z])-(.+)$/i);
+      if (m && SYNC_BACKENDS[m[1]]) return { be: SYNC_BACKENDS[m[1]], id: m[2] };
+      return { be: SYNC_BACKENDS[SYNC_ORDER[0]], id: c };          // legacy / untagged
+    }
+    // normalize a thrown error: a bare fetch rejection (TypeError) means the
+    // host was unreachable / CORS-blocked; our own errors carry a message.
+    normErr(e) {
+      if (e && (e.code || /HTTP|unreadable|no code|no data|too large/i.test(e.message || ''))) return e;
+      const er = new Error(navigator.onLine === false
         ? 'You appear to be offline.'
-        : 'Could not reach the sync service (network/Wi-Fi may be blocking it).');
-      e.code = 'unreachable'; return e;
+        : 'Could not reach the sync service (it may be down or blocked on this network).');
+      er.code = 'unreachable'; return er;
     }
     netMsg(e) { return (e && e.message) ? e.message : 'Network error.'; }
 
-    async cloudCreate() {
-      let res;
-      // kvdb only parses the create body as bucket config when it arrives with a
-      // JSON content-type; sent as plain text it errors (HTTP 500). So declare
-      // application/json here. This makes create a "preflighted" request, but
-      // kvdb returns CORS headers (we can read its responses), so it answers the
-      // preflight. GET/PUT below stay header-free simple requests.
-      try {
-        res = await fetch(SYNC_API + '/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: '{}',   // empty config = a public, shareable bucket
-        });
-      } catch (e) { throw this.unreachable(); }
-      if (!res.ok) throw new Error('Could not create a code (HTTP ' + res.status + ').');
-      const id = (await res.text()).trim();
-      if (!id) throw new Error('Sync service returned an empty code.');
-      return id;
-    }
-    async cloudGet(id) {
-      let res;
-      try { res = await fetch(this.bucketUrl(id), { method: 'GET', cache: 'no-store' }); }
-      catch (e) { throw this.unreachable(); }
-      if (res.status === 404) { const e = new Error('No data found for that code.'); e.code = 404; throw e; }
-      if (!res.ok) throw new Error('Could not read sync (HTTP ' + res.status + ').');
-      const txt = await res.text();
-      if (!txt) { const e = new Error('No data found for that code.'); e.code = 404; throw e; }
+    async cloudGet(code) {
+      const { be, id } = this.parseCode(code);
+      let txt;
+      try { txt = await be.get(id); } catch (e) { throw this.normErr(e); }
+      if (!txt) throw _notFound();
       try { return JSON.parse(txt); } catch (e) { throw new Error('Synced data was unreadable.'); }
     }
-    async cloudPut(id) {
-      let res;
-      try { res = await fetch(this.bucketUrl(id), { method: 'PUT', body: this.cloudPayload() }); }
-      catch (e) { throw this.unreachable(); }
-      if (res.status === 413) throw new Error('This trip is too large for the free sync tier.');
-      if (!res.ok) throw new Error('Could not save to sync (HTTP ' + res.status + ').');
+    async cloudPut(code) {
+      const { be, id } = this.parseCode(code);
+      try { await be.put(id, this.cloudPayload()); } catch (e) { throw this.normErr(e); }
     }
     validPayload(p) { return !!(p && p.data && p.data.trips && p.data.meta); }
 
@@ -1900,33 +1932,31 @@ a { color: inherit; }
     async createSync() {
       if (this._syncBusy) return;
       this._syncBusy = true; this.setSyncStatus('syncing', 'Creating…');
-      try {
-        if (!this.sync.rev) this.sync.rev = Date.now();
-        const id = await this.cloudCreate();
-        this.sync.id = id; this.persistSyncRec();
-        await this.cloudPut(id);                 // seed the new bucket with current trips
-        this.sync.lastSyncedAt = Date.now(); this.persistSyncRec();
-        this._syncBusy = false; this.setSyncStatus('synced', 'Code created'); this.bumpModal();
-      } catch (e) {
-        this._syncBusy = false;
-        if (!this.sync.lastSyncedAt) { this.sync.id = null; this.persistSyncRec(); }  // creation didn't complete
-        this.setSyncStatus('error', this.netMsg(e)); this.bumpModal();
+      if (!this.sync.rev) this.sync.rev = Date.now();
+      const body = this.cloudPayload();
+      let lastErr;
+      for (const tag of SYNC_ORDER) {
+        try {
+          const id = await SYNC_BACKENDS[tag].create(body);   // create stores our data too
+          this.sync.id = tag + '-' + id; this.sync.lastSyncedAt = Date.now(); this.persistSyncRec();
+          this._syncBusy = false; this.setSyncStatus('synced', 'Code created'); this.bumpModal();
+          return;
+        } catch (e) { lastErr = this.normErr(e); }
       }
+      this._syncBusy = false;
+      this.setSyncStatus('error', (lastErr && lastErr.message) || 'Could not create a code.'); this.bumpModal();
     }
     async linkSync(rawId) {
-      // tolerate a pasted full URL (e.g. https://kvdb.io/<id>/state) — keep just the bucket id
-      let id = (rawId || '').trim();
-      const m = id.match(/kvdb\.io\/([^/\s?#]+)/i);
-      if (m) id = m[1];
-      if (!id) { this.setSyncStatus('error', 'Enter a sync code.'); return; }
+      const code = (rawId || '').trim();
+      if (!code) { this.setSyncStatus('error', 'Enter a sync code.'); return; }
       if (this._syncBusy) return;
       this._syncBusy = true; this.setSyncStatus('syncing', 'Linking…');
       try {
-        const payload = await this.cloudGet(id);
+        const payload = await this.cloudGet(code);
         if (!this.validPayload(payload)) throw new Error('That code has no planner data.');
         this.snapshot();
         this.data = payload.data; this.migrate(); this._lastCoordKey = '';
-        this.sync.id = id; this.sync.rev = Number(payload.rev) || Date.now(); this.sync.lastSyncedAt = Date.now();
+        this.sync.id = code; this.sync.rev = Number(payload.rev) || Date.now(); this.sync.lastSyncedAt = Date.now();
         this.persistSyncRec(); this.saveLocalNow();
         this._syncBusy = false; this._syncCodeDraft = '';
         this.setSyncStatus('synced', 'Linked'); this.render(); this.bumpModal();
