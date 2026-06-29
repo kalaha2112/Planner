@@ -1527,11 +1527,17 @@
     _doStopDrag(e) {
       const d = this._stopDrag; if (!d) return;
       if (e.cancelable) e.preventDefault();
-      const dy = e.clientY - d.startY;
+      d.curY = e.clientY;                       // record latest; apply once per frame (coalesce)
+      if (!d.raf) d.raf = requestAnimationFrame(() => this._stopDragFrame());
+    }
+    _stopDragFrame() {
+      const d = this._stopDrag; if (!d) return;
+      d.raf = 0;
+      const dy = d.curY - d.startY;
       if (Math.abs(dy) > 4) d.moved = true;
-      // the picked-up card follows the finger 1:1 (smooth)
-      if (d.stopEl) d.stopEl.style.transform = `translateY(${dy}px)`;
-      const ins = this._dropIndexAt(e.clientY);
+      // GPU-composited transform; the picked-up card tracks the finger 1:1
+      if (d.stopEl) d.stopEl.style.transform = `translate3d(0, ${dy}px, 0)`;
+      const ins = this._dropIndexAt(d.curY);
       d.targetIdx = ins;
       if (d.moved && ins !== d.lastIns) {
         d.lastIns = ins;
@@ -1541,11 +1547,16 @@
     }
     _endStopDrag() {
       const d = this._stopDrag; if (!d) return;
+      if (d.raf) cancelAnimationFrame(d.raf);
       document.removeEventListener('pointermove', this._onSPM);
       this._stopDrag = null;
-      if (d.moved && d.targetIdx != null) {
+      // recompute the final drop slot from the last pointer position (robust to rAF timing)
+      const moved = d.moved || (d.curY != null && Math.abs(d.curY - d.startY) > 4);
+      let ins = d.targetIdx;
+      if (d.curY != null) { ins = 0; for (let i = 0; i < d.mids.length; i++) { if (d.curY > d.mids[i]) ins = i + 1; } }
+      if (moved && ins != null) {
         const n = this.currentTrip().stops.length;
-        let to = d.targetIdx > d.fromIdx ? d.targetIdx - 1 : d.targetIdx;
+        let to = ins > d.fromIdx ? ins - 1 : ins;
         to = Math.max(0, Math.min(n - 1, to));
         this.reorderStop(d.fromIdx, to);   // bump() re-renders and clears drag classes
       } else {
