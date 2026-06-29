@@ -341,11 +341,18 @@
 
     async cloudCreate() {
       let res;
-      // kvdb parses the POST body as JSON config — it must be valid JSON, so send
-      // "{}" (empty config = a public bucket). Kept as a plain-text body so the
-      // request stays a CORS "simple request" (no preflight).
-      try { res = await fetch(SYNC_API + '/', { method: 'POST', body: '{}' }); }
-      catch (e) { throw this.unreachable(); }
+      // kvdb only parses the create body as bucket config when it arrives with a
+      // JSON content-type; sent as plain text it errors (HTTP 500). So declare
+      // application/json here. This makes create a "preflighted" request, but
+      // kvdb returns CORS headers (we can read its responses), so it answers the
+      // preflight. GET/PUT below stay header-free simple requests.
+      try {
+        res = await fetch(SYNC_API + '/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',   // empty config = a public, shareable bucket
+        });
+      } catch (e) { throw this.unreachable(); }
       if (!res.ok) throw new Error('Could not create a code (HTTP ' + res.status + ').');
       const id = (await res.text()).trim();
       if (!id) throw new Error('Sync service returned an empty code.');
