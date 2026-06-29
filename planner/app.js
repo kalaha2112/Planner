@@ -341,7 +341,10 @@
 
     async cloudCreate() {
       let res;
-      try { res = await fetch(SYNC_API + '/', { method: 'POST', body: '' }); }
+      // kvdb parses the POST body as JSON config — it must be valid JSON, so send
+      // "{}" (empty config = a public bucket). Kept as a plain-text body so the
+      // request stays a CORS "simple request" (no preflight).
+      try { res = await fetch(SYNC_API + '/', { method: 'POST', body: '{}' }); }
       catch (e) { throw this.unreachable(); }
       if (!res.ok) throw new Error('Could not create a code (HTTP ' + res.status + ').');
       const id = (await res.text()).trim();
