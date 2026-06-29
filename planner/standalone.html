@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-06-29T17:10:54.038Z
+  Built: 2026-06-29T17:18:38.639Z
 -->
 
 <html lang="en">
@@ -1549,16 +1549,20 @@ a { color: inherit; }
   const _notFound = () => { const e = new Error('No data found for that code.'); e.code = 404; return e; };
   const _httpErr  = (name, status) => new Error('“' + name + '” error (HTTP ' + status + ').');
 
+  // IMPORTANT: every request below is a CORS "simple request" — no custom
+  // headers (the body goes as the default text/plain), so the browser never
+  // sends a preflight. Preflight that the bin server fails to answer is what
+  // surfaced as "could not reach". Each store still keeps the raw JSON we send.
   const SYNC_BACKENDS = {
-    // ExtendsClass JSON Storage — keyless, no signup, id returned in the body.
-    e: {
-      name: 'extendsclass',
-      base: 'https://json.extendsclass.com/bin',
+    // jsonblob — keyless, no signup, id returned in the X-jsonblob header.
+    j: {
+      name: 'jsonblob',
+      base: 'https://jsonblob.com/api/jsonBlob',
       async create(body) {
-        const res = await fetch(this.base, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+        const res = await fetch(this.base, { method: 'POST', body });
         if (!res.ok) throw _httpErr(this.name, res.status);
-        const j = await res.json(); const id = j && (j.id || j.Id);
-        if (!id) throw new Error('extendsclass returned no code.');
+        const id = res.headers.get('X-jsonblob') || ((res.headers.get('Location') || '').split('/').filter(Boolean).pop());
+        if (!id) throw new Error('jsonblob: code header not readable (CORS).');
         return id;
       },
       async get(id) {
@@ -1568,36 +1572,61 @@ a { color: inherit; }
         return res.text();
       },
       async put(id, body) {
-        const res = await fetch(this.base + '/' + encodeURIComponent(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body });
+        const res = await fetch(this.base + '/' + encodeURIComponent(id), { method: 'PUT', body });
         if (res.status === 404) throw _notFound();
         if (!res.ok) throw _httpErr(this.name, res.status);
       },
     },
-    // jsonblob — keyless, no signup, id returned in the X-jsonblob header.
-    j: {
-      name: 'jsonblob',
-      base: 'https://jsonblob.com/api/jsonBlob',
+    // ExtendsClass JSON Storage — keyless, no signup, id returned in the body.
+    e: {
+      name: 'extendsclass',
+      base: 'https://json.extendsclass.com/bin',
       async create(body) {
-        const res = await fetch(this.base, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body });
+        const res = await fetch(this.base, { method: 'POST', body });
         if (!res.ok) throw _httpErr(this.name, res.status);
-        const id = res.headers.get('X-jsonblob') || ((res.headers.get('Location') || '').split('/').filter(Boolean).pop());
-        if (!id) throw new Error('jsonblob exposed no code.');
+        const j = await res.json().catch(() => null); const id = j && (j.id || j.Id);
+        if (!id) throw new Error('extendsclass: no code in response.');
         return id;
       },
       async get(id) {
-        const res = await fetch(this.base + '/' + encodeURIComponent(id), { method: 'GET', headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+        const res = await fetch(this.base + '/' + encodeURIComponent(id), { method: 'GET', cache: 'no-store' });
         if (res.status === 404) throw _notFound();
         if (!res.ok) throw _httpErr(this.name, res.status);
         return res.text();
       },
       async put(id, body) {
-        const res = await fetch(this.base + '/' + encodeURIComponent(id), { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body });
+        const res = await fetch(this.base + '/' + encodeURIComponent(id), { method: 'PUT', body });
+        if (res.status === 404) throw _notFound();
+        if (!res.ok) throw _httpErr(this.name, res.status);
+      },
+    },
+    // kvdb.io — confirmed reachable on the user's network; bucket id in body.
+    // create makes a public bucket, then seeds it via put().
+    k: {
+      name: 'kvdb',
+      base: 'https://kvdb.io',
+      async create(body) {
+        const res = await fetch(this.base + '/', { method: 'POST', body: '{}' });
+        if (!res.ok) throw _httpErr(this.name, res.status);
+        const id = (await res.text()).trim();
+        if (!id) throw new Error('kvdb: empty code.');
+        await this.put(id, body);
+        return id;
+      },
+      async get(id) {
+        const res = await fetch(this.base + '/' + encodeURIComponent(id) + '/state', { method: 'GET', cache: 'no-store' });
+        if (res.status === 404) throw _notFound();
+        if (!res.ok) throw _httpErr(this.name, res.status);
+        return res.text();
+      },
+      async put(id, body) {
+        const res = await fetch(this.base + '/' + encodeURIComponent(id) + '/state', { method: 'PUT', body });
         if (res.status === 404) throw _notFound();
         if (!res.ok) throw _httpErr(this.name, res.status);
       },
     },
   };
-  const SYNC_ORDER = ['e', 'j'];   // create tries these in order
+  const SYNC_ORDER = ['j', 'e', 'k'];   // create tries these in order
 
   const DEFAULT_STATE = {
     meta: {
@@ -1934,17 +1963,20 @@ a { color: inherit; }
       this._syncBusy = true; this.setSyncStatus('syncing', 'Creating…');
       if (!this.sync.rev) this.sync.rev = Date.now();
       const body = this.cloudPayload();
-      let lastErr;
+      const fails = [];
       for (const tag of SYNC_ORDER) {
         try {
           const id = await SYNC_BACKENDS[tag].create(body);   // create stores our data too
           this.sync.id = tag + '-' + id; this.sync.lastSyncedAt = Date.now(); this.persistSyncRec();
           this._syncBusy = false; this.setSyncStatus('synced', 'Code created'); this.bumpModal();
           return;
-        } catch (e) { lastErr = this.normErr(e); }
+        } catch (e) {
+          const ne = this.normErr(e);
+          fails.push(SYNC_BACKENDS[tag].name + ': ' + (ne.code === 'unreachable' ? 'unreachable' : ne.message));
+        }
       }
       this._syncBusy = false;
-      this.setSyncStatus('error', (lastErr && lastErr.message) || 'Could not create a code.'); this.bumpModal();
+      this.setSyncStatus('error', 'Sync failed — ' + fails.join(' · ')); this.bumpModal();
     }
     async linkSync(rawId) {
       const code = (rawId || '').trim();
