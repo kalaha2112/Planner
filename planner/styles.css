@@ -28,7 +28,7 @@
   /* ---- hairlines / borders (warm-remapped) ---- */
   --line:       #e4ded3;   /* was #EBE6E2 */
   --line-2:     #efeae0;   /* was #F1ECE8 */
-  --line-3:     #ddd5c7;   /* was #E4DDD7 (spine) */
+  --line-3:     #c4bba8;   /* was #E4DDD7 (spine) */
   --dash:       #cdc4b5;   /* was #D8D0CA (dashed) */
 
   /* ---- calendar / closet warm fills ---- */
@@ -49,12 +49,13 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-html, body { background: var(--shell); }
+html, body { background: var(--shell); height: 100%; }
 body {
   font-family: var(--sans);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  overflow-y: auto; /* scrolls on small screens; overridden to hidden on wide */
 }
 
 button { font-family: inherit; }
@@ -69,25 +70,24 @@ a { color: inherit; }
    PAGE SHELL
    ============================================================ */
 .page {
-  max-width: 1120px;
+  max-width: 1360px;
   margin: 0 auto;
-  padding: 44px 28px 60px;
+  padding: 14px 12px 10px;
   color: var(--ink);
 }
 
-/* hand-drawn paper grain hint behind the column */
 .body-cols {
-  display: flex; flex-wrap: wrap; gap: 36px; align-items: flex-start;
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start;
 }
 
 /* ============================================================
    HEADER
    ============================================================ */
-.header { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 28px; }
+.header { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
 
 .trip-title {
   font-family: var(--serif);
-  font-size: 54px; font-weight: 900; letter-spacing: -.02em;
+  font-size: 42px; font-weight: 900; letter-spacing: -.025em;
   line-height: 1; color: var(--ink);
   border: none; background: transparent; padding: 0;
   field-sizing: content; min-width: 2ch; max-width: 100%;
@@ -144,7 +144,7 @@ a { color: inherit; }
 /* ============================================================
    TRIP SWITCHER
    ============================================================ */
-.tabs-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 14px; }
+.tabs-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 8px; }
 .tabs {
   display: inline-flex; gap: 3px;
   background: var(--line-2); border: 1px solid var(--line);
@@ -183,7 +183,7 @@ a { color: inherit; }
 /* ============================================================
    TRIP META
    ============================================================ */
-.meta-row { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-end; margin: 0 0 44px; }
+.meta-row { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-end; margin: 0 0 8px; }
 .meta-field { display: flex; flex-direction: column; gap: 3px; }
 .meta-field label {
   font-family: var(--sans); font-size: 10px; letter-spacing: .06em;
@@ -205,7 +205,7 @@ a { color: inherit; }
   pointer-events: none;
 }
 .route-spine svg { width: 6px; height: 100%; overflow: visible; }
-.route-spine path { stroke: var(--line-3); stroke-width: 1.5; fill: none; }
+.route-spine path { stroke: var(--line-3); stroke-width: 2; fill: none; }
 
 /* endpoint (origin / home) */
 .endpoint { position: relative; padding: 12px 0 12px 40px; }
@@ -253,21 +253,21 @@ a { color: inherit; }
 }
 
 /* stop card */
-.stop { position: relative; padding: 6px 0 4px 40px; transition: opacity .15s; }
+.stop { position: relative; padding: 6px 0 4px 40px; transition: opacity .15s; contain: layout; }
 .stop .dot {
-  position: absolute; left: 5px; top: 22px; width: 19px; height: 19px;
+  position: absolute; left: 5px; top: 27px; width: 19px; height: 19px;
   border-radius: 50%; background: var(--red); border: 3px solid var(--shell);
   box-sizing: border-box;
 }
 .card {
   background: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--r-card); padding: 11px 16px 9px;
+  border-radius: var(--r-card); padding: 11px 16px 11px;
   box-shadow: 0 1px 2px rgba(33,26,24,.04);
 }
 .stop .head { display: flex; align-items: center; gap: 10px; }
 .stop .city {
-  font-family: 'Josefin Sans', sans-serif; font-size: 28px; font-weight: 700;
-  letter-spacing: .07em; text-transform: uppercase; color: var(--ink);
+  font-family: 'Josefin Sans', sans-serif; font-size: 36px; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--ink);
   border: none; background: transparent; padding: 0; flex: 1; min-width: 0; outline-offset: 3px;
 }
 .iti-btn {
@@ -331,7 +331,7 @@ a { color: inherit; }
 /* ============================================================
    ASIDE (right column)
    ============================================================ */
-.aside { flex: 0 1 340px; min-width: 280px; position: sticky; top: 28px; display: flex; flex-direction: column; gap: 22px; }
+.aside { flex: 0 1 280px; min-width: 240px; display: flex; flex-direction: column; gap: 12px; }
 
 .map {
   height: 264px; width: 100%; border-radius: var(--r-card);
@@ -346,7 +346,7 @@ a { color: inherit; }
 .stat { padding: 16px 0; border-bottom: 1px solid var(--line-2); }
 .stat:last-child { border-bottom: none; }
 .stat.clickable { cursor: pointer; }
-.stat .fig { font-family: var(--caps); font-size: 42px; letter-spacing: .02em; color: var(--ink); line-height: .9; }
+.stat .fig { font-family: var(--caps); font-size: 52px; letter-spacing: .02em; color: var(--ink); line-height: .9; }
 .stat.cash .fig  { color: var(--red); }
 .stat.miles .fig { color: var(--gold); }
 .stat.miles.covered .fig { color: var(--green); }
@@ -620,11 +620,44 @@ a { color: inherit; }
 .opt .fld input.price { font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
 .opt .fld .lk a { color: var(--gold); font-family: var(--sans); font-size: 12px; font-weight: 800; text-decoration: none; flex-shrink: 0; }
 
-/* responsive: collapse aside under route on narrow screens */
-@media (max-width: 720px) {
-  .aside { position: static; flex-basis: 100%; }
-  .page { padding: 28px 16px 80px; }
-  .trip-title { font-size: 38px; }
+/* ---- Transport modal ---- */
+.transport-dialog { max-width: 380px; }
+.transport-city { font-family: var(--serif); font-size: 24px; font-weight: 700; letter-spacing: -.02em; color: var(--ink); line-height: 1; }
+.transport-body { padding: 22px 26px 30px; display: flex; flex-direction: column; gap: 22px; }
+.t-pills { display: flex; gap: 7px; flex-wrap: wrap; }
+.t-pill {
+  font-family: var(--sans); font-size: 12px; font-weight: 600;
+  padding: 6px 16px; border-radius: 20px;
+  border: 1.5px solid var(--line); background: var(--surface); color: var(--ink-soft);
+  cursor: pointer; transition: border-color .15s, background .15s, color .15s;
+}
+.t-pill:hover { border-color: var(--ink-mute); color: var(--ink); }
+.t-pill.active { color: #fff; }
+.t-row-3 { display: grid; grid-template-columns: 1fr 1fr 52px; gap: 20px; }
+.t-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.t-fld { display: flex; flex-direction: column; gap: 7px; }
+.t-fld label { font-family: var(--sans); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-mute); }
+.t-line-inp {
+  font-family: var(--sans); font-size: 14px; color: var(--ink);
+  border: none; border-bottom: 1px solid var(--line); background: transparent;
+  padding: 4px 0; width: 100%; min-width: 0; outline: none;
+  font-variant-numeric: tabular-nums;
+}
+.t-line-inp::placeholder { color: var(--ink-faint); }
+.t-line-inp:focus { border-bottom-color: var(--ink); }
+.t-transfer { text-align: center; }
+.t-cost-row { display: flex; align-items: baseline; gap: 4px; border-bottom: 1px solid var(--line); }
+.t-cost-row .t-line-inp { border-bottom: none; }
+.t-unit { font-family: var(--sans); font-size: 12px; color: var(--ink-soft); flex-shrink: 0; }
+.t-cost-row:focus-within { border-bottom-color: var(--ink); }
+
+/* mc-transport-btn tints the route icon with mode color */
+.mc-back .mc-transport-btn { border-color: currentColor; opacity: 0.85; }
+
+/* responsive: narrow screens — aside stacks below map, page scrolls */
+@media (max-width: 799px) {
+  .aside { flex-basis: 100%; }
+  .page { padding: 16px 12px 60px; }
   .iti-dialog { height: calc(100vh - 64px); }
   .iti-body { flex-direction: column; overflow-y: auto; }
   .iti-left { width: 100%; border-right: none; border-bottom: 1px solid var(--line); overflow-y: visible; }
@@ -815,3 +848,358 @@ a { color: inherit; }
 .sync-steps code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11.5px; background: var(--line-2); padding: 1px 5px; border-radius: 4px; color: var(--ink-mid); }
 .sync-link { color: var(--red); font-weight: 600; text-decoration: none; border-bottom: 1px solid color-mix(in oklch, var(--red) 40%, transparent); }
 .sync-link:hover { border-bottom-color: var(--red); }
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .iti-right { animation: none; }
+  .todo input.txt.done { animation: none; text-decoration-color: var(--green); }
+  .sync-dot.s-syncing { animation: none; opacity: 1; }
+  .stop { transition: none; }
+  .cal-cell { transition: none; }
+  .cal-cell.active { transform: none; }
+}
+
+/* ============================================================
+   PHONE (≤480px) — after the 720px block so phone wins
+   ============================================================ */
+@media (max-width: 480px) {
+  /* trip title: tighter than the 38px set in the 720px block */
+  .trip-title { font-size: 30px; }
+
+  /* stop city: 28px clips behind the iti-btn and nights on narrow screens */
+  .stop .city { font-size: 20px; letter-spacing: .04em; }
+
+  /* leg row: compact everything onto one line */
+  .leg .inner { gap: 5px; flex-wrap: nowrap; }
+  .leg select { font-size: 11px; padding: 4px 6px; max-width: 90px; }
+  .leg .dur { min-width: 0; flex: 1 1 60px; }
+  .leg .cost { width: 48px; }
+  .leg .unit { display: none; }
+
+  /* endpoint: loosen origin input so the date can sit alongside */
+  .endpoint input { min-width: 90px; }
+}
+
+/* ============================================================
+   MAP ROUTE — container-type:size so canvas can use cqi/cqb
+   ============================================================ */
+.map-route {
+  flex: 1 1 480px; min-width: 320px; min-height: 0;
+  position: relative;
+  align-self: flex-start; /* natural height; overridden in wide-screen media query */
+}
+
+.map-canvas {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 740 / 480;
+  overflow: visible;
+  border-radius: var(--r-card);
+  border: 1px solid var(--line);
+  /* enables cqi for pin overlays (relative to canvas width) */
+  container-type: inline-size;
+}
+
+.map-bg {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  display: block; border-radius: var(--r-card);
+}
+
+/* ============================================================
+   MAIN LEAFLET MAP — replaces static SVG canvas
+   ============================================================ */
+.main-map-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 740 / 480;
+  overflow: visible;
+  /* isolate so Leaflet's internal z-indices (200–700) stay contained here */
+  isolation: isolate;
+}
+.main-map-leaflet {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  border-radius: var(--r-card);
+  border: 1px solid var(--line);
+}
+.main-map-leaflet.leaflet-container { background: #e0d8cc; font-family: var(--sans); }
+
+/* smooth rounded joins on country border paths */
+.map-country { stroke-linejoin: round; stroke-linecap: round; }
+
+/* city name labels on the minimal basemap */
+.map-city-label {
+  font-family: var(--sans); font-size: 7.5px; font-weight: 600;
+  color: #c9a868; text-transform: uppercase; letter-spacing: .09em;
+  white-space: nowrap; pointer-events: none; line-height: 1;
+  padding-left: 2px;
+}
+.main-pins-overlay {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 710;
+  overflow: visible;
+}
+.main-city-labels-overlay {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 720;
+  overflow: visible;
+}
+.main-leaders-svg {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 750;
+  width: 100%; height: 100%;
+  overflow: visible;
+}
+.main-cards-overlay {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 800;
+}
+.main-cards-overlay .map-stop {
+  width: 155px;
+  pointer-events: all;
+}
+.map-pin-outer {
+  position: absolute;
+  pointer-events: all;
+}
+.map-pin-main-wrap { background: none; border: none; }
+.map-pin-main {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--red);
+  border: 2px solid oklch(97% 0.005 60);
+  display: flex; align-items: center; justify-content: center;
+}
+.map-pin-main .pin-order-input {
+  width: 22px; height: 22px;
+  font-size: 9px; line-height: 22px;
+}
+
+/* ============================================================
+   VIEWPORT-FIT MODE — everything in one screen height (≥ 800px)
+   Below 800px: aside stacks under map, page scrolls normally
+   ============================================================ */
+@media (min-width: 800px) {
+  html, body { overflow: hidden; }
+  .page {
+    height: 100vh; height: 100dvh;
+    display: flex; flex-direction: column;
+    overflow: hidden; padding-bottom: 30px;
+  }
+  .trip-title { font-size: 38px; }
+  .body-cols {
+    flex: 1 1 0; min-height: 0;
+    flex-wrap: nowrap; overflow: hidden;
+    align-items: flex-start; /* map-route only as tall as its canvas */
+  }
+  /* map-route stretches to body-cols height so the Leaflet coordinate space
+     never exceeds the visible area — prevents pins clipping at the bottom edge */
+  .map-route {
+    align-self: stretch;
+    overflow: hidden;
+  }
+  /* unset aspect-ratio so the map canvas fills the constrained height exactly */
+  .main-map-wrap {
+    height: 100%;
+    aspect-ratio: unset;
+  }
+  .aside {
+    flex: 0 0 290px; min-width: 0;
+    position: static; overflow-y: auto;
+    scrollbar-width: thin;
+    align-self: stretch; /* aside fills full body-cols height */
+    padding-bottom: 4px;
+  }
+}
+
+/* ============================================================
+   STOP CARDS — proportional scaling via CSS container queries
+   .map-stop has container-type:inline-size so all cqw values
+   inside the card are relative to the card's own width.
+   Card width = 28% of canvas = 207px at natural 740px canvas.
+   Conversion: Xpx → (X/207 × 100)cqw  ≈  X/2.07 cqw
+   ============================================================ */
+.map-stop {
+  position: absolute;
+  width: 20%; /* scales with canvas */
+  padding: 0; contain: none; z-index: 2;
+  container-type: inline-size; /* cqw = % of card width */
+  perspective: 338cqw; /* 700px / 207px × 100 */
+}
+
+/* flip wrapper — height proportional to width via aspect-ratio */
+.mc-flip {
+  position: relative;
+  aspect-ratio: 210 / 118; /* matches CARD_W_SVG / intended card height */
+  padding: 0; box-shadow: none;
+  transform-style: preserve-3d;
+  transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1) 0.18s;
+}
+.map-stop:not(.mc-dragging):hover .mc-flip {
+  transform: rotateY(180deg); transition-delay: 0s;
+}
+.map-stop.mc-dragging .mc-flip { transform: rotateY(180deg); transition: none; }
+
+/* shared face */
+.mc-front, .mc-back {
+  position: absolute; inset: 0;
+  border-radius: var(--r-card);
+  border: 1px solid var(--line);
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(33,26,24,.10);
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  overflow: hidden;
+}
+
+/* FRONT face — all sizes in cqw */
+.mc-front {
+  padding: 5.3cqw 6.3cqw 4.8cqw;
+  display: flex; flex-direction: column; justify-content: space-between;
+  cursor: default;
+}
+.mc-mode-pip {
+  position: absolute; top: 5.3cqw; right: 5.3cqw;
+  width: 2.9cqw; height: 2.9cqw;
+  border-radius: 50%; opacity: 0.85;
+}
+.mc-city-display {
+  font-family: 'Josefin Sans', sans-serif; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .06em; line-height: 1.1;
+  font-size: 12cqw;
+  color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  padding-right: 8.7cqw;
+}
+.mc-meta { display: flex; flex-direction: column; gap: 1.4cqw; }
+.mc-dates-display {
+  font-size: 4.8cqw; /* ~10px */
+  font-family: var(--sans); color: var(--ink-mute); letter-spacing: .01em;
+}
+.mc-hotel-display {
+  font-size: 4.8cqw;
+  font-family: var(--sans); color: var(--ink-soft);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mc-hotel-empty { opacity: 0.28; }
+
+/* BACK face */
+.mc-back {
+  transform: rotateY(180deg);
+  padding: 5.3cqw 5.3cqw 2.9cqw;
+  display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; gap: 0;
+  overflow-y: auto; scrollbar-width: none;
+  pointer-events: none;
+}
+.mc-back::-webkit-scrollbar { display: none; }
+.map-stop:not(.mc-dragging):hover .mc-front { pointer-events: none; }
+.map-stop:not(.mc-dragging):hover .mc-back,
+.map-stop.mc-dragging .mc-back { pointer-events: auto; }
+
+/* back: compact overrides — cqw relative to .map-stop width */
+.mc-back .city { font-size: 6.3cqw; letter-spacing: 0; }
+.mc-back .head { flex-direction: column; align-items: flex-start; gap: 1.9cqw; width: 100%; margin-bottom: 0; }
+.mc-top-row { display: flex; align-items: center; gap: 1.9cqw; width: 100%; }
+.mc-top-row .city { flex: 1; min-width: 0; }
+.mc-btn-row { display: flex; align-items: center; gap: 1.9cqw; }
+.mc-back .iti-btn { width: 11.6cqw; height: 11.6cqw; }
+.mc-back .nights input { font-size: 5.8cqw; width: 10.6cqw; }
+.mc-back .nights span  { font-size: 4.3cqw; }
+.mc-back .foot { margin-top: 0.5cqw; }
+
+/* editable order number — overlay on SVG pin; scaled via cqi relative to canvas */
+.map-pin-num {
+  position: absolute; transform: translate(-50%, -50%);
+  z-index: 3;
+  width: 2.97cqi; height: 2.97cqi; /* 22px / 740px × 100 */
+}
+.pin-order-input {
+  width: 2.97cqi; height: 2.97cqi;
+  border-radius: 50%; border: none;
+  background: transparent; color: #fff;
+  font-size: 1.22cqi; /* 9px / 740px × 100 */
+  font-weight: 700; text-align: center;
+  cursor: pointer; padding: 0; line-height: 2.97cqi;
+  appearance: none; -moz-appearance: textfield;
+  font-family: var(--sans);
+}
+.pin-order-input::-webkit-inner-spin-button,
+.pin-order-input::-webkit-outer-spin-button { display: none; }
+.pin-order-input:focus {
+  outline: none; background: var(--red);
+  box-shadow: 0 0 0 0.27cqi oklch(97% 0.005 60), 0 0 0 0.54cqi var(--red);
+}
+
+/* compact leg row inside map card back — cqw from .map-stop */
+.map-leg-row {
+  display: flex; align-items: center; gap: 1.9cqw; flex-wrap: wrap;
+  padding: 1.4cqw 0 1.9cqw; margin-top: 0;
+}
+.map-leg-row .mode-dot { width: 2.9cqw; height: 2.9cqw; border-radius: 50%; flex-shrink: 0; }
+.map-leg-row select {
+  font-family: var(--sans); font-size: 4.8cqw; font-weight: 500;
+  border: 1px solid var(--line); border-radius: var(--r-xs); padding: 1.4cqw 2.4cqw;
+  background: var(--surface); color: var(--ink); cursor: pointer; max-width: 36.7cqw;
+}
+.map-leg-row .dur {
+  font-family: var(--sans); font-size: 4.8cqw; color: var(--ink-soft);
+  border: none; border-bottom: 1px solid var(--line); background: transparent;
+  padding: 1cqw; order: 9; flex-basis: 100%; min-width: 0; outline-offset: 1px;
+}
+.map-leg-row .cost-wrap { display: inline-flex; align-items: center; gap: 1.4cqw; }
+.map-leg-row .cost-wrap--fb { background: var(--gold-soft); border-radius: var(--r-xs); padding: 0 1.9cqw 0 1.4cqw; border: 1px solid var(--gold-border); }
+.map-leg-row .cost-wrap--fb .cost { background: transparent; border-color: transparent; color: var(--gold); }
+.map-leg-row .cost-wrap--fb .unit { color: var(--gold); font-weight: 600; }
+.map-leg-row .cost {
+  font-family: var(--sans); font-size: 4.8cqw; width: 21.3cqw;
+  border: 1px solid var(--line); border-radius: var(--r-xs); padding: 1.4cqw 1.9cqw;
+  background: var(--surface); text-align: right; color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.map-leg-row .unit { font-family: var(--sans); font-size: 4.3cqw; color: var(--ink-mute); }
+
+/* origin / home endpoint labels */
+.map-ep {
+  position: absolute; z-index: 3;
+  display: flex; flex-direction: column; gap: 1px;
+  background: rgba(245,242,236,.92); border: 1px solid var(--line);
+  border-radius: var(--r-sm); padding: 5px 8px;
+  backdrop-filter: blur(4px);
+}
+.map-origin { top: 8px; left: 8px; }
+.map-home   { bottom: 8px; right: 8px; }
+.map-ep input {
+  font-family: var(--sans); font-size: 11px; font-weight: 700; color: var(--ink);
+  border: none; background: transparent; padding: 0; min-width: 88px; outline-offset: 2px;
+}
+.map-ep-date {
+  font-family: var(--script); font-style: italic; font-size: 11px; color: var(--ink-soft);
+}
+
+/* floating add-stop button on the map */
+.map-add-btn {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  font-family: var(--sans); font-size: 18px; font-weight: 800; line-height: 1;
+  color: #fff; background: var(--brown); border: none; border-radius: var(--r-btn);
+  width: 36px; height: 36px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(33,26,24,.28);
+  transition: opacity .15s;
+}
+.map-add-btn:hover  { opacity: .82; }
+.map-add-btn:active { opacity: 1; }
+
+/* on very narrow screens, let map scroll horizontally rather than collapse */
+@media (max-width: 500px) {
+  .map-canvas { min-width: 420px; }
+  .map-route { overflow-x: auto; }
+}

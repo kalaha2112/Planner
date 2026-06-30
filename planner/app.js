@@ -13,6 +13,54 @@
   const SHOW_MAP = true;
   const SHOW_COSTS = true;
 
+  // City SVG coordinates  viewBox 0 0 740 480  lon -10…32°E  lat 38…62°N
+  // x = (lon + 10) / 42 * 740    y = (62 - lat) / 24 * 480
+  const CITY_MAP = {
+    // Scandinavia
+    'oslo':[365,42],'stockholm':[495,54],'copenhagen':[396,127],'kobenhavn':[396,127],
+    'helsinki':[616,37],'bergen':[270,32],'gothenburg':[387,87],'goteborg':[387,87],
+    'trondheim':[320,4],'malmo':[388,128],'aarhus':[360,107],'turku':[580,100],
+    // British Isles
+    'london':[176,210],'edinburgh':[120,120],'dublin':[66,173],'manchester':[137,170],
+    'glasgow':[103,122],'birmingham':[137,187],'bristol':[122,205],'liverpool':[118,180],
+    // Western Europe
+    'paris':[218,263],'marseille':[271,374],'lyon':[238,318],'bordeaux':[148,325],
+    'amsterdam':[263,192],'brussels':[253,222],'bruxelles':[253,222],
+    'antwerp':[262,208],'rotterdam':[250,198],'cologne':[299,220],'koln':[299,220],
+    'frankfurt':[330,237],'hamburg':[352,171],'dusseldorf':[282,205],
+    'zurich':[327,292],'bern':[308,303],'geneva':[285,315],'geneve':[285,315],
+    'madrid':[111,432],'barcelona':[215,413],'seville':[66,466],'sevilla':[66,466],
+    'lisbon':[15,466],'lisboa':[15,466],'porto':[24,418],'bilbao':[148,371],'valencia':[194,443],
+    // Central Europe
+    'berlin':[413,189],'munich':[385,282],'munchen':[385,282],'vienna':[465,280],
+    'wien':[465,280],'prague':[431,238],'praha':[431,238],'warsaw':[547,196],
+    'warszawa':[547,196],'krakow':[529,239],'krakow':[529,239],'krakow':[529,239],
+    'budapest':[512,290],'bratislava':[478,282],'brno':[463,262],'wroclaw':[477,218],
+    'poznan':[450,196],'gdansk':[506,153],'lodz':[500,210],'lublin':[558,217],
+    'salzburg':[425,283],'innsbruck':[398,294],'graz':[470,298],'linz':[444,272],
+    'dresden':[430,207],'leipzig':[415,212],'stuttgart':[338,257],
+    'nuremberg':[365,254],'nurnberg':[365,254],'bonn':[294,218],
+    // Italy
+    'milan':[339,328],'milano':[339,328],'venice':[395,329],'venezia':[395,329],
+    'rome':[397,402],'roma':[397,402],'florence':[376,362],'firenze':[376,362],
+    'naples':[429,422],'napoli':[429,422],'bologna':[373,345],'turin':[302,330],
+    'torino':[302,330],'genoa':[324,348],'genova':[324,348],'pisa':[356,357],
+    'palermo':[402,468],'bari':[470,408],'catania':[428,475],
+    // Balkans & Eastern Med
+    'zagreb':[458,322],'ljubljana':[432,318],'sarajevo':[502,342],
+    'belgrade':[535,326],'sofia':[580,358],'bucharest':[636,349],
+    'dubrovnik':[495,372],'split':[466,354],'skopje':[554,370],
+    'thessaloniki':[571,400],'athens':[580,440],'istanbul':[686,418],
+    'valletta':[396,470],'tirana':[512,382],'podgorica':[504,360],
+    // Eastern Europe
+    'kyiv':[714,231],'kiev':[714,231],'lviv':[598,244],
+    'minsk':[663,162],'riga':[601,102],'tallinn':[612,53],
+    'vilnius':[621,132],'kaunas':[596,128],'odessa':[720,319],
+    'chisinau':[668,300],'luxembourg':[285,248],'reykjavik':[0,60],
+    // Common anglicizations
+    'new york':[0,0],'nyc':[0,0],'jfk':[0,0],
+  };
+
   const STORAGE_KEY = 'europe-trip-state-v1';
 
   /* ---- cross-device cloud sync (keyless, no-signup JSON stores) ----
@@ -240,11 +288,11 @@
 
   const MODE_OPTIONS = [
     { value: 'flight', label: 'Flight' },
+    { value: 'flying-blue', label: 'Rewards' },
     { value: 'train', label: 'Train' },
-    { value: 'overnight-train', label: 'Overnight train' },
-    { value: 'flying-blue', label: 'Flying Blue award' }
+    { value: 'bus', label: 'Bus' }
   ];
-  const MODE_HEX = { 'flight': '#91040C', 'train': '#5E8475', 'overnight-train': '#46604F', 'flying-blue': '#C8901F' };
+  const MODE_HEX = { 'flight': '#91040C', 'train': '#5E8475', 'bus': '#4A7098', 'overnight-train': '#46604F', 'flying-blue': '#C8901F' };
 
   const CITY_COORDS = {
     'new york': [40.6413, -73.7781], 'jfk': [40.6413, -73.7781],
@@ -258,7 +306,57 @@
     'vienna': [48.2082, 16.3738], 'hallstatt': [47.5622, 13.6493], 'munich': [48.1351, 11.5820],
     'bratislava': [48.1486, 17.1077], 'berlin': [52.5200, 13.4050], 'amsterdam': [52.3676, 4.9041],
     'zurich': [47.3769, 8.5417], 'ljubljana': [46.0569, 14.5058], 'bled': [46.3683, 14.1147],
-    'venice': [45.4408, 12.3155], 'rome': [41.9028, 12.4964], 'warsaw': [52.2297, 21.0122]
+    'venice': [45.4408, 12.3155], 'rome': [41.9028, 12.4964], 'warsaw': [52.2297, 21.0122],
+    // British Isles
+    'london': [51.5074, -0.1278], 'edinburgh': [55.9533, -3.1883], 'dublin': [53.3498, -6.2603],
+    'manchester': [53.4808, -2.2426], 'glasgow': [55.8642, -4.2518], 'birmingham': [52.4862, -1.8904],
+    'bristol': [51.4545, -2.5879], 'liverpool': [53.4084, -2.9916],
+    // France / Benelux
+    'marseille': [43.2965, 5.3698], 'lyon': [45.7640, 4.8357], 'bordeaux': [44.8378, -0.5792],
+    'brussels': [50.8503, 4.3517], 'bruxelles': [50.8503, 4.3517], 'antwerp': [51.2194, 4.4025],
+    'rotterdam': [51.9244, 4.4777], 'luxembourg': [49.6116, 6.1319],
+    // Germany
+    'cologne': [50.9333, 6.9500], 'koln': [50.9333, 6.9500],
+    'frankfurt': [50.1109, 8.6821], 'hamburg': [53.5753, 10.0153], 'dusseldorf': [51.2217, 6.7762],
+    'dresden': [51.0504, 13.7373], 'leipzig': [51.3397, 12.3731], 'stuttgart': [48.7758, 9.1829],
+    'nuremberg': [49.4521, 11.0767], 'nurnberg': [49.4521, 11.0767], 'bonn': [50.7374, 7.0982],
+    // Switzerland
+    'bern': [46.9481, 7.4474], 'geneva': [46.2044, 6.1432], 'geneve': [46.2044, 6.1432],
+    // Spain / Portugal
+    'madrid': [40.4168, -3.7038], 'barcelona': [41.3851, 2.1734], 'seville': [37.3891, -5.9845],
+    'sevilla': [37.3891, -5.9845], 'lisbon': [38.7223, -9.1393], 'lisboa': [38.7223, -9.1393],
+    'porto': [41.1579, -8.6291], 'bilbao': [43.2630, -2.9350], 'valencia': [39.4699, -0.3763],
+    // Scandinavia
+    'helsinki': [60.1699, 24.9384], 'gothenburg': [57.7089, 11.9746], 'goteborg': [57.7089, 11.9746],
+    'trondheim': [63.4305, 10.3951], 'malmo': [55.6050, 13.0038], 'aarhus': [56.1629, 10.2039],
+    'turku': [60.4518, 22.2666], 'reykjavik': [64.1466, -21.9426],
+    // Baltics
+    'tallinn': [59.4370, 24.7536], 'riga': [56.9496, 24.1052],
+    'vilnius': [54.6872, 25.2797], 'kaunas': [54.8985, 23.9036],
+    // Eastern Europe
+    'minsk': [53.9045, 27.5615],
+    'kyiv': [50.4501, 30.5234], 'kiev': [50.4501, 30.5234], 'lviv': [49.8397, 24.0297],
+    'odessa': [46.4825, 30.7233], 'chisinau': [47.0105, 28.6382],
+    // Poland
+    'wroclaw': [51.1079, 17.0385], 'poznan': [52.4064, 16.9252],
+    'gdansk': [54.3520, 18.6466], 'lodz': [51.7592, 19.4560], 'lublin': [51.2465, 22.5684],
+    'brno': [49.1951, 16.6068],
+    // Austria
+    'innsbruck': [47.2692, 11.4041], 'graz': [47.0707, 15.4395], 'linz': [48.3069, 14.2858],
+    // Italy
+    'milan': [45.4654, 9.1859], 'milano': [45.4654, 9.1859], 'florence': [43.7696, 11.2558],
+    'firenze': [43.7696, 11.2558], 'naples': [40.8518, 14.2681], 'napoli': [40.8518, 14.2681],
+    'bologna': [44.4949, 11.3426], 'turin': [45.0703, 7.6869], 'torino': [45.0703, 7.6869],
+    'genoa': [44.4056, 8.9463], 'genova': [44.4056, 8.9463], 'pisa': [43.7228, 10.4017],
+    'palermo': [38.1157, 13.3615], 'bari': [41.1171, 16.8719], 'catania': [37.5079, 15.0830],
+    // Balkans
+    'zagreb': [45.8150, 15.9819], 'sarajevo': [43.8563, 18.4131], 'belgrade': [44.8176, 20.4633],
+    'sofia': [42.6977, 23.3219], 'bucharest': [44.4268, 26.1025], 'dubrovnik': [42.6507, 18.0944],
+    'split': [43.5081, 16.4402], 'skopje': [41.9965, 21.4314], 'thessaloniki': [40.6401, 22.9444],
+    'athens': [37.9838, 23.7275], 'istanbul': [41.0082, 28.9784], 'valletta': [35.8997, 14.5147],
+    'tirana': [41.3275, 19.8189], 'podgorica': [42.4304, 19.2594],
+    // North America
+    'toronto': [43.6532, -79.3832], 'montreal': [45.5017, -73.5673], 'los_angeles': [34.0522, -118.2437]
   };
 
   const FX_CAD = {
@@ -304,6 +402,7 @@
     upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 9l5-5 5 5"/><path d="M12 4v12"/>',
     calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/>',
     building: '<path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v.01"/><path d="M9 12v.01"/><path d="M9 15v.01"/><path d="M9 18v.01"/>',
+    bed: '<rect x="2" y="3" width="20" height="7" rx="2"/><path d="M2 10h20v11H2z"/><path d="M2 14h20"/>',
     pin: '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
     msg: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
     trash: '<path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>',
@@ -312,7 +411,8 @@
     plus: '<path d="M12 5v14"/><path d="M5 12h14"/>',
     spark: '<path d="M12 3l1.6 5.1L19 9.7l-4.4 2.9L16 18l-4-3.2L8 18l1.4-5.4L5 9.7l5.4-.6z"/>',
     clipboard: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>',
-    sticker: '<rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>'
+    sticker: '<rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
+    route: '<rect x="2" y="8" width="16" height="8" rx="1.5"/><path d="M18 8l4 4-4 4"/><path d="M2 12h18"/>'
   };
   const svg = (paths, opt = {}) => {
     const { w = 16, h = 16, sw = 2, fill = 'none', stroke = 'currentColor' } = opt;
@@ -335,6 +435,7 @@
       this.openStopIdx = null;
       this.activeDay = null;
       this.accomOpenIdx = null;
+      this.transportOpenIdx = null;
       this.budgetOpen = false;
       this._savedShow = false;
       this._dragStopIdx = null;
@@ -374,6 +475,23 @@
       this._flashItem = null;       // item index to flash once after a pin click
       this._selectedItem = null;    // item index persistently highlighted by pin toggle
       this._optimizeNote = null;    // result banner from the route optimizer
+      this._mapCardDrag = null;
+      // persistent main map nodes (survive re-renders)
+      this.mainMapEl = document.createElement('div');
+      this.mainMapEl.className = 'main-map-leaflet';
+      this.mainLeafletMap = null;
+      this.mainMapLines = null;
+      this.mainCardsOverlayEl = document.createElement('div');
+      this.mainCardsOverlayEl.className = 'main-cards-overlay';
+      this.mainPinsOverlayEl = document.createElement('div');
+      this.mainPinsOverlayEl.className = 'main-pins-overlay';
+      this.mainCityLabelsEl = document.createElement('div');
+      this.mainCityLabelsEl.className = 'main-city-labels-overlay';
+      this._mapCities = [];
+      this.mainLeadersEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      this.mainLeadersEl.setAttribute('class', 'main-leaders-svg');
+      this.mainLeadersEl.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      this._lastMainCoordKey = '';
     }
 
     /* ---------- lifecycle ---------- */
@@ -400,6 +518,7 @@
         this.renderStickerPanel() +
         this.renderItineraryModal(trip, d, fmt) +
         this.renderAccomModal(trip, d, fmt) +
+        this.renderTransportModal(trip) +
         this.renderBudgetModal(budget, travelers, nights) +
         this.renderSyncModal();
       // modal-only re-render still has to (re)mount the per-day map node
@@ -752,9 +871,14 @@
       this.renderMap();
     }
     touchMap() {
-      if (!this.leafletMap) return;
-      clearTimeout(this._mapTimer);
-      this._mapTimer = setTimeout(() => { this.leafletMap.invalidateSize(); this.renderMap(); }, 220);
+      if (this.leafletMap) {
+        clearTimeout(this._mapTimer);
+        this._mapTimer = setTimeout(() => { this.leafletMap.invalidateSize(); this.renderMap(); }, 220);
+      }
+      if (this.mainLeafletMap) {
+        this.mainLeafletMap.invalidateSize();
+        setTimeout(() => this.renderMainMap(), 250);
+      }
     }
     renderMap() {
       if (!this.leafletMap || !window.L) return;
@@ -795,6 +919,281 @@
       this._mapMissing = missing.length ? `Couldn't place: ${missing.join(', ')} — try the nearest major city or airport code.`
         : `${bounds.length} points · route across ${trip.stops.length} stops.`;
       const note = this.root.querySelector('.map-note'); if (note) note.textContent = this._mapMissing;
+    }
+
+    /* ---------- main Leaflet map (replaces static SVG canvas) ---------- */
+    ensureMainMap(tries = 0) {
+      if (!this.mainMapEl.isConnected || !window.L) {
+        if (tries < 80) setTimeout(() => this.ensureMainMap(tries + 1), 100);
+        return;
+      }
+      if (this.mainLeafletMap) { return; }
+      const L = window.L;
+      const map = L.map(this.mainMapEl, {
+        scrollWheelZoom: false, zoomSnap: 0.25, zoomDelta: 0.5,
+        zoomControl: false, attributionControl: false, inertia: true,
+        center: [50, 14], zoom: 5
+      });
+      this.mainLeafletMap = map;
+      // Layer order: land polygons → route lines (pins/labels live in overlay divs above)
+      this.mainMapLand    = L.layerGroup().addTo(map);
+      this.mainMapLines   = L.layerGroup().addTo(map);
+      map.on('move zoom moveend zoomend', () => this._positionMainCards());
+      this.mainMapEl.addEventListener('mouseenter', () => map.scrollWheelZoom.enable());
+      this.mainMapEl.addEventListener('mouseleave', () => map.scrollWheelZoom.disable());
+      this._loadMinimalBasemap();
+    }
+
+    _chaikinRing(ring, n = 3) {
+      let pts = ring.slice(0, -1);
+      for (let iter = 0; iter < n; iter++) {
+        const out = [], len = pts.length;
+        for (let i = 0; i < len; i++) {
+          const a = pts[i], b = pts[(i + 1) % len];
+          out.push([a[0] * 0.75 + b[0] * 0.25, a[1] * 0.75 + b[1] * 0.25]);
+          out.push([a[0] * 0.25 + b[0] * 0.75, a[1] * 0.25 + b[1] * 0.75]);
+        }
+        pts = out;
+      }
+      pts.push(pts[0]);
+      return pts;
+    }
+
+    _smoothCountries(geojson) {
+      geojson.features.forEach(f => {
+        if (!f.geometry) return;
+        const g = f.geometry;
+        if (g.type === 'Polygon') g.coordinates = g.coordinates.map(r => this._chaikinRing(r));
+        else if (g.type === 'MultiPolygon') g.coordinates = g.coordinates.map(p => p.map(r => this._chaikinRing(r)));
+      });
+      return geojson;
+    }
+
+    _loadMinimalBasemap() {
+      const topo = window.topojson;
+      const world = window.WORLD_ATLAS_DATA;
+      if (!topo || !world || !this.mainMapLand) return;
+      const countries = this._smoothCountries(topo.feature(world, world.objects.countries));
+      window.L.geoJSON(
+        countries,
+        { style: { fillColor: '#23140C', fillOpacity: 1, color: '#47403a', weight: 3, opacity: 1, lineJoin: 'round', lineCap: 'round' } }
+      ).addTo(this.mainMapLand);
+      this._addMinimalCityLabels();
+    }
+
+    _addMinimalCityLabels() {
+      /* 30 tier-1 world cities — rendered in overlay div above Leaflet to avoid clipping */
+      this._mapCities = [
+        // Europe
+        ['London',51.507,-0.128],['Paris',48.857,2.352],['Berlin',52.520,13.405],
+        ['Rome',41.903,12.496],['Madrid',40.417,-3.704],['Vienna',48.208,16.374],
+        ['Warsaw',52.230,21.012],['Prague',50.076,14.438],['Budapest',47.498,19.040],
+        ['Amsterdam',52.368,4.904],['Stockholm',59.329,18.069],['Lisbon',38.722,-9.139],
+        // Russia / Turkey
+        ['Moscow',55.756,37.617],['Istanbul',41.008,28.978],
+        // Americas
+        ['New York',40.713,-74.006],['Los Angeles',34.052,-118.244],
+        ['Toronto',43.653,-79.383],['Mexico City',19.433,-99.133],
+        ['São Paulo',-23.551,-46.633],['Buenos Aires',-34.604,-58.382],
+        // Asia / Pacific
+        ['Tokyo',35.676,139.650],['Beijing',39.904,116.407],['Shanghai',31.230,121.474],
+        ['Seoul',37.567,126.978],['Singapore',1.352,103.820],
+        ['Mumbai',19.076,72.878],['Dubai',25.205,55.271],['Sydney',-33.869,151.209],
+        // Africa
+        ['Cairo',30.044,31.236],['Lagos',6.524,3.379],
+      ];
+      this.mainCityLabelsEl.innerHTML = this._mapCities
+        .map(([name]) => `<span class="map-city-label" style="position:absolute">${name}</span>`)
+        .join('');
+    }
+
+    renderMainMap() {
+      if (!this.mainLeafletMap || !window.L) return;
+      const L = window.L;
+      const map = this.mainLeafletMap;
+      const trip = this.currentTrip();
+      const stops = trip.stops;
+      const fmt = x => this.formatDate(x);
+      const legs = [trip.outboundLeg, ...stops.map(s => s.leg)];
+
+      this.mainMapLines.clearLayers();
+
+      const coords = stops.map(s => this.resolveCoord(s.city));
+      const bounds = coords.filter(Boolean);
+
+      // Route polyline
+      const polyCoords = [];
+      coords.forEach((c) => { if (c) polyCoords.push(c); });
+      if (polyCoords.length > 1) {
+        L.polyline(polyCoords, { color: '#23140C', weight: 2.2, opacity: 0.65 }).addTo(this.mainMapLines);
+      }
+
+      // Numbered pins rendered in overlay div (outside Leaflet — no overflow clipping)
+      this.mainPinsOverlayEl.innerHTML = stops.map((stop, idx) => {
+        if (!coords[idx]) return '';
+        return `<div class="map-pin-outer" data-pin="${idx}"><div class="map-pin-main" style="background:var(--red)"><input type="number" class="pin-order-input" value="${idx + 1}" min="1" max="${stops.length}" data-ch="stop-order" data-i="${idx}" title="Tap to change order"></div></div>`;
+      }).join('');
+
+      if (bounds.length === 1) {
+        const key = bounds[0].join(',');
+        key !== this._lastMainCoordKey ? map.flyTo(bounds[0], 7, { duration: 0.8 }) : map.setView(bounds[0], 7);
+      } else if (bounds.length > 1) {
+        const key = bounds.map(b => b.join(',')).join('|');
+        key !== this._lastMainCoordKey ? map.flyToBounds(bounds, { padding: [60, 60], duration: 0.8 }) : map.fitBounds(bounds, { padding: [60, 60] });
+        this._lastMainCoordKey = bounds.map(b => b.join(',')).join('|');
+      }
+
+      // Render cards HTML into overlay
+      this._renderMainMapCardHTML(stops, legs, this.computeDates(trip), fmt);
+      this._positionMainCards();
+      this._updateMainLeaders();
+    }
+
+    _legFields(leg, legIdx) {
+      const isFB = leg.mode === 'flying-blue';
+      const opts = MODE_OPTIONS.map(o => `<option value="${o.value}"${o.value === leg.mode ? ' selected' : ''}>${o.label}</option>`).join('');
+      return `<div class="map-leg-row">
+        <span class="mode-dot" style="background:${MODE_HEX[leg.mode] || '#7a7260'}"></span>
+        <select data-ch="leg-mode" data-leg="${legIdx}">${opts}</select>
+        <input class="dur" value="${escA(leg.duration)}" data-ch="leg-dur" data-leg="${legIdx}" placeholder="notes">
+        ${SHOW_COSTS ? `<span class="cost-wrap${isFB ? ' cost-wrap--fb' : ''}">
+          <input class="cost" type="text" inputmode="numeric" value="${escA(isFB ? (leg.miles ?? 0) : (leg.cost ?? 0))}" data-ch="leg-cost" data-leg="${legIdx}">
+          <span class="unit">${isFB ? 'mi/pp' : '$/pp'}</span></span>` : ''}
+      </div>`;
+    }
+
+    _renderMainMapCardHTML(stops, legs, d, fmt) {
+      let html = '';
+      stops.forEach((stop, idx) => {
+        const r = d ? d.stops[idx] : null;
+        const chosen = (stop.accom && stop.accom.options || []).find(o => o.chosen);
+        const accomSet = !!(chosen && chosen.name && chosen.name.trim());
+        const modeColor = MODE_HEX[(legs[idx] || {}).mode] || '#7a7260';
+        const dim = this._dragStopIdx === idx ? 0.38 : 1;
+        html += `<div class="stop map-stop" data-i="${idx}" style="opacity:${dim}">
+          <div class="card mc-flip">
+            <div class="mc-front">
+              <span class="mc-mode-pip" style="background:${modeColor}"></span>
+              <div class="mc-city-display">${stop.city ? esc(stop.city) : '<span style="opacity:.3">City?</span>'}</div>
+              <div class="mc-meta">
+                ${r ? `<div class="mc-dates-display">${esc(fmt(r.start))} – ${esc(fmt(r.end))}</div>` : (stop.nights ? `<div class="mc-dates-display">${stop.nights} nights</div>` : '')}
+                ${accomSet ? `<div class="mc-hotel-display">${esc(chosen.name)}</div>` : ''}
+              </div>
+            </div>
+            <div class="mc-back">
+              <div class="head">
+                <div class="mc-top-row">
+                  <input class="city" value="${escA(stop.city)}" data-ch="stop-city" data-i="${idx}" placeholder="City">
+                  <div class="nights"><input type="number" value="${escA(stop.nights)}" data-ch="stop-nights" data-i="${idx}"><span>nts</span></div>
+                </div>
+                <div class="mc-btn-row">
+                  <button class="iti-btn" data-act="stop-accom" data-i="${idx}" title="Accommodation" aria-label="Accommodation">${svg(I.bed)}</button>
+                  <button class="iti-btn" data-act="stop-iti" data-i="${idx}" title="Itinerary" aria-label="Open itinerary">${svg(I.calendar)}</button>
+                  <button class="iti-btn mc-transport-btn" data-act="stop-transport" data-i="${idx}" title="Transport" aria-label="Transport" style="color:${modeColor}">${svg(I.route)}</button>
+                </div>
+              </div>
+              <div class="foot">
+                <div class="grip" data-map-drag="${idx}" title="Drag card on map"><svg width="9" height="9" viewBox="0 0 7 7" fill="currentColor" aria-hidden="true"><circle cx="1.4" cy="1.4" r="1.1"/><circle cx="5.6" cy="1.4" r="1.1"/><circle cx="1.4" cy="5.6" r="1.1"/><circle cx="5.6" cy="5.6" r="1.1"/></svg></div>
+                <button class="trash" data-act="stop-delete" data-i="${idx}" title="Remove stop" aria-label="Remove stop">${svg(I.trash, { w: 14, h: 14, sw: 2.4 })}</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      });
+      this.mainCardsOverlayEl.innerHTML = html;
+    }
+
+    _positionMainCards() {
+      if (!this.mainLeafletMap) return;
+      const map = this.mainLeafletMap;
+      const trip = this.currentTrip();
+      const stops = trip.stops;
+      const CARD_W = 155, CARD_H = 87;
+      const mapW = this.mainMapEl.offsetWidth || 800;
+      const mapH = this.mainMapEl.offsetHeight || 480;
+
+      stops.forEach((stop, idx) => {
+        const cardEl = this.mainCardsOverlayEl.querySelector(`.map-stop[data-i="${idx}"]`);
+        if (!cardEl) return;
+
+        let px, py;
+        if (stop.cardLatLng) {
+          const pt = map.latLngToContainerPoint(stop.cardLatLng);
+          px = pt.x - CARD_W / 2;
+          py = pt.y - CARD_H / 2;
+        } else {
+          const coord = this.resolveCoord(stop.city);
+          if (!coord) { cardEl.style.display = 'none'; return; }
+          const pt = map.latLngToContainerPoint(coord);
+          const right = idx % 2 === 0;
+          px = right ? pt.x + 18 : pt.x - CARD_W - 18;
+          py = pt.y - CARD_H - 8;
+        }
+        // clamp so cards stay within the visible map area
+        px = Math.max(4, Math.min(mapW - CARD_W - 4, px));
+        py = Math.max(4, Math.min(mapH - CARD_H - 4, py));
+        cardEl.style.display = '';
+        cardEl.style.left = px + 'px';
+        cardEl.style.top = py + 'px';
+      });
+
+      // Position stop pins — clamp to map bounds so .map-route overflow:hidden never clips them
+      const PIN_R = 11; // half of 22px pin
+      const pinEls = this.mainPinsOverlayEl.querySelectorAll('.map-pin-outer');
+      stops.forEach((stop, idx) => {
+        const pinEl = pinEls[idx];
+        if (!pinEl) return;
+        const coord = this.resolveCoord(stop.city);
+        if (!coord) { pinEl.style.display = 'none'; return; }
+        const pt = map.latLngToContainerPoint(coord);
+        const cx = Math.max(PIN_R + 2, Math.min(mapW - PIN_R - 2, pt.x));
+        const cy = Math.max(PIN_R + 2, Math.min(mapH - PIN_R - 2, pt.y));
+        pinEl.style.display = '';
+        pinEl.style.left = (cx - PIN_R) + 'px';
+        pinEl.style.top = (cy - PIN_R) + 'px';
+      });
+
+      // Position city labels — only show those within the current viewport
+      const bounds = map.getBounds();
+      const labelEls = this.mainCityLabelsEl.children;
+      this._mapCities.forEach(([, lat, lng], i) => {
+        const el = labelEls[i];
+        if (!el) return;
+        if (!bounds.contains([lat, lng])) { el.style.display = 'none'; return; }
+        el.style.display = '';
+        const pt = map.latLngToContainerPoint([lat, lng]);
+        el.style.left = (pt.x + 2) + 'px';
+        el.style.top = (pt.y - 4) + 'px';
+      });
+
+      this._updateMainLeaders();
+    }
+
+    _updateMainLeaders() {
+      if (!this.mainLeafletMap) return;
+      const map = this.mainLeafletMap;
+      const trip = this.currentTrip();
+      const stops = trip.stops;
+      const CARD_W = 155, CARD_H = 87;
+      const rect = this.mainMapEl.getBoundingClientRect();
+      const svgW = rect.width || 800, svgH = rect.height || 480;
+      this.mainLeadersEl.setAttribute('viewBox', `0 0 ${svgW} ${svgH}`);
+      this.mainLeadersEl.setAttribute('width', svgW);
+      this.mainLeadersEl.setAttribute('height', svgH);
+
+      let linesHTML = '';
+      stops.forEach((stop, idx) => {
+        const coord = this.resolveCoord(stop.city);
+        if (!coord) return;
+        const pinPt = map.latLngToContainerPoint(coord);
+        const cardEl = this.mainCardsOverlayEl.querySelector(`.map-stop[data-i="${idx}"]`);
+        if (!cardEl) return;
+        const cx = parseFloat(cardEl.style.left) + CARD_W / 2;
+        const cy = parseFloat(cardEl.style.top) + CARD_H / 2;
+        if (isNaN(cx) || isNaN(cy)) return;
+        linesHTML += `<line x1="${pinPt.x.toFixed(1)}" y1="${pinPt.y.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${cy.toFixed(1)}" stroke="oklch(40% 0.012 70)" stroke-width="0.9" stroke-dasharray="5 4" opacity="0.28"/>`;
+      });
+      this.mainLeadersEl.innerHTML = linesHTML;
     }
 
     /* ---------- per-day itinerary map (inside the modal) ---------- */
@@ -1125,6 +1524,8 @@
     closeStop() { this.openStopIdx = null; this.bumpModal(); }
     openAccom(idx) { this.accomOpenIdx = idx; this.bumpModal(); }
     closeAccom() { this.accomOpenIdx = null; this.bumpModal(); }
+    openTransport(idx) { this.transportOpenIdx = idx; this.bumpModal(); }
+    closeTransport() { this.transportOpenIdx = null; this.bumpModal(); }
     ensureItinerary(stop) {
       if (!Array.isArray(stop.itinerary)) stop.itinerary = [];
       const days = Math.max(1, Number(stop.nights) || 1);
@@ -1319,13 +1720,19 @@
           ${this.renderTabs()}
           ${this.renderMeta(trip, travelers)}
           <div class="body-cols">
-            <div class="route">
-              <div class="route-spine"><svg viewBox="0 0 6 200" preserveAspectRatio="none"><path d="M3 0 C1.4 40 4.6 80 3 120 S1.4 170 3 200"/></svg></div>
-              ${this.renderRoute(trip, d, fmt)}
-              <div class="add-stop-wrap"><button class="add-stop" data-act="add-stop" title="Add stop" aria-label="Add stop">+</button></div>
+            <div class="route map-route">
+              <div id="main-map-holder" class="main-map-wrap"></div>
+              <div class="map-ep map-origin">
+                <input value="${escA(trip.originLabel)}" data-ch="origin-label" placeholder="Flying from">
+                <span class="map-ep-date">${d ? fmt(d.origin) : ''}</span>
+              </div>
+              <div class="map-ep map-home">
+                <input value="${escA(trip.homeLabel)}" data-ch="home-label" placeholder="Flying home to">
+                <span class="map-ep-date">${d ? fmt(d.home) : ''}</span>
+              </div>
+              <button class="map-add-btn" data-act="add-stop" title="Add stop" aria-label="Add stop">+</button>
             </div>
             <aside class="aside">
-              ${SHOW_MAP ? `<div style="display:flex;flex-direction:column;gap:8px;"><div id="map-holder"></div><div class="map-note"></div></div>` : ''}
               ${this.renderSummary(nights, budget.grandTotal, budget.perPerson, milesNeeded, meta.milesBalance || 0)}
               ${this.renderTodos(meta)}
             </aside>
@@ -1338,12 +1745,30 @@
         this.renderStickerPanel() +
         this.renderItineraryModal(trip, d, fmt) +
         this.renderAccomModal(trip, d, fmt) +
+        this.renderTransportModal(trip) +
         this.renderBudgetModal(budget, travelers, nights) +
         this.renderSyncModal();
 
       // re-attach persistent aside map node
       const holder = this.root.querySelector('#map-holder');
       if (holder) { holder.appendChild(this.mapEl); if (this.leafletMap) this.leafletMap.invalidateSize(); }
+      // re-attach persistent main map nodes (survive re-renders)
+      const mainHolder = this.root.querySelector('#main-map-holder');
+      if (mainHolder) {
+        mainHolder.appendChild(this.mainMapEl);
+        mainHolder.appendChild(this.mainPinsOverlayEl);
+        mainHolder.appendChild(this.mainCityLabelsEl);
+        mainHolder.appendChild(this.mainLeadersEl);
+        mainHolder.appendChild(this.mainCardsOverlayEl);
+        this.ensureMainMap(0);
+        // Invalidate after layout so Leaflet reads the correct dimensions
+        setTimeout(() => {
+          if (this.mainLeafletMap) {
+            this.mainLeafletMap.invalidateSize();
+            this.renderMainMap();
+          }
+        }, 50);
+      }
       // re-attach the per-day itinerary map (it lives inside the modal root)
       this.mountDayMap();
       this.paintSaved();
@@ -1402,59 +1827,158 @@
     }
 
     renderRoute(trip, d, fmt) {
-      const legHtml = (leg, legIdx, insertIdx) => {
-        const isFB = leg.mode === 'flying-blue';
-        const opts = MODE_OPTIONS.map(o => `<option value="${o.value}"${o.value === leg.mode ? ' selected' : ''}>${o.label}</option>`).join('');
-        return `<div class="leg"><div class="inner">
-          <span class="mode-dot" style="background:${MODE_HEX[leg.mode] || '#7a7260'}"></span>
-          <select data-ch="leg-mode" data-leg="${legIdx}">${opts}</select>
-          <input class="dur" value="${escA(leg.duration)}" data-ch="leg-dur" data-leg="${legIdx}" placeholder="duration / notes">
-          ${SHOW_COSTS ? `<span class="cost-wrap${isFB ? ' cost-wrap--fb' : ''}">
-            <input class="cost" type="text" inputmode="numeric" value="${escA(isFB ? (leg.miles ?? 0) : (leg.cost ?? 0))}" data-ch="leg-cost" data-leg="${legIdx}">
-            <span class="unit">${isFB ? 'mi/pp' : '$/pp'}</span></span>` : ''}
-          <button class="insert" data-act="insert-stop" data-i="${insertIdx}" title="Insert a stop here" aria-label="Insert a stop here">+</button>
-        </div></div>`;
+      const stops = trip.stops;
+      const legs = [trip.outboundLeg, ...stops.map(s => s.leg)];
+
+      // ---- normalize city name for CITY_MAP lookup ----
+      const getPos = city => {
+        if (!city || !city.trim()) return null;
+        const k = normKey(city).replace(/[\s\-']/g, '');
+        return CITY_MAP[k] || null;
       };
-      let out = '';
-      out += `<div class="endpoint"><div class="node"></div><div class="row">
-        <input value="${escA(trip.originLabel)}" data-ch="origin-label" placeholder="Flying from">
-        <span class="date">${d ? '· ' + esc(fmt(d.origin)) : ''}</span></div></div>`;
-      out += legHtml(trip.outboundLeg, 0, 0);
-      trip.stops.forEach((stop, idx) => {
+      const fallback = i => [160 + i * 160, 160 + (i % 2) * 90];
+      const positions = stops.map((s, i) => getPos(s.city) || fallback(i));
+
+      // ---- bezier route path through stop positions ----
+      const routeD = positions.length < 1 ? '' : positions.reduce((acc, [cx, cy], i) => {
+        if (i === 0) return `M ${cx} ${cy}`;
+        const [px, py] = positions[i - 1];
+        const mx = (px + cx) / 2, my = Math.min(py, cy) - 26;
+        return acc + ` Q ${mx} ${my} ${cx} ${cy}`;
+      }, '');
+
+      const legFields = (leg, legIdx) => this._legFields(leg, legIdx);
+
+      // ---- SVG: leaders + pin circles (text rendered as HTML overlay below) ----
+      const CARD_W_SVG = 148, CARD_H_SVG = 83; /* 20% of 740 = 148; height = 148 × 118/210 ≈ 83 */
+      let leadersSvg = '', dotsSvg = '';
+      stops.forEach((stop, i) => {
+        const [sx, sy] = positions[i];
+        const right = i % 2 === 0;
+        // card center in SVG coords for leader endpoint
+        let ccx, ccy;
+        if (stop.cardPos) {
+          ccx = stop.cardPos.x / 100 * 740 + CARD_W_SVG / 2;
+          ccy = stop.cardPos.y / 100 * 480 + CARD_H_SVG / 2;
+        } else {
+          const rawX = right ? sx + 54 : sx - 54 - CARD_W_SVG;
+          const rawY = sy - 58;
+          ccx = Math.max(1, Math.min(591, rawX)) + CARD_W_SVG / 2;
+          ccy = Math.max(1, Math.min(396, rawY)) + CARD_H_SVG / 2;
+        }
+        leadersSvg += `<line x1="${sx}" y1="${sy}" x2="${ccx.toFixed(1)}" y2="${ccy.toFixed(1)}" stroke="oklch(40% 0.012 70)" stroke-width="0.9" stroke-dasharray="5 4" opacity="0.28"/>`;
+        dotsSvg += `<circle cx="${sx}" cy="${sy}" r="11" style="fill:var(--red)" stroke="oklch(97% 0.005 60)" stroke-width="2"/>`;
+      });
+
+      const bgSvg = `<svg class="map-bg" viewBox="0 0 740 480" xmlns="http://www.w3.org/2000/svg">
+        <rect width="740" height="480" fill="oklch(95.5% 0.004 70)"/>
+        <!-- Continental Europe + Iberia -->
+        <path fill="oklch(91% 0.008 70)" stroke="oklch(75% 0.01 70)" stroke-width="0.7" d="
+          M 210 223 L 165 236 L 97 267 L 100 295 L 144 369
+          L 59 362 L 34 381 L 18 418 L 6 456 L 30 480
+          L 160 480 L 200 476 L 215 413 L 270 374 L 320 316
+          L 310 340 L 290 360 L 270 390 L 262 424 L 278 456 L 305 480
+          L 360 480 L 420 450 L 432 424 L 420 395 L 410 368 L 420 344
+          L 395 328 L 422 325 L 460 368 L 514 400 L 574 428 L 635 424 L 688 420
+          L 720 400 L 740 360 L 740 0 L 688 0
+          L 650 40 L 612 53 L 530 120 L 400 154 L 338 82 L 322 107 L 335 137
+          L 300 152 L 255 190 Z"/>
+        <!-- Scandinavian Peninsula -->
+        <path fill="oklch(91% 0.008 70)" stroke="oklch(75% 0.01 70)" stroke-width="0.7" d="
+          M 338 82 L 302 80 L 270 32 L 266 0 L 476 0 L 495 54 L 450 116 L 404 128 L 370 87 Z"/>
+        <!-- Great Britain -->
+        <path fill="oklch(91% 0.008 70)" stroke="oklch(75% 0.01 70)" stroke-width="0.7" d="
+          M 88 70 C 110 66 158 95 202 215 C 188 229 170 232 76 240
+          C 82 202 90 148 80 130 C 72 108 70 82 88 70 Z"/>
+        <!-- Ireland -->
+        <path fill="oklch(91% 0.008 70)" stroke="oklch(75% 0.01 70)" stroke-width="0.7" d="
+          M 52 130 L 70 134 L 65 192 L 31 208 L 4 213 L 2 150 Z"/>
+        ${routeD ? `<path d="${routeD}" fill="none" stroke="oklch(22% 0.025 70)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
+        ${leadersSvg}${dotsSvg}
+      </svg>`;
+
+      // ---- stop cards + HTML pin overlays (absolutely positioned) ----
+      let cardsHtml = '', pinsHtml = '';
+      stops.forEach((stop, idx) => {
+        const [sx, sy] = positions[idx];
+        const right = idx % 2 === 0;
+        const dim = this._dragStopIdx === idx ? .38 : 1;
         const r = d ? d.stops[idx] : null;
         const chosen = (stop.accom && stop.accom.options || []).find(o => o.chosen);
         const accomLabel = chosen ? chosen.name : 'Add accommodation';
         const accomSet = !!(chosen && chosen.name && chosen.name.trim());
-        const dim = this._dragStopIdx === idx ? .38 : 1;
-        out += `<div class="stop" data-drop="stop" data-i="${idx}" style="opacity:${dim}">
-          <div class="dot"></div>
-          <div class="card">
-            <div class="head">
-              <input class="city" value="${escA(stop.city)}" data-ch="stop-city" data-i="${idx}" placeholder="City">
-              <button class="iti-btn" data-act="stop-iti" data-i="${idx}" title="Open day-by-day itinerary" aria-label="Open day-by-day itinerary">${svg(I.calendar)}</button>
-              <div class="nights">
-                <input type="number" value="${escA(stop.nights)}" data-ch="stop-nights" data-i="${idx}">
-                <span>nights</span>
+
+        // Card position as % of canvas
+        let cx, cy;
+        if (stop.cardPos) {
+          cx = stop.cardPos.x.toFixed(2);
+          cy = stop.cardPos.y.toFixed(2);
+        } else {
+          const rawX = right ? sx + 54 : sx - 54 - CARD_W_SVG;
+          const rawY = sy - 58;
+          cx = (Math.max(1, Math.min(591, rawX)) / 740 * 100).toFixed(2);
+          cy = (Math.max(1, Math.min(396, rawY)) / 480 * 100).toFixed(2);
+        }
+
+        const modeColor = MODE_HEX[(legs[idx] || {}).mode] || '#7a7260';
+        cardsHtml += `<div class="stop map-stop" data-i="${idx}" style="left:${cx}%;top:${cy}%;opacity:${dim}">
+          <div class="card mc-flip">
+            <!-- FRONT: city · dates · hotel -->
+            <div class="mc-front">
+              <span class="mc-mode-pip" style="background:${modeColor}"></span>
+              <div class="mc-city-display">${stop.city ? esc(stop.city) : '<span style="opacity:.3">City?</span>'}</div>
+              <div class="mc-meta">
+                ${r ? `<div class="mc-dates-display">${esc(fmt(r.start))} – ${esc(fmt(r.end))}</div>` : (stop.nights ? `<div class="mc-dates-display">${stop.nights} nights</div>` : '')}
+                ${accomSet ? `<div class="mc-hotel-display">${esc(chosen.name)}</div>` : ''}
               </div>
             </div>
-            <div class="subdate">${r ? esc(fmt(r.start) + ' → ' + fmt(r.end)) : ''}</div>
-            <button class="accom-btn" data-act="stop-accom" data-i="${idx}" title="Edit accommodation">
-              ${svg(I.building, { w: 14, h: 14, stroke: '#a89e8c' })}
-              <span class="lbl" style="color:${accomSet ? 'var(--ink)' : 'var(--ink-mute)'}">${esc(accomLabel)}</span>
-              <span class="chev">›</span>
-            </button>
-            <div class="foot">
-              <div class="grip" data-grip-stop="${idx}" title="Drag to reorder"><svg width="9" height="9" viewBox="0 0 7 7" fill="currentColor" aria-hidden="true"><circle cx="1.4" cy="1.4" r="1.1"/><circle cx="5.6" cy="1.4" r="1.1"/><circle cx="1.4" cy="5.6" r="1.1"/><circle cx="5.6" cy="5.6" r="1.1"/></svg></div>
-              <button class="trash" data-act="stop-delete" data-i="${idx}" title="Remove stop" aria-label="Remove stop">${svg(I.trash, { w: 14, h: 14, sw: 2.4 })}</button>
+            <!-- BACK: all controls -->
+            <div class="mc-back">
+              <div class="head">
+                <input class="city" value="${escA(stop.city)}" data-ch="stop-city" data-i="${idx}" placeholder="City">
+                <button class="iti-btn" data-act="stop-accom" data-i="${idx}" title="Accommodation" aria-label="Accommodation">${svg(I.bed)}</button>
+                <button class="iti-btn" data-act="stop-iti" data-i="${idx}" title="Itinerary" aria-label="Open itinerary">${svg(I.calendar)}</button>
+                <div class="nights"><input type="number" value="${escA(stop.nights)}" data-ch="stop-nights" data-i="${idx}"><span>nts</span></div>
+              </div>
+              ${legFields(legs[idx], idx)}
+              <div class="foot">
+                <div class="grip" data-map-drag="${idx}" title="Drag card on map"><svg width="9" height="9" viewBox="0 0 7 7" fill="currentColor" aria-hidden="true"><circle cx="1.4" cy="1.4" r="1.1"/><circle cx="5.6" cy="1.4" r="1.1"/><circle cx="1.4" cy="5.6" r="1.1"/><circle cx="5.6" cy="5.6" r="1.1"/></svg></div>
+                <button class="trash" data-act="stop-delete" data-i="${idx}" title="Remove stop" aria-label="Remove stop">${svg(I.trash, { w: 14, h: 14, sw: 2.4 })}</button>
+              </div>
             </div>
           </div>
         </div>`;
-        out += legHtml(stop.leg, idx + 1, idx + 1);
+
+        // HTML pin overlay: editable number sits on top of the SVG circle
+        const pLeft = (sx / 740 * 100).toFixed(2);
+        const pTop = (sy / 480 * 100).toFixed(2);
+        pinsHtml += `<div class="map-pin-num" style="left:${pLeft}%;top:${pTop}%">
+          <input type="number" class="pin-order-input" value="${idx + 1}" min="1" max="${stops.length}" data-ch="stop-order" data-i="${idx}" title="Tap to change stop order">
+        </div>`;
       });
-      out += `<div class="endpoint"><div class="node"></div><div class="row">
+
+      // ---- hidden field: last departing leg (keeps data binding alive) ----
+      const hiddenLeg = stops.length > 0
+        ? `<div style="display:none">${legFields(legs[stops.length], stops.length)}</div>`
+        : '';
+
+      // ---- origin & home endpoint labels (floating corners of the map) ----
+      const originEl = `<div class="map-ep map-origin">
+        <input value="${escA(trip.originLabel)}" data-ch="origin-label" placeholder="Flying from">
+        <span class="map-ep-date">${d ? fmt(d.origin) : ''}</span>
+      </div>`;
+      const homeEl = `<div class="map-ep map-home">
         <input value="${escA(trip.homeLabel)}" data-ch="home-label" placeholder="Flying home to">
-        <span class="date">${d ? '· ' + esc(fmt(d.home)) : ''}</span></div></div>`;
-      return out;
+        <span class="map-ep-date">${d ? fmt(d.home) : ''}</span>
+      </div>`;
+
+      return `<div class="map-canvas">
+        ${bgSvg}
+        ${hiddenLeg}
+        ${originEl}${cardsHtml}
+        ${pinsHtml}
+      </div>
+      ${homeEl}`;
     }
 
     renderSummary(nights, grand, perPerson, miles, balance) {
@@ -1695,6 +2219,64 @@
       </div>`;
     }
 
+    renderTransportModal(trip) {
+      if (this.transportOpenIdx == null || !trip.stops[this.transportOpenIdx]) return '';
+      const idx = this.transportOpenIdx;
+      const leg = this.legByIndex(idx);
+      const stop = trip.stops[idx];
+      const isFB = leg.mode === 'flying-blue';
+      const modeColor = MODE_HEX[leg.mode] || '#7a7260';
+      const fmtCost = n => { const v = Number(n) || 0; return v >= 1000 ? v.toLocaleString('en-US') : (v || ''); };
+      const pills = MODE_OPTIONS.map(o =>
+        `<button class="t-pill${leg.mode === o.value ? ' active' : ''}" data-act="transport-mode" data-leg="${idx}" data-mode="${escA(o.value)}" style="${leg.mode === o.value ? `background:${modeColor};border-color:${modeColor}` : ''}">${esc(o.label)}</button>`
+      ).join('');
+      const idLabel = (leg.mode === 'flight' || isFB) ? 'Flight No.' : leg.mode === 'train' ? 'Train No.' : 'Line';
+      const costLabel = isFB ? 'Miles / pp' : 'Cost / pp';
+      const costUnit = isFB ? 'mi' : '$';
+      const costVal = escA(fmtCost(isFB ? (leg.miles ?? 0) : (leg.cost ?? 0)));
+      return `<div class="overlay" data-act="overlay-transport">
+        <div class="dialog transport-dialog">
+          <div class="head"><div class="row">
+            <div style="flex:1;min-width:0">
+              <div class="eyebrow">Getting there</div>
+              <div class="transport-city">${esc(stop.city || 'Stop')}</div>
+            </div>
+            <button class="modal-x" data-act="close-transport">✕</button>
+          </div></div>
+          <div class="transport-body">
+            <div class="t-pills">${pills}</div>
+            <div class="t-row-3">
+              <div class="t-fld">
+                <label>Depart</label>
+                <input class="t-line-inp" value="${escA(leg.departure || '')}" data-ch="transport-depart" data-leg="${idx}" placeholder="09:00">
+              </div>
+              <div class="t-fld">
+                <label>Arrive</label>
+                <input class="t-line-inp" value="${escA(leg.arrival || '')}" data-ch="transport-arrival" data-leg="${idx}" placeholder="17:30">
+              </div>
+              <div class="t-fld">
+                <label>Transfer</label>
+                <input class="t-line-inp t-transfer" type="number" min="0" value="${escA(leg.transfers ?? '')}" data-ch="transport-transfers" data-leg="${idx}" placeholder="0">
+              </div>
+            </div>
+            <div class="t-row-2">
+              <div class="t-fld">
+                <label>${esc(idLabel)}</label>
+                <input class="t-line-inp" value="${escA(leg.vehicleId || '')}" data-ch="transport-id" data-leg="${idx}" placeholder="—">
+              </div>
+              <div class="t-fld">
+                <label>${esc(costLabel)}</label>
+                <div class="t-cost-row">
+                  <span class="t-unit">${costUnit}</span>
+                  <input class="t-line-inp" inputmode="numeric" value="${costVal}" data-ch="transport-cost" data-leg="${idx}">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }
+
     renderBudgetModal(budget, travelers, nights) {
       if (!this.budgetOpen) return '';
       const lines = budget.lines.map(line => {
@@ -1814,6 +2396,7 @@
       if (this.syncOpen) { this.syncOpen = false; this.bumpModal(); }
       else if (this.budgetOpen) { this.budgetOpen = false; this.bumpModal(); }
       else if (this.accomOpenIdx != null) { this.closeAccom(); }
+      else if (this.transportOpenIdx != null) { this.closeTransport(); }
       else if (this.openStopIdx != null) { this.closeStop(); }
     }
 
@@ -1835,6 +2418,7 @@
         case 'insert-stop': this.insertStop(i); break;
         case 'stop-iti': this.openStop(i); break;
         case 'stop-accom': this.openAccom(i); break;
+        case 'stop-transport': this.openTransport(i); break;
         case 'stop-delete': this.removeStop(i); break;
         case 'todo-toggle': { const td = this.data.meta.todos[i]; td.done = !td.done; this.bump(); break; }
         case 'todo-remove': this.removeTodo(i); break;
@@ -1864,6 +2448,9 @@
         case 'overlay-iti': if (e.target === t) this.closeStop(); break;
         case 'close-accom': this.closeAccom(); break;
         case 'overlay-accom': if (e.target === t) this.closeAccom(); break;
+        case 'close-transport': this.closeTransport(); break;
+        case 'overlay-transport': if (e.target === t) this.closeTransport(); break;
+        case 'transport-mode': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.mode = t.dataset.mode; if (leg.mode === 'flying-blue' && leg.miles == null) leg.miles = 25000; this.bump(); break; }
         case 'cal-day': { this.activeDay = (this.activeDay === i ? null : i); this._optimizeNote = null; this._selectedItem = null; this.bumpModal(); break; }
         case 'optimize-day': this.optimizeDay(); break;
         case 'optimize-dismiss': this._optimizeNote = null; this.bumpModal(); break;
@@ -1900,8 +2487,14 @@
         case 'leg-mode': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.mode = v; if (leg.mode === 'flying-blue' && leg.miles == null) leg.miles = 25000; this.bump(); break; }
         case 'leg-dur': this.legByIndex(Number(t.dataset.leg)).duration = v; this.bump(); break;
         case 'leg-cost': { const leg = this.legByIndex(Number(t.dataset.leg)); const num = Number(v) || 0; if (leg.mode === 'flying-blue') leg.miles = num; else leg.cost = num; this.bump(); break; }
+        case 'transport-cost': { const leg = this.legByIndex(Number(t.dataset.leg)); const num = Number(v.replace(/,/g, '')) || 0; if (leg.mode === 'flying-blue') leg.miles = num; else leg.cost = num; this.scheduleSave(); break; }
+        case 'transport-depart': { this.legByIndex(Number(t.dataset.leg)).departure = v; this.scheduleSave(); break; }
+        case 'transport-arrival': { this.legByIndex(Number(t.dataset.leg)).arrival = v; this.scheduleSave(); break; }
+        case 'transport-transfers': { this.legByIndex(Number(t.dataset.leg)).transfers = Number(v) || 0; this.scheduleSave(); break; }
+        case 'transport-id': { this.legByIndex(Number(t.dataset.leg)).vehicleId = v; this.scheduleSave(); break; }
         case 'stop-city': trip.stops[i].city = v; this.bump(); break;
         case 'stop-nights': trip.stops[i].nights = Number(v) || 0; this.bump(); break;
+        case 'stop-order': { const newIdx = Math.max(0, Math.min(trip.stops.length - 1, (Number(v) || 1) - 1)); if (newIdx !== i) { this.snapshot(); this.reorderStop(i, newIdx); } break; }
         case 'todo-text': meta.todos[i].text = v; this.bump(); break;
         case 'import-file': this.importFile(e); break;
         case 'sync-code-in': this._syncCodeDraft = v; break;
@@ -2100,7 +2693,58 @@
         this.render();                      // restore (clear .dragging)
       }
     }
+    _startMapCardDrag(e, stopIdx) {
+      const card = this.mainCardsOverlayEl.querySelector(`.map-stop[data-i="${stopIdx}"]`);
+      if (!card) return;
+      const overlay = this.mainCardsOverlayEl;
+      const canvasRect = overlay.getBoundingClientRect();
+      const cardRect = card.getBoundingClientRect();
+      const offsetX = e.clientX - cardRect.left;
+      const offsetY = e.clientY - cardRect.top;
+      const stopEl = card;
+      if (stopEl) stopEl.classList.add('mc-dragging');
+      this._mapCardDrag = { stopIdx, card, canvasRect, offsetX, offsetY, stopEl, _lastLeft: null, _lastTop: null };
+      card.style.zIndex = '10';
+      card.style.transition = 'none';
+      this._onMCM = ev => this._doMapCardDrag(ev);
+      this._onMCU = () => this._endMapCardDrag();
+      document.addEventListener('pointermove', this._onMCM, { passive: false });
+      document.addEventListener('pointerup', this._onMCU, { once: true });
+      document.addEventListener('pointercancel', this._onMCU, { once: true });
+    }
+    _doMapCardDrag(e) {
+      const d = this._mapCardDrag; if (!d) return;
+      if (e.cancelable) e.preventDefault();
+      const { card, canvasRect, offsetX, offsetY } = d;
+      let newLeft = e.clientX - canvasRect.left - offsetX;
+      let newTop = e.clientY - canvasRect.top - offsetY;
+      newLeft = Math.max(0, Math.min(canvasRect.width - card.offsetWidth, newLeft));
+      newTop = Math.max(0, Math.min(canvasRect.height - card.offsetHeight, newTop));
+      card.style.left = newLeft + 'px';
+      card.style.top = newTop + 'px';
+      d._lastLeft = newLeft;
+      d._lastTop = newTop;
+    }
+    _endMapCardDrag() {
+      const d = this._mapCardDrag; if (!d) return;
+      document.removeEventListener('pointermove', this._onMCM);
+      this._mapCardDrag = null;
+      d.card.style.zIndex = '';
+      d.card.style.transition = '';
+      if (d.stopEl) d.stopEl.classList.remove('mc-dragging');
+      if (d._lastLeft == null) return;
+      if (this.mainLeafletMap && window.L) {
+        const CARD_W = 155, CARD_H = 87;
+        const pt = window.L.point(d._lastLeft + CARD_W / 2, d._lastTop + CARD_H / 2);
+        const latlng = this.mainLeafletMap.containerPointToLatLng(pt);
+        this.currentTrip().stops[d.stopIdx].cardLatLng = [latlng.lat, latlng.lng];
+      }
+      this.bump();
+    }
     onPointerDown(e) {
+      // map card free-drag (grip icon on map stop cards)
+      const mapGrip = e.target.closest('.grip[data-map-drag]');
+      if (mapGrip) { e.preventDefault(); this._startMapCardDrag(e, Number(mapGrip.dataset.mapDrag)); return; }
       // pointer-based stop reorder (works on touch + mouse; native HTML5 DnD doesn't fire from touch on iOS)
       const grip = e.target.closest('.grip[data-grip-stop]');
       if (grip) { e.preventDefault(); this._startStopDrag(e, grip); return; }

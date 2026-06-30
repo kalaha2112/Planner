@@ -21,7 +21,7 @@ const path = require('path');
 
 const DIR = __dirname;
 const OUT = path.join(DIR, 'standalone.html');
-const SOURCES = ['index.html', 'styles.css', 'app.js', 'vendor/leaflet/leaflet.css', 'vendor/leaflet/leaflet.js'];
+const SOURCES = ['index.html', 'styles.css', 'app.js', 'vendor/leaflet/leaflet.css', 'vendor/leaflet/leaflet.js', 'vendor/topojson/topojson.min.js', 'vendor/topojson/countries-110m.json'];
 
 const read = (rel) => fs.readFileSync(path.join(DIR, rel), 'utf8');
 
@@ -29,6 +29,8 @@ function build() {
   let html = read('index.html');
   const leafletCss = read('vendor/leaflet/leaflet.css');
   const leafletJs = read('vendor/leaflet/leaflet.js');
+  const topojsonJs = read('vendor/topojson/topojson.min.js');
+  const worldAtlas = read('vendor/topojson/countries-110m.json');
   const styles = read('styles.css');
   const app = read('app.js');
 
@@ -45,23 +47,28 @@ function build() {
     /<script src="vendor\/leaflet\/leaflet\.js"><\/script>/,
     () => `<script>\n/* vendor/leaflet/leaflet.js */\n${leafletJs}\n</script>`
   );
-  // 3) styles.css <link> (with optional ?v=) → inline <style>
+  // 3) TopoJSON client + world atlas — both inlined, zero network dependency
+  html = html.replace(
+    /<script src="vendor\/topojson\/topojson\.min\.js"><\/script>/,
+    () => `<script>\n/* vendor/topojson/topojson.min.js */\n${topojsonJs}\n</script>\n<script>window.WORLD_ATLAS_DATA=${worldAtlas};</script>`
+  );
+  // 4) styles.css <link> (with optional ?v=) → inline <style>
   html = html.replace(
     /<link rel="stylesheet" href="styles\.css(?:\?v=\d+)?">/,
     () => `<style>\n/* styles.css */\n${styles}\n</style>`
   );
-  // 4) app.js <script src> (with optional ?v=) → inline <script>
+  // 5) app.js <script src> (with optional ?v=) → inline <script>
   html = html.replace(
     /<script src="app\.js(?:\?v=\d+)?"><\/script>/,
     () => `<script>\n/* app.js */\n${app}\n</script>`
   );
 
-  const banner = `<!--\n  GENERATED FILE — do not edit by hand.\n  Built from index.html + styles.css + app.js + vendor/leaflet by build.js.\n  Edit those sources and re-run:  node build.js   (or: node build.js --watch)\n  Built: ${new Date().toISOString()}\n-->\n`;
+  const banner = `<!--\n  GENERATED FILE — do not edit by hand.\n  Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.\n  Edit those sources and re-run:  node build.js   (or: node build.js --watch)\n  Built: ${new Date().toISOString()}\n-->\n`;
   html = html.replace(/^<!DOCTYPE html>/i, `<!DOCTYPE html>\n${banner}`);
 
   // sanity: every external app/style/leaflet ref should now be inlined
   const leftovers = (html.match(/href="(styles\.css|vendor\/leaflet\/leaflet\.css)/g) || [])
-    .concat(html.match(/src="(app\.js|vendor\/leaflet\/leaflet\.js)/g) || []);
+    .concat(html.match(/src="(app\.js|vendor\/leaflet\/leaflet\.js|vendor\/topojson\/topojson\.min\.js)/g) || []);
   if (leftovers.length) {
     console.error('⚠ build: some references were not inlined:', leftovers.join(', '));
     process.exitCode = 1;
