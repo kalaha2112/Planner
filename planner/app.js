@@ -595,6 +595,9 @@
           if (!s.accom || typeof s.accom !== 'object' || !Array.isArray(s.accom.options)) s.accom = { options: [] };
         });
       });
+      Object.values(d.trips || {}).forEach(trip => {
+        if (Array.isArray(trip.stops)) trip.stops = trip.stops.filter(s => s.city && s.city.trim());
+      });
       if (!Array.isArray(d.stickerStock)) d.stickerStock = [];
       if (!Array.isArray(d.placedStickers)) d.placedStickers = [];
       d.placedStickers.forEach(ps => {
@@ -1511,7 +1514,6 @@
     /* ---------- mutators: stops / trips / todos ---------- */
     insertStop(idx) {
       this.currentTrip().stops.splice(idx, 0, { city: '', nights: 2, note: '', leg: { mode: 'train', duration: '', cost: 0 } });
-      this._newStopIdx = idx;
       this._editingStopIdx = idx;
       this.bump();
     }
@@ -1799,17 +1801,10 @@
         mainHolder.appendChild(this.mainCardsOverlayEl);
         this.ensureMainMap(0);
         // Invalidate after layout so Leaflet reads the correct dimensions
-        const _pendingNewStop = this._newStopIdx;
-        this._newStopIdx = null;
         setTimeout(() => {
           if (this.mainLeafletMap) {
             this.mainLeafletMap.invalidateSize();
             this.renderMainMap();
-          }
-          if (_pendingNewStop != null) {
-            const cardEl = this.mainCardsOverlayEl.querySelector(`.map-stop[data-i="${_pendingNewStop}"]`);
-            const cityInput = cardEl && cardEl.querySelector('.city');
-            if (cityInput) { cityInput.focus(); cityInput.select(); }
           }
         }, 50);
       }
