@@ -1150,11 +1150,20 @@
           py = pt.y - CARD_H / 2;
         } else {
           const coord = this.resolveCoord(stop.city);
-          if (!coord) { cardEl.style.display = 'none'; return; }
-          const pt = map.latLngToContainerPoint(coord);
-          const right = idx % 2 === 0;
-          px = right ? pt.x + 18 : pt.x - CARD_W - 18;
-          py = pt.y - CARD_H - 8;
+          if (!coord) {
+            if (idx === this._editingStopIdx) {
+              px = mapW / 2 - CARD_W / 2;
+              py = mapH / 2 - CARD_H / 2;
+            } else {
+              cardEl.style.display = 'none';
+              return;
+            }
+          } else {
+            const pt = map.latLngToContainerPoint(coord);
+            const right = idx % 2 === 0;
+            px = right ? pt.x + 18 : pt.x - CARD_W - 18;
+            py = pt.y - CARD_H - 8;
+          }
         }
         // clamp so cards stay within the visible map area
         px = Math.max(4, Math.min(mapW - CARD_W - 4, px));
