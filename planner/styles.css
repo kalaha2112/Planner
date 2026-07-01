@@ -1049,7 +1049,8 @@ a { color: inherit; }
   transform-style: preserve-3d;
   transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1) 0.18s;
 }
-.map-stop:not(.mc-dragging):hover .mc-flip {
+.map-stop:not(.mc-dragging):hover .mc-flip,
+.map-stop:not(.mc-dragging):focus-within .mc-flip {
   transform: rotateY(180deg); transition-delay: 0s;
 }
 .map-stop.mc-dragging .mc-flip { transform: rotateY(180deg); transition: none; }
