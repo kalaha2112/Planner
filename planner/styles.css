@@ -479,6 +479,18 @@ a { color: inherit; }
 .item-grip:hover { opacity: 1; color: var(--ink-soft); background: var(--line-2); }
 .item-grip:active { cursor: grabbing; }
 .item-grip svg { display: block; }
+/* pointer-drag feedback when moving an activity onto another day */
+.item.drag-source { opacity: .4; }
+.cal-cell.drag-target { outline: 3px solid var(--red); outline-offset: -2px; background: #F6E0D8; }
+.drag-ghost {
+  position: fixed; z-index: 1200; pointer-events: none;
+  transform: translate(-50%, -150%);
+  max-width: 220px; padding: 7px 12px; border-radius: 8px;
+  background: var(--brown); color: #fff;
+  font-family: var(--sans); font-size: 12px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  box-shadow: 0 4px 14px rgba(35,20,12,.3);
+}
 .item .mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
 .item .text { font-family: var(--sans); font-size: 14px; color: var(--ink); border: none; background: transparent; padding: 4px 0; width: 100%; outline-offset: 2px; }
 .item .meta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }

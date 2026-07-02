@@ -2272,7 +2272,7 @@
           const hasAddr = /\S/.test(geoQuery);
           return `<div class="item${ii === selIdx ? ' selected' : ''}${ii === flashIdx ? ' flash' : ''}" data-idx="${ii}">
           <span class="item-num${placed ? ' placed' : (hasAddr ? '' : ' empty')}" title="${placed ? 'Mapped' : hasAddr ? 'Locating…' : 'Type a place name to map this'}">${ii + 1}</span>
-          <span class="item-grip" draggable="true" data-drag="activity" data-i="${ii}" title="Drag to move to another day">
+          <span class="item-grip" data-drag="activity" data-i="${ii}" title="Drag onto another day">
             <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor" aria-hidden="true">
               <circle cx="2.4" cy="2.4" r="1.3"/><circle cx="7.6" cy="2.4" r="1.3"/>
               <circle cx="2.4" cy="8" r="1.3"/><circle cx="7.6" cy="8" r="1.3"/>
@@ -2895,6 +2895,59 @@
         this.render();                      // restore (clear .dragging)
       }
     }
+    /* ---- pointer-based activity move across days (touch + mouse; replaces native
+       HTML5 DnD, which iOS Safari never fires for touch) ---- */
+    _startActivityDrag(e, grip) {
+      if (this.openStopIdx == null || this.activeDay == null) return;
+      const itemIdx = Number(grip.dataset.i);
+      this._plannerDrag = { kind: 'activity', stopIdx: this.openStopIdx, dayIdx: this.activeDay, itemIdx };
+      const row = grip.closest('.item');
+      const label = (row && row.querySelector('.text') && row.querySelector('.text').value.trim()) || 'Activity';
+      const ghost = document.createElement('div');
+      ghost.className = 'drag-ghost';
+      ghost.textContent = label;
+      document.body.appendChild(ghost);
+      if (row) row.classList.add('drag-source');
+      this._actDrag = { ghost, row, targetCell: null, moved: false, startX: e.clientX, startY: e.clientY };
+      this._moveGhost(e.clientX, e.clientY);
+      try { grip.setPointerCapture(e.pointerId); } catch (_) {}
+      this._onAPM = (ev) => this._doActivityDrag(ev);
+      this._onAPU = () => this._endActivityDrag();
+      document.addEventListener('pointermove', this._onAPM, { passive: false });
+      document.addEventListener('pointerup', this._onAPU, { once: true });
+      document.addEventListener('pointercancel', this._onAPU, { once: true });
+    }
+    _moveGhost(x, y) {
+      const g = this._actDrag && this._actDrag.ghost; if (!g) return;
+      g.style.left = x + 'px'; g.style.top = y + 'px';
+    }
+    _doActivityDrag(e) {
+      const d = this._actDrag; if (!d) return;
+      if (e.cancelable) e.preventDefault();
+      if (Math.abs(e.clientX - d.startX) > 3 || Math.abs(e.clientY - d.startY) > 3) d.moved = true;
+      this._moveGhost(e.clientX, e.clientY);
+      // ghost has pointer-events:none, so elementFromPoint reads the cell beneath the finger
+      const under = document.elementFromPoint(e.clientX, e.clientY);
+      const cell = under ? under.closest('.cal-cell[data-drop="cell"]') : null;
+      if (cell !== d.targetCell) {
+        if (d.targetCell) d.targetCell.classList.remove('drag-target');
+        d.targetCell = cell;
+        if (cell) cell.classList.add('drag-target');
+      }
+    }
+    _endActivityDrag() {
+      const d = this._actDrag; if (!d) return;
+      document.removeEventListener('pointermove', this._onAPM);
+      this._actDrag = null;
+      if (d.ghost) d.ghost.remove();
+      if (d.row) d.row.classList.remove('drag-source');
+      if (d.targetCell) d.targetCell.classList.remove('drag-target');
+      if (d.moved && d.targetCell) {
+        this.plannerDrop(this.openStopIdx, Number(d.targetCell.dataset.i)); // moves item + re-renders modal
+      } else {
+        this._plannerDrag = null;
+      }
+    }
     _startMapCardDrag(e, stopIdx) {
       const card = this.mainCardsOverlayEl.querySelector(`.map-stop[data-i="${stopIdx}"]`);
       if (!card) return;
@@ -2944,6 +2997,9 @@
       this.bump();
     }
     onPointerDown(e) {
+      // activity move across days (touch-friendly; native HTML5 DnD never fires from touch on iOS Safari)
+      const actGrip = e.target.closest('.item-grip[data-drag="activity"]');
+      if (actGrip) { e.preventDefault(); this._startActivityDrag(e, actGrip); return; }
       // map card free-drag (grip icon on map stop cards)
       const mapGrip = e.target.closest('.grip[data-map-drag]');
       if (mapGrip) { e.preventDefault(); this._startMapCardDrag(e, Number(mapGrip.dataset.mapDrag)); return; }
