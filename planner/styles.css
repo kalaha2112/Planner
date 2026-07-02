@@ -936,6 +936,9 @@ a { color: inherit; }
   overflow: visible;
   /* isolate so Leaflet's internal z-indices (200–700) stay contained here */
   isolation: isolate;
+  /* lets .map-stop's width respond in cqw to the map's own rendered size below,
+     instead of staying a fixed px box that overlaps as the map shrinks */
+  container-type: inline-size;
 }
 .main-map-leaflet {
   position: absolute; inset: 0;
@@ -980,7 +983,13 @@ a { color: inherit; }
   z-index: 800;
 }
 .main-cards-overlay .map-stop {
-  width: 155px;
+  /* scales with the map's own rendered width (cqw of .main-map-wrap) instead of a
+     fixed 155px, so cards shrink in step with the map instead of clustering at
+     narrow viewports. 15.4cqw reproduces today's 155px at the map's normal/wide
+     rendered width (~1008px); clamped so it never grows past that nor shrinks
+     below a legible size. _positionMainCards() mirrors this ratio in JS for its
+     spacing/clamp math — keep the two in sync if this changes. */
+  width: clamp(100px, 15.4cqw, 155px);
   pointer-events: all;
 }
 .map-pin-outer {

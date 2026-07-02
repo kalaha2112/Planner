@@ -1029,6 +1029,14 @@
         .join('');
     }
 
+    // mirrors the CSS clamp(100px, 15.4cqw, 155px) on .main-cards-overlay .map-stop
+    // (styles.css) so every JS position/leader-line computation matches the card's
+    // actual responsive size — the one place that ratio lives on the JS side.
+    _mainCardSize() {
+      const mapW = this.mainMapEl.offsetWidth || 800;
+      const w = Math.max(100, Math.min(155, mapW * 0.154));
+      return { w, h: w * (74 / 155) };
+    }
     renderMainMap() {
       if (!this.mainLeafletMap || !window.L) return;
       const L = window.L;
@@ -1138,15 +1146,20 @@
       const map = this.mainLeafletMap;
       const trip = this.currentTrip();
       const stops = trip.stops;
-      const CARD_W = 155, CARD_H = 74;
       const mapW = this.mainMapEl.offsetWidth || 800;
       const mapH = this.mainMapEl.offsetHeight || 480;
+      const { w: CARD_W, h: CARD_H } = this._mainCardSize();
 
+      // ---- pass 1: each stop's desired position, before de-overlap ----
+      // `auto` marks cards placed by the default pin-offset heuristic — only those
+      // get nudged apart from each other; a card the user explicitly dragged
+      // (stop.cardLatLng) or that's mid-edit with no city yet keeps its exact spot.
+      const placed = [];
       stops.forEach((stop, idx) => {
         const cardEl = this.mainCardsOverlayEl.querySelector(`.map-stop[data-i="${idx}"]`);
         if (!cardEl) return;
 
-        let px, py;
+        let px, py, auto = false;
         if (stop.cardLatLng) {
           const pt = map.latLngToContainerPoint(stop.cardLatLng);
           px = pt.x - CARD_W / 2;
@@ -1166,12 +1179,49 @@
             const right = idx % 2 === 0;
             px = right ? pt.x + 18 : pt.x - CARD_W - 18;
             py = pt.y - CARD_H - 8;
+            auto = true;
           }
         }
-        // clamp so cards stay within the visible map area
+        cardEl.style.display = '';
+        placed.push({ cardEl, px, py, auto });
+      });
+
+      // ---- pass 2: nudge apart any auto-placed cards that collide ----
+      // pins that are geographically close converge in pixel space as the map
+      // shrinks, so same-size cards can still land on top of each other; a few
+      // rounds of iterative AABB separation is enough for the handful of stops
+      // a trip typically has. Leader lines (_updateMainLeaders) keep each
+      // nudged card visually tied back to its own pin.
+      const GAP = 6;
+      for (let iter = 0; iter < 4; iter++) {
+        let moved = false;
+        for (let i = 0; i < placed.length; i++) {
+          if (!placed[i].auto) continue;
+          for (let j = i + 1; j < placed.length; j++) {
+            if (!placed[j].auto) continue;
+            const a = placed[i], b = placed[j];
+            const overlapX = Math.min(a.px + CARD_W, b.px + CARD_W) - Math.max(a.px, b.px);
+            const overlapY = Math.min(a.py + CARD_H, b.py + CARD_H) - Math.max(a.py, b.py);
+            if (overlapX <= 0 || overlapY <= 0) continue;
+            moved = true;
+            if (overlapX < overlapY) {
+              const push = (overlapX + GAP) / 2;
+              if (a.px + CARD_W / 2 <= b.px + CARD_W / 2) { a.px -= push; b.px += push; }
+              else { a.px += push; b.px -= push; }
+            } else {
+              const push = (overlapY + GAP) / 2;
+              if (a.py + CARD_H / 2 <= b.py + CARD_H / 2) { a.py -= push; b.py += push; }
+              else { a.py += push; b.py -= push; }
+            }
+          }
+        }
+        if (!moved) break;
+      }
+
+      // ---- pass 3: clamp to the visible map area and commit to the DOM ----
+      placed.forEach(({ cardEl, px, py }) => {
         px = Math.max(4, Math.min(mapW - CARD_W - 4, px));
         py = Math.max(4, Math.min(mapH - CARD_H - 4, py));
-        cardEl.style.display = '';
         cardEl.style.left = px + 'px';
         cardEl.style.top = py + 'px';
       });
@@ -1213,7 +1263,7 @@
       const map = this.mainLeafletMap;
       const trip = this.currentTrip();
       const stops = trip.stops;
-      const CARD_W = 155, CARD_H = 74;
+      const { w: CARD_W, h: CARD_H } = this._mainCardSize();
       const rect = this.mainMapEl.getBoundingClientRect();
       const svgW = rect.width || 800, svgH = rect.height || 480;
       this.mainLeadersEl.setAttribute('viewBox', `0 0 ${svgW} ${svgH}`);
