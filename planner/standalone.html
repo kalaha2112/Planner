@@ -3,19 +3,18 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-02T01:25:45.354Z
+  Built: 2026-07-02T01:30:58.765Z
 -->
 
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <!-- discourage HTML caching so refreshes always get the latest build -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>Europe — Trip Planner</title>
-
 
   <!-- Wanderbook editorial type stack — loaded async so fonts never block first paint -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1563,12 +1562,6 @@ a { color: inherit; }
 .sync-btn:disabled { opacity: .45; cursor: not-allowed; pointer-events: none; }
 .sync-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .sync-actions .sync-btn { flex: 1; text-align: center; }
-.open-web-btn {
-  display: block; width: 100%; text-align: center; text-decoration: none;
-  margin-top: 4px; background: var(--gold-soft); border-color: var(--gold-border); color: var(--gold);
-}
-.open-web-btn:hover { background: var(--gold-hover); }
-a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .sync-or { display: flex; align-items: center; gap: 10px; color: var(--ink-mute); font-family: var(--caps); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
 .sync-or::before, .sync-or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .sync-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 18px; }
@@ -1582,7 +1575,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .sync-steps { margin: 2px 0 4px; padding-left: 20px; display: flex; flex-direction: column; gap: 7px; }
 .sync-steps li { font-family: var(--sans); font-size: 13px; line-height: 1.45; color: var(--ink-soft); }
 .sync-steps b { color: var(--ink); font-weight: 600; }
-.sync-steps code, .sync-note code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11.5px; background: var(--line-2); padding: 1px 5px; border-radius: 4px; color: var(--ink-mid); word-break: break-all; }
+.sync-steps code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11.5px; background: var(--line-2); padding: 1px 5px; border-radius: 4px; color: var(--ink-mid); }
 .sync-link { color: var(--red); font-weight: 600; text-decoration: none; border-bottom: 1px solid color-mix(in oklch, var(--red) 40%, transparent); }
 .sync-link:hover { border-bottom-color: var(--red); }
 
@@ -1840,8 +1833,8 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    bleeding through the 3D transform onto the front face */
 .mc-back {
   transform: rotateY(180deg);
-  padding: 4.3cqw 5.3cqw 3.35cqw;
-  display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; gap: 0;
+  padding: 4.3cqw 5.3cqw calc(3.35cqw + 22px);
+  display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start; gap: 0;
   overflow-y: hidden;
   pointer-events: none;
 }
@@ -1860,7 +1853,12 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .mc-back .iti-btn { width: 11.6cqw; height: 11.6cqw; }
 .mc-back .nights input { font-size: 5.8cqw; width: 10.6cqw; }
 .mc-back .nights span  { font-size: 4.3cqw; }
-.mc-back .foot { margin-top: 0.5cqw; }
+/* pin the foot to the bottom of the card face so it's always visible
+   regardless of how much content scrolls above it */
+.mc-back .foot {
+  position: absolute; bottom: 3.35cqw; left: 5.3cqw; right: 5.3cqw;
+  background: #fff;
+}
 
 /* editable order number — overlay on SVG pin; scaled via cqi relative to canvas */
 .map-pin-num {
@@ -1954,38 +1952,6 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .map-route { overflow-x: auto; }
 }
 
-/* ============================================================
-   APP MODE — installed-PWA niceties
-   ============================================================ */
-html { -webkit-tap-highlight-color: transparent; }
-
-/* installed app: suppress pull-to-refresh / rubber-band chaining */
-@media (display-mode: standalone) {
-  html, body { overscroll-behavior-y: none; }
-}
-
-/* notched phones (viewport-fit=cover): keep content out of the
-   sensor housing / home-indicator; env() is 0 elsewhere */
-@media (max-width: 799px) {
-  .page {
-    padding-top: max(16px, env(safe-area-inset-top));
-    padding-left: max(12px, env(safe-area-inset-left));
-    padding-right: max(12px, env(safe-area-inset-right));
-    padding-bottom: calc(60px + env(safe-area-inset-bottom));
-  }
-  .overlay {
-    padding-left: max(20px, env(safe-area-inset-left));
-    padding-right: max(20px, env(safe-area-inset-right));
-    padding-bottom: max(48px, env(safe-area-inset-bottom));
-  }
-  .overlay:has(.iti-dialog) {
-    padding-left: max(16px, env(safe-area-inset-left));
-    padding-right: max(16px, env(safe-area-inset-right));
-    padding-bottom: max(20px, env(safe-area-inset-bottom));
-  }
-  .sticker-panel { top: max(88px, calc(env(safe-area-inset-top) + 72px)); }
-}
-
 </style>
 </head>
 <body>
@@ -2068,12 +2034,6 @@ html { -webkit-tap-highlight-color: transparent; }
   const APP_TAG   = 'europe-trip-planner';            // payload marker so we only adopt our own data
   const SYNC_POLL_MS  = 20000;                        // how often to pull while the tab is visible
   const CLOUD_PUSH_DEBOUNCE_MS = 900;                 // coalesce rapid edits into one upload
-
-  // Public web build (the single-file standalone.html served by rawgithack from
-  // the main branch of the Planner repo — always the latest merged build). The
-  // Sync modal links here, carrying "?sync=<code>" so the hosted page
-  // auto-connects to this device's endpoint — two-way sync.
-  const HOSTED_WEB_URL = 'https://raw.githack.com/kalaha2112/Planner/main/planner/standalone.html';
 
   const _notFound = () => { const e = new Error('No data found for that code.'); e.code = 404; return e; };
   const _httpErr  = (name, status) => new Error('“' + name + '” error (HTTP ' + status + ').');
@@ -2510,17 +2470,7 @@ html { -webkit-tap-highlight-color: transparent; }
       this.render();
       this.ensureMap(0);
       this.startSyncLoop();
-      // auto-link from URL: any copy opened as …?sync=<code or endpoint URL>
-      // (or #sync=…) connects itself to that endpoint — this is how the
-      // installed app and the rawgithack-hosted standalone find each other.
-      const sm = (location.search + '&' + location.hash.replace(/^#/, '')).match(/[?&]sync=([^&]+)/);
-      const syncCode = sm ? this.normalizeEndpoint(decodeURIComponent(sm[1])) : '';
-      if (syncCode && syncCode !== 't-' && syncCode !== this.sync.id) {
-        this.syncOpen = true; this.bumpModal();   // show progress/result in the sync modal
-        this.connectEndpoint(syncCode);
-      } else if (this.isLinked()) {
-        this.pullCloud();   // pick up edits made on another device
-      }
+      if (this.isLinked()) this.pullCloud();   // pick up edits made on another device
     }
     currentTrip() { return this.data.trips[this.data.active]; }
     legByIndex(i) { const t = this.currentTrip(); return i === 0 ? t.outboundLeg : t.stops[i - 1].leg; }
@@ -2554,10 +2504,8 @@ html { -webkit-tap-highlight-color: transparent; }
     /* ---------- persistence ---------- */
     scheduleSave() {
       clearTimeout(this._saveTimer);
-      this._savePending = true;   // guards adoptLocal from reverting an unflushed edit
       this._saveTimer = setTimeout(() => {
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data)); this.flashSaved(); } catch (e) {}
-        this._savePending = false;
         // a local edit advances our revision and queues a cloud upload (if linked)
         if (this.isLinked()) { this.sync.rev = Date.now(); this.persistSyncRec(); this.scheduleCloudPush(); }
       }, 450);
@@ -2718,25 +2666,6 @@ html { -webkit-tap-highlight-color: transparent; }
     }
     syncNow() { this.pullCloud({ force: true }); }
 
-    // URL of the hosted web build, carrying this device's sync code when linked
-    // so the opened page auto-connects to the same trips.
-    hostedWebUrl() {
-      return this.isLinked()
-        ? HOSTED_WEB_URL + '?sync=' + encodeURIComponent(this.sync.id)
-        : HOSTED_WEB_URL;
-    }
-    // Open the hosted web build. If this device isn't linked yet, first create a
-    // sync endpoint automatically, then hand the new tab the ?sync= link so both
-    // ends stay in sync. The blank tab is opened up-front (inside the user
-    // gesture) so it isn't caught by the popup blocker after the async create.
-    async openHostedWeb() {
-      if (this.isLinked()) { window.open(this.hostedWebUrl(), '_blank', 'noopener'); return; }
-      const win = window.open('about:blank', '_blank');
-      await this.createSync();
-      if (this.isLinked()) { if (win) win.location = this.hostedWebUrl(); else window.open(this.hostedWebUrl(), '_blank', 'noopener'); }
-      else if (win) win.close();   // couldn't create an endpoint; status shows the error
-    }
-
     // reconstruct a human endpoint URL from a "t-<key>" code (for display)
     endpointUrl(code) {
       const { be, id } = this.parseCode(code);
@@ -2849,40 +2778,9 @@ html { -webkit-tap-highlight-color: transparent; }
       this._syncPoll = setInterval(() => {
         if (this.isLinked() && document.visibilityState === 'visible') this.pullCloud();
       }, SYNC_POLL_MS);
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') { this.adoptLocalSoon(); this.pullCloud(); }
-      });
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') this.pullCloud(); });
       window.addEventListener('focus', () => this.pullCloud());
       window.addEventListener('online', () => { if (this.isLinked()) this.pullCloud(); });
-      // same-origin live sync: localStorage is shared per-origin, so when the
-      // installed app and another copy (e.g. standalone.html on the same host)
-      // are both open, a save in one fires `storage` in the other — adopt it live.
-      window.addEventListener('storage', (e) => {
-        if (e.key === null || e.key === STORAGE_KEY || e.key === SYNC_KEY) this.adoptLocalSoon();
-      });
-    }
-
-    /* ----- same-origin adoption (installed app ↔ another window/tab) ----- */
-    adoptLocalSoon() {
-      clearTimeout(this._adoptTimer);
-      this._adoptTimer = setTimeout(() => this.adoptLocal(), 300);   // state+sync keys land as a burst
-    }
-    adoptLocal() {
-      if (this._savePending) { this.adoptLocalSoon(); return; }   // our own edit is mid-flight; it wins
-      // same guard as pullCloud: never clobber a modal mid-edit — retry after it closes
-      if (this.openStopIdx != null || this.accomOpenIdx != null || this.budgetOpen) {
-        clearTimeout(this._adoptTimer);
-        this._adoptTimer = setTimeout(() => this.adoptLocal(), 4000);
-        return;
-      }
-      this.sync = this.loadSyncRec();   // other window may have (un)linked or advanced rev
-      let raw = null;
-      try { raw = localStorage.getItem(STORAGE_KEY); } catch (e) {}
-      if (!raw || raw === JSON.stringify(this.data)) { this.paintSyncStatus(); return; }
-      let next; try { next = JSON.parse(raw); } catch (e) { return; }
-      this.data = next; this.migrate(); this._lastCoordKey = '';
-      if (this.isLinked()) this.setSyncStatus('synced', 'Updated from another window');
-      this.render(); this.bumpModal(); this.touchMap(); this.paintSyncStatus();
     }
 
     /* ----- status UI ----- */
@@ -4492,10 +4390,7 @@ html { -webkit-tap-highlight-color: transparent; }
           <button class="sync-btn primary" data-act="sync-now"${this._syncBusy ? ' disabled' : ''}>Sync now</button>
           <button class="sync-btn ghost" data-act="sync-unlink">Disconnect this device</button>
         </div>
-        <a class="sync-btn open-web-btn" href="${escA(this.hostedWebUrl())}" target="_blank" rel="noopener">Open the web version ↗</a>
-        <p class="sync-note">Opens the hosted planner already linked to this device — edits flow both ways.</p>
         <p class="sync-note">Trips live at this public endpoint. Anyone with the link can read or change them — treat it like a shared password. Offline edits upload automatically when you reconnect.</p>
-        <p class="sync-note">Auto-link another copy: open it with <code>?sync=${escA(this.sync.id)}</code> appended to its address (works for the installed app and the hosted standalone page alike). Copies served from the <b>same host</b> share edits live without any setup.</p>
       ` : `
         <p class="sync-lead">Create one free storage endpoint (no account, no email), then paste it on both devices. This device sets it up; the other one loads from it.</p>
         <ol class="sync-steps">
@@ -4509,9 +4404,6 @@ html { -webkit-tap-highlight-color: transparent; }
         </div>
         <div class="sync-row"><span class="sync-status ${statusCls}">${esc(this.syncStatusLabel())}</span></div>
         <p class="sync-note">Your trips are stored at this public endpoint so both devices can reach them. Anyone with the link can view or edit it, so keep it private.</p>
-        <div class="sync-or">or</div>
-        <button class="sync-btn open-web-btn" data-act="open-web"${this._syncBusy ? ' disabled' : ''}>Open the web version, synced ↗</button>
-        <p class="sync-note">One tap: creates a sync endpoint automatically and opens the hosted planner already linked to this device — edits then flow both ways.</p>
       `;
       return `<div class="overlay" data-act="overlay-sync">
         <div class="dialog sync-dialog" data-stop>
@@ -4610,7 +4502,6 @@ html { -webkit-tap-highlight-color: transparent; }
         case 'sync-connect': { const inp = this.modalEl.querySelector('.sync-code-in'); this.connectEndpoint(inp ? inp.value : this._syncCodeDraft); break; }
         case 'sync-link': { const inp = this.modalEl.querySelector('.sync-code-in'); this.linkSync(inp ? inp.value : this._syncCodeDraft); break; }
         case 'sync-now': this.syncNow(); break;
-        case 'open-web': this.openHostedWeb(); break;
         case 'sync-unlink': if (confirm('Unlink this device? Your trips stay here but stop syncing with other devices.')) this.unlinkSync(); break;
         case 'sync-select': if (t.select) t.select(); break;
         case 'sync-copy': {
