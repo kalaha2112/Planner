@@ -1214,3 +1214,35 @@ a { color: inherit; }
   .map-canvas { min-width: 420px; }
   .map-route { overflow-x: auto; }
 }
+
+/* ============================================================
+   APP MODE — installed-PWA niceties
+   ============================================================ */
+html { -webkit-tap-highlight-color: transparent; }
+
+/* installed app: suppress pull-to-refresh / rubber-band chaining */
+@media (display-mode: standalone) {
+  html, body { overscroll-behavior-y: none; }
+}
+
+/* notched phones (viewport-fit=cover): keep content out of the
+   sensor housing / home-indicator; env() is 0 elsewhere */
+@media (max-width: 799px) {
+  .page {
+    padding-top: max(16px, env(safe-area-inset-top));
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: calc(60px + env(safe-area-inset-bottom));
+  }
+  .overlay {
+    padding-left: max(20px, env(safe-area-inset-left));
+    padding-right: max(20px, env(safe-area-inset-right));
+    padding-bottom: max(48px, env(safe-area-inset-bottom));
+  }
+  .overlay:has(.iti-dialog) {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+  }
+  .sticker-panel { top: max(88px, calc(env(safe-area-inset-top) + 72px)); }
+}

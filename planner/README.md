@@ -41,6 +41,27 @@ node build.js --watch    # keep standalone.html in sync while you edit the sourc
 directly (a `file://` address). It's a **generated** file — edit the sources (`app.js`, `styles.css`,
 …), not `standalone.html`; run `node build.js` (or leave `--watch` running) and your edits flow into
 it. Map tiles + address geocoding still need internet, same as the served version.
+(The PWA wiring below is stripped from this build — `file://` pages can't register a service worker.)
+
+## Install as an app (PWA)
+
+The served planner is a full **installable app**: manifest, icons, offline service worker,
+standalone display, and safe-area handling for notched phones.
+
+- **Install** — serve over `https://` (or `localhost`) and use the browser's *Install app* /
+  *Add to Home Screen* action. It launches full-screen in its own window, with the paper-shell
+  theme color and the route-pin icon (`icons/`).
+- **Offline** — `sw.js` precaches the app shell (HTML/CSS/JS, vendored Leaflet + TopoJSON,
+  icons) with a **network-first** strategy: online you always run the latest build; offline the
+  last-seen build boots and your trips load from `localStorage` as usual. Map tiles you've
+  already viewed are cached (capped at ~400 tiles) so visited map areas render offline; fonts
+  are cached stale-while-revalidate. Geocoding and the cross-device sync backends are never
+  cached — they stay live-only.
+- **App feel** — `viewport-fit=cover` + `env(safe-area-inset-*)` padding keeps content clear of
+  the notch/home indicator; pull-to-refresh is suppressed in the installed app.
+
+To force-refresh the offline copy after deploying changes, bump `VERSION` in `sw.js` (old
+shell caches are cleaned up on activation).
 
 ## Features
 
@@ -68,10 +89,13 @@ it. Map tiles + address geocoding still need internet, same as the served versio
 
 | File | Purpose |
 |------|---------|
-| `index.html` | Document shell — fonts, local Leaflet, mounts `#app`. |
+| `index.html` | Document shell — fonts, local Leaflet, PWA wiring, mounts `#app`. |
 | `vendor/leaflet/` | Bundled Leaflet 1.9.4 (js/css/images) — no CDN dependency. |
 | `styles.css` | Wanderbook-reskinned design tokens + all component styles. |
 | `app.js` | State, computations, rendering, and interactions (vanilla, no framework). |
+| `manifest.webmanifest` | Web app manifest — install metadata, standalone display, icons. |
+| `sw.js` | Service worker — offline app shell, capped tile cache, font cache. |
+| `icons/` | App icon (SVG source + rendered 192/512/apple-touch PNGs). |
 
 ## Design lineage
 

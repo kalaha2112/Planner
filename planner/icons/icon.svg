@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Wanderbook editorial palette: paper shell, brown structure, red interactive -->
+  <rect width="512" height="512" fill="#e8e4dc"/>
+  <!-- stitched travel route, origin (bottom-left) to destination (top-right) -->
+  <path d="M 172 330 C 204 262, 288 288, 328 216"
+        fill="none" stroke="#23140C" stroke-width="13"
+        stroke-linecap="round" stroke-dasharray="1 30"/>
+  <!-- origin: quiet brown ring (structural) -->
+  <circle cx="150" cy="372" r="24" fill="#ffffff" stroke="#23140C" stroke-width="11"/>
+  <!-- destination: red stop dot (interactive), ringed like a map pin -->
+  <circle cx="356" cy="168" r="46" fill="#91040C"/>
+  <circle cx="356" cy="168" r="15" fill="#ffffff"/>
+</svg>

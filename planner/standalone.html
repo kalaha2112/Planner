@@ -3,18 +3,19 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-01T06:15:46.232Z
+  Built: 2026-07-02T00:45:15.178Z
 -->
 
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <!-- discourage HTML caching so refreshes always get the latest build -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>Europe — Trip Planner</title>
+
 
   <!-- Wanderbook editorial type stack — loaded async so fonts never block first paint -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1925,6 +1926,38 @@ a { color: inherit; }
 @media (max-width: 500px) {
   .map-canvas { min-width: 420px; }
   .map-route { overflow-x: auto; }
+}
+
+/* ============================================================
+   APP MODE — installed-PWA niceties
+   ============================================================ */
+html { -webkit-tap-highlight-color: transparent; }
+
+/* installed app: suppress pull-to-refresh / rubber-band chaining */
+@media (display-mode: standalone) {
+  html, body { overscroll-behavior-y: none; }
+}
+
+/* notched phones (viewport-fit=cover): keep content out of the
+   sensor housing / home-indicator; env() is 0 elsewhere */
+@media (max-width: 799px) {
+  .page {
+    padding-top: max(16px, env(safe-area-inset-top));
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: calc(60px + env(safe-area-inset-bottom));
+  }
+  .overlay {
+    padding-left: max(20px, env(safe-area-inset-left));
+    padding-right: max(20px, env(safe-area-inset-right));
+    padding-bottom: max(48px, env(safe-area-inset-bottom));
+  }
+  .overlay:has(.iti-dialog) {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+  }
+  .sticker-panel { top: max(88px, calc(env(safe-area-inset-top) + 72px)); }
 }
 
 </style>

@@ -1,0 +1,20 @@
+{
+  "name": "Europe Trip Planner",
+  "short_name": "Planner",
+  "description": "Plan multi-city European itineraries — route, nights, budget, miles, day-by-day plans and a live map.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#e8e4dc",
+  "theme_color": "#e8e4dc",
+  "lang": "en",
+  "categories": ["travel", "productivity"],
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

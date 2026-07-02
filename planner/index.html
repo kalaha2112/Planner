@@ -2,12 +2,22 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <!-- discourage HTML caching so refreshes always get the latest build -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>Europe — Trip Planner</title>
+
+  <!-- PWA: installable app (stripped from standalone.html — file:// can't register a SW) -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#e8e4dc">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Planner">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 
   <!-- Wanderbook editorial type stack — loaded async so fonts never block first paint -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,10 +32,18 @@
   <!-- TopoJSON client + world atlas — vendored locally, inlined by build.js -->
   <script src="vendor/topojson/topojson.min.js"></script>
 
-  <link rel="stylesheet" href="styles.css?v=98">
+  <link rel="stylesheet" href="styles.css?v=99">
 </head>
 <body>
   <main id="app"></main>
-  <script src="app.js?v=98"></script>
+  <script src="app.js?v=99"></script>
+  <!-- PWA: offline cache + install support (no-op on file:// and non-secure origins) -->
+  <script>
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch((err) => console.warn('SW registration failed:', err));
+      });
+    }
+  </script>
 </body>
 </html>

@@ -62,6 +62,10 @@ function build() {
     /<script src="app\.js(?:\?v=\d+)?"><\/script>/,
     () => `<script>\n/* app.js */\n${app}\n</script>`
   );
+  // 6) PWA wiring is meaningless on file:// (no manifest fetch, no service
+  //    worker, icon paths won't travel with the single file) — strip both blocks
+  html = html.replace(/[ \t]*<!-- PWA: installable app[\s\S]*?<link rel="apple-touch-icon"[^>]*>\n/, '');
+  html = html.replace(/[ \t]*<!-- PWA: offline cache[\s\S]*?<\/script>\n/, '');
 
   const banner = `<!--\n  GENERATED FILE — do not edit by hand.\n  Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.\n  Edit those sources and re-run:  node build.js   (or: node build.js --watch)\n  Built: ${new Date().toISOString()}\n-->\n`;
   html = html.replace(/^<!DOCTYPE html>/i, `<!DOCTYPE html>\n${banner}`);
