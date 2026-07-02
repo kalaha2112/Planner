@@ -530,9 +530,11 @@
       }
     }
     /* Touch pointer indicator: iOS/iPadOS have no cursor, so show the same
-       dashed arrow at the fingertip while touching (fades out on release) so
-       you can see where you're touching. Passive + pointer-events:none — it
-       never blocks taps, scrolling, or the pointer-based drags. */
+       dashed arrow at the fingertip — but only for taps and drags. When the
+       browser claims the gesture as a scroll it fires pointercancel (and the
+       page scrolls), so we hide instantly there; app drags capture the pointer
+       (touch-action:none grips), so no cancel fires and the arrow follows the
+       finger. Passive + pointer-events:none — never blocks any interaction. */
     initTouchPointer() {
       if (this._touchArrow) return;
       const el = document.createElement('div');
@@ -541,24 +543,30 @@
       document.body.appendChild(el);
       this._touchArrow = el;
       const SIZE = 34, TIPX = SIZE * 21 / 32, TIPY = SIZE * 20 / 32, LIFT = 8;
-      let raf = 0, x = 0, y = 0, hideT = 0;
+      let raf = 0, x = 0, y = 0, hideT = 0, down = false;
       const place = () => { raf = 0; el.style.transform = `translate3d(${x - LIFT - TIPX}px, ${y - LIFT - TIPY}px, 0)`; };
       const show = (e) => {
         if (e.pointerType !== 'touch') return;     // real cursor handles mouse/pen
+        if (e.type === 'pointerdown') down = true;
+        else if (!down) return;                    // ignore stray moves outside a touch
         x = e.clientX; y = e.clientY;
         clearTimeout(hideT);
         el.classList.add('on');
         if (!raf) raf = requestAnimationFrame(place);
       };
+      const hideNow = () => { down = false; clearTimeout(hideT); el.classList.remove('on'); };
       const hide = (e) => {
         if (e && e.pointerType && e.pointerType !== 'touch') return;
+        down = false;
         clearTimeout(hideT);
-        hideT = setTimeout(() => el.classList.remove('on'), 240);   // brief linger after lift
+        hideT = setTimeout(() => el.classList.remove('on'), 240);   // brief linger after a tap/drag ends
       };
       document.addEventListener('pointerdown', show, { passive: true });
       document.addEventListener('pointermove', show, { passive: true });
       document.addEventListener('pointerup', hide, { passive: true });
-      document.addEventListener('pointercancel', hide, { passive: true });
+      // scroll took over (browser cancels the pointer stream) → not a tap/drag: vanish at once
+      document.addEventListener('pointercancel', (e) => { if (!e.pointerType || e.pointerType === 'touch') hideNow(); }, { passive: true });
+      document.addEventListener('scroll', () => { if (down || el.classList.contains('on')) hideNow(); }, { passive: true, capture: true });
     }
     currentTrip() { return this.data.trips[this.data.active]; }
     legByIndex(i) { const t = this.currentTrip(); return i === 0 ? t.outboundLeg : t.stops[i - 1].leg; }
