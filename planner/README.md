@@ -63,6 +63,28 @@ standalone display, and safe-area handling for notched phones.
 To force-refresh the offline copy after deploying changes, bump `VERSION` in `sw.js` (old
 shell caches are cleaned up on activation).
 
+## Keeping the app and the hosted standalone.html in sync (both ways)
+
+The installed app and a hosted copy of `standalone.html` (e.g. on **rawgithack**) stay in
+sync in two ways, depending on where each is served from:
+
+- **Same host (zero setup, live)** — if the app was installed from the same host that serves
+  `standalone.html` (e.g. both under `raw.githack.com/...`), they share the same
+  `localStorage`. Each copy listens for `storage` events, so an edit saved in one window
+  appears in the other **live** (within ~1s) — no codes, no accounts. (Note rawgithack has two
+  hosts: `raw.githack.com` and `rawcdn.githack.com` are *different* origins and don't share
+  storage — use the cloud sync below across them.)
+- **Different hosts (cloud sync)** — open **Sync** in either copy and connect a textdb
+  endpoint, then link the other copy to the same endpoint. Easiest way: once one side is
+  linked, open the other side with `?sync=<code>` appended to its URL (the Sync dialog shows
+  the exact snippet) — it links itself and loads the trips automatically. From then on every
+  edit uploads (debounced ~1s) and each copy pulls every 20s, on focus, and on reconnect.
+  Conflicts resolve last-write-wins on a per-edit revision stamp.
+
+Offline behaviour: edits made in the installed app while offline are saved locally, then
+uploaded automatically the moment the device is back online — the hosted copy picks them up
+on its next pull, and vice versa.
+
 ## Features
 
 - **Multiple trips** — add, rename, remove, drag-to-reorder; two seeded routes (Central Europe,

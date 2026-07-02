@@ -510,7 +510,17 @@
       this.render();
       this.ensureMap(0);
       this.startSyncLoop();
-      if (this.isLinked()) this.pullCloud();   // pick up edits made on another device
+      // auto-link from URL: any copy opened as …?sync=<code or endpoint URL>
+      // (or #sync=…) connects itself to that endpoint — this is how the
+      // installed app and the rawgithack-hosted standalone find each other.
+      const sm = (location.search + '&' + location.hash.replace(/^#/, '')).match(/[?&]sync=([^&]+)/);
+      const syncCode = sm ? this.normalizeEndpoint(decodeURIComponent(sm[1])) : '';
+      if (syncCode && syncCode !== 't-' && syncCode !== this.sync.id) {
+        this.syncOpen = true; this.bumpModal();   // show progress/result in the sync modal
+        this.connectEndpoint(syncCode);
+      } else if (this.isLinked()) {
+        this.pullCloud();   // pick up edits made on another device
+      }
     }
     currentTrip() { return this.data.trips[this.data.active]; }
     legByIndex(i) { const t = this.currentTrip(); return i === 0 ? t.outboundLeg : t.stops[i - 1].leg; }
@@ -544,8 +554,10 @@
     /* ---------- persistence ---------- */
     scheduleSave() {
       clearTimeout(this._saveTimer);
+      this._savePending = true;   // guards adoptLocal from reverting an unflushed edit
       this._saveTimer = setTimeout(() => {
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data)); this.flashSaved(); } catch (e) {}
+        this._savePending = false;
         // a local edit advances our revision and queues a cloud upload (if linked)
         if (this.isLinked()) { this.sync.rev = Date.now(); this.persistSyncRec(); this.scheduleCloudPush(); }
       }, 450);
@@ -818,9 +830,40 @@
       this._syncPoll = setInterval(() => {
         if (this.isLinked() && document.visibilityState === 'visible') this.pullCloud();
       }, SYNC_POLL_MS);
-      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') this.pullCloud(); });
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') { this.adoptLocalSoon(); this.pullCloud(); }
+      });
       window.addEventListener('focus', () => this.pullCloud());
       window.addEventListener('online', () => { if (this.isLinked()) this.pullCloud(); });
+      // same-origin live sync: localStorage is shared per-origin, so when the
+      // installed app and another copy (e.g. standalone.html on the same host)
+      // are both open, a save in one fires `storage` in the other — adopt it live.
+      window.addEventListener('storage', (e) => {
+        if (e.key === null || e.key === STORAGE_KEY || e.key === SYNC_KEY) this.adoptLocalSoon();
+      });
+    }
+
+    /* ----- same-origin adoption (installed app ↔ another window/tab) ----- */
+    adoptLocalSoon() {
+      clearTimeout(this._adoptTimer);
+      this._adoptTimer = setTimeout(() => this.adoptLocal(), 300);   // state+sync keys land as a burst
+    }
+    adoptLocal() {
+      if (this._savePending) { this.adoptLocalSoon(); return; }   // our own edit is mid-flight; it wins
+      // same guard as pullCloud: never clobber a modal mid-edit — retry after it closes
+      if (this.openStopIdx != null || this.accomOpenIdx != null || this.budgetOpen) {
+        clearTimeout(this._adoptTimer);
+        this._adoptTimer = setTimeout(() => this.adoptLocal(), 4000);
+        return;
+      }
+      this.sync = this.loadSyncRec();   // other window may have (un)linked or advanced rev
+      let raw = null;
+      try { raw = localStorage.getItem(STORAGE_KEY); } catch (e) {}
+      if (!raw || raw === JSON.stringify(this.data)) { this.paintSyncStatus(); return; }
+      let next; try { next = JSON.parse(raw); } catch (e) { return; }
+      this.data = next; this.migrate(); this._lastCoordKey = '';
+      if (this.isLinked()) this.setSyncStatus('synced', 'Updated from another window');
+      this.render(); this.bumpModal(); this.touchMap(); this.paintSyncStatus();
     }
 
     /* ----- status UI ----- */
@@ -2365,6 +2408,7 @@
           <button class="sync-btn ghost" data-act="sync-unlink">Disconnect this device</button>
         </div>
         <p class="sync-note">Trips live at this public endpoint. Anyone with the link can read or change them — treat it like a shared password. Offline edits upload automatically when you reconnect.</p>
+        <p class="sync-note">Auto-link another copy: open it with <code>?sync=${escA(this.sync.id)}</code> appended to its address (works for the installed app and the hosted standalone page alike). Copies served from the <b>same host</b> share edits live without any setup.</p>
       ` : `
         <p class="sync-lead">Create one free storage endpoint (no account, no email), then paste it on both devices. This device sets it up; the other one loads from it.</p>
         <ol class="sync-steps">
