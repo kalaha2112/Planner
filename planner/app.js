@@ -1142,14 +1142,27 @@
 
     _loadMinimalBasemap() {
       const topo = window.topojson;
-      const world = window.WORLD_ATLAS_DATA;
-      if (!topo || !world || !this.mainMapLand) return;
-      const countries = this._smoothCountries(topo.feature(world, world.objects.countries));
-      window.L.geoJSON(
-        countries,
-        { style: { fillColor: '#23140C', fillOpacity: 1, color: '#47403a', weight: 3, opacity: 1, lineJoin: 'round', lineCap: 'round' } }
-      ).addTo(this.mainMapLand);
-      this._addMinimalCityLabels();
+      if (!topo || !this.mainMapLand) return;
+      const build = (world) => {
+        if (!world || this._basemapBuilt) return;
+        this._basemapBuilt = true;
+        const countries = this._smoothCountries(topo.feature(world, world.objects.countries));
+        window.L.geoJSON(
+          countries,
+          { style: { fillColor: '#23140C', fillOpacity: 1, color: '#47403a', weight: 3, opacity: 1, lineJoin: 'round', lineCap: 'round' } }
+        ).addTo(this.mainMapLand);
+        this._addMinimalCityLabels();
+        this._positionMainCards();
+      };
+      // standalone.html inlines the atlas; the served build (index.html) doesn't,
+      // so fetch it once — otherwise the dark land layer never renders there.
+      if (window.WORLD_ATLAS_DATA) { build(window.WORLD_ATLAS_DATA); return; }
+      if (this._atlasFetching) return;
+      this._atlasFetching = true;
+      fetch('vendor/topojson/countries-110m.json')
+        .then(r => r.json())
+        .then(w => { window.WORLD_ATLAS_DATA = w; build(w); })
+        .catch(() => { this._atlasFetching = false; });
     }
 
     _addMinimalCityLabels() {
