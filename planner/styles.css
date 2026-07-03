@@ -1104,7 +1104,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   position: absolute; inset: 0;
   border-radius: var(--r-card);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.75);
   box-shadow: 0 2px 10px rgba(33,26,24,.10);
   backface-visibility: hidden; -webkit-backface-visibility: hidden;
   overflow: hidden;
@@ -1131,7 +1131,8 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .mc-meta { display: flex; flex-direction: column; gap: 2cqw; }
 .mc-dates-display {
   font-size: 6cqw;
-  font-family: var(--sans); color: #3a7d44; letter-spacing: .01em;
+  /* bolder + a touch darker so the dates don't blend into the translucent card */
+  font-family: var(--sans); color: #2c6a37; font-weight: 700; letter-spacing: .01em;
 }
 .mc-hotel-display {
   font-size: 7.5cqw;
