@@ -517,6 +517,7 @@
         if (Number(cardEl.dataset.i) !== this._openMapCardIdx) return;
         this._openMapCardFlipped = true;
         cardEl.classList.add('mc-editing');
+        this._positionMainCards();   // re-clamp at the larger editing width so it stays inside the map
       });
       this.mainPinsOverlayEl = document.createElement('div');
       this.mainPinsOverlayEl.className = 'main-pins-overlay';
@@ -1201,7 +1202,12 @@
     // clamp(100px, 15.4cqw, 155px) on wide screens, fixed 185px popup ≤700px —
     // so every JS position/leader-line computation matches the card's actual size.
     _mainCardSize() {
-      if (this._mobileMap()) { const w = 123; return { w, h: w * (74 / 155) }; }
+      // compact popup 123px; expands to 185px once flipped to the edit face so
+      // the back controls keep their original size (CSS mirrors these widths)
+      if (this._mobileMap()) {
+        const w = (this._openMapCardFlipped && this._openMapCardIdx != null) ? 185 : 123;
+        return { w, h: w * (74 / 155) };
+      }
       const mapW = this.mainMapEl.offsetWidth || 800;
       const w = Math.max(100, Math.min(155, mapW * 0.154));
       return { w, h: w * (74 / 155) };

@@ -1270,6 +1270,12 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
      city title / date range / hotel name with it) reduced to ~2/3 so the card
      covers less of the small interactive map */
   .main-cards-overlay .map-stop { width: 123px; animation: mcPopIn .18s ease-out; }
+  /* flipped to the edit face → expand back to the full width so every back
+     control keeps its original (comfortable) tap size; JS repositions with the
+     larger size so the expanded card stays inside the map. The back title is
+     the sole exception — pinned to the compact size (matches the front). */
+  .main-cards-overlay .map-stop.mc-editing { width: 185px; }
+  .map-stop.mc-editing .mc-back .city { font-size: 4.2cqw; }
   .main-cards-overlay .map-stop .mc-front,
   .main-cards-overlay .map-stop .mc-back {
     border-color: var(--line-3);
