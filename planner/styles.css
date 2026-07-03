@@ -1259,6 +1259,49 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 }
 
 /* ============================================================
+   MOBILE MAP (≤700px) — pins only; tapping a pin pops up that
+   stop's card (full info + flip-to-edit, same abilities as the
+   desktop card). One popup at a time; closes on tap-away (JS).
+   Laptop / full-screen iPad keep the floating-cards design.
+   ============================================================ */
+@media (max-width: 700px) {
+  /* the sole visible card is a popup — full-size type, popover shadow */
+  .main-cards-overlay .map-stop { width: 185px; animation: mcPopIn .18s ease-out; }
+  .main-cards-overlay .map-stop .mc-front,
+  .main-cards-overlay .map-stop .mc-back {
+    border-color: var(--line-3);
+    box-shadow: 0 10px 30px rgba(33,26,24,.28);
+  }
+  /* no hover-flip on touch (iOS tap-hover is unreliable) — flip only via
+     .mc-editing, toggled by tapping the open card. Selectors mirror the
+     base hover rules' specificity so source order decides. */
+  .map-stop:not(.mc-dragging):hover .mc-flip { transform: none; transition-delay: .18s; }
+  .map-stop.mc-editing:not(.mc-dragging) .mc-flip { transform: rotateY(180deg); transition-delay: 0s; }
+  .map-stop:not(.mc-dragging):hover .mc-front { pointer-events: auto; }
+  .map-stop.mc-editing .mc-front { pointer-events: none; }
+  .map-stop.mc-editing .mc-back { pointer-events: auto; overflow-y: auto; scrollbar-width: none; }
+  /* popup auto-positions next to its pin — free drag doesn't apply here */
+  .mc-back .grip[data-map-drag] { display: none; }
+  /* bigger touch pins; the number is editable only while its card is open
+     (first tap opens the popup, second tap edits the stop order) */
+  .map-pin-main { width: 26px; height: 26px; }
+  .map-pin-main .pin-order-input { width: 26px; height: 26px; line-height: 26px; font-size: 11px; pointer-events: none; }
+  .map-pin-outer.pin-open .map-pin-main { outline: 2px solid #fff; outline-offset: 1.5px; }
+  .map-pin-outer.pin-open .pin-order-input { pointer-events: auto; }
+}
+@keyframes mcPopIn {
+  from { opacity: 0; transform: translateY(6px) scale(.96); }
+  to   { opacity: 1; transform: none; }
+}
+/* taller, more usable map on phones (default 740/480 is too short) */
+@media (max-width: 500px) {
+  .main-map-wrap { aspect-ratio: 1 / 0.9; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .main-cards-overlay .map-stop { animation: none; }
+}
+
+/* ============================================================
    APP MODE — installed-PWA niceties
    ============================================================ */
 html { -webkit-tap-highlight-color: transparent; }

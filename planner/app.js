@@ -488,18 +488,50 @@
       this.mainLeafletMap = null;
       this.mainMapLines = null;
       this._editingStopIdx = null;
+      // mobile map popup (≤700px): which stop's card is open, and whether it
+      // shows the edit (back) face. Not persisted — purely view state.
+      this._openMapCardIdx = null;
+      this._openMapCardFlipped = false;
       this.mainCardsOverlayEl = document.createElement('div');
       this.mainCardsOverlayEl.className = 'main-cards-overlay';
       document.addEventListener('pointerdown', (e) => {
-        if (this._editingStopIdx == null) return;
-        const editingCard = this.mainCardsOverlayEl.querySelector(`.map-stop[data-i="${this._editingStopIdx}"]`);
-        if (editingCard && !editingCard.contains(e.target)) {
-          editingCard.classList.remove('mc-editing');
-          this._editingStopIdx = null;
+        if (this._editingStopIdx != null) {
+          const editingCard = this.mainCardsOverlayEl.querySelector(`.map-stop[data-i="${this._editingStopIdx}"]`);
+          if (editingCard && !editingCard.contains(e.target)) {
+            editingCard.classList.remove('mc-editing');
+            this._editingStopIdx = null;
+          }
+        }
+        // mobile popup stays open until a tap lands outside the card and outside any pin
+        if (this._openMapCardIdx != null && this._mobileMap()) {
+          const openCard = this.mainCardsOverlayEl.querySelector(`.map-stop[data-i="${this._openMapCardIdx}"]`);
+          const onPin = e.target.closest && e.target.closest('.map-pin-outer');
+          if ((!openCard || !openCard.contains(e.target)) && !onPin) this._closeMapPopup();
         }
       }, true);
+      // tap on the open popup's front face flips it to the edit face (no :hover on touch)
+      this.mainCardsOverlayEl.addEventListener('click', (e) => {
+        if (!this._mobileMap()) return;
+        const cardEl = e.target.closest('.map-stop');
+        if (!cardEl || !e.target.closest('.mc-front')) return;
+        if (Number(cardEl.dataset.i) !== this._openMapCardIdx) return;
+        this._openMapCardFlipped = true;
+        cardEl.classList.add('mc-editing');
+      });
       this.mainPinsOverlayEl = document.createElement('div');
       this.mainPinsOverlayEl.className = 'main-pins-overlay';
+      // mobile: tapping a pin opens that stop's card as a popup
+      this.mainPinsOverlayEl.addEventListener('click', (e) => {
+        if (!this._mobileMap()) return;
+        const pin = e.target.closest('.map-pin-outer');
+        if (!pin) return;
+        const idx = Number(pin.dataset.pin);
+        if (this._openMapCardIdx === idx) return;   // already open — tap edits the order number
+        this._openMapCardIdx = idx;
+        this._openMapCardFlipped = false;
+        this._syncPinOpenClass();
+        this._positionMainCards();
+      });
       this.mainCityLabelsEl = document.createElement('div');
       this.mainCityLabelsEl.className = 'main-city-labels-overlay';
       this._mapCities = [];
@@ -516,6 +548,14 @@
       this.render();
       this.ensureMap(0);
       this.initTouchPointer();
+      // crossing the mobile-map breakpoint (resizing an iPad window, rotating)
+      // swaps pins-only popup mode ↔ floating cards live
+      try {
+        window.matchMedia('(max-width: 700px)').addEventListener('change', () => {
+          this._openMapCardIdx = null; this._openMapCardFlipped = false;
+          this.touchMap();
+        });
+      } catch (e) { /* very old Safari: no MQL addEventListener — a reload still applies the right mode */ }
       this.startSyncLoop();
       // auto-link from URL: any copy opened as …?sync=<code or endpoint URL>
       // (or #sync=…) connects itself to that endpoint — this is how the
@@ -1137,10 +1177,31 @@
         .join('');
     }
 
-    // mirrors the CSS clamp(100px, 15.4cqw, 155px) on .main-cards-overlay .map-stop
-    // (styles.css) so every JS position/leader-line computation matches the card's
-    // actual responsive size — the one place that ratio lives on the JS side.
+    // ≤700px the map switches to pins-only + one tap-to-open popup card;
+    // above it (laptop, full-screen iPad) the floating-cards design applies.
+    _mobileMap() { return window.matchMedia('(max-width: 700px)').matches; }
+    _closeMapPopup() {
+      if (this._openMapCardIdx != null) {
+        const openCard = this.mainCardsOverlayEl.querySelector(`.map-stop[data-i="${this._openMapCardIdx}"]`);
+        if (openCard) openCard.classList.remove('mc-editing');
+      }
+      this._openMapCardIdx = null;
+      this._openMapCardFlipped = false;
+      this._syncPinOpenClass();
+      this._positionMainCards();
+    }
+    // only the open popup's pin keeps an interactive order input on mobile
+    _syncPinOpenClass() {
+      const mobile = this._mobileMap();
+      this.mainPinsOverlayEl.querySelectorAll('.map-pin-outer').forEach(p => {
+        p.classList.toggle('pin-open', mobile && Number(p.dataset.pin) === this._openMapCardIdx);
+      });
+    }
+    // mirrors the CSS card widths on .main-cards-overlay .map-stop (styles.css):
+    // clamp(100px, 15.4cqw, 155px) on wide screens, fixed 185px popup ≤700px —
+    // so every JS position/leader-line computation matches the card's actual size.
     _mainCardSize() {
+      if (this._mobileMap()) { const w = 185; return { w, h: w * (74 / 155) }; }
       const mapW = this.mainMapEl.offsetWidth || 800;
       const w = Math.max(100, Math.min(155, mapW * 0.154));
       return { w, h: w * (74 / 155) };
@@ -1171,6 +1232,7 @@
         if (!coords[idx]) return '';
         return `<div class="map-pin-outer" data-pin="${idx}"><div class="map-pin-main" style="background:var(--red)"><input type="number" class="pin-order-input" value="${idx + 1}" min="1" max="${stops.length}" data-ch="stop-order" data-i="${idx}" title="Tap to change order"></div></div>`;
       }).join('');
+      this._syncPinOpenClass();
 
       if (bounds.length === 1) {
         const key = bounds[0].join(',');
@@ -1247,6 +1309,11 @@
           if (ci && !cardEl.contains(document.activeElement)) { ci.focus(); ci.select(); }
         }
       }
+      // mobile popup flipped to its edit face survives re-renders (e.g. nights edit → bump)
+      if (this._mobileMap() && this._openMapCardIdx != null && this._openMapCardFlipped) {
+        const openEl = this.mainCardsOverlayEl.querySelector(`.map-stop[data-i="${this._openMapCardIdx}"]`);
+        if (openEl) openEl.classList.add('mc-editing');   // class only — no focus, no keyboard pop
+      }
     }
 
     _positionMainCards() {
@@ -1262,10 +1329,34 @@
       // `auto` marks cards placed by the default pin-offset heuristic — only those
       // get nudged apart from each other; a card the user explicitly dragged
       // (stop.cardLatLng) or that's mid-edit with no city yet keeps its exact spot.
+      const mobile = this._mobileMap();
       const placed = [];
       stops.forEach((stop, idx) => {
         const cardEl = this.mainCardsOverlayEl.querySelector(`.map-stop[data-i="${idx}"]`);
         if (!cardEl) return;
+
+        // mobile (≤700px): pins only — the sole visible card is the tapped
+        // popup (or a just-added stop mid-edit), placed right by its pin.
+        if (mobile) {
+          if (idx !== this._openMapCardIdx && idx !== this._editingStopIdx) {
+            cardEl.style.display = 'none';
+            return;
+          }
+          const coord = this.resolveCoord(stop.city);
+          let px, py;
+          if (coord) {
+            const pt = map.latLngToContainerPoint(coord);
+            px = pt.x - CARD_W / 2;
+            py = pt.y - CARD_H - 14;          // prefer above the pin
+            if (py < 6) py = pt.y + 16;       // flip below when it would clip the top
+          } else {
+            px = mapW / 2 - CARD_W / 2;       // no coords yet (new stop) → center
+            py = mapH / 2 - CARD_H / 2;
+          }
+          cardEl.style.display = '';
+          placed.push({ cardEl, px, py, auto: false });
+          return;
+        }
 
         let px, py, auto = false;
         if (stop.cardLatLng) {
@@ -1327,15 +1418,16 @@
       }
 
       // ---- pass 3: clamp to the visible map area and commit to the DOM ----
+      const INSET = mobile ? 6 : 4;
       placed.forEach(({ cardEl, px, py }) => {
-        px = Math.max(4, Math.min(mapW - CARD_W - 4, px));
-        py = Math.max(4, Math.min(mapH - CARD_H - 4, py));
+        px = Math.max(INSET, Math.min(mapW - CARD_W - INSET, px));
+        py = Math.max(INSET, Math.min(mapH - CARD_H - INSET, py));
         cardEl.style.left = px + 'px';
         cardEl.style.top = py + 'px';
       });
 
       // Position stop pins — clamp to map bounds so .map-route overflow:hidden never clips them
-      const PIN_R = 11; // half of 22px pin
+      const PIN_R = mobile ? 13 : 11; // half the pin (26px touch pins ≤700px, 22px otherwise)
       const pinEls = this.mainPinsOverlayEl.querySelectorAll('.map-pin-outer');
       stops.forEach((stop, idx) => {
         const pinEl = pinEls[idx];
@@ -1384,7 +1476,7 @@
         if (!coord) return;
         const pinPt = map.latLngToContainerPoint(coord);
         const cardEl = this.mainCardsOverlayEl.querySelector(`.map-stop[data-i="${idx}"]`);
-        if (!cardEl) return;
+        if (!cardEl || cardEl.style.display === 'none') return;   // hidden (mobile pins-only) → no leader
         const cx = parseFloat(cardEl.style.left) + CARD_W / 2;
         const cy = parseFloat(cardEl.style.top) + CARD_H / 2;
         if (isNaN(cx) || isNaN(cy)) return;
@@ -1673,13 +1765,21 @@
     insertStop(idx) {
       this.currentTrip().stops.splice(idx, 0, { city: '', nights: 2, note: '', leg: { mode: 'train', duration: '', cost: 0 } });
       this._editingStopIdx = idx;
+      if (this._mobileMap()) { this._openMapCardIdx = idx; this._openMapCardFlipped = true; }   // new stop pops up in edit mode
       this.bump();
     }
-    removeStop(idx) { this.snapshot(); this.currentTrip().stops.splice(idx, 1); if (this.openStopIdx === idx) this.openStopIdx = null; this.bump(); }
+    removeStop(idx) {
+      this.snapshot(); this.currentTrip().stops.splice(idx, 1);
+      if (this.openStopIdx === idx) this.openStopIdx = null;
+      if (this._openMapCardIdx != null) { this._openMapCardIdx = null; this._openMapCardFlipped = false; }
+      this.bump();
+    }
     reorderStop(from, to) {
       if (from === to) return;
       const st = this.currentTrip().stops; const [it] = st.splice(from, 1); st.splice(to, 0, it);
-      if (this.openStopIdx === from) this.openStopIdx = to; this.bump();
+      if (this.openStopIdx === from) this.openStopIdx = to;
+      if (this._openMapCardIdx === from) this._openMapCardIdx = to;   // popup follows its stop
+      this.bump();
     }
     resetRoute() {
       if (!confirm('Reset this route to its default state? This cannot be undone.')) return;
@@ -2633,7 +2733,7 @@
         case 'export': this.exportState(); break;
         case 'import': this.root.querySelector('.import-file').click(); break;
         case 'add-trip': this.addTrip(); break;
-        case 'tab-select': if (this.data.active !== key) { this.data.active = key; this._lastCoordKey = ''; this.bump(); } break;
+        case 'tab-select': if (this.data.active !== key) { this.data.active = key; this._lastCoordKey = ''; this._openMapCardIdx = null; this._openMapCardFlipped = false; this.bump(); } break;
         case 'tab-remove': this.removeTrip(key); break;
         case 'traveler-inc': trip.travelers = Math.min(12, (Math.max(1, Number(trip.travelers) || 1)) + 1); this.bump(); break;
         case 'traveler-dec': trip.travelers = Math.max(1, (Math.max(1, Number(trip.travelers) || 1)) - 1); this.bump(); break;
@@ -2989,6 +3089,7 @@
       }
     }
     _startMapCardDrag(e, stopIdx) {
+      if (this._mobileMap()) return;   // popup position is automatic on mobile (grip hidden too)
       const card = this.mainCardsOverlayEl.querySelector(`.map-stop[data-i="${stopIdx}"]`);
       if (!card) return;
       const overlay = this.mainCardsOverlayEl;
@@ -3029,7 +3130,9 @@
       if (d.stopEl) d.stopEl.classList.remove('mc-dragging');
       if (d._lastLeft == null) return;
       if (this.mainLeafletMap && window.L) {
-        const CARD_W = 155, CARD_H = 74;
+        // responsive size, matching _positionMainCards — a fixed 155/74 here made
+        // dragged cards jump on the next render whenever the map was narrower
+        const { w: CARD_W, h: CARD_H } = this._mainCardSize();
         const pt = window.L.point(d._lastLeft + CARD_W / 2, d._lastTop + CARD_H / 2);
         const latlng = this.mainLeafletMap.containerPointToLatLng(pt);
         this.currentTrip().stops[d.stopIdx].cardLatLng = [latlng.lat, latlng.lng];
