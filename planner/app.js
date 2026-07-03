@@ -1201,7 +1201,7 @@
     // clamp(100px, 15.4cqw, 155px) on wide screens, fixed 185px popup ≤700px —
     // so every JS position/leader-line computation matches the card's actual size.
     _mainCardSize() {
-      if (this._mobileMap()) { const w = 185; return { w, h: w * (74 / 155) }; }
+      if (this._mobileMap()) { const w = 123; return { w, h: w * (74 / 155) }; }
       const mapW = this.mainMapEl.offsetWidth || 800;
       const w = Math.max(100, Math.min(155, mapW * 0.154));
       return { w, h: w * (74 / 155) };

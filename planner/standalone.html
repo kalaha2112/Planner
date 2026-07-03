@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-03T00:54:30.264Z
+  Built: 2026-07-03T04:25:40.696Z
 -->
 
 <html lang="en">
@@ -1979,7 +1979,10 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    ============================================================ */
 @media (max-width: 700px) {
   /* the sole visible card is a popup — full-size type, popover shadow */
-  .main-cards-overlay .map-stop { width: 185px; animation: mcPopIn .18s ease-out; }
+  /* compact popup: width (and, since the card's type is all cqw-based, the
+     city title / date range / hotel name with it) reduced to ~2/3 so the card
+     covers less of the small interactive map */
+  .main-cards-overlay .map-stop { width: 123px; animation: mcPopIn .18s ease-out; }
   .main-cards-overlay .map-stop .mc-front,
   .main-cards-overlay .map-stop .mc-back {
     border-color: var(--line-3);
@@ -3289,7 +3292,7 @@ html { -webkit-tap-highlight-color: transparent; }
     // clamp(100px, 15.4cqw, 155px) on wide screens, fixed 185px popup ≤700px —
     // so every JS position/leader-line computation matches the card's actual size.
     _mainCardSize() {
-      if (this._mobileMap()) { const w = 185; return { w, h: w * (74 / 155) }; }
+      if (this._mobileMap()) { const w = 123; return { w, h: w * (74 / 155) }; }
       const mapW = this.mainMapEl.offsetWidth || 800;
       const w = Math.max(100, Math.min(155, mapW * 0.154));
       return { w, h: w * (74 / 155) };

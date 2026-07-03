@@ -1266,7 +1266,10 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    ============================================================ */
 @media (max-width: 700px) {
   /* the sole visible card is a popup — full-size type, popover shadow */
-  .main-cards-overlay .map-stop { width: 185px; animation: mcPopIn .18s ease-out; }
+  /* compact popup: width (and, since the card's type is all cqw-based, the
+     city title / date range / hotel name with it) reduced to ~2/3 so the card
+     covers less of the small interactive map */
+  .main-cards-overlay .map-stop { width: 123px; animation: mcPopIn .18s ease-out; }
   .main-cards-overlay .map-stop .mc-front,
   .main-cards-overlay .map-stop .mc-back {
     border-color: var(--line-3);
