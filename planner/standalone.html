@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-03T13:52:09.280Z
+  Built: 2026-07-03T15:22:26.031Z
 -->
 
 <html lang="en">
@@ -1797,6 +1797,10 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   position: relative;
   aspect-ratio: 210 / 100;
   padding: 0; box-shadow: none;
+  /* the .card class gives this a solid white background/border; clear it so the
+     80%-transparent faces actually let the map show through (the faces carry
+     their own border + shadow) */
+  background: transparent; border: none;
   transform-style: preserve-3d;
   transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1) 0.18s;
 }

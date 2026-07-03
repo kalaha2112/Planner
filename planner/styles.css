@@ -1084,6 +1084,10 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   position: relative;
   aspect-ratio: 210 / 100;
   padding: 0; box-shadow: none;
+  /* the .card class gives this a solid white background/border; clear it so the
+     80%-transparent faces actually let the map show through (the faces carry
+     their own border + shadow) */
+  background: transparent; border: none;
   transform-style: preserve-3d;
   transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1) 0.18s;
 }
