@@ -1354,8 +1354,9 @@
           if (coord) {
             const pt = map.latLngToContainerPoint(coord);
             px = pt.x - CARD_W / 2;
-            py = pt.y - CARD_H - 14;          // prefer above the pin
-            if (py < 6) py = pt.y + 16;       // flip below when it would clip the top
+            // leave a clear gap between the card and the pin (pin radius 13 + ~13 gap)
+            py = pt.y - CARD_H - 26;          // prefer above the pin
+            if (py < 6) py = pt.y + 26;       // flip below when it would clip the top
           } else {
             px = mapW / 2 - CARD_W / 2;       // no coords yet (new stop) → center
             py = mapH / 2 - CARD_H / 2;

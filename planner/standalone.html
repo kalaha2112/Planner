@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-03T04:53:18.070Z
+  Built: 2026-07-03T13:52:09.280Z
 -->
 
 <html lang="en">
@@ -1807,12 +1807,13 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 }
 .map-stop.mc-dragging .mc-flip { transform: rotateY(180deg); transition: none; }
 
-/* shared face */
+/* shared face — 80% opaque white (20% transparent) so the map reads faintly
+   through the stop card, on every screen size and in both builds */
 .mc-front, .mc-back {
   position: absolute; inset: 0;
   border-radius: var(--r-card);
   border: 1px solid var(--line);
-  background: #fff;
+  background: rgba(255, 255, 255, 0.8);
   box-shadow: 0 2px 10px rgba(33,26,24,.10);
   backface-visibility: hidden; -webkit-backface-visibility: hidden;
   overflow: hidden;
@@ -1876,7 +1877,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    regardless of how much content scrolls above it */
 .mc-back .foot {
   position: absolute; bottom: 3.35cqw; left: 5.3cqw; right: 5.3cqw;
-  background: #fff;
+  background: transparent;   /* card face is uniformly 80% white; no brighter strip */
 }
 
 /* editable order number — overlay on SVG pin; scaled via cqi relative to canvas */
@@ -2009,7 +2010,10 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .map-stop.mc-editing:not(.mc-dragging) .mc-flip { transform: rotateY(180deg); transition-delay: 0s; }
   .map-stop:not(.mc-dragging):hover .mc-front { pointer-events: auto; }
   .map-stop.mc-editing .mc-front { pointer-events: none; }
-  .map-stop.mc-editing .mc-back { pointer-events: auto; overflow-y: auto; scrollbar-width: none; }
+  /* overflow:visible (not auto) so the button row can never be clipped by a
+     scroll container when the device renders the content a hair taller than the
+     box — the content is sized to fit, so nothing actually spills */
+  .map-stop.mc-editing .mc-back { pointer-events: auto; overflow: visible; }
   /* popup auto-positions next to its pin — free drag doesn't apply here */
   .mc-back .grip[data-map-drag] { display: none; }
   /* bigger touch pins; the number is editable only while its card is open
@@ -3459,8 +3463,9 @@ html { -webkit-tap-highlight-color: transparent; }
           if (coord) {
             const pt = map.latLngToContainerPoint(coord);
             px = pt.x - CARD_W / 2;
-            py = pt.y - CARD_H - 14;          // prefer above the pin
-            if (py < 6) py = pt.y + 16;       // flip below when it would clip the top
+            // leave a clear gap between the card and the pin (pin radius 13 + ~13 gap)
+            py = pt.y - CARD_H - 26;          // prefer above the pin
+            if (py < 6) py = pt.y + 26;       // flip below when it would clip the top
           } else {
             px = mapW / 2 - CARD_W / 2;       // no coords yet (new stop) → center
             py = mapH / 2 - CARD_H / 2;
