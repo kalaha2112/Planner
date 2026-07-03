@@ -1270,12 +1270,20 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
      city title / date range / hotel name with it) reduced to ~2/3 so the card
      covers less of the small interactive map */
   .main-cards-overlay .map-stop { width: 123px; animation: mcPopIn .18s ease-out; }
-  /* flipped to the edit face → expand back to the full width so every back
-     control keeps its original (comfortable) tap size; JS repositions with the
-     larger size so the expanded card stays inside the map. The back title is
-     the sole exception — pinned to the compact size (matches the front). */
-  .main-cards-overlay .map-stop.mc-editing { width: 185px; }
-  .map-stop.mc-editing .mc-back .city { font-size: 4.2cqw; }
+  /* flipped to the edit face → keep the front's compact WIDTH (123px); don't
+     shrink the controls, just tighten padding/gaps and let the box grow a touch
+     taller to fit them (buttons, nights, trash, title all keep their size).
+     Fixed px because at 123px the card's own cqw units would shrink them. */
+  .map-stop.mc-editing .mc-flip { aspect-ratio: auto; height: 72px; }
+  .map-stop.mc-editing .mc-back { padding: 5px 6px 26px; }
+  .map-stop.mc-editing .mc-back .head { gap: 4px; }
+  .map-stop.mc-editing .mc-top-row { gap: 5px; }
+  .map-stop.mc-editing .mc-btn-row { gap: 5px; }
+  .map-stop.mc-editing .mc-back .iti-btn { width: 21px; height: 21px; }
+  .map-stop.mc-editing .mc-back .nights input { font-size: 10.5px; width: 20px; }
+  .map-stop.mc-editing .mc-back .nights span { font-size: 8px; }
+  .map-stop.mc-editing .mc-back .city { font-size: 7.8px; }   /* keep the current compact title size */
+  .map-stop.mc-editing .mc-back .foot { bottom: 4px; left: 6px; right: 6px; }
   .main-cards-overlay .map-stop .mc-front,
   .main-cards-overlay .map-stop .mc-back {
     border-color: var(--line-3);

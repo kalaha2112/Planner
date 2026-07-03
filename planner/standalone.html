@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-03T04:33:38.322Z
+  Built: 2026-07-03T04:44:26.884Z
 -->
 
 <html lang="en">
@@ -1983,12 +1983,20 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
      city title / date range / hotel name with it) reduced to ~2/3 so the card
      covers less of the small interactive map */
   .main-cards-overlay .map-stop { width: 123px; animation: mcPopIn .18s ease-out; }
-  /* flipped to the edit face → expand back to the full width so every back
-     control keeps its original (comfortable) tap size; JS repositions with the
-     larger size so the expanded card stays inside the map. The back title is
-     the sole exception — pinned to the compact size (matches the front). */
-  .main-cards-overlay .map-stop.mc-editing { width: 185px; }
-  .map-stop.mc-editing .mc-back .city { font-size: 4.2cqw; }
+  /* flipped to the edit face → keep the front's compact WIDTH (123px); don't
+     shrink the controls, just tighten padding/gaps and let the box grow a touch
+     taller to fit them (buttons, nights, trash, title all keep their size).
+     Fixed px because at 123px the card's own cqw units would shrink them. */
+  .map-stop.mc-editing .mc-flip { aspect-ratio: auto; height: 72px; }
+  .map-stop.mc-editing .mc-back { padding: 5px 6px 26px; }
+  .map-stop.mc-editing .mc-back .head { gap: 4px; }
+  .map-stop.mc-editing .mc-top-row { gap: 5px; }
+  .map-stop.mc-editing .mc-btn-row { gap: 5px; }
+  .map-stop.mc-editing .mc-back .iti-btn { width: 21px; height: 21px; }
+  .map-stop.mc-editing .mc-back .nights input { font-size: 10.5px; width: 20px; }
+  .map-stop.mc-editing .mc-back .nights span { font-size: 8px; }
+  .map-stop.mc-editing .mc-back .city { font-size: 7.8px; }   /* keep the current compact title size */
+  .map-stop.mc-editing .mc-back .foot { bottom: 4px; left: 6px; right: 6px; }
   .main-cards-overlay .map-stop .mc-front,
   .main-cards-overlay .map-stop .mc-back {
     border-color: var(--line-3);
@@ -3299,11 +3307,12 @@ html { -webkit-tap-highlight-color: transparent; }
     // clamp(100px, 15.4cqw, 155px) on wide screens, fixed 185px popup ≤700px —
     // so every JS position/leader-line computation matches the card's actual size.
     _mainCardSize() {
-      // compact popup 123px; expands to 185px once flipped to the edit face so
-      // the back controls keep their original size (CSS mirrors these widths)
+      // compact popup 123px — same width front and back; the edit face is a
+      // little taller (72px) to fit the full-size controls (CSS mirrors this)
       if (this._mobileMap()) {
-        const w = (this._openMapCardFlipped && this._openMapCardIdx != null) ? 185 : 123;
-        return { w, h: w * (74 / 155) };
+        const w = 123;
+        const flipped = this._openMapCardFlipped && this._openMapCardIdx != null;
+        return { w, h: flipped ? 72 : w * (74 / 155) };
       }
       const mapW = this.mainMapEl.offsetWidth || 800;
       const w = Math.max(100, Math.min(155, mapW * 0.154));

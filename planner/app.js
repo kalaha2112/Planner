@@ -1202,11 +1202,12 @@
     // clamp(100px, 15.4cqw, 155px) on wide screens, fixed 185px popup ≤700px —
     // so every JS position/leader-line computation matches the card's actual size.
     _mainCardSize() {
-      // compact popup 123px; expands to 185px once flipped to the edit face so
-      // the back controls keep their original size (CSS mirrors these widths)
+      // compact popup 123px — same width front and back; the edit face is a
+      // little taller (72px) to fit the full-size controls (CSS mirrors this)
       if (this._mobileMap()) {
-        const w = (this._openMapCardFlipped && this._openMapCardIdx != null) ? 185 : 123;
-        return { w, h: w * (74 / 155) };
+        const w = 123;
+        const flipped = this._openMapCardFlipped && this._openMapCardIdx != null;
+        return { w, h: flipped ? 72 : w * (74 / 155) };
       }
       const mapW = this.mainMapEl.offsetWidth || 800;
       const w = Math.max(100, Math.min(155, mapW * 0.154));
