@@ -1207,7 +1207,7 @@
       if (this._mobileMap()) {
         const w = 123;
         const flipped = this._openMapCardFlipped && this._openMapCardIdx != null;
-        return { w, h: flipped ? 72 : w * (74 / 155) };
+        return { w, h: flipped ? 67 : w * (74 / 155) };
       }
       const mapW = this.mainMapEl.offsetWidth || 800;
       const w = Math.max(100, Math.min(155, mapW * 0.154));

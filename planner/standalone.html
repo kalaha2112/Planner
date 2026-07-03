@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-03T04:44:26.884Z
+  Built: 2026-07-03T04:53:18.070Z
 -->
 
 <html lang="en">
@@ -1987,16 +1987,16 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
      shrink the controls, just tighten padding/gaps and let the box grow a touch
      taller to fit them (buttons, nights, trash, title all keep their size).
      Fixed px because at 123px the card's own cqw units would shrink them. */
-  .map-stop.mc-editing .mc-flip { aspect-ratio: auto; height: 72px; }
-  .map-stop.mc-editing .mc-back { padding: 5px 6px 26px; }
-  .map-stop.mc-editing .mc-back .head { gap: 4px; }
+  .map-stop.mc-editing .mc-flip { aspect-ratio: auto; height: 67px; }
+  .map-stop.mc-editing .mc-back { padding: 4px 6px 19px; }
+  .map-stop.mc-editing .mc-back .head { gap: 3px; }
   .map-stop.mc-editing .mc-top-row { gap: 5px; }
   .map-stop.mc-editing .mc-btn-row { gap: 5px; }
   .map-stop.mc-editing .mc-back .iti-btn { width: 21px; height: 21px; }
   .map-stop.mc-editing .mc-back .nights input { font-size: 10.5px; width: 20px; }
   .map-stop.mc-editing .mc-back .nights span { font-size: 8px; }
   .map-stop.mc-editing .mc-back .city { font-size: 7.8px; }   /* keep the current compact title size */
-  .map-stop.mc-editing .mc-back .foot { bottom: 4px; left: 6px; right: 6px; }
+  .map-stop.mc-editing .mc-back .foot { bottom: 2px; left: 6px; right: 6px; }
   .main-cards-overlay .map-stop .mc-front,
   .main-cards-overlay .map-stop .mc-back {
     border-color: var(--line-3);
@@ -3312,7 +3312,7 @@ html { -webkit-tap-highlight-color: transparent; }
       if (this._mobileMap()) {
         const w = 123;
         const flipped = this._openMapCardFlipped && this._openMapCardIdx != null;
-        return { w, h: flipped ? 72 : w * (74 / 155) };
+        return { w, h: flipped ? 67 : w * (74 / 155) };
       }
       const mapW = this.mainMapEl.offsetWidth || 800;
       const w = Math.max(100, Math.min(155, mapW * 0.154));
