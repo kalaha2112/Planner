@@ -1110,8 +1110,8 @@
       this.mainMapLand    = L.layerGroup().addTo(map);
       this.mainMapLines   = L.layerGroup().addTo(map);
       map.on('move zoom moveend zoomend', () => this._positionMainCards());
-      this.mainMapEl.addEventListener('mouseenter', () => map.scrollWheelZoom.enable());
-      this.mainMapEl.addEventListener('mouseleave', () => map.scrollWheelZoom.disable());
+      // scroll-to-zoom stays OFF (created with scrollWheelZoom:false) — wheel
+      // scrolls the page; zoom via double-click, pinch, or +/- keys instead
       this._loadMinimalBasemap();
     }
 
