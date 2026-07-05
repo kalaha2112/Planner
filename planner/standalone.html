@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-05T02:09:36.326Z
+  Built: 2026-07-05T02:16:22.882Z
 -->
 
 <html lang="en">
@@ -3214,8 +3214,13 @@ html { -webkit-tap-highlight-color: transparent; }
       }
       if (this.mainLeafletMap) { return; }
       const L = window.L;
+      // touch devices: one-finger drag must scroll the PAGE, not pan the map
+      // (dragging:false keeps Leaflet's touch-action at pan-x pan-y, so the
+      // browser handles the swipe; pinch still zooms/pans the map, and desktop
+      // mouse dragging is unaffected — coarse pointer = touch-first device)
+      const touchFirst = window.matchMedia('(pointer: coarse)').matches;
       const map = L.map(this.mainMapEl, {
-        scrollWheelZoom: false, zoomSnap: 0.25, zoomDelta: 0.5,
+        scrollWheelZoom: false, dragging: !touchFirst, zoomSnap: 0.25, zoomDelta: 0.5,
         zoomControl: false, attributionControl: false, inertia: true,
         center: [50, 14], zoom: 5
       });

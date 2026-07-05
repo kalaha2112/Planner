@@ -1100,8 +1100,13 @@
       }
       if (this.mainLeafletMap) { return; }
       const L = window.L;
+      // touch devices: one-finger drag must scroll the PAGE, not pan the map
+      // (dragging:false keeps Leaflet's touch-action at pan-x pan-y, so the
+      // browser handles the swipe; pinch still zooms/pans the map, and desktop
+      // mouse dragging is unaffected — coarse pointer = touch-first device)
+      const touchFirst = window.matchMedia('(pointer: coarse)').matches;
       const map = L.map(this.mainMapEl, {
-        scrollWheelZoom: false, zoomSnap: 0.25, zoomDelta: 0.5,
+        scrollWheelZoom: false, dragging: !touchFirst, zoomSnap: 0.25, zoomDelta: 0.5,
         zoomControl: false, attributionControl: false, inertia: true,
         center: [50, 14], zoom: 5
       });
