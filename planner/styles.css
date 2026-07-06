@@ -1350,32 +1350,31 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   padding: 9vh 0 0 6vw;
   overflow: hidden;
 }
-/* globe sits RIGHT (bleeding off the edge); the headline flows to its left and
-   its right edge wraps along the globe's curve via shape-outside */
+/* globe sits RIGHT and BIGGER, lifted up and layered ON TOP of the headline
+   (transparent wireframe, so the text reads through it). It's taken out of flow
+   and absolutely positioned so it can overlap the text; its right margin (6vw)
+   mirrors the headline's left margin (6vw) so the page is evenly framed.
+   NOTE: positioning uses top/right only — the scroll driver writes
+   `transform: rotate()` on this element, so transform can't hold layout. */
 .intro-globe {
-  float: right;
-  width: min(76vh, 44vw);
-  /* right margin ~0 so the globe's right edge sits inside the screen (no cutoff),
-     pulled left of the old -7vw bleed; left margin keeps a gap from the headline */
-  margin: -3vh 1vw 1vh 2.5vw;
-  /* the drawn globe is a circle at ~48% of its box — shape the float to match
-     (border-box, immune to the negative margins) so the headline's right edge
-     genuinely follows the globe's left curve */
-  shape-outside: circle(48% at 50% 50%) border-box;
-  shape-margin: 1.6vw;
+  position: absolute;
+  right: 6vw;                              /* right margin == headline left margin */
+  width: min(94vh, 54vw);                  /* bigger */
+  /* vertically centre the box, then lift it ~6vh higher up the page */
+  top: calc(50% - min(94vh, 54vw) / 2 - 6vh);
+  z-index: 3;                              /* above the text */
   will-change: transform;
 }
 .intro-globe svg { display: block; width: 100%; height: auto; }
 .intro-text {
+  position: relative; z-index: 1;          /* below the globe */
+  max-width: 62vw;                         /* stays left; globe overlaps its right edge */
   font-family: var(--serif); font-weight: 400;
   text-transform: uppercase;
   font-size: clamp(26px, 4.2vw, 58px);
   line-height: 1.22; letter-spacing: .015em;
   color: var(--ink);
   outline: none; caret-color: var(--red);
-  /* NO overflow:hidden here — that creates a BFC, and a BFC sits beside a
-     float as a rectangle instead of wrapping its shape-outside curve.
-     The overlay clips at the screen edge anyway. */
   will-change: transform;
 }
 .intro-hint {
@@ -1395,9 +1394,10 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   /* app version: text on top, globe centered beneath it — the last lines of
      the headline overlap the top of the (transparent) globe */
   .intro-inner { display: flex; flex-direction: column; justify-content: center; padding: 7vh 7vw 0; }
-  .intro-text  { order: 1; position: relative; z-index: 2; font-size: clamp(24px, 7.2vw, 42px); max-height: 56vh; }
+  .intro-text  { order: 1; position: relative; z-index: 2; max-width: none; font-size: clamp(24px, 7.2vw, 42px); max-height: 56vh; }
   .intro-globe {
-    order: 2; float: none; shape-outside: none;
+    order: 2; position: static; float: none; shape-outside: none;
+    top: auto; right: auto;
     width: min(80vw, 48vh);
     margin: -9vh auto 0;          /* pulls the globe up under the text's bottom lines */
   }
