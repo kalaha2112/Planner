@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-06T16:03:00.987Z
+  Built: 2026-07-06T16:11:38.154Z
 -->
 
 <html lang="en">
@@ -2068,7 +2068,9 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .intro-globe {
   float: right;
   width: min(76vh, 44vw);
-  margin: -3vh -7vw 1vh 1vw;
+  /* right margin ~0 so the globe's right edge sits inside the screen (no cutoff),
+     pulled left of the old -7vw bleed; left margin keeps a gap from the headline */
+  margin: -3vh 1vw 1vh 2.5vw;
   /* the drawn globe is a circle at ~48% of its box — shape the float to match
      (border-box, immune to the negative margins) so the headline's right edge
      genuinely follows the globe's left curve */
