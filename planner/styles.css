@@ -13,8 +13,8 @@
   --ink-faint:  #c8c2ae;   /* faintest */
   --brown:      #23140C;   /* structural: dark pills, buttons, nodes */
   --red:        #91040C;   /* interactive / active: stops, cash, flight */
-  --shell:      #e8e4dc;   /* paper page background */
-  --surface:    #ffffff;   /* card surface */
+  --shell:      #F2F2F2;   /* paper page background */
+  --surface:    #F2F2F2;   /* card surface */
 
   /* ---- retained functional accents ---- */
   --gold:       #C8901F;   /* miles / award / itinerary / links */
@@ -1336,8 +1336,8 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .intro-lock, .intro-lock body { overflow: hidden !important; }
 .intro-overlay {
   position: fixed; inset: 0; z-index: 1500;
-  /* fades into the page shell at the bottom so intro + trip page read as one sheet */
-  background: linear-gradient(#f7f5f0 78%, var(--shell) 100%);
+  /* matches the page shell so intro + trip page read as one sheet */
+  background: var(--shell);
   overflow: hidden;
   touch-action: none;
   will-change: transform;

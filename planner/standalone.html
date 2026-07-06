@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-06T20:58:02.193Z
+  Built: 2026-07-06T21:02:37.808Z
 -->
 
 <html lang="en">
@@ -726,8 +726,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
   --ink-faint:  #c8c2ae;   /* faintest */
   --brown:      #23140C;   /* structural: dark pills, buttons, nodes */
   --red:        #91040C;   /* interactive / active: stops, cash, flight */
-  --shell:      #e8e4dc;   /* paper page background */
-  --surface:    #ffffff;   /* card surface */
+  --shell:      #F2F2F2;   /* paper page background */
+  --surface:    #F2F2F2;   /* card surface */
 
   /* ---- retained functional accents ---- */
   --gold:       #C8901F;   /* miles / award / itinerary / links */
@@ -2049,8 +2049,8 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .intro-lock, .intro-lock body { overflow: hidden !important; }
 .intro-overlay {
   position: fixed; inset: 0; z-index: 1500;
-  /* fades into the page shell at the bottom so intro + trip page read as one sheet */
-  background: linear-gradient(#f7f5f0 78%, var(--shell) 100%);
+  /* matches the page shell so intro + trip page read as one sheet */
+  background: var(--shell);
   overflow: hidden;
   touch-action: none;
   will-change: transform;
