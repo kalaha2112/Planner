@@ -2339,8 +2339,6 @@
 
     renderHeader(meta, dateRangeStr) {
       return `<div class="header">
-        <input class="trip-title" value="${escA(meta.title)}" data-ch="trip-title" placeholder="Name this trip">
-        <span class="date-badge">${esc(dateRangeStr)}</span>
         <span class="saved" style="opacity:0">saved</span>
         <div class="toolbar">
           <button class="tool-btn" data-act="undo" title="Undo (⌘Z)" aria-label="Undo" ${!this._history.length ? 'disabled' : ''}>${svg(I.undo)}<span class="tool-lbl">Undo</span></button>
