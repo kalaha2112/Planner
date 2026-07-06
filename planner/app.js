@@ -628,10 +628,13 @@
       if (this._introEl) return;
       const overlay = document.createElement('div');
       overlay.className = 'intro-overlay';
+      // globe first in the DOM: on wide screens it floats left and the headline
+      // wraps along its right curve (shape-outside); on phones flex `order`
+      // puts the text first with the globe centered beneath, overlapping.
       overlay.innerHTML = `
         <div class="intro-inner">
-          <div class="intro-text" contenteditable="true" spellcheck="false" aria-label="Edit intro text"></div>
           <div class="intro-globe"><svg viewBox="0 0 400 400" aria-hidden="true"></svg></div>
+          <div class="intro-text" contenteditable="true" spellcheck="false" aria-label="Edit intro text"></div>
         </div>
         <button class="intro-hint" aria-label="Continue to the planner"><span>scroll</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
@@ -653,74 +656,102 @@
       this._ensureAtlas().then(() => this._buildIntroGlobe(svg));   // …continents when the atlas lands
       this._introGlobeRefresh = () => this._buildIntroGlobe(svg);   // stops added while intro open
 
-      // ---- scroll driver: wheel / touch / keys / hint tap → progress 0..1 ----
+      // ---- seamless scroll driver: the intro and the trip page behave like
+      // one tall page. Wheel/touch track ~1:1; fully scrolled the intro PARKS
+      // (hidden, non-interactive) instead of being removed, and scrolling up
+      // at the top of the trip page pulls it back down. ----
       const easeInOut = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-      let target = 0, cur = 0, raf = 0;
-      const finish = () => {
-        if (!this._introEl) return;
-        document.removeEventListener('keydown', onKey, true);
-        document.removeEventListener('wheel', onWheel, { capture: true });
-        document.removeEventListener('touchstart', onTouchStart, { capture: true });
-        document.removeEventListener('touchmove', onTouchMove, { capture: true });
-        document.removeEventListener('touchend', onTouchEnd, { capture: true });
-        document.documentElement.classList.remove('intro-lock');
-        overlay.remove();
-        this._introEl = null;
-        this._introGlobeRefresh = null;
-        if (raf) cancelAnimationFrame(raf);
+      let target = 0, cur = 0, raf = 0, parked = false;
+      const clamp01 = (v) => Math.max(0, Math.min(1, v));
+      const park = () => {
+        if (parked) return;
+        parked = true;
+        overlay.classList.add('intro-parked');
+        document.documentElement.classList.remove('intro-lock');   // page scrolls natively again
       };
-      this._introFinish = finish;
+      const unpark = () => {
+        if (!parked) return;
+        parked = false;
+        overlay.classList.remove('intro-parked');
+        document.documentElement.classList.add('intro-lock');
+      };
       const apply = () => {
         raf = 0;
-        cur += (target - cur) * 0.16;
+        cur += (target - cur) * 0.32;                    // tight tracking — reads as native scroll
         if (Math.abs(target - cur) < 0.0008) cur = target;
-        const e = easeInOut(Math.max(0, Math.min(1, cur)));
+        const e = easeInOut(clamp01(cur));
         overlay.style.transform = `translate3d(0, ${(-cur * 100).toFixed(3)}%, 0)`;
         textEl.style.transform = `translate3d(${(e * 4).toFixed(2)}px, ${(e * 40).toFixed(2)}px, 0)`;   // down 0→40px, 4px offset
         globeWrap.style.transform = `rotate(${(cur * 358).toFixed(2)}deg)`;                              // rotate 358°
-        if (cur >= 0.999 && target >= 1) { finish(); return; }
+        if (cur >= 0.999) park(); else unpark();
         if (cur !== target) raf = requestAnimationFrame(apply);
       };
       const kick = () => { if (!raf) raf = requestAnimationFrame(apply); };
-      const clamp01 = (v) => Math.max(0, Math.min(1, v));
-      // document-level (capture) so the gesture keeps driving the intro even
-      // once the overlay has slid partway up and the pointer sits over the
-      // revealed page; all removed in finish()
+      // "at the very top of the app" — window unscrolled and no ancestor of the
+      // event target scrolled down (aside lists, modals keep their own scroll)
+      const atAppTop = (t) => {
+        if (t && t.closest && t.closest('.overlay, .sticker-panel')) return false;
+        let el = t instanceof Element ? t : null;
+        while (el && el !== document.body) { if (el.scrollTop > 1) return false; el = el.parentElement; }
+        return (window.scrollY || document.documentElement.scrollTop || 0) <= 1;
+      };
       const onWheel = (e) => {
+        if (parked) {
+          if (e.deltaY < 0 && atAppTop(e.target)) {      // pull the intro back down
+            e.preventDefault();
+            target = clamp01(target + e.deltaY / window.innerHeight);
+            kick();
+          }
+          return;                                        // otherwise: native scroll
+        }
         e.preventDefault();
-        target = clamp01(target + e.deltaY / (window.innerHeight * 0.8));
+        target = clamp01(target + e.deltaY / window.innerHeight);   // ~1:1 with the wheel
         kick();
       };
-      let touchY = null;
-      const onTouchStart = (e) => { touchY = e.touches[0].clientY; };
+      let touchY = null, touchV = 0, touchT = 0, touchDriving = false;
+      const onTouchStart = (e) => { touchY = e.touches[0].clientY; touchV = 0; touchT = e.timeStamp; touchDriving = !parked; };
       const onTouchMove = (e) => {
         if (touchY == null) return;
         const y = e.touches[0].clientY;
-        target = clamp01(target + (touchY - y) / (window.innerHeight * 0.7));
+        const dy = touchY - y;                            // >0 = finger up = scroll down
+        if (parked && !touchDriving) {
+          if (dy < 0 && atAppTop(e.target)) touchDriving = true;   // pulling down at the top
+          else { touchY = y; return; }                    // native page scroll
+        }
+        const dt = Math.max(1, e.timeStamp - touchT);
+        touchV = dy / dt;                                 // px/ms for release inertia
+        touchT = e.timeStamp;
+        target = clamp01(target + dy / window.innerHeight);        // ~1:1 with the finger
         touchY = y;
-        e.preventDefault();   // the intro consumes the swipe; the page beneath must not scroll
+        e.preventDefault();
         kick();
       };
       const onTouchEnd = () => {
-        touchY = null;
-        // settle: past a third → complete; otherwise spring back up
-        target = target > 0.33 ? 1 : 0;
-        kick();
+        if (touchY != null && touchDriving) {
+          target = clamp01(target + touchV * 260 / window.innerHeight);   // flick inertia, no snapping
+          kick();
+        }
+        touchY = null; touchDriving = false;
       };
       document.addEventListener('wheel', onWheel, { passive: false, capture: true });
       document.addEventListener('touchstart', onTouchStart, { passive: true, capture: true });
       document.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
       document.addEventListener('touchend', onTouchEnd, { passive: true, capture: true });
       const onKey = (e) => {
-        if (!this._introEl) return;
         if (document.activeElement === textEl) return;   // typing in the headline
+        if (parked) {
+          if ((e.key === 'ArrowUp' || e.key === 'PageUp') && atAppTop(e.target)) { e.preventDefault(); target = 0; kick(); }
+          return;
+        }
         if (e.key === ' ' || e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === 'Enter') { e.preventDefault(); target = 1; kick(); }
         else if (e.key === 'ArrowUp' || e.key === 'PageUp') { e.preventDefault(); target = 0; kick(); }
       };
       document.addEventListener('keydown', onKey, true);
       overlay.querySelector('.intro-hint').addEventListener('click', () => { target = 1; kick(); });
+      // tests / power users: jump straight to the app
+      this._introSkip = () => { target = 1; cur = 1; apply(); };
     }
-    skipIntro() { if (this._introFinish) this._introFinish(); }
+    skipIntro() { if (this._introSkip) this._introSkip(); }
 
     // Transparent wireframe globe (orthographic): graticule + continent outlines
     // + every stop as a red dot, consecutive stops linked by dashed route lines.
