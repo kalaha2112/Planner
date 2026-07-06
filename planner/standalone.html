@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-06T16:11:38.154Z
+  Built: 2026-07-06T20:33:48.626Z
 -->
 
 <html lang="en">
@@ -2063,32 +2063,31 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   padding: 9vh 0 0 6vw;
   overflow: hidden;
 }
-/* globe sits RIGHT (bleeding off the edge); the headline flows to its left and
-   its right edge wraps along the globe's curve via shape-outside */
+/* globe sits RIGHT and BIGGER, lifted up and layered ON TOP of the headline
+   (transparent wireframe, so the text reads through it). It's taken out of flow
+   and absolutely positioned so it can overlap the text; its right margin (6vw)
+   mirrors the headline's left margin (6vw) so the page is evenly framed.
+   NOTE: positioning uses top/right only — the scroll driver writes
+   `transform: rotate()` on this element, so transform can't hold layout. */
 .intro-globe {
-  float: right;
-  width: min(76vh, 44vw);
-  /* right margin ~0 so the globe's right edge sits inside the screen (no cutoff),
-     pulled left of the old -7vw bleed; left margin keeps a gap from the headline */
-  margin: -3vh 1vw 1vh 2.5vw;
-  /* the drawn globe is a circle at ~48% of its box — shape the float to match
-     (border-box, immune to the negative margins) so the headline's right edge
-     genuinely follows the globe's left curve */
-  shape-outside: circle(48% at 50% 50%) border-box;
-  shape-margin: 1.6vw;
+  position: absolute;
+  right: 6vw;                              /* right margin == headline left margin */
+  width: min(94vh, 54vw);                  /* bigger */
+  /* vertically centre the box, then lift it ~6vh higher up the page */
+  top: calc(50% - min(94vh, 54vw) / 2 - 6vh);
+  z-index: 3;                              /* above the text */
   will-change: transform;
 }
 .intro-globe svg { display: block; width: 100%; height: auto; }
 .intro-text {
+  position: relative; z-index: 1;          /* below the globe */
+  max-width: 62vw;                         /* stays left; globe overlaps its right edge */
   font-family: var(--serif); font-weight: 400;
   text-transform: uppercase;
   font-size: clamp(26px, 4.2vw, 58px);
   line-height: 1.22; letter-spacing: .015em;
   color: var(--ink);
   outline: none; caret-color: var(--red);
-  /* NO overflow:hidden here — that creates a BFC, and a BFC sits beside a
-     float as a rectangle instead of wrapping its shape-outside curve.
-     The overlay clips at the screen edge anyway. */
   will-change: transform;
 }
 .intro-hint {
@@ -2108,9 +2107,10 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   /* app version: text on top, globe centered beneath it — the last lines of
      the headline overlap the top of the (transparent) globe */
   .intro-inner { display: flex; flex-direction: column; justify-content: center; padding: 7vh 7vw 0; }
-  .intro-text  { order: 1; position: relative; z-index: 2; font-size: clamp(24px, 7.2vw, 42px); max-height: 56vh; }
+  .intro-text  { order: 1; position: relative; z-index: 2; max-width: none; font-size: clamp(24px, 7.2vw, 42px); max-height: 56vh; }
   .intro-globe {
-    order: 2; float: none; shape-outside: none;
+    order: 2; position: static; float: none; shape-outside: none;
+    top: auto; right: auto;
     width: min(80vw, 48vh);
     margin: -9vh auto 0;          /* pulls the globe up under the text's bottom lines */
   }
@@ -2853,6 +2853,15 @@ html { -webkit-tap-highlight-color: transparent; }
       // one tall page. Wheel/touch track ~1:1; fully scrolled the intro PARKS
       // (hidden, non-interactive) instead of being removed, and scrolling up
       // at the top of the trip page pulls it back down. ----
+      // The intro (fixed overlay) slides UP while the trip page slides up from
+      // BELOW to replace it — the two move together, not a curtain lifting off a
+      // static page. The trip page (#app) is a tall document, so it's driven in
+      // viewport PIXELS (not %, which would be a % of its own content height) so
+      // its top edge meets the intro's bottom edge exactly.
+      const appRoot = document.getElementById('app');
+      const vh = () => window.innerHeight;
+      appRoot.style.transform = `translate3d(0, ${vh()}px, 0)`;   // start fully below the fold
+      appRoot.style.willChange = 'transform';
       const easeInOut = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
       let target = 0, cur = 0, raf = 0, parked = false;
       const clamp01 = (v) => Math.max(0, Math.min(1, v));
@@ -2860,12 +2869,15 @@ html { -webkit-tap-highlight-color: transparent; }
         if (parked) return;
         parked = true;
         overlay.classList.add('intro-parked');
+        appRoot.style.transform = '';                              // hand the trip page back to native flow
+        appRoot.style.willChange = '';                             // (so scroll + position:fixed work normally)
         document.documentElement.classList.remove('intro-lock');   // page scrolls natively again
       };
       const unpark = () => {
         if (!parked) return;
         parked = false;
         overlay.classList.remove('intro-parked');
+        appRoot.style.willChange = 'transform';
         document.documentElement.classList.add('intro-lock');
       };
       const apply = () => {
@@ -2874,6 +2886,7 @@ html { -webkit-tap-highlight-color: transparent; }
         if (Math.abs(target - cur) < 0.0008) cur = target;
         const e = easeInOut(clamp01(cur));
         overlay.style.transform = `translate3d(0, ${(-cur * 100).toFixed(3)}%, 0)`;
+        appRoot.style.transform = `translate3d(0, ${((1 - cur) * vh()).toFixed(2)}px, 0)`;   // rises from below to fill
         textEl.style.transform = `translate3d(${(e * 4).toFixed(2)}px, ${(e * 40).toFixed(2)}px, 0)`;   // down 0→40px, 4px offset
         globeWrap.style.transform = `rotate(${(cur * 358).toFixed(2)}deg)`;                              // rotate 358°
         if (cur >= 0.999) park(); else unpark();

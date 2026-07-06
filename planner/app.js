@@ -660,6 +660,15 @@
       // one tall page. Wheel/touch track ~1:1; fully scrolled the intro PARKS
       // (hidden, non-interactive) instead of being removed, and scrolling up
       // at the top of the trip page pulls it back down. ----
+      // The intro (fixed overlay) slides UP while the trip page slides up from
+      // BELOW to replace it — the two move together, not a curtain lifting off a
+      // static page. The trip page (#app) is a tall document, so it's driven in
+      // viewport PIXELS (not %, which would be a % of its own content height) so
+      // its top edge meets the intro's bottom edge exactly.
+      const appRoot = document.getElementById('app');
+      const vh = () => window.innerHeight;
+      appRoot.style.transform = `translate3d(0, ${vh()}px, 0)`;   // start fully below the fold
+      appRoot.style.willChange = 'transform';
       const easeInOut = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
       let target = 0, cur = 0, raf = 0, parked = false;
       const clamp01 = (v) => Math.max(0, Math.min(1, v));
@@ -667,12 +676,15 @@
         if (parked) return;
         parked = true;
         overlay.classList.add('intro-parked');
+        appRoot.style.transform = '';                              // hand the trip page back to native flow
+        appRoot.style.willChange = '';                             // (so scroll + position:fixed work normally)
         document.documentElement.classList.remove('intro-lock');   // page scrolls natively again
       };
       const unpark = () => {
         if (!parked) return;
         parked = false;
         overlay.classList.remove('intro-parked');
+        appRoot.style.willChange = 'transform';
         document.documentElement.classList.add('intro-lock');
       };
       const apply = () => {
@@ -681,6 +693,7 @@
         if (Math.abs(target - cur) < 0.0008) cur = target;
         const e = easeInOut(clamp01(cur));
         overlay.style.transform = `translate3d(0, ${(-cur * 100).toFixed(3)}%, 0)`;
+        appRoot.style.transform = `translate3d(0, ${((1 - cur) * vh()).toFixed(2)}px, 0)`;   // rises from below to fill
         textEl.style.transform = `translate3d(${(e * 4).toFixed(2)}px, ${(e * 40).toFixed(2)}px, 0)`;   // down 0→40px, 4px offset
         globeWrap.style.transform = `rotate(${(cur * 358).toFixed(2)}deg)`;                              // rotate 358°
         if (cur >= 0.999) park(); else unpark();
