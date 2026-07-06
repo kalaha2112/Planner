@@ -81,6 +81,9 @@
   // auto-connects to this device's endpoint — two-way sync.
   const HOSTED_WEB_URL = 'https://raw.githack.com/kalaha2112/Planner/main/planner/standalone.html';
 
+  // Startup page headline (editable in place; persisted in meta.introText and synced)
+  const DEFAULT_INTRO_TEXT = 'The first website was published in 1990 by computer scientist Tim Berners-Lee and now it seems like an eyesore. Early websites were basic few';
+
   const _notFound = () => { const e = new Error('No data found for that code.'); e.code = 404; return e; };
   const _httpErr  = (name, status) => new Error('“' + name + '” error (HTTP ' + status + ').');
 
@@ -548,6 +551,7 @@
       this.loadState();
       this.render();
       this.ensureMap(0);
+      this.initIntro();
       this.initTouchPointer();
       // crossing the mobile-map breakpoint (resizing an iPad window, rotating)
       // swaps pins-only popup mode ↔ floating cards live
@@ -609,10 +613,188 @@
       document.addEventListener('pointercancel', (e) => { if (!e.pointerType || e.pointerType === 'touch') hideNow(); }, { passive: true });
       document.addEventListener('scroll', () => { if (down || el.classList.contains('on')) hideNow(); }, { passive: true, capture: true });
     }
+
+    /* ============================================================
+       STARTUP / LOADING PAGE
+       ------------------------------------------------------------
+       Full-screen editorial hero shown on every launch, above the
+       trip page: editable headline (persisted in meta.introText,
+       synced like everything else) + a transparent wireframe globe
+       plotting all current stops linked by the route. Scrolling
+       down eases the text 0→40px (4px lateral offset), rotates the
+       globe 358°, and slides the whole page up to reveal the app.
+       ============================================================ */
+    initIntro() {
+      if (this._introEl) return;
+      const overlay = document.createElement('div');
+      overlay.className = 'intro-overlay';
+      overlay.innerHTML = `
+        <div class="intro-inner">
+          <div class="intro-text" contenteditable="true" spellcheck="false" aria-label="Edit intro text"></div>
+          <div class="intro-globe"><svg viewBox="0 0 400 400" aria-hidden="true"></svg></div>
+        </div>
+        <button class="intro-hint" aria-label="Continue to the planner"><span>scroll</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+        </button>`;
+      document.body.appendChild(overlay);
+      this._introEl = overlay;
+      document.documentElement.classList.add('intro-lock');
+
+      const textEl = overlay.querySelector('.intro-text');
+      textEl.textContent = (this.data.meta.introText != null ? this.data.meta.introText : DEFAULT_INTRO_TEXT);
+      textEl.addEventListener('input', () => {
+        this.data.meta.introText = textEl.innerText.replace(/\s+$/,'');
+        this.scheduleSave();
+      });
+
+      const globeWrap = overlay.querySelector('.intro-globe');
+      const svg = overlay.querySelector('.intro-globe svg');
+      this._buildIntroGlobe(svg);                       // graticule + stops now…
+      this._ensureAtlas().then(() => this._buildIntroGlobe(svg));   // …continents when the atlas lands
+      this._introGlobeRefresh = () => this._buildIntroGlobe(svg);   // stops added while intro open
+
+      // ---- scroll driver: wheel / touch / keys / hint tap → progress 0..1 ----
+      const easeInOut = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      let target = 0, cur = 0, raf = 0;
+      const finish = () => {
+        if (!this._introEl) return;
+        document.removeEventListener('keydown', onKey, true);
+        document.removeEventListener('wheel', onWheel, { capture: true });
+        document.removeEventListener('touchstart', onTouchStart, { capture: true });
+        document.removeEventListener('touchmove', onTouchMove, { capture: true });
+        document.removeEventListener('touchend', onTouchEnd, { capture: true });
+        document.documentElement.classList.remove('intro-lock');
+        overlay.remove();
+        this._introEl = null;
+        this._introGlobeRefresh = null;
+        if (raf) cancelAnimationFrame(raf);
+      };
+      this._introFinish = finish;
+      const apply = () => {
+        raf = 0;
+        cur += (target - cur) * 0.16;
+        if (Math.abs(target - cur) < 0.0008) cur = target;
+        const e = easeInOut(Math.max(0, Math.min(1, cur)));
+        overlay.style.transform = `translate3d(0, ${(-cur * 100).toFixed(3)}%, 0)`;
+        textEl.style.transform = `translate3d(${(e * 4).toFixed(2)}px, ${(e * 40).toFixed(2)}px, 0)`;   // down 0→40px, 4px offset
+        globeWrap.style.transform = `rotate(${(cur * 358).toFixed(2)}deg)`;                              // rotate 358°
+        if (cur >= 0.999 && target >= 1) { finish(); return; }
+        if (cur !== target) raf = requestAnimationFrame(apply);
+      };
+      const kick = () => { if (!raf) raf = requestAnimationFrame(apply); };
+      const clamp01 = (v) => Math.max(0, Math.min(1, v));
+      // document-level (capture) so the gesture keeps driving the intro even
+      // once the overlay has slid partway up and the pointer sits over the
+      // revealed page; all removed in finish()
+      const onWheel = (e) => {
+        e.preventDefault();
+        target = clamp01(target + e.deltaY / (window.innerHeight * 0.8));
+        kick();
+      };
+      let touchY = null;
+      const onTouchStart = (e) => { touchY = e.touches[0].clientY; };
+      const onTouchMove = (e) => {
+        if (touchY == null) return;
+        const y = e.touches[0].clientY;
+        target = clamp01(target + (touchY - y) / (window.innerHeight * 0.7));
+        touchY = y;
+        e.preventDefault();   // the intro consumes the swipe; the page beneath must not scroll
+        kick();
+      };
+      const onTouchEnd = () => {
+        touchY = null;
+        // settle: past a third → complete; otherwise spring back up
+        target = target > 0.33 ? 1 : 0;
+        kick();
+      };
+      document.addEventListener('wheel', onWheel, { passive: false, capture: true });
+      document.addEventListener('touchstart', onTouchStart, { passive: true, capture: true });
+      document.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
+      document.addEventListener('touchend', onTouchEnd, { passive: true, capture: true });
+      const onKey = (e) => {
+        if (!this._introEl) return;
+        if (document.activeElement === textEl) return;   // typing in the headline
+        if (e.key === ' ' || e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === 'Enter') { e.preventDefault(); target = 1; kick(); }
+        else if (e.key === 'ArrowUp' || e.key === 'PageUp') { e.preventDefault(); target = 0; kick(); }
+      };
+      document.addEventListener('keydown', onKey, true);
+      overlay.querySelector('.intro-hint').addEventListener('click', () => { target = 1; kick(); });
+    }
+    skipIntro() { if (this._introFinish) this._introFinish(); }
+
+    // Transparent wireframe globe (orthographic): graticule + continent outlines
+    // + every stop as a red dot, consecutive stops linked by dashed route lines.
+    _buildIntroGlobe(svg) {
+      if (!svg) return;
+      const W = 400, R = 186, CX = 200, CY = 200;
+      const stops = this.currentTrip().stops
+        .map(s => this.resolveCoord(s.city))
+        .filter(Boolean);
+      // center the view on the trip so the stops face us (fallback: Europe)
+      const lat0 = (stops.length ? stops.reduce((a, c) => a + c[0], 0) / stops.length : 47) * Math.PI / 180;
+      const lng0 = (stops.length ? stops.reduce((a, c) => a + c[1], 0) / stops.length : 12) * Math.PI / 180;
+      const sin0 = Math.sin(lat0), cos0 = Math.cos(lat0);
+      const proj = (lat, lng) => {
+        const φ = lat * Math.PI / 180, λ = lng * Math.PI / 180 - lng0;
+        const cosc = sin0 * Math.sin(φ) + cos0 * Math.cos(φ) * Math.cos(λ);
+        if (cosc < 0.02) return null;   // back hemisphere
+        return [
+          CX + R * Math.cos(φ) * Math.sin(λ),
+          CY - R * (cos0 * Math.sin(φ) - sin0 * Math.cos(φ) * Math.cos(λ)),
+        ];
+      };
+      const pathFrom = (pts) => {   // polyline path, broken where points dip behind the globe
+        let d = '', pen = false;
+        for (const p of pts) {
+          if (!p) { pen = false; continue; }
+          d += (pen ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1);
+          pen = true;
+        }
+        return d;
+      };
+      const ink = '#23140C';
+      let out = `<circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="${ink}" stroke-width="1.1" opacity=".55"/>`;
+      // graticule — meridians + parallels every 30°
+      let grat = '';
+      for (let lng = -180; lng < 180; lng += 30) {
+        const pts = []; for (let lat = -90; lat <= 90; lat += 2.5) pts.push(proj(lat, lng));
+        grat += pathFrom(pts) ? `<path d="${pathFrom(pts)}"/>` : '';
+      }
+      for (let lat = -60; lat <= 60; lat += 30) {
+        const pts = []; for (let lng = -180; lng <= 180; lng += 2.5) pts.push(proj(lat, lng));
+        grat += pathFrom(pts) ? `<path d="${pathFrom(pts)}"/>` : '';
+      }
+      out += `<g fill="none" stroke="${ink}" stroke-width=".55" opacity=".38">${grat}</g>`;
+      // continent outlines (110m atlas, front hemisphere only)
+      const topo = window.topojson, world = window.WORLD_ATLAS_DATA;
+      if (topo && world) {
+        let land = '';
+        const feats = topo.feature(world, world.objects.countries).features;
+        for (const f of feats) {
+          const polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
+          for (const poly of polys) for (const ring of poly) {
+            const pts = ring.map(([lng, lat]) => proj(lat, lng));
+            const d = pathFrom(pts);
+            if (d) land += `<path d="${d}"/>`;
+          }
+        }
+        out += `<g fill="none" stroke="${ink}" stroke-width=".8" opacity=".5" stroke-linejoin="round">${land}</g>`;
+      }
+      // the trip: stops linked in order, then dots on top
+      const pj = stops.map(([lat, lng]) => proj(lat, lng));
+      let links = '';
+      for (let i = 1; i < pj.length; i++) {
+        if (pj[i - 1] && pj[i]) links += `<line x1="${pj[i-1][0].toFixed(1)}" y1="${pj[i-1][1].toFixed(1)}" x2="${pj[i][0].toFixed(1)}" y2="${pj[i][1].toFixed(1)}"/>`;
+      }
+      out += `<g stroke="#91040C" stroke-width="1.2" stroke-dasharray="4 4" opacity=".8">${links}</g>`;
+      out += `<g fill="#91040C">${pj.filter(Boolean).map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4.2"/>`).join('')}</g>`;
+      svg.innerHTML = out;
+    }
+
     currentTrip() { return this.data.trips[this.data.active]; }
     legByIndex(i) { const t = this.currentTrip(); return i === 0 ? t.outboundLeg : t.stops[i - 1].leg; }
 
-    bump() { this.render(); this.scheduleSave(); this.touchMap(); }
+    bump() { this.render(); this.scheduleSave(); this.touchMap(); if (this._introGlobeRefresh) this._introGlobeRefresh(); }
     bumpModal() {
       const trip = this.currentTrip();
       const travelers = Math.max(1, Number(trip.travelers) || 1);
@@ -675,6 +857,7 @@
         legs.forEach(l => { if (l && l.mode === 'flying-blue' && l.miles == null) l.miles = 0; });
       });
       if (d.meta && d.meta.title == null) d.meta.title = '';
+      if (d.meta && d.meta.introText == null) d.meta.introText = DEFAULT_INTRO_TEXT;
       if (d.meta && !Array.isArray(d.meta.todos)) d.meta.todos = clone(DEFAULT_STATE.meta.todos);
       if (d.meta && !d.meta.budget) d.meta.budget = clone(DEFAULT_STATE.meta.budget);
       if (d.meta && d.meta.budget && d.meta.budget.cityPassOverride === 0) d.meta.budget.cityPassOverride = null;
@@ -1145,10 +1328,22 @@
       return geojson;
     }
 
+    // standalone.html inlines the atlas; the served build (index.html) doesn't,
+    // so fetch it once and share the promise (basemap + intro globe both use it)
+    _ensureAtlas() {
+      if (window.WORLD_ATLAS_DATA) return Promise.resolve(window.WORLD_ATLAS_DATA);
+      if (!this._atlasPromise) {
+        this._atlasPromise = fetch('vendor/topojson/countries-110m.json')
+          .then(r => r.json())
+          .then(w => { window.WORLD_ATLAS_DATA = w; return w; })
+          .catch(() => { this._atlasPromise = null; return null; });
+      }
+      return this._atlasPromise;
+    }
     _loadMinimalBasemap() {
       const topo = window.topojson;
       if (!topo || !this.mainMapLand) return;
-      const build = (world) => {
+      this._ensureAtlas().then((world) => {
         if (!world || this._basemapBuilt) return;
         this._basemapBuilt = true;
         const countries = this._smoothCountries(topo.feature(world, world.objects.countries));
@@ -1158,16 +1353,7 @@
         ).addTo(this.mainMapLand);
         this._addMinimalCityLabels();
         this._positionMainCards();
-      };
-      // standalone.html inlines the atlas; the served build (index.html) doesn't,
-      // so fetch it once — otherwise the dark land layer never renders there.
-      if (window.WORLD_ATLAS_DATA) { build(window.WORLD_ATLAS_DATA); return; }
-      if (this._atlasFetching) return;
-      this._atlasFetching = true;
-      fetch('vendor/topojson/countries-110m.json')
-        .then(r => r.json())
-        .then(w => { window.WORLD_ATLAS_DATA = w; build(w); })
-        .catch(() => { this._atlasFetching = false; });
+      });
     }
 
     _addMinimalCityLabels() {
