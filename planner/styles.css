@@ -13,8 +13,8 @@
   --ink-faint:  #c8c2ae;   /* faintest */
   --brown:      #23140C;   /* structural: dark pills, buttons, nodes */
   --red:        #91040C;   /* interactive / active: stops, cash, flight */
-  --shell:      #F2F2F2;   /* paper page background */
-  --surface:    #F2F2F2;   /* card surface */
+  --shell:      #FAFAFA;   /* paper page background */
+  --surface:    #FAFAFA;   /* card surface */
 
   /* ---- retained functional accents ---- */
   --gold:       #C8901F;   /* miles / award / itinerary / links */
