@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-07T00:14:34.021Z
+  Built: 2026-07-07T01:30:12.176Z
 -->
 
 <html lang="en">
@@ -1247,8 +1247,16 @@ a { color: inherit; }
 .day-main { flex: 1; min-width: 0; }
 .day-aside { flex: 0 0 260px; position: sticky; top: 4px; display: flex; flex-direction: column; gap: 7px; }
 .daymap { height: 340px; }
-/* Positron tiles: desaturate fully, add warm paper tint, push contrast so roads read */
-.daymap.map .leaflet-tile-pane { filter: saturate(0) sepia(.18) brightness(.88) contrast(1.18); }
+/* Night-satellite look: dark-matter tiles pushed to grainy high-contrast B&W —
+   black city blocks, streets reading as light veins (like city lights from orbit) */
+.daymap.map.leaflet-container { background: #0a0a0a; }   /* unloaded tile area stays black */
+.daymap.map .leaflet-tile-pane { filter: saturate(0) contrast(1.3) brightness(1.14); }
+/* film-grain overlay above the tiles, below the pins (Leaflet marker pane is z 600) */
+.daymap.map::after {
+  content: ''; position: absolute; inset: 0; z-index: 450; pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  opacity: .09; mix-blend-mode: screen;   /* light speckle, like sensor noise */
+}
 .daymap-cap { font-family: var(--sans); font-size: 10.5px; color: var(--ink-mute); line-height: 1.4; padding: 0 1px; }
 
 /* activity number badge (matches its map pin) */
@@ -3960,7 +3968,7 @@ html { -webkit-tap-highlight-color: transparent; }
       if (this.dayMap) { this.dayMap.invalidateSize(); this.renderDayMap(); return; }
       const L = window.L;
       this.dayMap = L.map(this.dayMapEl, { scrollWheelZoom: false, zoomSnap: .25, zoomDelta: .5, wheelPxPerZoomLevel: 120, inertia: true, attributionControl: false });
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, detectRetina: true }).addTo(this.dayMap);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, detectRetina: true }).addTo(this.dayMap);
       this.dayLines = L.layerGroup().addTo(this.dayMap);
       this.dayMarkers = L.layerGroup().addTo(this.dayMap);
       this.dayMap.setView([48, 10], 4);
@@ -4081,7 +4089,7 @@ html { -webkit-tap-highlight-color: transparent; }
         });
         this.dayMarkers.addLayer(marker);
       });
-      if (pts.length > 1) this.dayLines.addLayer(L.polyline(pts, { color: '#91040C', weight: 1.5, opacity: .28, dashArray: '5 6' }));
+      if (pts.length > 1) this.dayLines.addLayer(L.polyline(pts, { color: '#ffffff', weight: 1.5, opacity: .35, dashArray: '5 6' }));   // white so the route reads on the black night map
       if (pts.length === 1) this.dayMap.setView(pts[0], 14);
       else if (pts.length > 1) this.dayMap.fitBounds(pts, { padding: [30, 30], maxZoom: 15 });
       else if (cityCoord) this.dayMap.setView(cityCoord, 11);

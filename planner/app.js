@@ -1770,7 +1770,7 @@
       if (this.dayMap) { this.dayMap.invalidateSize(); this.renderDayMap(); return; }
       const L = window.L;
       this.dayMap = L.map(this.dayMapEl, { scrollWheelZoom: false, zoomSnap: .25, zoomDelta: .5, wheelPxPerZoomLevel: 120, inertia: true, attributionControl: false });
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, detectRetina: true }).addTo(this.dayMap);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, detectRetina: true }).addTo(this.dayMap);
       this.dayLines = L.layerGroup().addTo(this.dayMap);
       this.dayMarkers = L.layerGroup().addTo(this.dayMap);
       this.dayMap.setView([48, 10], 4);
@@ -1891,7 +1891,7 @@
         });
         this.dayMarkers.addLayer(marker);
       });
-      if (pts.length > 1) this.dayLines.addLayer(L.polyline(pts, { color: '#91040C', weight: 1.5, opacity: .28, dashArray: '5 6' }));
+      if (pts.length > 1) this.dayLines.addLayer(L.polyline(pts, { color: '#ffffff', weight: 1.5, opacity: .35, dashArray: '5 6' }));   // white so the route reads on the black night map
       if (pts.length === 1) this.dayMap.setView(pts[0], 14);
       else if (pts.length > 1) this.dayMap.fitBounds(pts, { padding: [30, 30], maxZoom: 15 });
       else if (cityCoord) this.dayMap.setView(cityCoord, 11);
