@@ -1782,7 +1782,17 @@
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', { maxZoom: 19, detectRetina: true }).addTo(this.dayMap);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', { maxZoom: 15, detectRetina: true }).addTo(this.dayMap);
       } else {
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, detectRetina: true }).addTo(this.dayMap);
+        // Web: dilated bold-white street base, plus the labels (street names
+        // included) in their OWN pane so the street-line dilate filter never
+        // touches the text — dilating the baked-in labels made them unreadable
+        // blobs. The label pane gets its own gentle whitening filter (no
+        // dilate) via .leaflet-daylabels-pane in styles.css.
+        this.dayMap.createPane('daylabels');
+        const lp = this.dayMap.getPane('daylabels');
+        lp.style.zIndex = 550;              // above tiles + grain, below markers (600)
+        lp.style.pointerEvents = 'none';
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', { maxZoom: 19, detectRetina: true }).addTo(this.dayMap);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', { maxZoom: 19, detectRetina: true, pane: 'daylabels' }).addTo(this.dayMap);
       }
       this.dayLines = L.layerGroup().addTo(this.dayMap);
       this.dayMarkers = L.layerGroup().addTo(this.dayMap);

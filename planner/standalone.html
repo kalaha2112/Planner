@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-07T14:21:17.518Z
+  Built: 2026-07-07T14:26:36.150Z
 -->
 
 <html lang="en">
@@ -1265,6 +1265,10 @@ a { color: inherit; }
    from its pure-white core outward: white edge-to-edge and ~1.5px bolder.
    Unlike blur, dilation has no threshold that can drop a thin line. */
 .daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(2.8) contrast(8) url(#daymap-dilate); }
+/* Web-only labels ride in their own pane (see ensureDayMap) so the street-line
+   dilate above never touches the text. Whiten it gently — NO dilate, NO hard
+   contrast — so street names stay thin and legible over the bold grid. */
+.daymap.map .leaflet-daylabels-pane { filter: saturate(0) brightness(1.7) contrast(1.15); }
 /* film-grain overlay above the tiles, below the pins (Leaflet marker pane is z 600) */
 .daymap.map::after {
   content: ''; position: absolute; inset: 0; z-index: 450; pointer-events: none;
@@ -4001,7 +4005,17 @@ html { -webkit-tap-highlight-color: transparent; }
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', { maxZoom: 19, detectRetina: true }).addTo(this.dayMap);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', { maxZoom: 15, detectRetina: true }).addTo(this.dayMap);
       } else {
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, detectRetina: true }).addTo(this.dayMap);
+        // Web: dilated bold-white street base, plus the labels (street names
+        // included) in their OWN pane so the street-line dilate filter never
+        // touches the text — dilating the baked-in labels made them unreadable
+        // blobs. The label pane gets its own gentle whitening filter (no
+        // dilate) via .leaflet-daylabels-pane in styles.css.
+        this.dayMap.createPane('daylabels');
+        const lp = this.dayMap.getPane('daylabels');
+        lp.style.zIndex = 550;              // above tiles + grain, below markers (600)
+        lp.style.pointerEvents = 'none';
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', { maxZoom: 19, detectRetina: true }).addTo(this.dayMap);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', { maxZoom: 19, detectRetina: true, pane: 'daylabels' }).addTo(this.dayMap);
       }
       this.dayLines = L.layerGroup().addTo(this.dayMap);
       this.dayMarkers = L.layerGroup().addTo(this.dayMap);
