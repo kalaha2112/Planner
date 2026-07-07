@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-07T14:35:25.524Z
+  Built: 2026-07-07T14:44:34.516Z
 -->
 
 <html lang="en">
@@ -738,15 +738,15 @@ svg.leaflet-image-layer.leaflet-interactive path {
   --green-dark: #46604F;   /* overnight train */
   --green-bg:   #EAF4EF;
 
-  /* ---- hairlines / borders (warm-remapped) ---- */
-  --line:       #e4ded3;   /* was #EBE6E2 */
-  --line-2:     #efeae0;   /* was #F1ECE8 */
-  --line-3:     #c4bba8;   /* was #E4DDD7 (spine) */
-  --dash:       #cdc4b5;   /* was #D8D0CA (dashed) */
+  /* ---- hairlines / borders — black outlines/lines/dividers ---- */
+  --line:       #000000;   /* card/box borders, section + row dividers */
+  --line-2:     #efeae0;   /* subtle FILL only (hover/active/code bg) — not a line */
+  --line-3:     #000000;   /* spine / secondary rules */
+  --dash:       #000000;   /* dashed outlines */
 
   /* ---- calendar / closet warm fills ---- */
-  --stay-fill:  #FBEEE9;
-  --stay-line:  #EBD2C9;
+  --stay-fill:  #FBEEE9;   /* calendar cell FILL (kept) */
+  --stay-line:  #000000;   /* calendar cell border (line) */
   --map-bg:     #EDE7E2;
 
   /* ---- type ---- */
@@ -830,7 +830,7 @@ a { color: inherit; }
 .toolbar-divider {
   width: 1px;
   height: 22px;
-  background: var(--line-2);
+  background: var(--line);   /* black divider */
   margin: 0 2px;
   flex-shrink: 0;
 }
@@ -1060,7 +1060,7 @@ a { color: inherit; }
 .map-note { font-family: var(--sans); font-size: 10px; color: var(--ink-mute); padding: 0 2px; line-height: 1.4; }
 
 .summary { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 12px 18px; }
-.stat { padding: 13px 0; border-bottom: 1px solid var(--line-2); }
+.stat { padding: 13px 0; border-bottom: 1px solid var(--line); }
 .stat:last-child { border-bottom: none; }
 .stat.clickable { cursor: pointer; }
 .stat .fig { font-family: var(--caps); font-size: 42px; letter-spacing: .02em; color: var(--ink); line-height: .9; }
@@ -1179,7 +1179,7 @@ a { color: inherit; }
 /* padding + compensating negative margin: unselected rows still align flush
    with .add-item and other day-main content, but .item.selected/.flash's
    own rounded box gets breathing room instead of content touching its edge */
-.item { display: flex; gap: 12px; align-items: flex-start; padding: 11px 12px; margin: 0 -12px; border-bottom: 1px solid var(--line-2); }
+.item { display: flex; gap: 12px; align-items: flex-start; padding: 11px 12px; margin: 0 -12px; border-bottom: 1px solid var(--line); }
 .item-grip {
   flex-shrink: 0; width: 20px; height: 22px; margin-top: 1px;
   display: flex; align-items: center; justify-content: center;
@@ -1355,7 +1355,7 @@ a { color: inherit; }
 .budget-total { font-family: var(--caps); font-size: 34px; letter-spacing: .03em; color: var(--red); line-height: 1; }
 .budget-sub { font-family: var(--sans); font-size: 12px; color: var(--ink-soft); margin-top: 6px; }
 .budget-body { padding: 10px 28px 26px; }
-.bline { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--line-2); }
+.bline { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--line); }
 .bline .info { flex: 1; min-width: 0; }
 .bline .info .l { font-family: var(--sans); font-size: 14px; font-weight: 600; color: var(--ink); }
 .bline .info .m { font-family: var(--sans); font-size: 10px; color: var(--ink-mute); margin-top: 3px; }
