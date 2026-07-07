@@ -2879,14 +2879,11 @@
           <div class="printer-slot" aria-hidden="true"></div>
           <div class="receipt-clip">
             <div class="dialog budget-dialog${printing}">
-              <div class="head"><div class="row">
-                <div style="flex:1">
-                  <div class="eyebrow">Budget breakdown</div>
-                  <div class="budget-total">${esc(money(budget.grandTotal))}</div>
-                  <div class="budget-sub">${esc(money(budget.perPerson))} / person · ${travelers} travelers · ${nights} nights</div>
-                </div>
+              <div class="head">
                 <button class="modal-x" data-act="close-budget">✕</button>
-              </div></div>
+                <div class="eyebrow">Budget breakdown</div>
+                <div class="budget-sub">${esc(money(budget.perPerson))} / person · ${travelers} travelers · ${nights} nights</div>
+              </div>
               <div class="budget-body">
                 ${lines}
                 <div class="btotal"><div class="l">Total</div><div class="v">${esc(money(budget.grandTotal))}</div></div>

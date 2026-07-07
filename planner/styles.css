@@ -671,6 +671,8 @@ a { color: inherit; }
 .receipt-clip { overflow: hidden; padding: 0 8px 30px; margin: -14px -8px 0; position: relative; z-index: 3; }
 .budget-dialog {
   position: relative;
+  /* paper 0.2px narrower than the slot so it reads as feeding through it */
+  width: calc(100% - 0.2px); margin-left: auto; margin-right: auto;
   max-width: none; border-radius: 0; overflow: visible;
   /* faint ruled lines + edge shading on warm receipt paper */
   background:
@@ -697,9 +699,9 @@ a { color: inherit; }
 }
 @media (prefers-reduced-motion: reduce) { .budget-dialog.printing { animation: none; } }
 
-.budget-dialog .head { background: transparent; border-bottom: 1px dashed rgba(0,0,0,.45); padding: 22px 22px 16px; }
-.budget-dialog .eyebrow { font-family: var(--mono); color: #111; letter-spacing: .3em; font-size: 11px; }
-.budget-dialog .modal-x { border: none; background: transparent; color: #777; font-family: var(--mono); }
+.budget-dialog .head { position: relative; text-align: center; background: transparent; border-bottom: 1px dashed rgba(0,0,0,.45); padding: 24px 22px 16px; }
+.budget-dialog .eyebrow { font-family: var(--mono); font-weight: 700; color: #111; letter-spacing: .12em; font-size: 19px; margin-bottom: 9px; }
+.budget-dialog .modal-x { position: absolute; top: 12px; right: 14px; border: none; background: transparent; color: #777; font-family: var(--mono); padding: 4px; }
 .budget-total { font-family: var(--mono); font-weight: 700; font-size: 30px; letter-spacing: .02em; color: #111; line-height: 1; }
 .budget-sub { font-family: var(--mono); font-size: 10.5px; color: #555; margin-top: 6px; }
 .budget-body { padding: 6px 22px 26px; }
