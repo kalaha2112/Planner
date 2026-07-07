@@ -11,7 +11,7 @@
   --ink-soft:   #7a7260;   /* secondary text */
   --ink-mute:   #a89e8c;   /* muted / placeholder */
   --ink-faint:  #c8c2ae;   /* faintest */
-  --brown:      #23140C;   /* structural: dark pills, buttons, nodes */
+  --brown:      #000000;   /* structural: dark pills, buttons, nodes (was brown #23140C) */
   --red:        #91040C;   /* interactive / active: stops, cash, flight */
   --shell:      #FAFAFA;   /* paper page background */
   --surface:    #FAFAFA;   /* card surface */

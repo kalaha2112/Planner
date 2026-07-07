@@ -796,7 +796,7 @@
         }
         return d;
       };
-      const ink = '#23140C';
+      const ink = '#000000';
       let out = `<circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="${ink}" stroke-width="1.1" opacity=".55"/>`;
       // graticule — meridians + parallels every 30°
       let grat = '';
@@ -1298,7 +1298,7 @@
         const ep = p.kind === 'endpoint';
         const stopIdx = ep ? null : pi - 1;
         const marker = L.circleMarker(p.coord, {
-          radius: ep ? 6 : 8, color: ep ? '#23140C' : '#91040C', weight: ep ? 2 : 0,
+          radius: ep ? 6 : 8, color: ep ? '#000000' : '#91040C', weight: ep ? 2 : 0,
           fillColor: ep ? '#ffffff' : '#91040C', fillOpacity: 1,
           className: ep ? '' : 'map-stop-dot'
         });
@@ -1393,7 +1393,7 @@
         const countries = this._smoothCountries(topo.feature(world, world.objects.countries));
         window.L.geoJSON(
           countries,
-          { style: { fillColor: '#23140C', fillOpacity: 1, color: '#47403a', weight: 3, opacity: 1, lineJoin: 'round', lineCap: 'round' } }
+          { style: { fillColor: '#000000', fillOpacity: 1, color: '#47403a', weight: 3, opacity: 1, lineJoin: 'round', lineCap: 'round' } }
         ).addTo(this.mainMapLand);
         this._addMinimalCityLabels();
         this._positionMainCards();
@@ -1479,7 +1479,7 @@
       const polyCoords = [];
       coords.forEach((c) => { if (c) polyCoords.push(c); });
       if (polyCoords.length > 1) {
-        L.polyline(polyCoords, { color: '#23140C', weight: 2.2, opacity: 0.65 }).addTo(this.mainMapLines);
+        L.polyline(polyCoords, { color: '#000000', weight: 2.2, opacity: 0.65 }).addTo(this.mainMapLines);
       }
 
       // Numbered pins rendered in overlay div (outside Leaflet — no overflow clipping)
@@ -3135,7 +3135,7 @@
         di.textContent = label;
         Object.assign(di.style, {
           position: 'fixed', top: '-200px', left: '-200px', maxWidth: '220px',
-          padding: '7px 12px', borderRadius: '8px', background: '#23140C', color: '#fff',
+          padding: '7px 12px', borderRadius: '8px', background: '#000000', color: '#fff',
           fontFamily: 'Sora, system-ui, sans-serif', fontSize: '12px', fontWeight: '600',
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           boxShadow: '0 4px 14px rgba(35,20,12,.3)',
