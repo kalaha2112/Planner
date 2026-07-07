@@ -542,12 +542,13 @@ a { color: inherit; }
    modest brightness, then a HARD contrast(6) pivots between them: the land
    clips to near-black while every street + label swings up to white.
    (verified numerically: land -> 7, minor streets -> 254, roads/labels -> 255) */
-/* brighten so the bg/street midpoint lands on the contrast pivot, then hard
-   contrast splits them: land clips to near-black, streets + labels go white.
-   (No blur here — blurring thin 1px street lines drops their peak below the
-   pivot and the contrast then crushes them to black. Boldness comes from
-   rendering the tiles at 1x instead, see detectRetina:false in app.js.) */
-.daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(2.7) contrast(6); }
+/* brighten so the land/street midpoint lands on the contrast pivot, then hard
+   contrast splits them. Verified numerically on dark-matter tones: land and
+   water clip to pure black (0), all street classes + labels saturate to pure
+   white (255), and anti-aliased street edges land ~178 — so lines keep a
+   bright halo and read whiter AND thicker. (No blur — blurring 1px lines
+   drops their peak below the pivot and the contrast crushes them to black.) */
+.daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(2.8) contrast(8); }
 /* film-grain overlay above the tiles, below the pins (Leaflet marker pane is z 600) */
 .daymap.map::after {
   content: ''; position: absolute; inset: 0; z-index: 450; pointer-events: none;
