@@ -1770,11 +1770,10 @@
       if (this.dayMap) { this.dayMap.invalidateSize(); this.renderDayMap(); return; }
       const L = window.L;
       this.dayMap = L.map(this.dayMapEl, { scrollWheelZoom: false, zoomSnap: .25, zoomDelta: .5, wheelPxPerZoomLevel: 120, inertia: true, attributionControl: false });
-      // dark_nolabels: no street names — just the street grid.
-      // @2x tiles + tileSize 512 + zoomOffset -1: serves each view from one zoom
-      // level down at double scale, so every street line draws ~2x thicker at
-      // every zoom while the @2x resolution keeps it crisp (not upscaled-blurry).
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}@2x.png', { maxZoom: 19, tileSize: 512, zoomOffset: -1 }).addTo(this.dayMap);
+      // dark_all (with place/street labels); retina tiles keep thin lines crisp.
+      // NOTE: do not get clever with tileSize 512 / zoomOffset -1 here — that
+      // combination broke tile loading and the map went blank-black.
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, detectRetina: true }).addTo(this.dayMap);
       this.dayLines = L.layerGroup().addTo(this.dayMap);
       this.dayMarkers = L.layerGroup().addTo(this.dayMap);
       this.dayMap.setView([48, 10], 4);
