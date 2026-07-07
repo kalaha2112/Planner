@@ -107,17 +107,13 @@ a { color: inherit; }
 .tool-btn {
   display: flex; align-items: center; justify-content: center;
   width: 34px; height: 34px;
-  border: 1px solid var(--line); background: var(--surface);
+  border: none; background: transparent;
   border-radius: var(--r-btn); cursor: pointer; color: var(--ink-soft);
-  transition: background .15s;
+  transition: color .15s;
 }
-.tool-btn:hover { background: var(--line-2); }
+.tool-btn:hover { color: var(--ink); }
 .tool-btn:disabled { opacity: .35; cursor: not-allowed; pointer-events: none; }
-.tool-lbl { display: none; font-family: var(--sans); font-size: 9px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; line-height: 1; }
-@media (max-width: 480px) {
-  .tool-btn { flex-direction: column; gap: 3px; width: auto; padding: 6px 8px; height: auto; }
-  .tool-lbl { display: block; }
-}
+.tool-lbl { display: none; }
 .toolbar-divider {
   width: 1px;
   height: 22px;
@@ -126,19 +122,20 @@ a { color: inherit; }
   flex-shrink: 0;
 }
 .sticker-toggle-btn {
-  background: var(--gold-soft) !important;
-  color: var(--gold) !important;
-  border-color: color-mix(in oklch, var(--gold) 25%, transparent) !important;
-  transition: background .15s, box-shadow .15s;
+  background: transparent !important;
+  color: var(--ink-soft) !important;
+  border: none !important;
+  transition: color .15s;
 }
 .sticker-toggle-btn:hover {
-  background: color-mix(in oklch, var(--gold-soft) 85%, var(--gold)) !important;
-  box-shadow: 0 2px 8px rgba(35,20,12,.14);
+  background: transparent !important;
+  color: var(--gold) !important;
+  box-shadow: none;
 }
 .sticker-toggle-btn.active {
-  background: var(--gold) !important;
-  color: var(--surface) !important;
-  border-color: var(--gold) !important;
+  background: transparent !important;
+  color: var(--gold) !important;
+  border: none !important;
 }
 
 /* ============================================================
