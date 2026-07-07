@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-07T16:53:08.131Z
+  Built: 2026-07-07T17:01:56.157Z
 -->
 
 <html lang="en">
@@ -1360,25 +1360,28 @@ a { color: inherit; }
 .receipt-wrap { width: 100%; max-width: 380px; }
 .printer-slot {   /* silver-white printer housing */
   position: relative; z-index: 2;
-  height: 30px; border-radius: 10px;
-  background: linear-gradient(180deg, #fbfbfc, #e3e5e8 42%, #c9ccd1 58%, #edeff1);
+  height: 38px; border-radius: 11px;
+  background: linear-gradient(180deg, #fbfbfc, #e3e5e8 40%, #c9ccd1 62%, #edeff1);
   border: 1px solid #b7babf;
   box-shadow: 0 4px 10px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.95), inset 0 -1px 0 rgba(0,0,0,.08);
 }
-.printer-slot::before {   /* the dark feed slit the paper comes out of */
-  content: ''; position: absolute; left: 16px; right: 34px; top: 55%;
-  height: 8px; transform: translateY(-50%);
-  border-radius: 4px;
-  background: linear-gradient(180deg, #0b0b0b, #262626);
-  box-shadow: inset 0 2px 3px rgba(0,0,0,.85), inset 0 -1px 1px rgba(255,255,255,.18);
+.printer-slot::before {   /* the dark feed slit the paper rolls out of */
+  content: ''; position: absolute; left: 5px; right: 5px; top: 17px;
+  height: 14px;
+  border-radius: 7px;
+  background: linear-gradient(180deg, #050505, #232323);
+  box-shadow: inset 0 3px 4px rgba(0,0,0,.9), inset 0 -1px 1px rgba(255,255,255,.16);
 }
-.printer-slot::after {   /* little status LED */
-  content: ''; position: absolute; right: 13px; top: 50%;
+.printer-slot::after {   /* little status LED, on the face above the slit */
+  content: ''; position: absolute; right: 15px; top: 6px;
   width: 5px; height: 5px; border-radius: 50%;
-  transform: translateY(-50%);
   background: #46c95c; box-shadow: 0 0 5px #46c95c, inset 0 0 1px rgba(0,0,0,.35);
 }
-.receipt-clip { overflow: hidden; padding: 0 6px 30px; margin: 0 -6px; }
+/* The clip's top edge sits at the slit's centerline (-14px into the 38px
+   housing) and stacks ABOVE the housing, so the paper is cut off exactly at
+   the dark opening and hangs over the housing's lower lip — reading as the
+   sheet rolling out of the slot rather than sliding from under the bar. */
+.receipt-clip { overflow: hidden; padding: 0 8px 30px; margin: -14px -8px 0; position: relative; z-index: 3; }
 .budget-dialog {
   position: relative;
   max-width: none; border-radius: 0; overflow: visible;
