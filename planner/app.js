@@ -2870,20 +2870,31 @@
         const mid = editable ? `<div class="edit"><input type="text" inputmode="numeric" value="${escA(line.value)}" data-ch="budget-edit" data-key="${escA(line.key)}"><span class="u">${esc(line.unit)}</span></div>` : '';
         return `<div class="bline"><div class="info"><div class="l">${esc(line.label)}</div><div class="m">${esc(line.mult)}</div></div>${mid}${right}</div>`;
       }).join('');
+      // print-feed animation runs only on the render right after opening —
+      // edits re-render the modal live and must not replay the animation
+      const printing = this._budgetPrint ? ' printing' : '';
+      if (this._budgetPrint) { clearTimeout(this._budgetPrintTimer); this._budgetPrintTimer = setTimeout(() => { this._budgetPrint = false; }, 1900); }
       return `<div class="overlay" data-act="overlay-budget">
-        <div class="dialog budget-dialog" data-stop>
-          <div class="head"><div class="row">
-            <div style="flex:1">
-              <div class="eyebrow">Budget breakdown</div>
-              <div class="budget-total">${esc(money(budget.grandTotal))}</div>
-              <div class="budget-sub">${esc(money(budget.perPerson))} / person · ${travelers} travelers · ${nights} nights</div>
+        <div class="receipt-wrap" data-stop>
+          <div class="printer-slot" aria-hidden="true"></div>
+          <div class="receipt-clip">
+            <div class="dialog budget-dialog${printing}">
+              <div class="head"><div class="row">
+                <div style="flex:1">
+                  <div class="eyebrow">Budget breakdown</div>
+                  <div class="budget-total">${esc(money(budget.grandTotal))}</div>
+                  <div class="budget-sub">${esc(money(budget.perPerson))} / person · ${travelers} travelers · ${nights} nights</div>
+                </div>
+                <button class="modal-x" data-act="close-budget">✕</button>
+              </div></div>
+              <div class="budget-body">
+                ${lines}
+                <div class="btotal"><div class="l">Total</div><div class="v">${esc(money(budget.grandTotal))}</div></div>
+                <p class="budget-note">All figures in CAD. Flights &amp; intercity transport are pulled from your route legs; city public transport uses researched local-currency day passes converted to CAD. Edit any rate to refine — it updates live.</p>
+                <div class="receipt-barcode" aria-hidden="true"></div>
+                <div class="receipt-barcode-num">№ ${String(Math.abs(Math.round(budget.grandTotal * 100))).padStart(12, '0')}</div>
+              </div>
             </div>
-            <button class="modal-x" data-act="close-budget">✕</button>
-          </div></div>
-          <div class="budget-body">
-            ${lines}
-            <div class="btotal"><div class="l">Total</div><div class="v">${esc(money(budget.grandTotal))}</div></div>
-            <p class="budget-note">All figures in CAD. Flights &amp; intercity transport are pulled from your route legs; city public transport uses researched local-currency day passes converted to CAD. Edit any rate to refine — it updates live.</p>
           </div>
         </div>
       </div>`;
@@ -3018,7 +3029,7 @@
         case 'todo-toggle': { const td = this.data.meta.todos[i]; td.done = !td.done; this.bump(); break; }
         case 'todo-remove': this.removeTodo(i); break;
         case 'add-todo': this.addTodo(); break;
-        case 'open-budget': this.budgetOpen = true; this.bumpModal(); break;
+        case 'open-budget': this.budgetOpen = true; this._budgetPrint = true; this.bumpModal(); break;
         case 'close-budget': this.budgetOpen = false; this.bumpModal(); break;
         case 'overlay-budget': if (e.target === t) { this.budgetOpen = false; this.bumpModal(); } break;
         case 'open-sync': this.syncOpen = true; this.bumpModal(); break;

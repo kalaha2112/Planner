@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-07T15:07:35.060Z
+  Built: 2026-07-07T15:29:58.643Z
 -->
 
 <html lang="en">
@@ -751,6 +751,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
   /* ---- type ---- */
   --serif:  'Playfair Display', Georgia, serif;
+  --mono:   ui-monospace, 'SF Mono', Menlo, Consolas, 'Courier New', monospace;   /* receipt */
   --sans:   'Sora', system-ui, sans-serif;
   --caps:   'Bebas Neue', 'DM Sans', sans-serif;
   --script: 'Jost', sans-serif;
@@ -1351,23 +1352,82 @@ a { color: inherit; }
 .add-outfit span { font-family: var(--sans); font-size: 10px; color: var(--ink-mute); }
 
 /* ---- Budget modal ---- */
-.budget-dialog { max-width: 480px; }
-.budget-total { font-family: var(--caps); font-size: 34px; letter-spacing: .03em; color: var(--red); line-height: 1; }
-.budget-sub { font-family: var(--sans); font-size: 12px; color: var(--ink-soft); margin-top: 6px; }
-.budget-body { padding: 10px 28px 26px; }
-.bline { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+/* ============================================================
+   BUDGET MODAL — printed receipt. Paper feeds out of a printer
+   slot (stepped translate = dot-matrix ratchet), monochrome
+   monospace ink, dashed rules, torn bottom edge, fake barcode.
+   ============================================================ */
+.receipt-wrap { width: 100%; max-width: 380px; }
+.printer-slot {
+  position: relative; z-index: 2;
+  height: 16px; border-radius: 8px;
+  background: #101010;
+  box-shadow: inset 0 -3px 5px rgba(0,0,0,.55), 0 3px 8px rgba(0,0,0,.35);
+}
+.printer-slot::after {   /* little status LED */
+  content: ''; position: absolute; right: 12px; top: 6px;
+  width: 4px; height: 4px; border-radius: 50%;
+  background: #7ddf8a; box-shadow: 0 0 4px #7ddf8a;
+}
+.receipt-clip { overflow: hidden; padding: 0 6px 30px; margin: 0 -6px; }
+.budget-dialog {
+  position: relative;
+  max-width: none; border-radius: 0; overflow: visible;
+  /* faint ruled lines + edge shading on warm receipt paper */
+  background:
+    repeating-linear-gradient(0deg, transparent 0 27px, rgba(0,0,0,.03) 27px 28px),
+    linear-gradient(90deg, rgba(0,0,0,.05), transparent 7%, transparent 93%, rgba(0,0,0,.05)),
+    #fbfaf4;
+  box-shadow: 0 16px 38px rgba(0,0,0,.34);
+  font-family: var(--mono);
+}
+.budget-dialog::after {   /* torn zigzag bottom edge */
+  content: ''; position: absolute; left: 0; right: 0; bottom: -12px; height: 12px;
+  background:
+    linear-gradient(45deg, transparent 33.33%, #fbfaf4 33.33% 66.66%, transparent 66.66%),
+    linear-gradient(-45deg, transparent 33.33%, #fbfaf4 33.33% 66.66%, transparent 66.66%);
+  background-size: 14px 28px;
+  background-position: 0 -14px;
+  filter: drop-shadow(0 5px 5px rgba(0,0,0,.12));
+}
+/* paper feeds down out of the slot; steps() = printer ratchet */
+.budget-dialog.printing { animation: printFeed 1.7s steps(28, end) both; }
+@keyframes printFeed {
+  from { transform: translateY(calc(-100% - 40px)); }
+  to   { transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) { .budget-dialog.printing { animation: none; } }
+
+.budget-dialog .head { background: transparent; border-bottom: 1px dashed rgba(0,0,0,.45); padding: 22px 22px 16px; }
+.budget-dialog .eyebrow { font-family: var(--mono); color: #111; letter-spacing: .3em; font-size: 11px; }
+.budget-dialog .modal-x { border: none; background: transparent; color: #777; font-family: var(--mono); }
+.budget-total { font-family: var(--mono); font-weight: 700; font-size: 30px; letter-spacing: .02em; color: #111; line-height: 1; }
+.budget-sub { font-family: var(--mono); font-size: 10.5px; color: #555; margin-top: 6px; }
+.budget-body { padding: 6px 22px 26px; }
+.bline { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px dashed rgba(0,0,0,.3); }
 .bline .info { flex: 1; min-width: 0; }
-.bline .info .l { font-family: var(--sans); font-size: 14px; font-weight: 600; color: var(--ink); }
-.bline .info .m { font-family: var(--sans); font-size: 10px; color: var(--ink-mute); margin-top: 3px; }
+.bline .info .l { font-family: var(--mono); font-size: 12.5px; font-weight: 700; color: #111; text-transform: uppercase; letter-spacing: .02em; }
+.bline .info .m { font-family: var(--mono); font-size: 9.5px; color: #777; margin-top: 3px; }
 .bline .edit { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
-.bline .edit input { font-family: var(--sans); font-size: 13px; width: 66px; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 6px 8px; background: var(--surface); text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; }
-.bline .edit .u { font-family: var(--sans); font-size: 9px; color: var(--ink-mute); width: 62px; }
-.bline .amt { font-family: var(--sans); font-size: 14px; font-weight: 700; color: var(--ink); width: 74px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
-.bline .amt input { font-family: var(--sans); font-size: 14px; font-weight: 700; color: var(--ink); border: none; background: transparent; text-align: right; padding: 0; outline: none; cursor: text; width: 74px; font-variant-numeric: tabular-nums; }
-.btotal { display: flex; align-items: baseline; justify-content: space-between; padding: 16px 0 4px; }
-.btotal .l { font-family: var(--sans); font-size: 14px; font-weight: 700; color: var(--ink); }
-.btotal .v { font-family: var(--caps); font-size: 24px; color: var(--red); letter-spacing: .02em; }
-.budget-note { font-family: var(--sans); font-size: 11px; color: var(--ink-mute); line-height: 1.5; margin: 8px 0 0; }
+.bline .edit input { font-family: var(--mono); font-size: 12.5px; width: 62px; border: none; border-bottom: 1px dashed #999; border-radius: 0; padding: 4px 2px; background: transparent; text-align: right; color: #111; font-variant-numeric: tabular-nums; }
+.bline .edit .u { font-family: var(--mono); font-size: 8.5px; color: #777; width: 62px; }
+.bline .amt { font-family: var(--mono); font-size: 13px; font-weight: 700; color: #111; width: 74px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.bline .amt input { font-family: var(--mono); font-size: 13px; font-weight: 700; color: #111; border: none; background: transparent; text-align: right; padding: 0; outline: none; cursor: text; width: 74px; font-variant-numeric: tabular-nums; }
+.btotal { display: flex; align-items: baseline; justify-content: space-between; padding: 16px 0 4px; border-top: 3px double #111; margin-top: -1px; }
+.btotal .l { font-family: var(--mono); font-size: 13px; font-weight: 700; color: #111; text-transform: uppercase; letter-spacing: .12em; }
+.btotal .v { font-family: var(--mono); font-weight: 700; font-size: 21px; color: #111; letter-spacing: .02em; }
+.budget-note { font-family: var(--mono); font-size: 9.5px; color: #888; line-height: 1.55; margin: 10px 0 0; text-align: center; }
+/* thin fake barcode + ticket number */
+.receipt-barcode {
+  height: 26px; margin: 16px auto 0; width: 76%;
+  background: repeating-linear-gradient(90deg,
+    #111 0 2px, transparent 2px 4px,
+    #111 4px 5px, transparent 5px 9px,
+    #111 9px 12px, transparent 12px 14px,
+    #111 14px 15px, transparent 15px 19px,
+    #111 19px 21px, transparent 21px 24px);
+}
+.receipt-barcode-num { font-family: var(--mono); font-size: 9.5px; letter-spacing: .4em; text-align: center; color: #111; margin-top: 5px; }
 
 /* ---- Accommodation modal ---- */
 .accom-dialog { max-width: 640px; }
@@ -5103,20 +5163,31 @@ html { -webkit-tap-highlight-color: transparent; }
         const mid = editable ? `<div class="edit"><input type="text" inputmode="numeric" value="${escA(line.value)}" data-ch="budget-edit" data-key="${escA(line.key)}"><span class="u">${esc(line.unit)}</span></div>` : '';
         return `<div class="bline"><div class="info"><div class="l">${esc(line.label)}</div><div class="m">${esc(line.mult)}</div></div>${mid}${right}</div>`;
       }).join('');
+      // print-feed animation runs only on the render right after opening —
+      // edits re-render the modal live and must not replay the animation
+      const printing = this._budgetPrint ? ' printing' : '';
+      if (this._budgetPrint) { clearTimeout(this._budgetPrintTimer); this._budgetPrintTimer = setTimeout(() => { this._budgetPrint = false; }, 1900); }
       return `<div class="overlay" data-act="overlay-budget">
-        <div class="dialog budget-dialog" data-stop>
-          <div class="head"><div class="row">
-            <div style="flex:1">
-              <div class="eyebrow">Budget breakdown</div>
-              <div class="budget-total">${esc(money(budget.grandTotal))}</div>
-              <div class="budget-sub">${esc(money(budget.perPerson))} / person · ${travelers} travelers · ${nights} nights</div>
+        <div class="receipt-wrap" data-stop>
+          <div class="printer-slot" aria-hidden="true"></div>
+          <div class="receipt-clip">
+            <div class="dialog budget-dialog${printing}">
+              <div class="head"><div class="row">
+                <div style="flex:1">
+                  <div class="eyebrow">Budget breakdown</div>
+                  <div class="budget-total">${esc(money(budget.grandTotal))}</div>
+                  <div class="budget-sub">${esc(money(budget.perPerson))} / person · ${travelers} travelers · ${nights} nights</div>
+                </div>
+                <button class="modal-x" data-act="close-budget">✕</button>
+              </div></div>
+              <div class="budget-body">
+                ${lines}
+                <div class="btotal"><div class="l">Total</div><div class="v">${esc(money(budget.grandTotal))}</div></div>
+                <p class="budget-note">All figures in CAD. Flights &amp; intercity transport are pulled from your route legs; city public transport uses researched local-currency day passes converted to CAD. Edit any rate to refine — it updates live.</p>
+                <div class="receipt-barcode" aria-hidden="true"></div>
+                <div class="receipt-barcode-num">№ ${String(Math.abs(Math.round(budget.grandTotal * 100))).padStart(12, '0')}</div>
+              </div>
             </div>
-            <button class="modal-x" data-act="close-budget">✕</button>
-          </div></div>
-          <div class="budget-body">
-            ${lines}
-            <div class="btotal"><div class="l">Total</div><div class="v">${esc(money(budget.grandTotal))}</div></div>
-            <p class="budget-note">All figures in CAD. Flights &amp; intercity transport are pulled from your route legs; city public transport uses researched local-currency day passes converted to CAD. Edit any rate to refine — it updates live.</p>
           </div>
         </div>
       </div>`;
@@ -5251,7 +5322,7 @@ html { -webkit-tap-highlight-color: transparent; }
         case 'todo-toggle': { const td = this.data.meta.todos[i]; td.done = !td.done; this.bump(); break; }
         case 'todo-remove': this.removeTodo(i); break;
         case 'add-todo': this.addTodo(); break;
-        case 'open-budget': this.budgetOpen = true; this.bumpModal(); break;
+        case 'open-budget': this.budgetOpen = true; this._budgetPrint = true; this.bumpModal(); break;
         case 'close-budget': this.budgetOpen = false; this.bumpModal(); break;
         case 'overlay-budget': if (e.target === t) { this.budgetOpen = false; this.bumpModal(); } break;
         case 'open-sync': this.syncOpen = true; this.bumpModal(); break;
