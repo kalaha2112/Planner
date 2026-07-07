@@ -552,9 +552,14 @@ a { color: inherit; }
    from its pure-white core outward: white edge-to-edge and ~1.5px bolder.
    Unlike blur, dilation has no threshold that can drop a thin line. */
 .daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(2.8) contrast(8) url(#daymap-dilate); }
+/* Web (wide): a lighter dilate so the bold grid doesn't overwhelm the street
+   labels sitting on top of it. App (<=700px) keeps the bolder grid above. */
+@media (min-width: 701px) {
+  .daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(2.8) contrast(8) url(#daymap-dilate-soft); }
+}
 /* Web-only labels ride in their own pane (see ensureDayMap) so the street-line
    dilate above never touches the text. Whiten it gently — NO dilate, NO hard
-   contrast — so street names stay thin and legible over the bold grid. */
+   contrast — so street names stay thin and legible over the grid. */
 .daymap.map .leaflet-daylabels-pane { filter: saturate(0) brightness(1.7) contrast(1.15); }
 /* film-grain overlay above the tiles, below the pins (Leaflet marker pane is z 600) */
 .daymap.map::after {
