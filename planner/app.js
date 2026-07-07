@@ -1770,15 +1770,20 @@
       if (this.dayMap) { this.dayMap.invalidateSize(); this.renderDayMap(); return; }
       const L = window.L;
       this.dayMap = L.map(this.dayMapEl, { scrollWheelZoom: false, zoomSnap: .25, zoomDelta: .5, wheelPxPerZoomLevel: 120, inertia: true, attributionControl: false });
-      // Base without any text + a transparent labels overlay capped at z15:
-      // area names (arrondissements, Montmartre, Le Marais…) live in the
-      // z14-16 label band and the day map's default views land at z14-15, so
-      // they show; street names (mostly z16+) stay below the cap and never
-      // load. Past z15 all text drops away, leaving just the street grid.
+      // Labels differ by version (see _mobileMap):
+      //  · APP (phone): area names only — dark_nolabels base + a transparent
+      //    area-label overlay capped at z15. Street names (Carto puts them in
+      //    the label tiles ~z16+) stay below the cap and never load. UNCHANGED.
+      //  · WEB (desktop): full dark_all labels, i.e. street names shown — the
+      //    street-label setting from before the area-only overlay existed.
       // NOTE: do not get clever with tileSize 512 / zoomOffset -1 here — that
       // combination broke tile loading and the map went blank-black.
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', { maxZoom: 19, detectRetina: true }).addTo(this.dayMap);
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', { maxZoom: 15, detectRetina: true }).addTo(this.dayMap);
+      if (this._mobileMap()) {
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', { maxZoom: 19, detectRetina: true }).addTo(this.dayMap);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', { maxZoom: 15, detectRetina: true }).addTo(this.dayMap);
+      } else {
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, detectRetina: true }).addTo(this.dayMap);
+      }
       this.dayLines = L.layerGroup().addTo(this.dayMap);
       this.dayMarkers = L.layerGroup().addTo(this.dayMap);
       this.dayMap.setView([48, 10], 4);
