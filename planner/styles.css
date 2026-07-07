@@ -537,7 +537,9 @@ a { color: inherit; }
 /* Night-satellite look: dark-matter tiles pushed to grainy high-contrast B&W —
    black city blocks, streets reading as light veins (like city lights from orbit) */
 .daymap.map.leaflet-container { background: #0a0a0a; }   /* unloaded tile area stays black */
-.daymap.map .leaflet-tile-pane { filter: saturate(0) contrast(1.3) brightness(1.14); }
+/* brighten FIRST (lifts the faint streets above the contrast pivot), then hard
+   contrast: background clips to pure black while streets swing up to white */
+.daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(2.6) contrast(2.2); }
 /* film-grain overlay above the tiles, below the pins (Leaflet marker pane is z 600) */
 .daymap.map::after {
   content: ''; position: absolute; inset: 0; z-index: 450; pointer-events: none;

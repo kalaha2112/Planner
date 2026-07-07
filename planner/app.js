@@ -1891,7 +1891,7 @@
         });
         this.dayMarkers.addLayer(marker);
       });
-      if (pts.length > 1) this.dayLines.addLayer(L.polyline(pts, { color: '#ffffff', weight: 1.5, opacity: .35, dashArray: '5 6' }));   // white so the route reads on the black night map
+      if (pts.length > 1) this.dayLines.addLayer(L.polyline(pts, { color: '#ffffff', weight: 3, opacity: .9, dashArray: '6 8' }));   // bold white so the route stands out on the black night map
       if (pts.length === 1) this.dayMap.setView(pts[0], 14);
       else if (pts.length > 1) this.dayMap.fitBounds(pts, { padding: [30, 30], maxZoom: 15 });
       else if (cityCoord) this.dayMap.setView(cityCoord, 11);
