@@ -2342,10 +2342,6 @@
         <span class="saved" style="opacity:0">saved</span>
         <div class="toolbar">
           <button class="tool-btn" data-act="undo" title="Undo (⌘Z)" aria-label="Undo" ${!this._history.length ? 'disabled' : ''}>${svg(I.undo)}<span class="tool-lbl">Undo</span></button>
-          <button class="tool-btn" data-act="reset" title="Reset route" aria-label="Reset route">${svg(I.reset)}<span class="tool-lbl">Reset</span></button>
-          <button class="tool-btn" data-act="export" title="Export trip" aria-label="Export trip">${svg(I.download)}<span class="tool-lbl">Export</span></button>
-          <button class="tool-btn" data-act="import" title="Import trip" aria-label="Import trip">${svg(I.upload)}<span class="tool-lbl">Import</span></button>
-          <input type="file" accept="application/json" class="import-file" data-ch="import-file" style="display:none">
           <button class="tool-btn sync-toggle-btn${this.isLinked() ? ' active' : ''}" data-act="open-sync" title="Sync across devices" aria-label="Sync across devices"><span class="sync-dot s-${this.isLinked() ? this._syncStatus : 'off'}"></span>${svg(I.sync)}<span class="tool-lbl">Sync</span></button>
           <div class="toolbar-divider"></div>
           <button class="tool-btn sticker-toggle-btn${this.stickerPanelOpen ? ' active' : ''}" data-act="toggle-stickers" title="Memories" aria-label="Memories">${svg(I.sticker)}<span class="tool-lbl">Memory</span></button>
