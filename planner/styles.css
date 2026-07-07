@@ -548,7 +548,10 @@ a { color: inherit; }
    white (255), and anti-aliased street edges land ~178 — so lines keep a
    bright halo and read whiter AND thicker. (No blur — blurring 1px lines
    drops their peak below the pivot and the contrast crushes them to black.) */
-.daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(2.8) contrast(8); }
+/* …then feMorphology dilate (defined in index.html) rebuilds each street line
+   from its pure-white core outward: white edge-to-edge and ~1.5px bolder.
+   Unlike blur, dilation has no threshold that can drop a thin line. */
+.daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(2.8) contrast(8) url(#daymap-dilate); }
 /* film-grain overlay above the tiles, below the pins (Leaflet marker pane is z 600) */
 .daymap.map::after {
   content: ''; position: absolute; inset: 0; z-index: 450; pointer-events: none;

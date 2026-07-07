@@ -36,6 +36,13 @@
 </head>
 <body>
   <main id="app"></main>
+  <!-- SVG filter used by the day-plan map: dilates the white street lines so
+       they read bolder (referenced from styles.css as url(#daymap-dilate)) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <filter id="daymap-dilate" color-interpolation-filters="sRGB">
+      <feMorphology operator="dilate" radius="0.75"/>
+    </filter>
+  </svg>
   <script src="app.js?v=124"></script>
   <!-- PWA: offline cache + install support (no-op on file:// and non-secure origins) -->
   <script>

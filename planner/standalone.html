@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-07T04:27:22.124Z
+  Built: 2026-07-07T04:33:14.619Z
 -->
 
 <html lang="en">
@@ -1261,7 +1261,10 @@ a { color: inherit; }
    white (255), and anti-aliased street edges land ~178 — so lines keep a
    bright halo and read whiter AND thicker. (No blur — blurring 1px lines
    drops their peak below the pivot and the contrast crushes them to black.) */
-.daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(2.8) contrast(8); }
+/* …then feMorphology dilate (defined in index.html) rebuilds each street line
+   from its pure-white core outward: white edge-to-edge and ~1.5px bolder.
+   Unlike blur, dilation has no threshold that can drop a thin line. */
+.daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(2.8) contrast(8) url(#daymap-dilate); }
 /* film-grain overlay above the tiles, below the pins (Leaflet marker pane is z 600) */
 .daymap.map::after {
   content: ''; position: absolute; inset: 0; z-index: 450; pointer-events: none;
@@ -2205,6 +2208,13 @@ html { -webkit-tap-highlight-color: transparent; }
 </head>
 <body>
   <main id="app"></main>
+  <!-- SVG filter used by the day-plan map: dilates the white street lines so
+       they read bolder (referenced from styles.css as url(#daymap-dilate)) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <filter id="daymap-dilate" color-interpolation-filters="sRGB">
+      <feMorphology operator="dilate" radius="0.75"/>
+    </filter>
+  </svg>
   <script>
 /* app.js */
 /* ============================================================
@@ -3979,14 +3989,15 @@ html { -webkit-tap-highlight-color: transparent; }
       if (this.dayMap) { this.dayMap.invalidateSize(); this.renderDayMap(); return; }
       const L = window.L;
       this.dayMap = L.map(this.dayMapEl, { scrollWheelZoom: false, zoomSnap: .25, zoomDelta: .5, wheelPxPerZoomLevel: 120, inertia: true, attributionControl: false });
-      // Base without any text + a transparent labels overlay capped at z14:
-      // city/area names show at overview zooms, but street names (which only
-      // enter Carto's label tiles at ~z15+) never appear — zooming in past 14
-      // drops all text and leaves just the street grid.
+      // Base without any text + a transparent labels overlay capped at z15:
+      // area names (arrondissements, Montmartre, Le Marais…) live in the
+      // z14-16 label band and the day map's default views land at z14-15, so
+      // they show; street names (mostly z16+) stay below the cap and never
+      // load. Past z15 all text drops away, leaving just the street grid.
       // NOTE: do not get clever with tileSize 512 / zoomOffset -1 here — that
       // combination broke tile loading and the map went blank-black.
       L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', { maxZoom: 19, detectRetina: true }).addTo(this.dayMap);
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', { maxZoom: 14, detectRetina: true }).addTo(this.dayMap);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', { maxZoom: 15, detectRetina: true }).addTo(this.dayMap);
       this.dayLines = L.layerGroup().addTo(this.dayMap);
       this.dayMarkers = L.layerGroup().addTo(this.dayMap);
       this.dayMap.setView([48, 10], 4);
