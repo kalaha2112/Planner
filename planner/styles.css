@@ -542,7 +542,10 @@ a { color: inherit; }
    modest brightness, then a HARD contrast(6) pivots between them: the land
    clips to near-black while every street + label swings up to white.
    (verified numerically: land -> 7, minor streets -> 254, roads/labels -> 255) */
-.daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(2.7) contrast(6); }
+/* the small blur(.5px) before the hard contrast DILATES the bright lines: the
+   white streets + labels spread a touch wider (reading as bolder/bigger) while
+   the near-uniform dark land averages with itself and still clips to black */
+.daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(2.7) blur(.5px) contrast(6); }
 /* film-grain overlay above the tiles, below the pins (Leaflet marker pane is z 600) */
 .daymap.map::after {
   content: ''; position: absolute; inset: 0; z-index: 450; pointer-events: none;
