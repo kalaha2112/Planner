@@ -1614,24 +1614,28 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   outline: none; caret-color: var(--red);
   will-change: transform;
 }
-/* dark-mode toggle — top right of the intro (first) page, both layouts.
-   Direct child of .intro-overlay (like .intro-hint): .intro-inner clips
-   overflow, and the globe is z-index 3 — so sit above it at z 4. */
-.intro-theme {
-  position: absolute;
-  top: max(18px, env(safe-area-inset-top));
-  right: max(18px, env(safe-area-inset-right));
-  z-index: 4;
-  width: 40px; height: 40px;
+/* fixed top-right action cluster: undo · sync · memory · theme toggle.
+   Lives on <body>, z 1600 — above modals (1000), the modal sticker layer
+   (1020), the drag ghost (1200) and the intro overlay (1500) — so it is
+   always visible and clickable: intro page, trip page, and open modals. */
+.top-actions {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(14px, env(safe-area-inset-right));
+  z-index: 1600;
+  display: flex; align-items: center; gap: 6px;
+}
+.theme-btn {
+  width: 36px; height: 36px;
   display: flex; align-items: center; justify-content: center;
   border: 1px solid var(--line); border-radius: var(--r-pill);
   background: var(--surface); color: var(--ink); cursor: pointer;
   transition: transform .15s;
 }
-.intro-theme:hover { transform: scale(1.06); }
-.intro-theme .ic-sun { display: none; }                        /* light: show moon */
-[data-theme="dark"] .intro-theme .ic-moon { display: none; }   /* dark: show sun  */
-[data-theme="dark"] .intro-theme .ic-sun  { display: block; }
+.theme-btn:hover { transform: scale(1.06); }
+.theme-btn .ic-sun { display: none; }                        /* light: show moon */
+[data-theme="dark"] .theme-btn .ic-moon { display: none; }   /* dark: show sun  */
+[data-theme="dark"] .theme-btn .ic-sun  { display: block; }
 
 .intro-hint {
   position: absolute; bottom: max(20px, env(safe-area-inset-bottom)); left: 50%;

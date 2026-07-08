@@ -549,6 +549,7 @@
     init() {
       this.wireDelegation();
       this.loadState();
+      this.initTopActions();
       this.render();
       this.ensureMap(0);
       this.initIntro();
@@ -624,6 +625,56 @@
        down eases the text 0→40px (4px lateral offset), rotates the
        globe 358°, and slides the whole page up to reveal the app.
        ============================================================ */
+    /* ============================================================
+       TOP ACTIONS — fixed cluster at the top right of the screen:
+       undo · sync · memory · dark-mode toggle. Lives on <body> at
+       z 1600 (above modals 1000, sticker layer 1020, drag ghost
+       1200, intro overlay 1500), so it stays visible and clickable
+       on the intro page, the trip page, and over open modals.
+       ============================================================ */
+    initTopActions() {
+      const ta = document.createElement('div');
+      ta.className = 'top-actions';
+      ta.innerHTML = `
+        <button class="tool-btn" data-act="undo" title="Undo (⌘Z)" aria-label="Undo" disabled>${svg(I.undo)}</button>
+        <button class="tool-btn sync-toggle-btn" data-act="open-sync" title="Sync across devices" aria-label="Sync across devices"><span class="sync-dot s-off"></span>${svg(I.sync)}</button>
+        <button class="tool-btn sticker-toggle-btn" data-act="toggle-stickers" title="Memories" aria-label="Memories">${svg(I.sticker)}</button>
+        <button class="theme-btn" data-act="toggle-theme" aria-label="Toggle dark mode" title="Toggle dark mode">
+          <svg class="ic-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+          <svg class="ic-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>`;
+      document.body.appendChild(ta);
+      this.topActionsEl = ta;
+      ta.addEventListener('click', (e) => this.onClick(e));   // same delegated dispatch as the app root
+      // pre-paint boot may have set dark before the app booted — sync the meta
+      const themeMeta = document.querySelector('meta[name="theme-color"]');   // absent in standalone.html
+      if (themeMeta && document.documentElement.getAttribute('data-theme') === 'dark') themeMeta.setAttribute('content', '#121210');
+      this.updateTopActions();
+    }
+    toggleTheme() {
+      const dark = document.documentElement.getAttribute('data-theme') !== 'dark';
+      if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+      else document.documentElement.removeAttribute('data-theme');
+      const themeMeta = document.querySelector('meta[name="theme-color"]');
+      if (themeMeta) themeMeta.setAttribute('content', dark ? '#121210' : '#e8e4dc');
+      try { localStorage.setItem('europe-trip-theme-v1', dark ? 'dark' : 'light'); } catch (e) {}
+      if (this._introGlobeRefresh) this._introGlobeRefresh();   // globe strokes re-read --ink/--red
+      this.updateTopActions();
+    }
+    updateTopActions() {
+      const ta = this.topActionsEl; if (!ta) return;
+      const undoBtn = ta.querySelector('[data-act="undo"]');
+      if (undoBtn) undoBtn.disabled = !this._history.length;
+      const syncBtn = ta.querySelector('.sync-toggle-btn');
+      if (syncBtn) syncBtn.classList.toggle('active', this.isLinked());
+      const dot = ta.querySelector('.sync-dot');
+      if (dot) dot.className = 'sync-dot s-' + (this.isLinked() ? this._syncStatus : 'off');
+      const memBtn = ta.querySelector('.sticker-toggle-btn');
+      if (memBtn) memBtn.classList.toggle('active', this.stickerPanelOpen);
+      const themeBtn = ta.querySelector('[data-act="toggle-theme"]');
+      if (themeBtn) themeBtn.setAttribute('aria-pressed', String(document.documentElement.getAttribute('data-theme') === 'dark'));
+    }
+
     initIntro() {
       if (this._introEl) return;
       const overlay = document.createElement('div');
@@ -638,10 +689,6 @@
         </div>
         <button class="intro-hint" aria-label="Continue to the planner"><span>scroll</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
-        </button>
-        <button class="intro-theme" aria-label="Toggle dark mode" title="Toggle dark mode">
-          <svg class="ic-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
-          <svg class="ic-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
         </button>`;
       document.body.appendChild(overlay);
       this._introEl = overlay;
@@ -659,26 +706,6 @@
       this._buildIntroGlobe(svg);                       // graticule + stops now…
       this._ensureAtlas().then(() => this._buildIntroGlobe(svg));   // …continents when the atlas lands
       this._introGlobeRefresh = () => this._buildIntroGlobe(svg);   // stops added while intro open
-
-      // ---- dark-mode toggle (top right; theme applies app-wide, both versions).
-      // data-theme lives on <html> so it survives the intro parking; the boot
-      // script in index.html re-applies it pre-paint on reload. ----
-      const THEME_KEY = 'europe-trip-theme-v1';
-      const themeBtn = overlay.querySelector('.intro-theme');
-      const themeMeta = document.querySelector('meta[name="theme-color"]');  // absent in standalone.html
-      const applyTheme = (dark) => {
-        if (dark) document.documentElement.setAttribute('data-theme', 'dark');
-        else document.documentElement.removeAttribute('data-theme');
-        themeBtn.setAttribute('aria-pressed', String(dark));
-        if (themeMeta) themeMeta.setAttribute('content', dark ? '#121210' : '#e8e4dc');
-        try { localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light'); } catch (e) {}
-        this._buildIntroGlobe(svg);   // globe strokes re-read --ink/--red
-      };
-      themeBtn.addEventListener('click', () =>
-        applyTheme(document.documentElement.getAttribute('data-theme') !== 'dark'));
-      const bootedDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      themeBtn.setAttribute('aria-pressed', String(bootedDark));
-      if (bootedDark && themeMeta) themeMeta.setAttribute('content', '#121210');
 
       // ---- seamless scroll driver: the intro and the trip page behave like
       // one tall page. Wheel/touch track ~1:1; fully scrolled the intro PARKS
@@ -882,6 +909,7 @@
         this.renderSyncModal();
       // modal-only re-render still has to (re)mount the per-day map node
       this.mountDayMap();
+      this.updateTopActions();   // sticker toggle / sync-modal actions change cluster state
     }
     // attach the persistent day-map node into the freshly-rendered modal and (re)init Leaflet
     mountDayMap() {
@@ -1246,7 +1274,7 @@
       return new Date(ts).toLocaleDateString();
     }
     paintSyncStatus() {
-      const dot = this.root && this.root.querySelector('.sync-dot');
+      const dot = this.topActionsEl && this.topActionsEl.querySelector('.sync-dot');
       if (dot) dot.className = 'sync-dot s-' + (this.isLinked() ? this._syncStatus : 'off');
       const st = this.modalEl && this.modalEl.querySelector('.sync-status');
       if (st) { st.textContent = this.syncStatusLabel(); st.className = 'sync-status s-' + this._syncStatus; }
@@ -2387,17 +2415,15 @@
       // re-attach the per-day itinerary map (it lives inside the modal root)
       this.mountDayMap();
       this.paintSaved();
+      this.updateTopActions();
     }
 
     renderHeader(meta, dateRangeStr) {
+      // undo/sync/memory + the theme toggle live in the fixed .top-actions
+      // cluster (initTopActions): always visible on the intro, the trip page,
+      // and above open modals.
       return `<div class="header">
         <span class="saved" style="opacity:0">saved</span>
-        <div class="toolbar">
-          <button class="tool-btn" data-act="undo" title="Undo (⌘Z)" aria-label="Undo" ${!this._history.length ? 'disabled' : ''}>${svg(I.undo)}<span class="tool-lbl">Undo</span></button>
-          <button class="tool-btn sync-toggle-btn${this.isLinked() ? ' active' : ''}" data-act="open-sync" title="Sync across devices" aria-label="Sync across devices"><span class="sync-dot s-${this.isLinked() ? this._syncStatus : 'off'}"></span>${svg(I.sync)}<span class="tool-lbl">Sync</span></button>
-          <div class="toolbar-divider"></div>
-          <button class="tool-btn sticker-toggle-btn${this.stickerPanelOpen ? ' active' : ''}" data-act="toggle-stickers" title="Memories" aria-label="Memories">${svg(I.sticker)}<span class="tool-lbl">Memory</span></button>
-        </div>
       </div>`;
     }
 
@@ -3038,6 +3064,7 @@
       const trip = this.currentTrip();
       switch (act) {
         case 'undo': this.undo(); break;
+        case 'toggle-theme': this.toggleTheme(); break;
         case 'reset': this.resetRoute(); break;
         case 'export': this.exportState(); break;
         case 'import': this.root.querySelector('.import-file').click(); break;
