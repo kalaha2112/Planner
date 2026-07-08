@@ -1626,13 +1626,13 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   display: flex; align-items: center; gap: 6px;
 }
 .theme-btn {
-  width: 36px; height: 36px;
+  width: 34px; height: 34px;
   display: flex; align-items: center; justify-content: center;
-  border: 1px solid var(--line); border-radius: var(--r-pill);
-  background: var(--surface); color: var(--ink); cursor: pointer;
-  transition: transform .15s;
+  border: none; background: transparent;   /* bare icon, like the tool buttons */
+  color: var(--ink-soft); cursor: pointer;
+  transition: color .15s;
 }
-.theme-btn:hover { transform: scale(1.06); }
+.theme-btn:hover { color: var(--ink); }
 .theme-btn .ic-sun { display: none; }                        /* light: show moon */
 [data-theme="dark"] .theme-btn .ic-moon { display: none; }   /* dark: show sun  */
 [data-theme="dark"] .theme-btn .ic-sun  { display: block; }
