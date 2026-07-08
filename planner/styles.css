@@ -36,6 +36,28 @@
   --stay-line:  #000000;   /* calendar cell border (line) */
   --map-bg:     #EDE7E2;
 
+  /* ---- themed literals (light values; see [data-theme="dark"] below) ---- */
+  --on-brown:      #fff;                    /* text/icons on --brown surfaces */
+  --hover-soft:    #faf8f4;                 /* accom-btn hover + add-outfit bg */
+  --cal-hover:     #F6E0D8;                 /* cal-cell hover + drag-target */
+  --rm-hover:      #fef2f2;                 /* .opt .rm:hover */
+  --chip-glass:    rgba(255,255,255,.86);   /* outfit/stock delete chips */
+  --card-glass:    rgba(255,255,255,.8);    /* .mc-front / .mc-back faces */
+  --ep-glass:      rgba(245,242,236,.92);   /* .map-ep chips */
+  --map-sea:       #e0d8cc;                 /* main-map container (sea) */
+  --map-land:      #000000;                 /* main-map geojson land fill */
+  --map-land-line: #47403a;                 /* main-map country borders */
+  --map-route:     #000000;                 /* main-map route polyline */
+  --map-label:     #c9a868;                 /* .map-city-label */
+  --mc-dates:      #2c6a37;                 /* .mc-dates-display */
+  /* itinerary mini "paper map" SVG */
+  --mini-sea:      oklch(95.5% 0.004 70);
+  --mini-land:     oklch(91% 0.008 70);
+  --mini-border:   oklch(75% 0.01 70);
+  --mini-route:    oklch(22% 0.025 70);
+  --mini-leader:   oklch(40% 0.012 70);
+  --mini-ring:     oklch(97% 0.005 60);
+
   /* ---- type ---- */
   --serif:  'Playfair Display', Georgia, serif;
   --mono:   ui-monospace, 'SF Mono', Menlo, Consolas, 'Courier New', monospace;   /* receipt */
@@ -46,6 +68,78 @@
   /* ---- radii (from spec) ---- */
   --r-pill: 999px; --r-modal: 18px; --r-card: 13px; --r-cell: 12px;
   --r-btn: 9px; --r-sm: 8px; --r-xs: 7px; --r-check: 6px;
+}
+
+/* ============================================================
+   DARK THEME — toggled from the intro page (top-right button).
+   data-theme="dark" is set on <html> pre-paint by the inline
+   boot script in index.html and persisted as
+   localStorage['europe-trip-theme-v1'].
+   Light surfaces go near-black, black lines/pills go white,
+   accents (red/gold/green) brighten slightly.
+   ============================================================ */
+[data-theme="dark"] {
+  /* ink ladder, reversed: ink brightest, faint closest to the bg */
+  --ink:        #F2EFE7;
+  --ink-mid:    #DCD5C3;
+  --ink-soft:   #A9A08E;
+  --ink-mute:   #7C7464;
+  --ink-faint:  #514C3D;
+  --brown:      #FAFAF7;   /* black pills/buttons go white… */
+  --on-brown:   #131313;   /* …with dark text on them */
+  --red:        #C93A41;   /* brightened from #91040C */
+  --shell:      #121210;   /* warm near-black, not pure black */
+  --surface:    #161614;
+
+  --gold:       #E0AC3E;   /* brightened from #C8901F */
+  --gold-soft:  #2A2315;
+  --gold-border:#4D3F1F;
+  --gold-hover: #362D1A;
+  --green:      #7FA893;   /* brightened from #5E8475 */
+  --green-dark: #628268;   /* brightened from #46604F */
+  --green-bg:   #1B2721;
+
+  --line:       #FFFFFF;   /* pure-white hairlines mirror the black ones */
+  --line-2:     #26241F;   /* subtle fill only — stays a fill */
+  --line-3:     #FFFFFF;
+  --dash:       #FFFFFF;
+
+  --stay-fill:  #2A211D;
+  --stay-line:  #FFFFFF;
+  --map-bg:     #1E1B18;
+
+  --hover-soft:    #211F1B;
+  --cal-hover:     #33241F;
+  --rm-hover:      #391B1E;
+  --chip-glass:    rgba(28,28,26,.86);
+  --card-glass:    rgba(22,22,20,.85);
+  --ep-glass:      rgba(28,26,23,.92);
+  --map-sea:       #24201C;
+  --map-land:      #0B0A09;   /* land stays near-black — a white landmass would
+                                 read as a huge light slab inside a dark app */
+  --map-land-line: #6A6156;
+  --map-route:     #F2EFE7;   /* black route -> warm white */
+  --map-label:     #DDBB77;
+  --mc-dates:      #8CC49A;
+  --mini-sea:      #14120F;
+  --mini-land:     #201D19;
+  --mini-border:   #4B453C;
+  --mini-route:    #F2EFE7;
+  --mini-leader:   #A9A08E;
+  --mini-ring:     #121210;
+
+  color-scheme: dark;   /* native scrollbars, inputs, date pickers */
+}
+/* route-modal OSM tiles: soft-invert to a dark basemap. :not(.daymap) because
+   the day-plan map also carries .map and has its own theme treatment below. */
+[data-theme="dark"] .map:not(.daymap) .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) saturate(.45) brightness(.9) contrast(.92);
+}
+[data-theme="dark"] .leaflet-bar a {
+  background: var(--surface); color: var(--ink); border-color: var(--ink-faint);
+}
+[data-theme="dark"] .leaflet-control-attribution {
+  background: rgba(18,18,16,.7); color: var(--ink-mute);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -156,12 +250,12 @@ a { color: inherit; }
 .tab-active input {
   font-family: var(--sans); font-size: 13px; font-weight: 600;
   padding: 8px 4px 8px 16px; border: none; background: transparent;
-  color: #fff; cursor: text; outline-offset: 2px;
+  color: var(--on-brown); cursor: text; outline-offset: 2px;
 }
 .tab-x {
   display: flex; align-items: center; justify-content: center;
   width: 22px; height: 22px; margin-right: 6px;
-  border: none; background: transparent; color: rgba(255,255,255,.7);
+  border: none; background: transparent; color: var(--on-brown); opacity: .7;
   cursor: pointer; font-family: var(--sans); font-size: 17px; font-weight: 800;
   line-height: 1; padding: 0;
 }
@@ -295,7 +389,7 @@ a { color: inherit; }
   border: none; background: transparent; border-radius: var(--r-xs);
   padding: 4px 4px; margin-left: -4px; cursor: pointer; transition: background .15s;
 }
-.accom-btn:hover { background: #faf8f4; }
+.accom-btn:hover { background: var(--hover-soft); }
 .accom-btn .lbl { flex: 1; min-width: 0; font-family: var(--sans); font-size: 12px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .accom-btn .chev { flex-shrink: 0; font-family: var(--sans); font-size: 11px; color: var(--ink-faint); font-weight: 700; }
 .stop .foot { display: flex; align-items: flex-end; gap: 4px; margin-top: 2px; }
@@ -325,7 +419,7 @@ a { color: inherit; }
 
 .add-stop {
   font-family: var(--sans); font-size: 22px; font-weight: 800; line-height: 1;
-  color: #fff; background: var(--brown); border: none; border-radius: var(--r-btn);
+  color: var(--on-brown); background: var(--brown); border: none; border-radius: var(--r-btn);
   width: 42px; height: 42px; cursor: pointer; display: flex; align-items: center; justify-content: center;
   transition: opacity .15s;
 }
@@ -451,7 +545,7 @@ a { color: inherit; }
   padding: 10px 4px 0; overflow: hidden; width: 100%;
   border: 1px solid var(--stay-line); transition: background .15s;
 }
-.cal-cell:hover { background: #F6E0D8; }
+.cal-cell:hover { background: var(--cal-hover); }
 .cal-cell.active {
   border: 3px solid var(--brown); color: var(--ink);
   transform: scale(1.05); box-shadow: 0 6px 20px rgba(35,20,12,.2);
@@ -479,12 +573,12 @@ a { color: inherit; }
 .item-grip svg { display: block; }
 /* pointer-drag feedback when moving an activity onto another day */
 .item.drag-source { opacity: .4; }
-.cal-cell.drag-target { outline: 3px solid var(--red); outline-offset: -2px; background: #F6E0D8; }
+.cal-cell.drag-target { outline: 3px solid var(--red); outline-offset: -2px; background: var(--cal-hover); }
 .drag-ghost {
   position: fixed; z-index: 1200; pointer-events: none;
   transform: translate(-50%, -150%);
   max-width: 220px; padding: 7px 12px; border-radius: 8px;
-  background: var(--brown); color: #fff;
+  background: var(--brown); color: var(--on-brown);
   font-family: var(--sans); font-size: 12px; font-weight: 600;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   box-shadow: 0 4px 14px rgba(35,20,12,.3);
@@ -493,6 +587,7 @@ a { color: inherit; }
 .item .text { font-family: var(--sans); font-size: 14px; color: var(--ink); border: none; background: transparent; padding: 4px 0; width: 100%; outline-offset: 2px; }
 .item .meta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .item .field { flex: 1; display: flex; align-items: center; gap: 5px; min-width: 120px; }
+.item .field > svg { color: var(--ink-mute); }   /* icons use currentColor -> theme-aware */
 .item .field input { font-family: var(--sans); font-size: 12px; color: var(--ink-soft); border: none; background: transparent; padding: 2px 0; flex: 1; min-width: 0; outline-offset: 2px; }
 .item .maps { flex-shrink: 0; display: flex; align-items: center; color: var(--gold); text-decoration: none; font-family: var(--sans); font-size: 11px; font-weight: 700; }
 .item .cost-field { flex: 0 1 72px; display: flex; align-items: center; gap: 3px; }
@@ -535,9 +630,14 @@ a { color: inherit; }
 .day-main { flex: 1; min-width: 0; }
 .day-aside { flex: 0 0 260px; position: sticky; top: 4px; display: flex; flex-direction: column; gap: 7px; }
 .daymap { height: 340px; }
-/* Night-satellite look: dark-matter tiles pushed to grainy high-contrast B&W —
-   black city blocks, streets reading as light veins (like city lights from orbit) */
-.daymap.map.leaflet-container { background: #0a0a0a; }   /* unloaded tile area stays black */
+/* Grainy high-contrast B&W satellite look, themed:
+   · LIGHT theme — the exact INVERSE: white ground, black streets (the base
+     filter below already produces pure black/white, so appending invert(1)
+     is lossless).
+   · DARK theme — the original night-satellite look: black city blocks,
+     streets reading as light veins (city lights from orbit). */
+.daymap.map.leaflet-container { background: #f2f0ec; }   /* unloaded tile area, light */
+[data-theme="dark"] .daymap.map.leaflet-container { background: #0a0a0a; }
 /* On dark-matter tiles the land (~#26) and the minor streets (~#35) are only
    ~15 levels apart, so a gentle contrast can't separate them. Lift both with a
    modest brightness, then a HARD contrast(6) pivots between them: the land
@@ -552,21 +652,28 @@ a { color: inherit; }
 /* …then feMorphology dilate (defined in index.html) rebuilds each street line
    from its pure-white core outward: white edge-to-edge and ~1.5px bolder.
    Unlike blur, dilation has no threshold that can drop a thin line. */
-.daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(2.8) contrast(8) url(#daymap-dilate); }
+.daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(2.8) contrast(8) url(#daymap-dilate) invert(1); }
+[data-theme="dark"] .daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(2.8) contrast(8) url(#daymap-dilate); }
 /* Web (wide): a lighter dilate so the bold grid doesn't overwhelm the street
    labels sitting on top of it. App (<=700px) keeps the bolder grid above. */
 @media (min-width: 701px) {
-  .daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(2.8) contrast(8) url(#daymap-dilate-soft); }
+  .daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(2.8) contrast(8) url(#daymap-dilate-soft) invert(1); }
+  [data-theme="dark"] .daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(2.8) contrast(8) url(#daymap-dilate-soft); }
 }
 /* Web-only labels ride in their own pane (see ensureDayMap) so the street-line
-   dilate above never touches the text. Whiten it gently — NO dilate, NO hard
-   contrast — so street names stay thin and legible over the grid. */
-.daymap.map .leaflet-daylabels-pane { filter: saturate(0) brightness(1.7) contrast(1.15); }
+   dilate above never touches the text. Gently whiten, then invert(1) in light
+   theme so the names come out dark on the white ground; dark theme keeps the
+   whitened text on black. NO dilate, NO hard contrast — names stay thin. */
+.daymap.map .leaflet-daylabels-pane { filter: saturate(0) brightness(1.7) contrast(1.15) invert(1); }
+[data-theme="dark"] .daymap.map .leaflet-daylabels-pane { filter: saturate(0) brightness(1.7) contrast(1.15); }
 /* film-grain overlay above the tiles, below the pins (Leaflet marker pane is z 600) */
 .daymap.map::after {
   content: ''; position: absolute; inset: 0; z-index: 450; pointer-events: none;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
-  opacity: .09; mix-blend-mode: screen;   /* light speckle, like sensor noise */
+  opacity: .07; mix-blend-mode: multiply;   /* dark speckle on the light ground */
+}
+[data-theme="dark"] .daymap.map::after {
+  opacity: .09; mix-blend-mode: screen;     /* light speckle, like sensor noise */
 }
 .daymap-cap { font-family: var(--sans); font-size: 10.5px; color: var(--ink-mute); line-height: 1.4; padding: 0 1px; }
 
@@ -610,7 +717,8 @@ a { color: inherit; }
 
 /* active (selected) pin — slightly larger + white border ring */
 .day-pin.active { filter: drop-shadow(0 2px 8px rgba(145,4,12,.55)); }
-.day-pin.active span { width: 32px; height: 32px; outline: 2.5px solid #fff; outline-offset: 1px; }
+.day-pin.active span { width: 32px; height: 32px; outline: 2.5px solid var(--ink); outline-offset: 1px; }
+[data-theme="dark"] .day-pin.active span { outline-color: #fff; }
 
 /* stack the map above the activity list when the day column gets narrow */
 @media (max-width: 900px) {
@@ -630,13 +738,14 @@ a { color: inherit; }
   overflow: hidden; cursor: grab; flex-shrink: 0;
 }
 .outfit img { width: 100%; height: 100%; object-fit: contain; }
-.outfit .del { position: absolute; bottom: 2px; right: 2px; width: 15px; height: 15px; border-radius: 50%; border: none; background: rgba(255,255,255,.85); color: var(--ink-soft); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; line-height: 1; padding: 0; }
+.outfit .del { position: absolute; bottom: 2px; right: 2px; width: 15px; height: 15px; border-radius: 50%; border: none; background: var(--chip-glass); color: var(--ink-soft); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; line-height: 1; padding: 0; }
 .add-outfit {
   width: 52px; height: 62px; border: 2px dashed var(--dash); border-radius: var(--r-btn);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  cursor: pointer; background: #faf8f4; outline: none; flex-shrink: 0;
+  cursor: pointer; background: var(--hover-soft); outline: none; flex-shrink: 0;
 }
 .add-outfit span { font-family: var(--sans); font-size: 10px; color: var(--ink-mute); }
+.add-outfit svg { color: var(--gold); }   /* icons use currentColor -> theme-aware */
 
 /* ---- Budget modal ---- */
 /* ============================================================
@@ -744,7 +853,7 @@ a { color: inherit; }
 .opt .name { font-family: var(--sans); font-size: 16px; font-weight: 700; color: var(--ink); border: none; background: transparent; padding: 0; flex: 1; min-width: 0; outline-offset: 2px; }
 .opt .badge { font-family: var(--sans); font-size: 9px; font-weight: 700; color: var(--green); background: var(--green-bg); border-radius: var(--r-pill); padding: 3px 9px; letter-spacing: .06em; text-transform: uppercase; flex-shrink: 0; }
 .opt .rm { flex-shrink: 0; width: 28px; height: 28px; border: none; background: transparent; color: var(--ink-faint); cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: var(--r-xs); transition: color .15s, background .15s; }
-.opt .rm:hover { color: var(--red); background: #fef2f2; }
+.opt .rm:hover { color: var(--red); background: var(--rm-hover); }
 .opt .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; }
 .opt .fld { display: flex; flex-direction: column; gap: 4px; }
 .opt .fld label { font-family: var(--sans); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-mute); }
@@ -911,7 +1020,7 @@ a { color: inherit; }
   width: 15px; height: 15px;
   border-radius: 50%;
   border: none;
-  background: rgba(255,255,255,.88);
+  background: var(--chip-glass);
   color: var(--ink-soft);
   cursor: pointer;
   display: none;
@@ -1067,7 +1176,32 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   border-radius: var(--r-card);
   border: 1px solid var(--line);
 }
-.main-map-leaflet.leaflet-container { background: #e0d8cc; font-family: var(--sans); }
+.main-map-leaflet.leaflet-container { background: var(--map-sea); font-family: var(--sans); }
+
+/* Theme-aware Leaflet vectors: Leaflet writes colors as SVG presentation
+   attributes at layer creation; these CLASS rules override them, so the
+   map re-themes instantly on toggle with zero JS. */
+.map-land       { fill: var(--map-land); stroke: var(--map-land-line); }
+.map-route-line { stroke: var(--map-route); }
+.map-ep-dot     { stroke: var(--line); fill: var(--surface); }
+.map-stop-dot   { stroke: var(--red); fill: var(--red); }
+.day-route-line { stroke: #1a1a1a; }                       /* dark dashes on the light day map */
+[data-theme="dark"] .day-route-line { stroke: #ffffff; }   /* white dashes on the night map */
+/* transport-leg polylines: light theme keeps the exact MODE_HEX attribute
+   colors (no rule = attribute wins); dark theme lifts them to the bright set */
+[data-theme="dark"] .leg-flight          { stroke: var(--red); }
+[data-theme="dark"] .leg-train           { stroke: var(--green); }
+[data-theme="dark"] .leg-overnight-train { stroke: var(--green-dark); }
+[data-theme="dark"] .leg-flying-blue     { stroke: var(--gold); }
+[data-theme="dark"] .leg-bus             { stroke: #6E96BE; }
+
+/* itinerary mini "paper map" SVG + main-map card leader lines
+   (inline SVG — class rules beat presentation attributes) */
+.mini-sea    { fill: var(--mini-sea); }
+.mini-land   { fill: var(--mini-land); stroke: var(--mini-border); }
+.mini-route  { stroke: var(--mini-route); }
+.mini-leader { stroke: var(--mini-leader); }
+.mini-dot    { stroke: var(--mini-ring); }
 
 /* smooth rounded joins on country border paths */
 .map-country { stroke-linejoin: round; stroke-linecap: round; }
@@ -1075,7 +1209,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 /* city name labels on the minimal basemap */
 .map-city-label {
   font-family: var(--sans); font-size: 7.5px; font-weight: 600;
-  color: #c9a868; text-transform: uppercase; letter-spacing: .09em;
+  color: var(--map-label); text-transform: uppercase; letter-spacing: .09em;
   white-space: nowrap; pointer-events: none; line-height: 1;
   padding-left: 2px;
 }
@@ -1207,7 +1341,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   position: absolute; inset: 0;
   border-radius: var(--r-card);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--card-glass);
   box-shadow: 0 2px 10px rgba(33,26,24,.10);
   backface-visibility: hidden; -webkit-backface-visibility: hidden;
   overflow: hidden;
@@ -1235,7 +1369,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .mc-dates-display {
   font-size: 6cqw;
   /* bolder + a touch darker so the dates don't blend into the translucent card */
-  font-family: var(--sans); color: #2c6a37; font-weight: 700; letter-spacing: .01em;
+  font-family: var(--sans); color: var(--mc-dates); font-weight: 700; letter-spacing: .01em;
 }
 .mc-hotel-display {
   font-size: 7.5cqw;
@@ -1330,7 +1464,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .map-ep {
   position: absolute; z-index: 3;
   display: flex; flex-direction: column; gap: 1px;
-  background: rgba(245,242,236,.92); border: 1px solid var(--line);
+  background: var(--ep-glass); border: 1px solid var(--line);
   border-radius: var(--r-sm); padding: 5px 8px;
   backdrop-filter: blur(4px);
 }
@@ -1352,7 +1486,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   transform: translateX(-50%);
   z-index: 4;
   font-family: var(--sans); font-size: 18px; font-weight: 800; line-height: 1;
-  color: #fff; background: var(--brown); border: none; border-radius: var(--r-btn);
+  color: var(--on-brown); background: var(--brown); border: none; border-radius: var(--r-btn);
   width: 36px; height: 36px; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 2px 8px rgba(33,26,24,.28);
@@ -1480,6 +1614,25 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   outline: none; caret-color: var(--red);
   will-change: transform;
 }
+/* dark-mode toggle — top right of the intro (first) page, both layouts.
+   Direct child of .intro-overlay (like .intro-hint): .intro-inner clips
+   overflow, and the globe is z-index 3 — so sit above it at z 4. */
+.intro-theme {
+  position: absolute;
+  top: max(18px, env(safe-area-inset-top));
+  right: max(18px, env(safe-area-inset-right));
+  z-index: 4;
+  width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line); border-radius: var(--r-pill);
+  background: var(--surface); color: var(--ink); cursor: pointer;
+  transition: transform .15s;
+}
+.intro-theme:hover { transform: scale(1.06); }
+.intro-theme .ic-sun { display: none; }                        /* light: show moon */
+[data-theme="dark"] .intro-theme .ic-moon { display: none; }   /* dark: show sun  */
+[data-theme="dark"] .intro-theme .ic-sun  { display: block; }
+
 .intro-hint {
   position: absolute; bottom: max(20px, env(safe-area-inset-bottom)); left: 50%;
   transform: translateX(-50%);

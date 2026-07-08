@@ -638,6 +638,10 @@
         </div>
         <button class="intro-hint" aria-label="Continue to the planner"><span>scroll</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+        </button>
+        <button class="intro-theme" aria-label="Toggle dark mode" title="Toggle dark mode">
+          <svg class="ic-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+          <svg class="ic-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
         </button>`;
       document.body.appendChild(overlay);
       this._introEl = overlay;
@@ -655,6 +659,26 @@
       this._buildIntroGlobe(svg);                       // graticule + stops now…
       this._ensureAtlas().then(() => this._buildIntroGlobe(svg));   // …continents when the atlas lands
       this._introGlobeRefresh = () => this._buildIntroGlobe(svg);   // stops added while intro open
+
+      // ---- dark-mode toggle (top right; theme applies app-wide, both versions).
+      // data-theme lives on <html> so it survives the intro parking; the boot
+      // script in index.html re-applies it pre-paint on reload. ----
+      const THEME_KEY = 'europe-trip-theme-v1';
+      const themeBtn = overlay.querySelector('.intro-theme');
+      const themeMeta = document.querySelector('meta[name="theme-color"]');  // absent in standalone.html
+      const applyTheme = (dark) => {
+        if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+        else document.documentElement.removeAttribute('data-theme');
+        themeBtn.setAttribute('aria-pressed', String(dark));
+        if (themeMeta) themeMeta.setAttribute('content', dark ? '#121210' : '#e8e4dc');
+        try { localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light'); } catch (e) {}
+        this._buildIntroGlobe(svg);   // globe strokes re-read --ink/--red
+      };
+      themeBtn.addEventListener('click', () =>
+        applyTheme(document.documentElement.getAttribute('data-theme') !== 'dark'));
+      const bootedDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      themeBtn.setAttribute('aria-pressed', String(bootedDark));
+      if (bootedDark && themeMeta) themeMeta.setAttribute('content', '#121210');
 
       // ---- seamless scroll driver: the intro and the trip page behave like
       // one tall page. Wheel/touch track ~1:1; fully scrolled the intro PARKS
@@ -796,7 +820,10 @@
         }
         return d;
       };
-      const ink = '#000000';
+      // theme-aware: rebuilt on toggle (applyTheme -> _buildIntroGlobe)
+      const cs = getComputedStyle(document.documentElement);
+      const ink = cs.getPropertyValue('--ink').trim() || '#000000';
+      const dot = cs.getPropertyValue('--red').trim() || '#91040C';
       let out = `<circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="${ink}" stroke-width="1.1" opacity=".55"/>`;
       // graticule — meridians + parallels every 30°
       let grat = '';
@@ -830,8 +857,8 @@
       for (let i = 1; i < pj.length; i++) {
         if (pj[i - 1] && pj[i]) links += `<line x1="${pj[i-1][0].toFixed(1)}" y1="${pj[i-1][1].toFixed(1)}" x2="${pj[i][0].toFixed(1)}" y2="${pj[i][1].toFixed(1)}"/>`;
       }
-      out += `<g stroke="#91040C" stroke-width="1.2" stroke-dasharray="4 4" opacity=".8">${links}</g>`;
-      out += `<g fill="#91040C">${pj.filter(Boolean).map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4.2"/>`).join('')}</g>`;
+      out += `<g stroke="${dot}" stroke-width="1.2" stroke-dasharray="4 4" opacity=".8">${links}</g>`;
+      out += `<g fill="${dot}">${pj.filter(Boolean).map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4.2"/>`).join('')}</g>`;
       svg.innerHTML = out;
     }
 
@@ -1300,7 +1327,9 @@
         const marker = L.circleMarker(p.coord, {
           radius: ep ? 6 : 8, color: ep ? '#000000' : '#91040C', weight: ep ? 2 : 0,
           fillColor: ep ? '#ffffff' : '#91040C', fillOpacity: 1,
-          className: ep ? '' : 'map-stop-dot'
+          // attribute colors above are light-theme fallbacks; the class rules
+          // (.map-ep-dot / .map-stop-dot) override them and follow the theme
+          className: ep ? 'map-ep-dot' : 'map-stop-dot'
         });
         if (!ep && stopIdx != null) marker.on('click', () => this.openStop(stopIdx));
         this.mapMarkers.addLayer(marker);
@@ -1310,7 +1339,7 @@
         if (!a.coord || !b.coord) continue;
         const color = MODE_HEX[leg.mode] || '#7a7260';
         const dashed = leg.mode === 'flight' || leg.mode === 'flying-blue';
-        this.mapLines.addLayer(L.polyline([a.coord, b.coord], { color, weight: 3, opacity: .85, dashArray: dashed ? '6 6' : null }));
+        this.mapLines.addLayer(L.polyline([a.coord, b.coord], { color, weight: 3, opacity: .85, dashArray: dashed ? '6 6' : null, className: 'leg-' + leg.mode }));
       }
       if (bounds.length === 1) changed ? this.leafletMap.flyTo(bounds[0], 5, { duration: .8 }) : this.leafletMap.setView(bounds[0], 5);
       else if (bounds.length > 1) changed ? this.leafletMap.flyToBounds(bounds, { padding: [26, 26], duration: .8 }) : this.leafletMap.fitBounds(bounds, { padding: [26, 26] });
@@ -1393,7 +1422,7 @@
         const countries = this._smoothCountries(topo.feature(world, world.objects.countries));
         window.L.geoJSON(
           countries,
-          { style: { fillColor: '#000000', fillOpacity: 1, color: '#47403a', weight: 3, opacity: 1, lineJoin: 'round', lineCap: 'round' } }
+          { style: { fillColor: '#000000', fillOpacity: 1, color: '#47403a', weight: 3, opacity: 1, lineJoin: 'round', lineCap: 'round', className: 'map-land' } }   // .map-land CSS themes fill/stroke
         ).addTo(this.mainMapLand);
         this._addMinimalCityLabels();
         this._positionMainCards();
@@ -1479,7 +1508,7 @@
       const polyCoords = [];
       coords.forEach((c) => { if (c) polyCoords.push(c); });
       if (polyCoords.length > 1) {
-        L.polyline(polyCoords, { color: '#000000', weight: 2.2, opacity: 0.65 }).addTo(this.mainMapLines);
+        L.polyline(polyCoords, { color: '#000000', weight: 2.2, opacity: 0.65, className: 'map-route-line' }).addTo(this.mainMapLines);
       }
 
       // Numbered pins rendered in overlay div (outside Leaflet — no overflow clipping)
@@ -1736,7 +1765,7 @@
         const cx = parseFloat(cardEl.style.left) + CARD_W / 2;
         const cy = parseFloat(cardEl.style.top) + CARD_H / 2;
         if (isNaN(cx) || isNaN(cy)) return;
-        linesHTML += `<line x1="${pinPt.x.toFixed(1)}" y1="${pinPt.y.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${cy.toFixed(1)}" stroke="oklch(40% 0.012 70)" stroke-width="0.9" stroke-dasharray="5 4" opacity="0.28"/>`;
+        linesHTML += `<line class="mini-leader" x1="${pinPt.x.toFixed(1)}" y1="${pinPt.y.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${cy.toFixed(1)}" stroke="oklch(40% 0.012 70)" stroke-width="0.9" stroke-dasharray="5 4" opacity="0.28"/>`;
       });
       this.mainLeadersEl.innerHTML = linesHTML;
     }
@@ -1914,7 +1943,7 @@
         });
         this.dayMarkers.addLayer(marker);
       });
-      if (pts.length > 1) this.dayLines.addLayer(L.polyline(pts, { color: '#ffffff', weight: 1.8, opacity: .6, dashArray: '6 8' }));   // thin, light white dashes over the black night map
+      if (pts.length > 1) this.dayLines.addLayer(L.polyline(pts, { color: '#ffffff', weight: 1.8, opacity: .6, dashArray: '6 8', className: 'day-route-line' }));   // .day-route-line CSS: dark dashes on the light map, white on the night map
       if (pts.length === 1) this.dayMap.setView(pts[0], 14);
       else if (pts.length > 1) this.dayMap.fitBounds(pts, { padding: [30, 30], maxZoom: 15 });
       else if (cityCoord) this.dayMap.setView(cityCoord, 11);
@@ -2443,14 +2472,14 @@
           ccx = Math.max(1, Math.min(591, rawX)) + CARD_W_SVG / 2;
           ccy = Math.max(1, Math.min(396, rawY)) + CARD_H_SVG / 2;
         }
-        leadersSvg += `<line x1="${sx}" y1="${sy}" x2="${ccx.toFixed(1)}" y2="${ccy.toFixed(1)}" stroke="oklch(40% 0.012 70)" stroke-width="0.9" stroke-dasharray="5 4" opacity="0.28"/>`;
-        dotsSvg += `<circle cx="${sx}" cy="${sy}" r="11" style="fill:var(--red)" stroke="oklch(97% 0.005 60)" stroke-width="2"/>`;
+        leadersSvg += `<line class="mini-leader" x1="${sx}" y1="${sy}" x2="${ccx.toFixed(1)}" y2="${ccy.toFixed(1)}" stroke="oklch(40% 0.012 70)" stroke-width="0.9" stroke-dasharray="5 4" opacity="0.28"/>`;
+        dotsSvg += `<circle class="mini-dot" cx="${sx}" cy="${sy}" r="11" style="fill:var(--red)" stroke="oklch(97% 0.005 60)" stroke-width="2"/>`;
       });
 
       const bgSvg = `<svg class="map-bg" viewBox="0 0 740 480" xmlns="http://www.w3.org/2000/svg">
-        <rect width="740" height="480" fill="oklch(95.5% 0.004 70)"/>
+        <rect class="mini-sea" width="740" height="480" fill="oklch(95.5% 0.004 70)"/>
         <!-- Continental Europe + Iberia -->
-        <path fill="oklch(91% 0.008 70)" stroke="oklch(75% 0.01 70)" stroke-width="0.7" d="
+        <path class="mini-land" fill="oklch(91% 0.008 70)" stroke="oklch(75% 0.01 70)" stroke-width="0.7" d="
           M 210 223 L 165 236 L 97 267 L 100 295 L 144 369
           L 59 362 L 34 381 L 18 418 L 6 456 L 30 480
           L 160 480 L 200 476 L 215 413 L 270 374 L 320 316
@@ -2461,16 +2490,16 @@
           L 650 40 L 612 53 L 530 120 L 400 154 L 338 82 L 322 107 L 335 137
           L 300 152 L 255 190 Z"/>
         <!-- Scandinavian Peninsula -->
-        <path fill="oklch(91% 0.008 70)" stroke="oklch(75% 0.01 70)" stroke-width="0.7" d="
+        <path class="mini-land" fill="oklch(91% 0.008 70)" stroke="oklch(75% 0.01 70)" stroke-width="0.7" d="
           M 338 82 L 302 80 L 270 32 L 266 0 L 476 0 L 495 54 L 450 116 L 404 128 L 370 87 Z"/>
         <!-- Great Britain -->
-        <path fill="oklch(91% 0.008 70)" stroke="oklch(75% 0.01 70)" stroke-width="0.7" d="
+        <path class="mini-land" fill="oklch(91% 0.008 70)" stroke="oklch(75% 0.01 70)" stroke-width="0.7" d="
           M 88 70 C 110 66 158 95 202 215 C 188 229 170 232 76 240
           C 82 202 90 148 80 130 C 72 108 70 82 88 70 Z"/>
         <!-- Ireland -->
-        <path fill="oklch(91% 0.008 70)" stroke="oklch(75% 0.01 70)" stroke-width="0.7" d="
+        <path class="mini-land" fill="oklch(91% 0.008 70)" stroke="oklch(75% 0.01 70)" stroke-width="0.7" d="
           M 52 130 L 70 134 L 65 192 L 31 208 L 4 213 L 2 150 Z"/>
-        ${routeD ? `<path d="${routeD}" fill="none" stroke="oklch(22% 0.025 70)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
+        ${routeD ? `<path class="mini-route" d="${routeD}" fill="none" stroke="oklch(22% 0.025 70)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
         ${leadersSvg}${dotsSvg}
       </svg>`;
 
@@ -2599,10 +2628,10 @@
         <div class="sticker-panel__strip" data-drop="sticker-zone">
           ${items}
           <div class="add-outfit" data-act="sticker-panel-add" tabindex="0" title="Click, paste, or drop to add photos">
-            ${svg(I.plus, { w: 14, h: 14, sw: 2.2, stroke: '#C8901F' })}<span>Add</span>
+            ${svg(I.plus, { w: 14, h: 14, sw: 2.2, stroke: 'currentColor' })}<span>Add</span>
           </div>
           <div class="add-outfit paste-tile" data-act="sticker-paste" tabindex="0" title="Paste a copied/lifted image">
-            ${svg(I.clipboard, { w: 14, h: 14, sw: 2, stroke: '#C8901F' })}<span>Paste</span>
+            ${svg(I.clipboard, { w: 14, h: 14, sw: 2, stroke: 'currentColor' })}<span>Paste</span>
           </div>
         </div>
         <input type="file" accept="image/*" multiple class="sticker-file" data-ch="sticker-file" style="display:none">
@@ -2694,8 +2723,8 @@
           <div class="mid">
             <input class="text" value="${escA(it.text)}" data-ch="item-text" data-i="${ii}" placeholder="">
             <div class="meta">
-              <div class="field">${svg(I.pin, { w: 11, h: 11, stroke: '#a89e8c' })}<input value="${escA(it.address)}" data-ch="item-address" data-i="${ii}" placeholder="Address">${hasAddr ? `<a class="maps" href="https://maps.google.com/?q=${encodeURIComponent(it.address || '')}" target="_blank" rel="noopener" title="Open in Maps">↗</a>` : ''}</div>
-              <div class="field">${svg(I.msg, { w: 11, h: 11, stroke: '#a89e8c' })}<input value="${escA(it.note)}" data-ch="item-note" data-i="${ii}" placeholder="Note"></div>
+              <div class="field">${svg(I.pin, { w: 11, h: 11, stroke: 'currentColor' })}<input value="${escA(it.address)}" data-ch="item-address" data-i="${ii}" placeholder="Address">${hasAddr ? `<a class="maps" href="https://maps.google.com/?q=${encodeURIComponent(it.address || '')}" target="_blank" rel="noopener" title="Open in Maps">↗</a>` : ''}</div>
+              <div class="field">${svg(I.msg, { w: 11, h: 11, stroke: 'currentColor' })}<input value="${escA(it.note)}" data-ch="item-note" data-i="${ii}" placeholder="Note"></div>
               <div class="cost-field"><span class="d">$</span><input value="${escA(it.cost)}" data-ch="item-cost" data-i="${ii}" inputmode="numeric"></div>
             </div>
           </div>
@@ -2747,9 +2776,9 @@
                 <div class="hd"><div class="t">Closet</div><span class="hint">add an outfit, then drag it onto any date</span></div>
                 <div class="strip">${stripCells}
                   <div class="add-outfit" data-act="closet-add" data-drop="closet-zone" tabindex="0" title="Paste, drop, or tap to add an outfit">
-                    ${svg(I.plus, { w: 16, h: 16, sw: 2.2, stroke: '#C8901F' })}<span>Add</span></div>
+                    ${svg(I.plus, { w: 16, h: 16, sw: 2.2, stroke: 'currentColor' })}<span>Add</span></div>
                   <div class="add-outfit paste-tile" data-act="closet-paste" tabindex="0" title="Paste a copied/lifted image">
-                    ${svg(I.clipboard, { w: 15, h: 15, sw: 2, stroke: '#C8901F' })}<span>Paste</span></div>
+                    ${svg(I.clipboard, { w: 15, h: 15, sw: 2, stroke: 'currentColor' })}<span>Paste</span></div>
                   <input type="file" accept="image/*" class="closet-file" data-ch="closet-file" style="display:none">
                 </div>
               </div>
@@ -3142,7 +3171,7 @@
         di.textContent = label;
         Object.assign(di.style, {
           position: 'fixed', top: '-200px', left: '-200px', maxWidth: '220px',
-          padding: '7px 12px', borderRadius: '8px', background: '#000000', color: '#fff',
+          padding: '7px 12px', borderRadius: '8px', background: 'var(--brown)', color: 'var(--on-brown)',
           fontFamily: 'Sora, system-ui, sans-serif', fontSize: '12px', fontWeight: '600',
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           boxShadow: '0 4px 14px rgba(35,20,12,.3)',
