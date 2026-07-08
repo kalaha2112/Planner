@@ -404,11 +404,8 @@
 
   /* ---- icons (Lucide-style) ---- */
   const I = {
-    reset: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
     undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
     sync: '<path d="M21 12a9 9 0 0 0-15-6.7L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 15 6.7L21 16"/><path d="M21 21v-5h-5"/>',
-    download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>',
-    upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 9l5-5 5 5"/><path d="M12 4v12"/>',
     calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/>',
     building: '<path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v.01"/><path d="M9 12v.01"/><path d="M9 15v.01"/><path d="M9 18v.01"/>',
     bed: '<path d="M2 20V10a3 3 0 0 1 3-3h14a3 3 0 0 1 3 3v10"/><path d="M2 20h20"/><rect x="6" y="10" width="5" height="4" rx="1.5"/><rect x="13" y="10" width="5" height="4" rx="1.5"/>',
@@ -2117,12 +2114,6 @@
       if (this._openMapCardIdx === from) this._openMapCardIdx = to;   // popup follows its stop
       this.bump();
     }
-    resetRoute() {
-      if (!confirm('Reset this route to its default state? This cannot be undone.')) return;
-      this.snapshot();
-      this.data.trips[this.data.active] = clone(DEFAULT_STATE.trips[this.data.active] || Object.values(DEFAULT_STATE.trips)[0]);
-      this.bump();
-    }
     addTrip() {
       const key = 'trip' + Date.now();
       const n = Object.keys(this.data.trips).length + 1;
@@ -2274,27 +2265,6 @@
     }
 
     /* ---------- export / import ---------- */
-    exportState() {
-      const blob = new Blob([JSON.stringify(this.data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = 'europe-trip-state.json';
-      document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-    }
-    importFile(e) {
-      const file = e.target.files[0]; if (!file) return;
-      if (!confirm('Import will replace your current trip data. Continue?')) { e.target.value = ''; return; }
-      const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          const parsed = JSON.parse(reader.result);
-          if (!parsed.trips || !parsed.meta) throw new Error('bad');
-          this.snapshot();
-          this.data = parsed; this.migrate(); this._lastCoordKey = ''; this.bump();
-        } catch (err) { alert('Could not read that file — make sure it is a JSON export from this tool.'); }
-      };
-      reader.readAsText(file); e.target.value = '';
-    }
-
     /* ---------- budget computation ---------- */
     computeBudget(trip, travelers, nights) {
       const meta = this.data.meta;
@@ -2354,12 +2324,10 @@
       const milesNeeded = legs.reduce((s, l) => s + (l.mode === 'flying-blue' ? (Number(l.miles) || 0) : 0), 0) * travelers;
       const budget = this.computeBudget(trip, travelers, nights);
 
-      let dateRangeStr = '';
-      if (d) { const days = Math.max(0, Math.round((d.home - d.origin) / 86400000)); dateRangeStr = fmt(d.origin) + ' – ' + fmt(d.home) + ' · ' + days + ' days'; }
 
       const html = `
         <div class="page" style="position:relative">
-          ${this.renderHeader(meta, dateRangeStr)}
+          ${this.renderHeader()}
           ${this.renderTabs()}
           ${this.renderMeta(trip, travelers)}
           <div class="body-cols">
@@ -2418,7 +2386,7 @@
       this.updateTopActions();
     }
 
-    renderHeader(meta, dateRangeStr) {
+    renderHeader() {
       // undo/sync/memory + the theme toggle live in the fixed .top-actions
       // cluster (initTopActions): always visible on the intro, the trip page,
       // and above open modals.
@@ -3065,9 +3033,6 @@
       switch (act) {
         case 'undo': this.undo(); break;
         case 'toggle-theme': this.toggleTheme(); break;
-        case 'reset': this.resetRoute(); break;
-        case 'export': this.exportState(); break;
-        case 'import': this.root.querySelector('.import-file').click(); break;
         case 'add-trip': this.addTrip(); break;
         case 'tab-select': if (this.data.active !== key) { this.data.active = key; this._lastCoordKey = ''; this._openMapCardIdx = null; this._openMapCardFlipped = false; this.bump(); } break;
         case 'tab-remove': this.removeTrip(key); break;
@@ -3137,7 +3102,6 @@
       const i = t.dataset.i != null ? Number(t.dataset.i) : null;
       const trip = this.currentTrip(); const meta = this.data.meta;
       switch (ch) {
-        case 'trip-title': meta.title = v; this.bump(); break;
         case 'tab-rename': this.data.trips[t.dataset.key].label = v; this.bump(); break;
         case 'depart': trip.depart = v; this.bump(); break;
         case 'return': trip.returnDate = v; this.bump(); break;
@@ -3156,7 +3120,6 @@
         case 'stop-nights': trip.stops[i].nights = Number(v) || 0; this.bump(); break;
         case 'stop-order': { const newIdx = Math.max(0, Math.min(trip.stops.length - 1, (Number(v) || 1) - 1)); if (newIdx !== i) { this.snapshot(); this.reorderStop(i, newIdx); } break; }
         case 'todo-text': meta.todos[i].text = v; this.bump(); break;
-        case 'import-file': this.importFile(e); break;
         case 'sync-code-in': this._syncCodeDraft = v; break;
         // itinerary modal
         case 'iti-city': trip.stops[this.openStopIdx].city = v; this.bump(); break;

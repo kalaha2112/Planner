@@ -180,19 +180,6 @@ a { color: inherit; }
    ============================================================ */
 .header { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
 
-.trip-title {
-  font-family: var(--serif);
-  font-size: 42px; font-weight: 900; letter-spacing: -.025em;
-  line-height: 1; color: var(--ink);
-  border: none; background: transparent; padding: 0;
-  field-sizing: content; min-width: 2ch; max-width: 100%;
-  outline-offset: 4px;
-}
-.date-badge {
-  font-family: var(--caps);
-  font-size: 17px; letter-spacing: .04em;
-  color: var(--green); line-height: 1;
-}
 .saved {
   font-family: var(--script); font-style: italic; font-weight: 300; font-size: 13px;
   color: var(--green); margin-left: auto;
@@ -208,7 +195,6 @@ a { color: inherit; }
 }
 .tool-btn:hover { color: var(--ink); }
 .tool-btn:disabled { opacity: .35; cursor: not-allowed; pointer-events: none; }
-.tool-lbl { display: none; }
 .toolbar-divider {
   width: 1px;
   height: 22px;
@@ -638,11 +624,6 @@ a { color: inherit; }
      streets reading as light veins (city lights from orbit). */
 .daymap.map.leaflet-container { background: #f2f0ec; }   /* unloaded tile area, light */
 [data-theme="dark"] .daymap.map.leaflet-container { background: #0a0a0a; }
-/* On dark-matter tiles the land (~#26) and the minor streets (~#35) are only
-   ~15 levels apart, so a gentle contrast can't separate them. Lift both with a
-   modest brightness, then a HARD contrast(6) pivots between them: the land
-   clips to near-black while every street + label swings up to white.
-   (verified numerically: land -> 7, minor streets -> 254, roads/labels -> 255) */
 /* brighten so the land/street midpoint lands on the contrast pivot, then hard
    contrast splits them. Verified numerically on dark-matter tones: land and
    water clip to pure black (0), all street classes + labels saturate to pure
@@ -1113,9 +1094,6 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    PHONE (≤480px) — after the 720px block so phone wins
    ============================================================ */
 @media (max-width: 480px) {
-  /* trip title: tighter than the 38px set in the 720px block */
-  .trip-title { font-size: 30px; }
-
   /* stop city: 28px clips behind the iti-btn and nights on narrow screens */
   .stop .city { font-size: 20px; letter-spacing: .04em; }
 
@@ -1275,7 +1253,6 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     display: flex; flex-direction: column;
     overflow: hidden; padding-bottom: 30px;
   }
-  .trip-title { font-size: 38px; }
   .body-cols {
     flex: 1 1 0; min-height: 0;
     flex-wrap: nowrap; overflow: hidden;
