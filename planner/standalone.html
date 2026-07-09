@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-09T05:22:55.993Z
+  Built: 2026-07-09T15:06:00.368Z
 -->
 
 <html lang="en">
@@ -1740,6 +1740,8 @@ a { color: inherit; }
 }
 .stock-item:hover .stock-item__del { display: flex; }
 .tool-btn.active { background: var(--line-2); color: var(--ink); }
+/* sync button: no beige fill even when linked/active — its dot shows status */
+.sync-toggle-btn.active { background: transparent; }
 
 @media (max-width: 720px) {
   .sticker-panel { right: 16px; width: calc(100vw - 32px); }
@@ -2329,6 +2331,13 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   right: max(14px, env(safe-area-inset-right));
   z-index: 1600;
   display: flex; align-items: center; gap: 6px;
+}
+/* the (intro-only) sync button lives at the TOP-LEFT instead of in the cluster;
+   pulling it out of the flex flow leaves undo/memory/theme grouped top-right */
+.top-actions .sync-toggle-btn {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(14px, env(safe-area-inset-left));
 }
 .theme-btn {
   width: 34px; height: 34px;
