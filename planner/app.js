@@ -658,12 +658,21 @@
       if (this._introGlobeRefresh) this._introGlobeRefresh();   // globe strokes re-read --ink/--red
       this.updateTopActions();
     }
+    _anyModalOpen() {
+      return this.syncOpen || this.budgetOpen || this.stickerPanelOpen ||
+        this.accomOpenIdx != null || this.transportOpenIdx != null || this.openStopIdx != null;
+    }
     updateTopActions() {
       const ta = this.topActionsEl; if (!ta) return;
       const undoBtn = ta.querySelector('[data-act="undo"]');
       if (undoBtn) undoBtn.disabled = !this._history.length;
       const syncBtn = ta.querySelector('.sync-toggle-btn');
-      if (syncBtn) syncBtn.classList.toggle('active', this.isLinked());
+      if (syncBtn) {
+        syncBtn.classList.toggle('active', this.isLinked());
+        // sync lives on the intro page only: hide it once scrolled to the trip
+        // page (parked) or while any modal/panel is open
+        syncBtn.style.display = (this._introParked || this._anyModalOpen()) ? 'none' : '';
+      }
       const dot = ta.querySelector('.sync-dot');
       if (dot) dot.className = 'sync-dot s-' + (this.isLinked() ? this._syncStatus : 'off');
       const memBtn = ta.querySelector('.sticker-toggle-btn');
@@ -757,6 +766,7 @@
         appRoot.style.transform = '';                              // hand the trip page back to native flow
         appRoot.style.willChange = '';                             // (so scroll + position:fixed work normally)
         document.documentElement.classList.remove('intro-lock');   // page scrolls natively again
+        this._introParked = true; this.updateTopActions();         // hide the intro-only sync button
       };
       const unpark = () => {
         if (!parked) return;
@@ -764,6 +774,7 @@
         overlay.classList.remove('intro-parked');
         appRoot.style.willChange = 'transform';
         document.documentElement.classList.add('intro-lock');
+        this._introParked = false; this.updateTopActions();        // sync button returns with the intro
       };
       const apply = () => {
         raf = 0;
