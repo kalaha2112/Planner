@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-09T15:06:00.368Z
+  Built: 2026-07-09T20:18:52.513Z
 -->
 
 <html lang="en">
@@ -2294,11 +2294,10 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   padding: 13vh 0 0 6vw;   /* headline sits a little lower down the page */
   overflow: hidden;
 }
-/* globe sits RIGHT and BIGGER, vertically centred (top/bottom margins match)
-   and layered ON TOP of the headline (transparent wireframe, so the text
-   reads through it). It's taken out of flow and absolutely positioned so it
-   can overlap the text; its right margin (6vw) mirrors the headline's left
-   margin (6vw) so the page is evenly framed.
+/* globe sits RIGHT and BIGGER, vertically centred (top/bottom margins match).
+   Its right margin (6vw) mirrors the headline's left margin (6vw) so the page
+   is evenly framed. The headline is kept to a column on its LEFT so the two
+   no longer overlap.
    NOTE: positioning uses top/right only — the scroll driver writes
    `transform: rotate()` on this element, so transform can't hold layout. */
 .intro-globe {
@@ -2306,16 +2305,18 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   right: 6vw;                              /* right margin == headline left margin */
   width: min(94vh, 54vw);                  /* bigger */
   top: calc(50% - min(94vh, 54vw) / 2);    /* vertically centred */
-  z-index: 3;                              /* above the text */
+  z-index: 3;
   will-change: transform;
 }
 .intro-globe svg { display: block; width: 100%; height: auto; }
 .intro-text {
-  position: relative; z-index: 1;          /* below the globe */
-  max-width: 62vw;                         /* stays left; globe overlaps its right edge */
+  position: relative; z-index: 1;
+  /* end the column ~3vw before the globe's left edge (globe left edge =
+     100vw - 6vw - globeWidth), so the headline never overlaps the globe */
+  max-width: calc(85vw - min(94vh, 54vw));
   font-family: var(--serif); font-weight: 400;
   text-transform: uppercase;
-  font-size: clamp(26px, 4.2vw, 58px);
+  font-size: clamp(20px, 3.4vw, 44px);     /* smaller so it fits the narrower left column */
   line-height: 1.22; letter-spacing: .015em;
   color: var(--ink);
   outline: none; caret-color: var(--red);
@@ -2367,15 +2368,14 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 /* the "+" stays pinned in front while the tabs scroll behind it */
 .intro-tabs .add-trip { position: sticky; left: 0; z-index: 2; background: var(--shell); }
 @media (max-width: 700px) {
-  /* app version: text on top, globe centered beneath it — the last lines of
-     the headline overlap the top of the (transparent) globe */
+  /* app version: narrative block on top, globe fully beneath it (no overlap) */
   .intro-inner { display: flex; flex-direction: column; justify-content: center; padding: 7vh 7vw 0; }
   .intro-text  { order: 1; position: relative; z-index: 2; max-width: none; font-size: clamp(24px, 7.2vw, 42px); max-height: 56vh; }
   .intro-globe {
     order: 2; position: static; float: none; shape-outside: none;
     top: auto; right: auto;
     width: min(80vw, 48vh);
-    margin: -9vh auto 0;          /* pulls the globe up under the text's bottom lines */
+    margin: 3vh auto 0;           /* sits below the headline — no longer overlaps it */
   }
   .intro-tabs { padding: 6px 7vw; }
 }
