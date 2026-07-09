@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-09T21:45:48.860Z
+  Built: 2026-07-09T21:53:16.021Z
 -->
 
 <html lang="en">
@@ -2378,14 +2378,19 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 /* the "+" stays pinned in front while the tabs scroll behind it */
 .intro-tabs .add-trip { position: sticky; left: 0; z-index: 2; background: var(--shell); }
 @media (max-width: 700px) {
-  /* app version: narrative block on top, globe fully beneath it (no overlap) */
-  .intro-inner { display: flex; flex-direction: column; justify-content: center; padding: 7vh 7vw 0; }
+  /* app version: narrative block on top, globe fully beneath it (no overlap).
+     justify-content:flex-end anchors the globe (+ its fixed 3vh gap) to a
+     constant position near the bottom of the screen — a longer narrative
+     only grows UPWARD into the empty space above, it never pushes the globe
+     down or changes the text-globe gap. Bottom padding on .intro-inner
+     reserves room so the globe never sits under the .intro-tabs row. */
+  .intro-inner { display: flex; flex-direction: column; justify-content: flex-end; padding: 7vh 7vw 100px; }
   .intro-text  { order: 1; position: relative; z-index: 2; max-width: none; font-size: clamp(24px, 7.2vw, 42px); max-height: 56vh; }
   .intro-globe {
     order: 2; position: static; float: none; shape-outside: none;
     top: auto; right: auto;
     width: min(80vw, 48vh);
-    margin: 3vh auto 0;           /* sits below the headline — no longer overlaps it */
+    margin: 3vh auto 0;           /* fixed gap below the headline — no longer overlaps it */
   }
   .intro-tabs { padding: 6px 7vw; }
 }
