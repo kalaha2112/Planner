@@ -787,7 +787,9 @@
         return (window.scrollY || document.documentElement.scrollTop || 0) <= 1;
       };
       const onTabs = (t) => t && t.closest && t.closest('.intro-tabs');
+      const onModal = (t) => t && t.closest && t.closest('.overlay, .sticker-panel');   // sync/memory opened over the intro
       const onWheel = (e) => {
+        if (onModal(e.target)) return;                   // let the modal/panel scroll natively, don't drive the intro
         if (onTabs(e.target)) {                          // scroll the tab row sideways, don't drive the intro
           introTabsEl.scrollLeft += (e.deltaX || e.deltaY);
           e.preventDefault();
@@ -807,7 +809,7 @@
       };
       let touchY = null, touchV = 0, touchT = 0, touchDriving = false;
       const onTouchStart = (e) => {
-        if (onTabs(e.target)) { touchY = null; return; }  // let the tab row pan sideways natively
+        if (onModal(e.target) || onTabs(e.target)) { touchY = null; return; }  // let modals/panel + tab row scroll natively
         touchY = e.touches[0].clientY; touchV = 0; touchT = e.timeStamp; touchDriving = !parked;
       };
       const onTouchMove = (e) => {

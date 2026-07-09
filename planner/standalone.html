@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-09T04:43:52.897Z
+  Built: 2026-07-09T05:03:12.264Z
 -->
 
 <html lang="en">
@@ -1192,6 +1192,9 @@ a { color: inherit; }
   display: flex; justify-content: center; align-items: flex-start;
   padding: 48px 20px; overflow-y: auto;
 }
+/* sync modal can be opened from the top-actions cluster while the intro is
+   still up, so it must sit above the intro overlay (1500), below top-actions (1600) */
+.overlay[data-act="overlay-sync"] { z-index: 1550; }
 .dialog {
   background: var(--shell); width: 100%; border-radius: var(--r-modal);
   box-shadow: 0 24px 70px rgba(35,20,12,.28); overflow: hidden;
@@ -1686,7 +1689,7 @@ a { color: inherit; }
   background: var(--shell);
   border: 1.5px solid var(--line-3);
   border-radius: var(--r-card);
-  z-index: 1050;
+  z-index: 1550;   /* above the intro overlay (1500) so it shows when opened over the intro */
 }
 .sticker-panel__head {
   display: flex;
@@ -3241,7 +3244,9 @@ html { -webkit-tap-highlight-color: transparent; }
         return (window.scrollY || document.documentElement.scrollTop || 0) <= 1;
       };
       const onTabs = (t) => t && t.closest && t.closest('.intro-tabs');
+      const onModal = (t) => t && t.closest && t.closest('.overlay, .sticker-panel');   // sync/memory opened over the intro
       const onWheel = (e) => {
+        if (onModal(e.target)) return;                   // let the modal/panel scroll natively, don't drive the intro
         if (onTabs(e.target)) {                          // scroll the tab row sideways, don't drive the intro
           introTabsEl.scrollLeft += (e.deltaX || e.deltaY);
           e.preventDefault();
@@ -3261,7 +3266,7 @@ html { -webkit-tap-highlight-color: transparent; }
       };
       let touchY = null, touchV = 0, touchT = 0, touchDriving = false;
       const onTouchStart = (e) => {
-        if (onTabs(e.target)) { touchY = null; return; }  // let the tab row pan sideways natively
+        if (onModal(e.target) || onTabs(e.target)) { touchY = null; return; }  // let modals/panel + tab row scroll natively
         touchY = e.touches[0].clientY; touchV = 0; touchT = e.timeStamp; touchDriving = !parked;
       };
       const onTouchMove = (e) => {

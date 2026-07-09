@@ -468,6 +468,9 @@ a { color: inherit; }
   display: flex; justify-content: center; align-items: flex-start;
   padding: 48px 20px; overflow-y: auto;
 }
+/* sync modal can be opened from the top-actions cluster while the intro is
+   still up, so it must sit above the intro overlay (1500), below top-actions (1600) */
+.overlay[data-act="overlay-sync"] { z-index: 1550; }
 .dialog {
   background: var(--shell); width: 100%; border-radius: var(--r-modal);
   box-shadow: 0 24px 70px rgba(35,20,12,.28); overflow: hidden;
@@ -962,7 +965,7 @@ a { color: inherit; }
   background: var(--shell);
   border: 1.5px solid var(--line-3);
   border-radius: var(--r-card);
-  z-index: 1050;
+  z-index: 1550;   /* above the intro overlay (1500) so it shows when opened over the intro */
 }
 .sticker-panel__head {
   display: flex;
