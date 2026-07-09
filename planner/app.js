@@ -2393,7 +2393,6 @@
 
       const html = `
         <div class="page" style="position:relative">
-          ${this.renderHeader()}
           ${this.renderMeta(trip, travelers)}
           <div class="body-cols">
             <div class="route map-route">
@@ -2451,15 +2450,6 @@
       this.updateTopActions();
     }
 
-    renderHeader() {
-      // undo/sync/memory + the theme toggle live in the fixed .top-actions
-      // cluster (initTopActions): always visible on the intro, the trip page,
-      // and above open modals.
-      return `<div class="header">
-        <span class="saved" style="opacity:0">saved</span>
-      </div>`;
-    }
-
     renderTabs() {
       const keys = Object.keys(this.data.trips);
       const pills = keys.map(key => {
@@ -2483,6 +2473,7 @@
       return `<div class="meta-row">
         <div class="meta-field"><label>Depart</label><input type="date" value="${escA(trip.depart)}" data-ch="depart"></div>
         <div class="meta-field"><label>Return</label><input type="date" value="${escA(trip.returnDate)}" data-ch="return"></div>
+        <span class="saved" style="opacity:0">saved</span>
       </div>`;
     }
     travelersPip(travelers) {

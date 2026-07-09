@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-09T20:57:46.311Z
+  Built: 2026-07-09T21:07:47.859Z
 -->
 
 <html lang="en">
@@ -899,11 +899,6 @@ a { color: inherit; }
   display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start;
 }
 
-/* ============================================================
-   HEADER
-   ============================================================ */
-.header { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
-
 .saved {
   font-family: var(--script); font-style: italic; font-weight: 300; font-size: 13px;
   color: var(--green); margin-left: auto;
@@ -1154,7 +1149,9 @@ a { color: inherit; }
 .stat:last-child { border-bottom: none; }
 /* nights stat split into two halves: left = nights, right = travellers */
 .stat.stat-split { display: flex; padding: 0; }
-.stat-split .stat-half { flex: 1; padding: 13px 0; min-width: 0; }
+/* size each half to its content (not flex:1) so the nights half doesn't
+   stretch to fill the row, leaving a big empty gap before the divider */
+.stat-split .stat-half { flex: 0 0 auto; padding: 13px 24px 13px 0; min-width: 0; }
 .stat-split .stat-half + .stat-half { border-left: 1px solid var(--line); padding-left: 18px; }
 /* travellers half shrinks to its icons so the nights half takes the extra width */
 .stat-split .stat-travelers { flex: 0 0 auto; display: flex; align-items: center; }
@@ -2319,9 +2316,9 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .intro-globe svg { display: block; width: 100%; height: auto; }
 .intro-text {
   position: relative; z-index: 1;
-  /* end the column ~3vw before the globe's left edge (globe left edge =
-     100vw - 6vw - globeWidth), so the headline never overlaps the globe */
-  max-width: calc(85vw - min(94vh, 54vw));
+  /* end the column a small gap before the globe's left edge (globe left edge
+     = 100vw - 6vw - globeWidth), so the headline never overlaps the globe */
+  max-width: calc(90vw - min(94vh, 54vw));
   font-family: var(--serif); font-weight: 400;
   text-transform: uppercase;
   font-size: clamp(20px, 3.4vw, 44px);     /* smaller so it fits the narrower left column */
@@ -4867,7 +4864,6 @@ html { -webkit-tap-highlight-color: transparent; }
 
       const html = `
         <div class="page" style="position:relative">
-          ${this.renderHeader()}
           ${this.renderMeta(trip, travelers)}
           <div class="body-cols">
             <div class="route map-route">
@@ -4925,15 +4921,6 @@ html { -webkit-tap-highlight-color: transparent; }
       this.updateTopActions();
     }
 
-    renderHeader() {
-      // undo/sync/memory + the theme toggle live in the fixed .top-actions
-      // cluster (initTopActions): always visible on the intro, the trip page,
-      // and above open modals.
-      return `<div class="header">
-        <span class="saved" style="opacity:0">saved</span>
-      </div>`;
-    }
-
     renderTabs() {
       const keys = Object.keys(this.data.trips);
       const pills = keys.map(key => {
@@ -4957,6 +4944,7 @@ html { -webkit-tap-highlight-color: transparent; }
       return `<div class="meta-row">
         <div class="meta-field"><label>Depart</label><input type="date" value="${escA(trip.depart)}" data-ch="depart"></div>
         <div class="meta-field"><label>Return</label><input type="date" value="${escA(trip.returnDate)}" data-ch="return"></div>
+        <span class="saved" style="opacity:0">saved</span>
       </div>`;
     }
     travelersPip(travelers) {

@@ -175,11 +175,6 @@ a { color: inherit; }
   display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start;
 }
 
-/* ============================================================
-   HEADER
-   ============================================================ */
-.header { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
-
 .saved {
   font-family: var(--script); font-style: italic; font-weight: 300; font-size: 13px;
   color: var(--green); margin-left: auto;
@@ -430,7 +425,9 @@ a { color: inherit; }
 .stat:last-child { border-bottom: none; }
 /* nights stat split into two halves: left = nights, right = travellers */
 .stat.stat-split { display: flex; padding: 0; }
-.stat-split .stat-half { flex: 1; padding: 13px 0; min-width: 0; }
+/* size each half to its content (not flex:1) so the nights half doesn't
+   stretch to fill the row, leaving a big empty gap before the divider */
+.stat-split .stat-half { flex: 0 0 auto; padding: 13px 24px 13px 0; min-width: 0; }
 .stat-split .stat-half + .stat-half { border-left: 1px solid var(--line); padding-left: 18px; }
 /* travellers half shrinks to its icons so the nights half takes the extra width */
 .stat-split .stat-travelers { flex: 0 0 auto; display: flex; align-items: center; }
@@ -1595,9 +1592,11 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .intro-globe svg { display: block; width: 100%; height: auto; }
 .intro-text {
   position: relative; z-index: 1;
-  /* end the column ~3vw before the globe's left edge (globe left edge =
-     100vw - 6vw - globeWidth), so the headline never overlaps the globe */
-  max-width: calc(85vw - min(94vh, 54vw));
+  /* end the column a small gap before the globe's left edge (globe left edge
+     = 100vw - 6vw - globeWidth), so the headline never overlaps the globe.
+     gap = (88 - 87)vw = 1vw at this constant (accounts for .intro-inner's
+     6vw left padding) — verified by measuring text-right vs globe-left. */
+  max-width: calc(87vw - min(94vh, 54vw));
   font-family: var(--serif); font-weight: 400;
   text-transform: uppercase;
   font-size: clamp(20px, 3.4vw, 44px);     /* smaller so it fits the narrower left column */
