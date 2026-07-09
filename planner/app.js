@@ -2654,7 +2654,7 @@
           <div class="stat-half stat-travelers">${this.travelersPip(travelers)}</div>
         </div>
         ${SHOW_COSTS ? `<div class="stat cash clickable" data-act="open-budget" title="See budget breakdown">
-          <div class="fig">${esc(money(grand))}</div><div class="cap">total budget · ${esc(money(perPerson))} / person</div></div>
+          <div class="fig">${esc(money(grand))}</div><div class="cap">total · ${esc(money(perPerson))} / person</div></div>
         <div class="stat miles${covered ? ' covered' : ''}"><div class="fig">${miles.toLocaleString()}</div><div class="cap">reward points needed</div></div>` : ''}
       </div>`;
     }
