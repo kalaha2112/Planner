@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-09T01:59:17.764Z
+  Built: 2026-07-09T02:28:14.851Z
 -->
 
 <html lang="en">
@@ -946,14 +946,13 @@ a { color: inherit; }
 /* ============================================================
    TRIP SWITCHER
    ============================================================ */
-.tabs-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; }
 .tabs {
-  display: inline-flex; gap: 3px;
+  display: inline-flex; gap: 3px; flex-shrink: 0;
   background: var(--line-2); border: 1px solid var(--line);
   border-radius: var(--r-pill); padding: 4px;
 }
 .tab-active {
-  display: inline-flex; align-items: center;
+  display: inline-flex; align-items: center; flex-shrink: 0;
   background: var(--brown); border-radius: var(--r-pill);
   cursor: grab;
 }
@@ -970,12 +969,12 @@ a { color: inherit; }
   line-height: 1; padding: 0;
 }
 .tab-inactive {
-  font-family: var(--sans); font-size: 13px; font-weight: 600;
+  font-family: var(--sans); font-size: 13px; font-weight: 600; flex-shrink: 0;
   padding: 8px 18px; border-radius: var(--r-pill); border: none;
   background: transparent; color: var(--ink-soft); cursor: grab;
 }
 .add-trip {
-  display: flex; align-items: center; justify-content: center;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   width: 34px; height: 34px; border: 1px dashed var(--dash);
   background: transparent; border-radius: var(--r-pill); cursor: pointer;
   color: var(--ink-soft); font-family: var(--sans); font-size: 20px;
@@ -2338,19 +2337,21 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 [data-theme="dark"] .theme-btn .ic-moon { display: none; }   /* dark: show sun  */
 [data-theme="dark"] .theme-btn .ic-sun  { display: block; }
 
-.intro-hint {
-  position: absolute; bottom: max(20px, env(safe-area-inset-bottom)); left: 50%;
-  transform: translateX(-50%);
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  font-family: var(--sans); font-size: 10px; font-weight: 600;
-  letter-spacing: .18em; text-transform: uppercase;
-  color: var(--ink-soft); background: none; border: none; cursor: pointer;
-  animation: introHintBob 1.8s ease-in-out infinite;
+/* trip-tab row pinned to the bottom of the intro; scrolls left/right (never
+   wraps) so trips overflow to the right. Sits above the transparent globe. */
+.intro-tabs {
+  position: absolute; left: 0; right: 0; bottom: max(20px, env(safe-area-inset-bottom));
+  z-index: 4;
+  display: flex; align-items: center; gap: 10px;
+  flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
+  padding: 6px 6vw;
+  touch-action: pan-x;                 /* horizontal pan works despite the overlay's touch-action:none */
+  scrollbar-width: none;               /* Firefox: hide the scrollbar */
+  -ms-overflow-style: none;
 }
-@keyframes introHintBob {
-  0%, 100% { transform: translate(-50%, 0); }
-  50%      { transform: translate(-50%, 6px); }
-}
+.intro-tabs::-webkit-scrollbar { display: none; }
+/* the "+" stays pinned in front while the tabs scroll behind it */
+.intro-tabs .add-trip { position: sticky; left: 0; z-index: 2; background: var(--shell); }
 @media (max-width: 700px) {
   /* app version: text on top, globe centered beneath it — the last lines of
      the headline overlap the top of the (transparent) globe */
@@ -2362,9 +2363,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     width: min(80vw, 48vh);
     margin: -9vh auto 0;          /* pulls the globe up under the text's bottom lines */
   }
-}
-@media (prefers-reduced-motion: reduce) {
-  .intro-hint { animation: none; }
+  .intro-tabs { padding: 6px 7vw; }
 }
 
 /* ============================================================
@@ -3137,9 +3136,7 @@ html { -webkit-tap-highlight-color: transparent; }
           <div class="intro-globe"><svg viewBox="0 0 400 400" aria-hidden="true"></svg></div>
           <div class="intro-text" contenteditable="true" spellcheck="false" aria-label="Edit intro text"></div>
         </div>
-        <button class="intro-hint" aria-label="Continue to the planner"><span>scroll</span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
-        </button>`;
+        <div class="intro-tabs" role="tablist" aria-label="Trips"></div>`;
       document.body.appendChild(overlay);
       this._introEl = overlay;
       document.documentElement.classList.add('intro-lock');
@@ -3156,6 +3153,38 @@ html { -webkit-tap-highlight-color: transparent; }
       this._buildIntroGlobe(svg);                       // graticule + stops now…
       this._ensureAtlas().then(() => this._buildIntroGlobe(svg));   // …continents when the atlas lands
       this._introGlobeRefresh = () => this._buildIntroGlobe(svg);   // stops added while intro open
+
+      // ---- trip-tab row, now living at the bottom of the intro (the "+" first,
+      // then the tabs; the row scrolls left/right and never wraps). It stays wired
+      // to the trip page + globe: selecting/adding/reordering runs the normal
+      // handlers, so `this.data.active` changes propagate to both. ----
+      const introTabsEl = overlay.querySelector('.intro-tabs');
+      const renderIntroTabs = () => {
+        const keepScroll = introTabsEl.scrollLeft;
+        introTabsEl.innerHTML = this.renderTabs();
+        introTabsEl.scrollLeft = keepScroll;            // don't jump the row on re-render
+      };
+      renderIntroTabs();
+      this._introTabsEl = introTabsEl;
+      this._introTabsRefresh = renderIntroTabs;
+      // the tab row lives outside #app, so wire the same delegated handlers the
+      // trip page uses (wireDelegation binds only #app + modals). Covers click
+      // (select/add/remove), change (rename), and native drag reorder.
+      overlay.addEventListener('click', (e) => this.onClick(e));
+      overlay.addEventListener('change', (e) => this.onChange(e));
+      overlay.addEventListener('dragstart', (e) => this.onDragStart(e));
+      overlay.addEventListener('dragover', (e) => this.onDragOver(e));
+      overlay.addEventListener('drop', (e) => this.onDrop(e));
+      overlay.addEventListener('dragend', (e) => this.onDragEnd(e));
+      // editing a tab name shouldn't start an ancestor drag (mirrors wireDelegation)
+      overlay.addEventListener('focusin', (e) => {
+        const t = e.target;
+        if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) {
+          let el = t.parentElement;
+          while (el && el !== overlay) { if (el.getAttribute && el.getAttribute('draggable') === 'true') { el.setAttribute('draggable', 'false'); el.dataset.dragRestore = '1'; } el = el.parentElement; }
+        }
+      });
+      overlay.addEventListener('focusout', () => { overlay.querySelectorAll('[data-drag-restore="1"]').forEach(el => { el.setAttribute('draggable', 'true'); delete el.dataset.dragRestore; }); });
 
       // ---- seamless scroll driver: the intro and the trip page behave like
       // one tall page. Wheel/touch track ~1:1; fully scrolled the intro PARKS
@@ -3209,7 +3238,13 @@ html { -webkit-tap-highlight-color: transparent; }
         while (el && el !== document.body) { if (el.scrollTop > 1) return false; el = el.parentElement; }
         return (window.scrollY || document.documentElement.scrollTop || 0) <= 1;
       };
+      const onTabs = (t) => t && t.closest && t.closest('.intro-tabs');
       const onWheel = (e) => {
+        if (onTabs(e.target)) {                          // scroll the tab row sideways, don't drive the intro
+          introTabsEl.scrollLeft += (e.deltaX || e.deltaY);
+          e.preventDefault();
+          return;
+        }
         if (parked) {
           if (e.deltaY < 0 && atAppTop(e.target)) {      // pull the intro back down
             e.preventDefault();
@@ -3223,7 +3258,10 @@ html { -webkit-tap-highlight-color: transparent; }
         kick();
       };
       let touchY = null, touchV = 0, touchT = 0, touchDriving = false;
-      const onTouchStart = (e) => { touchY = e.touches[0].clientY; touchV = 0; touchT = e.timeStamp; touchDriving = !parked; };
+      const onTouchStart = (e) => {
+        if (onTabs(e.target)) { touchY = null; return; }  // let the tab row pan sideways natively
+        touchY = e.touches[0].clientY; touchV = 0; touchT = e.timeStamp; touchDriving = !parked;
+      };
       const onTouchMove = (e) => {
         if (touchY == null) return;
         const y = e.touches[0].clientY;
@@ -3252,7 +3290,8 @@ html { -webkit-tap-highlight-color: transparent; }
       document.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
       document.addEventListener('touchend', onTouchEnd, { passive: true, capture: true });
       const onKey = (e) => {
-        if (document.activeElement === textEl) return;   // typing in the headline
+        const ae = document.activeElement;
+        if (ae === textEl || (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))) return;   // typing in the headline or a tab name
         if (parked) {
           if ((e.key === 'ArrowUp' || e.key === 'PageUp') && atAppTop(e.target)) { e.preventDefault(); target = 0; kick(); }
           return;
@@ -3261,7 +3300,6 @@ html { -webkit-tap-highlight-color: transparent; }
         else if (e.key === 'ArrowUp' || e.key === 'PageUp') { e.preventDefault(); target = 0; kick(); }
       };
       document.addEventListener('keydown', onKey, true);
-      overlay.querySelector('.intro-hint').addEventListener('click', () => { target = 1; kick(); });
       // tests / power users: jump straight to the app
       this._introSkip = () => { target = 1; cur = 1; apply(); };
     }
@@ -3342,7 +3380,7 @@ html { -webkit-tap-highlight-color: transparent; }
     currentTrip() { return this.data.trips[this.data.active]; }
     legByIndex(i) { const t = this.currentTrip(); return i === 0 ? t.outboundLeg : t.stops[i - 1].leg; }
 
-    bump() { this.render(); this.scheduleSave(); this.touchMap(); if (this._introGlobeRefresh) this._introGlobeRefresh(); }
+    bump() { this.render(); this.scheduleSave(); this.touchMap(); if (this._introGlobeRefresh) this._introGlobeRefresh(); if (this._introTabsRefresh) this._introTabsRefresh(); }
     bumpModal() {
       const trip = this.currentTrip();
       const travelers = Math.max(1, Number(trip.travelers) || 1);
@@ -4781,7 +4819,6 @@ html { -webkit-tap-highlight-color: transparent; }
       const html = `
         <div class="page" style="position:relative">
           ${this.renderHeader()}
-          ${this.renderTabs()}
           ${this.renderMeta(trip, travelers)}
           <div class="body-cols">
             <div class="route map-route">
@@ -4862,8 +4899,9 @@ html { -webkit-tap-highlight-color: transparent; }
         }
         return `<button class="tab-inactive" draggable="true" data-drag="trip" data-drop="trip" data-act="tab-select" data-key="${escA(key)}" title="Drag to reorder · click to open">${esc(lbl)}</button>`;
       }).join('');
-      return `<div class="tabs-row"><div class="tabs">${pills}</div>
-        <button class="add-trip" data-act="add-trip" title="Add a trip" aria-label="Add a trip">+</button></div>`;
+      // "+" first (in front of every tab), then the tab pill; the row scrolls
+      // left/right (never wraps) so trips added to the end overflow to the right.
+      return `<button class="add-trip" data-act="add-trip" title="Add a trip" aria-label="Add a trip">+</button><div class="tabs">${pills}</div>`;
     }
 
     renderMeta(trip, travelers) {

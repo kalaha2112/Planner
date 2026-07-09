@@ -684,9 +684,7 @@
           <div class="intro-globe"><svg viewBox="0 0 400 400" aria-hidden="true"></svg></div>
           <div class="intro-text" contenteditable="true" spellcheck="false" aria-label="Edit intro text"></div>
         </div>
-        <button class="intro-hint" aria-label="Continue to the planner"><span>scroll</span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
-        </button>`;
+        <div class="intro-tabs" role="tablist" aria-label="Trips"></div>`;
       document.body.appendChild(overlay);
       this._introEl = overlay;
       document.documentElement.classList.add('intro-lock');
@@ -703,6 +701,38 @@
       this._buildIntroGlobe(svg);                       // graticule + stops now…
       this._ensureAtlas().then(() => this._buildIntroGlobe(svg));   // …continents when the atlas lands
       this._introGlobeRefresh = () => this._buildIntroGlobe(svg);   // stops added while intro open
+
+      // ---- trip-tab row, now living at the bottom of the intro (the "+" first,
+      // then the tabs; the row scrolls left/right and never wraps). It stays wired
+      // to the trip page + globe: selecting/adding/reordering runs the normal
+      // handlers, so `this.data.active` changes propagate to both. ----
+      const introTabsEl = overlay.querySelector('.intro-tabs');
+      const renderIntroTabs = () => {
+        const keepScroll = introTabsEl.scrollLeft;
+        introTabsEl.innerHTML = this.renderTabs();
+        introTabsEl.scrollLeft = keepScroll;            // don't jump the row on re-render
+      };
+      renderIntroTabs();
+      this._introTabsEl = introTabsEl;
+      this._introTabsRefresh = renderIntroTabs;
+      // the tab row lives outside #app, so wire the same delegated handlers the
+      // trip page uses (wireDelegation binds only #app + modals). Covers click
+      // (select/add/remove), change (rename), and native drag reorder.
+      overlay.addEventListener('click', (e) => this.onClick(e));
+      overlay.addEventListener('change', (e) => this.onChange(e));
+      overlay.addEventListener('dragstart', (e) => this.onDragStart(e));
+      overlay.addEventListener('dragover', (e) => this.onDragOver(e));
+      overlay.addEventListener('drop', (e) => this.onDrop(e));
+      overlay.addEventListener('dragend', (e) => this.onDragEnd(e));
+      // editing a tab name shouldn't start an ancestor drag (mirrors wireDelegation)
+      overlay.addEventListener('focusin', (e) => {
+        const t = e.target;
+        if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) {
+          let el = t.parentElement;
+          while (el && el !== overlay) { if (el.getAttribute && el.getAttribute('draggable') === 'true') { el.setAttribute('draggable', 'false'); el.dataset.dragRestore = '1'; } el = el.parentElement; }
+        }
+      });
+      overlay.addEventListener('focusout', () => { overlay.querySelectorAll('[data-drag-restore="1"]').forEach(el => { el.setAttribute('draggable', 'true'); delete el.dataset.dragRestore; }); });
 
       // ---- seamless scroll driver: the intro and the trip page behave like
       // one tall page. Wheel/touch track ~1:1; fully scrolled the intro PARKS
@@ -756,7 +786,13 @@
         while (el && el !== document.body) { if (el.scrollTop > 1) return false; el = el.parentElement; }
         return (window.scrollY || document.documentElement.scrollTop || 0) <= 1;
       };
+      const onTabs = (t) => t && t.closest && t.closest('.intro-tabs');
       const onWheel = (e) => {
+        if (onTabs(e.target)) {                          // scroll the tab row sideways, don't drive the intro
+          introTabsEl.scrollLeft += (e.deltaX || e.deltaY);
+          e.preventDefault();
+          return;
+        }
         if (parked) {
           if (e.deltaY < 0 && atAppTop(e.target)) {      // pull the intro back down
             e.preventDefault();
@@ -770,7 +806,10 @@
         kick();
       };
       let touchY = null, touchV = 0, touchT = 0, touchDriving = false;
-      const onTouchStart = (e) => { touchY = e.touches[0].clientY; touchV = 0; touchT = e.timeStamp; touchDriving = !parked; };
+      const onTouchStart = (e) => {
+        if (onTabs(e.target)) { touchY = null; return; }  // let the tab row pan sideways natively
+        touchY = e.touches[0].clientY; touchV = 0; touchT = e.timeStamp; touchDriving = !parked;
+      };
       const onTouchMove = (e) => {
         if (touchY == null) return;
         const y = e.touches[0].clientY;
@@ -799,7 +838,8 @@
       document.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
       document.addEventListener('touchend', onTouchEnd, { passive: true, capture: true });
       const onKey = (e) => {
-        if (document.activeElement === textEl) return;   // typing in the headline
+        const ae = document.activeElement;
+        if (ae === textEl || (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))) return;   // typing in the headline or a tab name
         if (parked) {
           if ((e.key === 'ArrowUp' || e.key === 'PageUp') && atAppTop(e.target)) { e.preventDefault(); target = 0; kick(); }
           return;
@@ -808,7 +848,6 @@
         else if (e.key === 'ArrowUp' || e.key === 'PageUp') { e.preventDefault(); target = 0; kick(); }
       };
       document.addEventListener('keydown', onKey, true);
-      overlay.querySelector('.intro-hint').addEventListener('click', () => { target = 1; kick(); });
       // tests / power users: jump straight to the app
       this._introSkip = () => { target = 1; cur = 1; apply(); };
     }
@@ -889,7 +928,7 @@
     currentTrip() { return this.data.trips[this.data.active]; }
     legByIndex(i) { const t = this.currentTrip(); return i === 0 ? t.outboundLeg : t.stops[i - 1].leg; }
 
-    bump() { this.render(); this.scheduleSave(); this.touchMap(); if (this._introGlobeRefresh) this._introGlobeRefresh(); }
+    bump() { this.render(); this.scheduleSave(); this.touchMap(); if (this._introGlobeRefresh) this._introGlobeRefresh(); if (this._introTabsRefresh) this._introTabsRefresh(); }
     bumpModal() {
       const trip = this.currentTrip();
       const travelers = Math.max(1, Number(trip.travelers) || 1);
@@ -2328,7 +2367,6 @@
       const html = `
         <div class="page" style="position:relative">
           ${this.renderHeader()}
-          ${this.renderTabs()}
           ${this.renderMeta(trip, travelers)}
           <div class="body-cols">
             <div class="route map-route">
@@ -2409,8 +2447,9 @@
         }
         return `<button class="tab-inactive" draggable="true" data-drag="trip" data-drop="trip" data-act="tab-select" data-key="${escA(key)}" title="Drag to reorder · click to open">${esc(lbl)}</button>`;
       }).join('');
-      return `<div class="tabs-row"><div class="tabs">${pills}</div>
-        <button class="add-trip" data-act="add-trip" title="Add a trip" aria-label="Add a trip">+</button></div>`;
+      // "+" first (in front of every tab), then the tab pill; the row scrolls
+      // left/right (never wraps) so trips added to the end overflow to the right.
+      return `<button class="add-trip" data-act="add-trip" title="Add a trip" aria-label="Add a trip">+</button><div class="tabs">${pills}</div>`;
     }
 
     renderMeta(trip, travelers) {

@@ -222,14 +222,13 @@ a { color: inherit; }
 /* ============================================================
    TRIP SWITCHER
    ============================================================ */
-.tabs-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; }
 .tabs {
-  display: inline-flex; gap: 3px;
+  display: inline-flex; gap: 3px; flex-shrink: 0;
   background: var(--line-2); border: 1px solid var(--line);
   border-radius: var(--r-pill); padding: 4px;
 }
 .tab-active {
-  display: inline-flex; align-items: center;
+  display: inline-flex; align-items: center; flex-shrink: 0;
   background: var(--brown); border-radius: var(--r-pill);
   cursor: grab;
 }
@@ -246,12 +245,12 @@ a { color: inherit; }
   line-height: 1; padding: 0;
 }
 .tab-inactive {
-  font-family: var(--sans); font-size: 13px; font-weight: 600;
+  font-family: var(--sans); font-size: 13px; font-weight: 600; flex-shrink: 0;
   padding: 8px 18px; border-radius: var(--r-pill); border: none;
   background: transparent; color: var(--ink-soft); cursor: grab;
 }
 .add-trip {
-  display: flex; align-items: center; justify-content: center;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   width: 34px; height: 34px; border: 1px dashed var(--dash);
   background: transparent; border-radius: var(--r-pill); cursor: pointer;
   color: var(--ink-soft); font-family: var(--sans); font-size: 20px;
@@ -1614,19 +1613,21 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 [data-theme="dark"] .theme-btn .ic-moon { display: none; }   /* dark: show sun  */
 [data-theme="dark"] .theme-btn .ic-sun  { display: block; }
 
-.intro-hint {
-  position: absolute; bottom: max(20px, env(safe-area-inset-bottom)); left: 50%;
-  transform: translateX(-50%);
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  font-family: var(--sans); font-size: 10px; font-weight: 600;
-  letter-spacing: .18em; text-transform: uppercase;
-  color: var(--ink-soft); background: none; border: none; cursor: pointer;
-  animation: introHintBob 1.8s ease-in-out infinite;
+/* trip-tab row pinned to the bottom of the intro; scrolls left/right (never
+   wraps) so trips overflow to the right. Sits above the transparent globe. */
+.intro-tabs {
+  position: absolute; left: 0; right: 0; bottom: max(20px, env(safe-area-inset-bottom));
+  z-index: 4;
+  display: flex; align-items: center; gap: 10px;
+  flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
+  padding: 6px 6vw;
+  touch-action: pan-x;                 /* horizontal pan works despite the overlay's touch-action:none */
+  scrollbar-width: none;               /* Firefox: hide the scrollbar */
+  -ms-overflow-style: none;
 }
-@keyframes introHintBob {
-  0%, 100% { transform: translate(-50%, 0); }
-  50%      { transform: translate(-50%, 6px); }
-}
+.intro-tabs::-webkit-scrollbar { display: none; }
+/* the "+" stays pinned in front while the tabs scroll behind it */
+.intro-tabs .add-trip { position: sticky; left: 0; z-index: 2; background: var(--shell); }
 @media (max-width: 700px) {
   /* app version: text on top, globe centered beneath it — the last lines of
      the headline overlap the top of the (transparent) globe */
@@ -1638,9 +1639,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     width: min(80vw, 48vh);
     margin: -9vh auto 0;          /* pulls the globe up under the text's bottom lines */
   }
-}
-@media (prefers-reduced-motion: reduce) {
-  .intro-hint { animation: none; }
+  .intro-tabs { padding: 6px 7vw; }
 }
 
 /* ============================================================
