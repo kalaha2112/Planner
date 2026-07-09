@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-09T21:53:16.021Z
+  Built: 2026-07-09T21:55:45.709Z
 -->
 
 <html lang="en">
@@ -1152,9 +1152,8 @@ a { color: inherit; }
 /* size each half to its content (not flex:1) so the nights half doesn't
    stretch to fill the row, leaving a big empty gap before the divider */
 .stat-split .stat-half { flex: 0 0 auto; padding: 13px 24px 13px 0; min-width: 0; }
-/* nights half gets back half of the trailing whitespace that flex:1 used to
-   give it (measured: flex:1 width 117px vs content-hug 72px -> +22px) */
-.stat-split .stat-half:first-child { padding-right: 46px; }
+/* nights half's trailing whitespace before the divider */
+.stat-split .stat-half:first-child { padding-right: 68px; }
 .stat-split .stat-half + .stat-half { border-left: 1px solid var(--line); padding-left: 18px; }
 /* travellers half shrinks to its icons so the nights half takes the extra width */
 .stat-split .stat-travelers { flex: 0 0 auto; display: flex; align-items: center; }
