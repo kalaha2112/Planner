@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-09T20:54:31.761Z
+  Built: 2026-07-09T20:56:57.910Z
 -->
 
 <html lang="en">
@@ -5124,7 +5124,7 @@ html { -webkit-tap-highlight-color: transparent; }
       const covered = miles > 0 && balance >= miles;
       return `<div class="summary">
         <div class="stat stat-split">
-          <div class="stat-half"><div class="fig">${nights}</div><div class="cap">nights on the ground</div></div>
+          <div class="stat-half"><div class="fig">${nights}</div><div class="cap">night${nights === 1 ? '' : 's'}</div></div>
           <div class="stat-half stat-travelers">${this.travelersPip(travelers)}</div>
         </div>
         ${SHOW_COSTS ? `<div class="stat cash clickable" data-act="open-budget" title="See budget breakdown">

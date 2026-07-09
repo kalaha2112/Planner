@@ -2650,7 +2650,7 @@
       const covered = miles > 0 && balance >= miles;
       return `<div class="summary">
         <div class="stat stat-split">
-          <div class="stat-half"><div class="fig">${nights}</div><div class="cap">nights on the ground</div></div>
+          <div class="stat-half"><div class="fig">${nights}</div><div class="cap">night${nights === 1 ? '' : 's'}</div></div>
           <div class="stat-half stat-travelers">${this.travelersPip(travelers)}</div>
         </div>
         ${SHOW_COSTS ? `<div class="stat cash clickable" data-act="open-budget" title="See budget breakdown">
