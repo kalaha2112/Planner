@@ -427,6 +427,11 @@ a { color: inherit; }
 .summary { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 12px 18px; }
 .stat { padding: 13px 0; border-bottom: 1px solid var(--line); }
 .stat:last-child { border-bottom: none; }
+/* nights stat split into two halves: left = nights, right = travellers */
+.stat.stat-split { display: flex; padding: 0; }
+.stat-split .stat-half { flex: 1; padding: 13px 0; min-width: 0; }
+.stat-split .stat-half + .stat-half { border-left: 1px solid var(--line); padding-left: 18px; }
+.stat-travelers .travelers-pip { min-height: 38px; padding-bottom: 0; align-items: center; flex-wrap: wrap; }
 .stat.clickable { cursor: pointer; }
 .stat .fig { font-family: var(--caps); font-size: 42px; letter-spacing: .02em; color: var(--ink); line-height: .9; }
 .stat.cash .fig  { color: var(--red); }

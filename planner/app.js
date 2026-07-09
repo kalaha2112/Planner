@@ -2409,7 +2409,7 @@
               <button class="map-add-btn" data-act="add-stop" title="Add stop" aria-label="Add stop">+</button>
             </div>
             <aside class="aside">
-              ${this.renderSummary(nights, budget.grandTotal, budget.perPerson, milesNeeded, meta.milesBalance || 0)}
+              ${this.renderSummary(nights, budget.grandTotal, budget.perPerson, milesNeeded, meta.milesBalance || 0, travelers)}
               ${this.renderTodos(meta)}
             </aside>
           </div>
@@ -2483,12 +2483,12 @@
       return `<div class="meta-row">
         <div class="meta-field"><label>Depart</label><input type="date" value="${escA(trip.depart)}" data-ch="depart"></div>
         <div class="meta-field"><label>Return</label><input type="date" value="${escA(trip.returnDate)}" data-ch="return"></div>
-        <div class="meta-field">
-          <div class="travelers-pip">
-            ${Array.from({ length: travelers }, () => `<button class="traveler-icon" data-act="traveler-dec" title="Remove traveler"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="7" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></button>`).join('')}
-            <button class="traveler-add" data-act="traveler-inc" title="Add traveler">+</button>
-          </div>
-        </div>
+      </div>`;
+    }
+    travelersPip(travelers) {
+      return `<div class="travelers-pip">
+        ${Array.from({ length: travelers }, () => `<button class="traveler-icon" data-act="traveler-dec" title="Remove traveler"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="7" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></button>`).join('')}
+        <button class="traveler-add" data-act="traveler-inc" title="Add traveler">+</button>
       </div>`;
     }
 
@@ -2646,10 +2646,13 @@
       ${homeEl}`;
     }
 
-    renderSummary(nights, grand, perPerson, miles, balance) {
+    renderSummary(nights, grand, perPerson, miles, balance, travelers) {
       const covered = miles > 0 && balance >= miles;
       return `<div class="summary">
-        <div class="stat"><div class="fig">${nights}</div><div class="cap">nights on the ground</div></div>
+        <div class="stat stat-split">
+          <div class="stat-half"><div class="fig">${nights}</div><div class="cap">nights on the ground</div></div>
+          <div class="stat-half stat-travelers">${this.travelersPip(travelers)}<div class="cap">travellers</div></div>
+        </div>
         ${SHOW_COSTS ? `<div class="stat cash clickable" data-act="open-budget" title="See budget breakdown">
           <div class="fig">${esc(money(grand))}</div><div class="cap">total budget · ${esc(money(perPerson))} / person</div></div>
         <div class="stat miles${covered ? ' covered' : ''}"><div class="fig">${miles.toLocaleString()}</div><div class="cap">reward points needed</div></div>` : ''}
