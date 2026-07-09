@@ -224,8 +224,6 @@ a { color: inherit; }
    ============================================================ */
 .tabs {
   display: inline-flex; gap: 3px; flex-shrink: 0;
-  background: var(--line-2); border: 1px solid var(--line);
-  border-radius: var(--r-pill); padding: 4px;
 }
 .tab-active {
   display: inline-flex; align-items: center; flex-shrink: 0;
