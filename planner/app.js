@@ -737,7 +737,7 @@
       };
       const apply = () => {
         raf = 0;
-        cur += (target - cur) * 0.32;                    // tight tracking — reads as native scroll
+        cur += (target - cur) * 0.38;                    // tracking — a touch snappier (settles faster, still a smooth glide)
         if (Math.abs(target - cur) < 0.0008) cur = target;
         const e = easeInOut(clamp01(cur));
         overlay.style.transform = `translate3d(0, ${(-cur * 100).toFixed(3)}%, 0)`;
@@ -760,13 +760,13 @@
         if (parked) {
           if (e.deltaY < 0 && atAppTop(e.target)) {      // pull the intro back down
             e.preventDefault();
-            target = clamp01(target + e.deltaY / window.innerHeight);
+            target = clamp01(target + e.deltaY * 1.3 / window.innerHeight);
             kick();
           }
           return;                                        // otherwise: native scroll
         }
         e.preventDefault();
-        target = clamp01(target + e.deltaY / window.innerHeight);   // ~1:1 with the wheel
+        target = clamp01(target + e.deltaY * 1.3 / window.innerHeight);   // 1.3x wheel gain — crosses a bit faster
         kick();
       };
       let touchY = null, touchV = 0, touchT = 0, touchDriving = false;
@@ -789,7 +789,7 @@
       };
       const onTouchEnd = () => {
         if (touchY != null && touchDriving) {
-          target = clamp01(target + touchV * 260 / window.innerHeight);   // flick inertia, no snapping
+          target = clamp01(target + touchV * 340 / window.innerHeight);   // flick inertia — carries further so a flick completes the transition
           kick();
         }
         touchY = null; touchDriving = false;
