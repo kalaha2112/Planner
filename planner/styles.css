@@ -646,12 +646,6 @@ a { color: inherit; }
    Unlike blur, dilation has no threshold that can drop a thin line. */
 .daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(2.8) contrast(8) url(#daymap-dilate) invert(1); }
 [data-theme="dark"] .daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(2.8) contrast(8) url(#daymap-dilate); }
-/* Web (wide): a lighter dilate so the bold grid doesn't overwhelm the street
-   labels sitting on top of it. App (<=700px) keeps the bolder grid above. */
-@media (min-width: 701px) {
-  .daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(2.8) contrast(8) url(#daymap-dilate-soft) invert(1); }
-  [data-theme="dark"] .daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(2.8) contrast(8) url(#daymap-dilate-soft); }
-}
 /* Web-only labels ride in their own pane (see ensureDayMap) so the street-line
    dilate above never touches the text. Gently whiten, then invert(1) in light
    theme so the names come out dark on the white ground; dark theme keeps the
@@ -666,6 +660,22 @@ a { color: inherit; }
 }
 [data-theme="dark"] .daymap.map::after {
   opacity: .09; mix-blend-mode: screen;     /* light speckle, like sensor noise */
+}
+/* WEB (wide) ONLY: the day map keeps the NIGHT look — black map, white streets
+   — in BOTH light and dark themes; it never inverts to the light version (the
+   app <=700px still follows the theme). Uses the lighter dilate so the bold
+   grid doesn't overwhelm the labels. Placed LAST so it wins on source order,
+   and each rule also lists a [data-theme="dark"] variant to match the dark
+   base rules' specificity and override them for web. */
+@media (min-width: 701px) {
+  .daymap.map.leaflet-container,
+  [data-theme="dark"] .daymap.map.leaflet-container { background: #0a0a0a; }
+  .daymap.map .leaflet-tile-pane,
+  [data-theme="dark"] .daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(2.8) contrast(8) url(#daymap-dilate-soft); }
+  .daymap.map .leaflet-daylabels-pane,
+  [data-theme="dark"] .daymap.map .leaflet-daylabels-pane { filter: saturate(0) brightness(1.7) contrast(1.15); }
+  .daymap.map::after,
+  [data-theme="dark"] .daymap.map::after { opacity: .09; mix-blend-mode: screen; }
 }
 .daymap-cap { font-family: var(--sans); font-size: 10.5px; color: var(--ink-mute); line-height: 1.4; padding: 0 1px; }
 
