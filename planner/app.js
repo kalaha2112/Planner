@@ -2487,7 +2487,7 @@
     }
     travelersPip(travelers) {
       return `<div class="travelers-pip">
-        ${Array.from({ length: travelers }, () => `<button class="traveler-icon" data-act="traveler-dec" title="Remove traveler"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="7" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></button>`).join('')}
+        ${Array.from({ length: travelers }, () => `<button class="traveler-icon" data-act="traveler-dec" title="Remove traveler"><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="7" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></button>`).join('')}
         <button class="traveler-add" data-act="traveler-inc" title="Add traveler">+</button>
       </div>`;
     }
@@ -2651,7 +2651,7 @@
       return `<div class="summary">
         <div class="stat stat-split">
           <div class="stat-half"><div class="fig">${nights}</div><div class="cap">nights on the ground</div></div>
-          <div class="stat-half stat-travelers">${this.travelersPip(travelers)}<div class="cap">travellers</div></div>
+          <div class="stat-half stat-travelers">${this.travelersPip(travelers)}</div>
         </div>
         ${SHOW_COSTS ? `<div class="stat cash clickable" data-act="open-budget" title="See budget breakdown">
           <div class="fig">${esc(money(grand))}</div><div class="cap">total budget · ${esc(money(perPerson))} / person</div></div>

@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-09T20:43:52.564Z
+  Built: 2026-07-09T20:46:15.477Z
 -->
 
 <html lang="en">
@@ -997,7 +997,7 @@ a { color: inherit; }
 .travelers-pip { display: flex; flex-direction: row; align-items: center; gap: 2px; min-height: 24px; padding-bottom: 8px; transform: translateY(-0.1px); }
 .traveler-icon { background: none; border: none; padding: 0; cursor: pointer; color: var(--ink-soft); opacity: 0.85; line-height: 0; }
 .traveler-icon:hover { color: var(--red); opacity: 1; }
-.traveler-add { background: none; border: 1px dashed var(--ink-faint); border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 12px; line-height: 1; cursor: pointer; color: var(--ink-faint); padding: 0; }
+.traveler-add { background: none; border: 1px dashed var(--ink-faint); border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; cursor: pointer; color: var(--ink-faint); padding: 0; }
 .traveler-add:hover { border-color: var(--ink-soft); color: var(--ink-soft); }
 
 /* ============================================================
@@ -1155,6 +1155,7 @@ a { color: inherit; }
 .stat.stat-split { display: flex; padding: 0; }
 .stat-split .stat-half { flex: 1; padding: 13px 0; min-width: 0; }
 .stat-split .stat-half + .stat-half { border-left: 1px solid var(--line); padding-left: 18px; }
+.stat-travelers { display: flex; align-items: center; }
 .stat-travelers .travelers-pip { min-height: 38px; padding-bottom: 0; align-items: center; flex-wrap: wrap; }
 .stat.clickable { cursor: pointer; }
 .stat .fig { font-family: var(--caps); font-size: 42px; letter-spacing: .02em; color: var(--ink); line-height: .9; }
@@ -4958,7 +4959,7 @@ html { -webkit-tap-highlight-color: transparent; }
     }
     travelersPip(travelers) {
       return `<div class="travelers-pip">
-        ${Array.from({ length: travelers }, () => `<button class="traveler-icon" data-act="traveler-dec" title="Remove traveler"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="7" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></button>`).join('')}
+        ${Array.from({ length: travelers }, () => `<button class="traveler-icon" data-act="traveler-dec" title="Remove traveler"><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="7" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></button>`).join('')}
         <button class="traveler-add" data-act="traveler-inc" title="Add traveler">+</button>
       </div>`;
     }
@@ -5122,7 +5123,7 @@ html { -webkit-tap-highlight-color: transparent; }
       return `<div class="summary">
         <div class="stat stat-split">
           <div class="stat-half"><div class="fig">${nights}</div><div class="cap">nights on the ground</div></div>
-          <div class="stat-half stat-travelers">${this.travelersPip(travelers)}<div class="cap">travellers</div></div>
+          <div class="stat-half stat-travelers">${this.travelersPip(travelers)}</div>
         </div>
         ${SHOW_COSTS ? `<div class="stat cash clickable" data-act="open-budget" title="See budget breakdown">
           <div class="fig">${esc(money(grand))}</div><div class="cap">total budget · ${esc(money(perPerson))} / person</div></div>
