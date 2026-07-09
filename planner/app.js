@@ -1627,8 +1627,8 @@
       let html = '';
       stops.forEach((stop, idx) => {
         const r = d ? d.stops[idx] : null;
-        const chosen = (stop.accom && stop.accom.options || []).find(o => o.chosen);
-        const accomSet = !!(chosen && chosen.name && chosen.name.trim());
+        const chosenNames = (stop.accom && stop.accom.options || []).filter(o => o.chosen && o.name && o.name.trim()).map(o => o.name.trim());
+        const accomSet = chosenNames.length > 0;
         const modeColor = MODE_HEX[(legs[idx] || {}).mode] || '#7a7260';
         const dim = this._dragStopIdx === idx ? 0.38 : 1;
         html += `<div class="stop map-stop" data-i="${idx}" style="opacity:${dim}">
@@ -1638,7 +1638,7 @@
               <div class="mc-city-display">${stop.city ? esc(stop.city) : '<span style="opacity:.3">City?</span>'}</div>
               <div class="mc-meta">
                 ${r ? `<div class="mc-dates-display">${esc(fmt(r.start))} – ${esc(fmt(r.end))}</div>` : (stop.nights ? `<div class="mc-dates-display">${stop.nights} nights</div>` : '')}
-                ${accomSet ? `<div class="mc-hotel-display">${esc(chosen.name)}</div>` : ''}
+                ${accomSet ? `<div class="mc-hotel-display">${chosenNames.map(n => esc(n)).join(' · ')}</div>` : ''}
               </div>
             </div>
             <div class="mc-back">
@@ -2213,7 +2213,19 @@
     removeDayItem(stop, dayIdx, itemIdx) { stop.itinerary[dayIdx].items.splice(itemIdx, 1); this.bump(); }
     addAccomOption(stopIdx) { const s = this.currentTrip().stops[stopIdx]; if (!s.accom) s.accom = { options: [] }; s.accom.options.push({ id: Date.now(), name: '', link: '', totalPrice: '', features: '', distance: '', chosen: false }); this.bump(); }
     removeAccomOption(stopIdx, optIdx) { this.snapshot(); this.currentTrip().stops[stopIdx].accom.options.splice(optIdx, 1); this.bump(); }
-    chooseAccomOption(stopIdx, optIdx) { const o = this.currentTrip().stops[stopIdx].accom.options; o.forEach((x, i) => x.chosen = (i === optIdx ? !x.chosen : false)); this.bump(); }
+    chooseAccomOption(stopIdx, optIdx) {
+      const opts = this.currentTrip().stops[stopIdx].accom.options;
+      const opt = opts[optIdx];
+      if (opt.chosen) { opt.chosen = false; this.bump(); return; }   // toggle off
+      opt.chosen = true;                                              // choose it
+      // allow at most 2 chosen at once: if this makes a 3rd, drop the
+      // earliest other chosen option so the newest two stay selected
+      let others = opts.filter((x, i) => x.chosen && i !== optIdx).length;
+      for (let i = 0; i < opts.length && others > 1; i++) {
+        if (i !== optIdx && opts[i].chosen) { opts[i].chosen = false; others--; }
+      }
+      this.bump();
+    }
 
     /* ---------- outfit closet ---------- */
     ensureCloset() { const t = this.currentTrip(); if (!Array.isArray(t.closet)) t.closet = []; return t.closet; }
@@ -2337,9 +2349,11 @@
       const parseAmt = s => { const m = (s || '').replace(/,/g, '').match(/\d+(\.\d+)?/); return m ? Number(m[0]) : 0; };
       let lodgingFromHotels = 0, hotelNightsCovered = 0, anyChosenPrice = false; const lodgingParts = [];
       trip.stops.forEach(st => {
-        const chosen = ((st.accom && st.accom.options) || []).find(o => o.chosen);
-        const amt = chosen ? parseAmt(chosen.totalPrice) : 0;
-        if (chosen && amt > 0) { anyChosenPrice = true; lodgingFromHotels += amt; hotelNightsCovered += Number(st.nights) || 0; lodgingParts.push(`${st.city} $${Math.round(amt)}`); }
+        // up to 2 hotels can be chosen per stop — sum both toward lodging,
+        // but count the stop's nights as covered only once
+        const chosenOpts = ((st.accom && st.accom.options) || []).filter(o => o.chosen);
+        const amt = chosenOpts.reduce((s, o) => s + parseAmt(o.totalPrice), 0);
+        if (amt > 0) { anyChosenPrice = true; lodgingFromHotels += amt; hotelNightsCovered += Number(st.nights) || 0; lodgingParts.push(`${st.city} $${Math.round(amt)}`); }
       });
       const nightsUncovered = Math.max(0, nights - hotelNightsCovered);
       const lodgingTotal = lodgingFromHotels;
@@ -2556,9 +2570,8 @@
         const right = idx % 2 === 0;
         const dim = this._dragStopIdx === idx ? .38 : 1;
         const r = d ? d.stops[idx] : null;
-        const chosen = (stop.accom && stop.accom.options || []).find(o => o.chosen);
-        const accomLabel = chosen ? chosen.name : 'Add accommodation';
-        const accomSet = !!(chosen && chosen.name && chosen.name.trim());
+        const chosenNames = (stop.accom && stop.accom.options || []).filter(o => o.chosen && o.name && o.name.trim()).map(o => o.name.trim());
+        const accomSet = chosenNames.length > 0;
 
         // Card position as % of canvas
         let cx, cy;
@@ -2581,7 +2594,7 @@
               <div class="mc-city-display">${stop.city ? esc(stop.city) : '<span style="opacity:.3">City?</span>'}</div>
               <div class="mc-meta">
                 ${r ? `<div class="mc-dates-display">${esc(fmt(r.start))} – ${esc(fmt(r.end))}</div>` : (stop.nights ? `<div class="mc-dates-display">${stop.nights} nights</div>` : '')}
-                ${accomSet ? `<div class="mc-hotel-display">${esc(chosen.name)}</div>` : ''}
+                ${accomSet ? `<div class="mc-hotel-display">${chosenNames.map(n => esc(n)).join(' · ')}</div>` : ''}
               </div>
             </div>
             <!-- BACK: all controls -->
