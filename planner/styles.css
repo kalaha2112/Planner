@@ -1588,7 +1588,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   position: absolute;
   right: 6vw;                              /* right margin == headline left margin */
   width: min(94vh, 54vw);                  /* bigger */
-  top: calc(50% - min(94vh, 54vw) / 2);    /* vertically centred */
+  top: calc(50% - min(94vh, 54vw) / 2 - 3vh);   /* lifted a little above centre */
   z-index: 3;
   will-change: transform;
 }
