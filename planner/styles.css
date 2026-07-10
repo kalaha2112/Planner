@@ -1899,6 +1899,9 @@ html { -webkit-tap-highlight-color: transparent; }
    declarations by source order. Hotspot = arrowhead tip (21,20).
    ============================================================ */
 :root { --cur-arrow-img: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABdElEQVR4nOyWv0uFUBTHj/pExaEl8Ac9Xkm0BQX9Ay1tbf0DzdHW1NjQn9C/EDTWEC0NTUVbEW+KlhB8lNDTRDK1r4MQb/Led8HlfuCAHrjn+/Xc49UB9cyAekYakAZ6N6ARI77vLxqGsZBlWUoCUImRuq4fdF0/J0EwGXAcx1YUJUC8kiCYZiCKom+YWC/L8pMEwbwFYBkdcEgQzG+BpmlnqqpOcLlFAuDpwC1is5kHEgCPgaOqqjaaeWgTnucdI2546jEvCMPwA+LPELzHmXCJlI4YYi52cL9PjPB0oKV5E3YhulcUxQnOhwxxipzJUoT5JGwxTfMKAzlN0/TCsqw1iP9iOLdt2/5B7q5rHYUEgO14g4ERtiFuvGFGAmzTpMta7g78Q0c3puhGgOsvmBiiE1aSJNddFnN/DV3XPYDQIZ58FaKzDzLqWofbAMRXIL4E8UfcjtH2F+Se8jwfx3H83rWOkBmYB/lHJA1IA9JA7wb+AAAA//9MzyZTAAAABklEQVQDANz7a+07w93XAAAAAElFTkSuQmCC); }
+/* dark mode: the ink arrow vanishes on dark surfaces — swap to a white one
+   (same shape, inverted). Applies to the custom cursor and the touch arrow. */
+[data-theme="dark"] { --cur-arrow-img: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABl0lEQVR4AeyUPUvDUBSGbUpKoIEOtbVpLWpnRR39A910cnDVUdeKKLoIiouri0IXwd2tCM6Kowgubv2CWhdRIR/Ep3I7N/cmIJSUc3hPQu55H869t9rEP/9igHgC8QSkJ9Butyd7vZ4V1e2VBsD40XGcGzSSkALodrtp3/cr5Fsk7jSRAigUCl/JZHIhlUodsjaSkAIQjrNMYErUoUUawPO8C9d1r0I7iwbSAIlE4p61y4PzgIYOaQAca5qmLQ3OA/VfcDUPyAZbI91PekGxWHzH/LnVaj2Qt5jqUJTRKhCb1FIhDTDszlb0qVcxXdd1/Zjnb/IUEIP3gUMZANMNDPdN02zYtl2hrmOe52zsBnbnQ2WAXC73yXacZTKZD8yv6bWN9oHYAyLPc6BQBhh2x5Bh6CfoC++aaJqrekQdKJQBOp3ODofwFf1hCy4xnicXheuM0JGiDIDZHCOfRp9wqXM1a2jVMIxyqVRaow4UygDsf400MVshtyzLOkfvstlsM5Cz+EgZQKwPLTFAPIF4AuM/gVF/FL8AAAD//84jpP8AAAAGSURBVAMAdPqUQf6alLsAAAAASUVORK5CYII=); }
 @media (pointer: fine) {
   html, body,
   a, button, select, summary, label,
