@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-10T21:48:31.538Z
+  Built: 2026-07-10T21:54:05.799Z
 -->
 
 <html lang="en">
@@ -2050,11 +2050,19 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     grid-template-columns: minmax(0, 1fr) 360px;
     grid-template-rows: 100%;
   }
-  /* the map fills its own grid cell (definite height from the row) */
-  .leaf-route .ledger-map { position: relative; min-width: 0; min-height: 0; height: 100%; }
+  /* the map is a framed block inset from the page edges — equal left/right
+     margin (24px each) plus top/bottom breathing room */
+  .leaf-route .ledger-map {
+    position: relative; min-width: 0; min-height: 0;
+    margin: 24px;                       /* left = right; adds top/bottom too */
+    height: calc(100% - 48px);          /* fill the row minus top+bottom margin */
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+    overflow: hidden;
+  }
   .leaf-route .main-map-wrap { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: unset; }
   .leaf-route .main-map-leaflet { border: none; border-radius: 0; }
-  .leaf-route .placed-stickers-layer { position: absolute; inset: 0; z-index: 4; }
+  .leaf-route .placed-stickers-layer { position: absolute; inset: 24px; z-index: 4; }
   /* the info panel is a real column beside the map, not an overlay on top of it */
   .ledger-col {
     position: relative; min-height: 0; height: 100%;
