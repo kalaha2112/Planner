@@ -1346,7 +1346,6 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     overflow-y: auto; scrollbar-width: thin;
     padding: 56px 54px 24px 20px;   /* top clears the fixed action icons; right clears the edge tabs */
     background: var(--shell);
-    border-left: 1px solid var(--line);
   }
   /* date range as prose — no box, no labels, darker green */
   .ledger-col .meta-range {
