@@ -1284,46 +1284,32 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     --ledger-margin: rgba(201, 58, 65, .22);
   }
 
+  /* full-bleed pages — no framed book, no desk margin */
   .ledger-stage {
     position: relative;
     height: 100vh; height: 100dvh;
     overflow: hidden;
-    padding: 24px 76px 30px 30px;   /* right space hosts the divider tabs */
-    background: var(--shell);
+    background: var(--surface);
   }
-  /* a clean sheet, not a skeuomorphic book — a soft-shadowed panel with a
-     hairline edge, no spine binding or peeking page stack */
   .ledger-book {
     position: relative;
     width: 100%; height: 100%;
     background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    box-shadow: 0 20px 50px rgba(35, 20, 12, .14);
-    perspective: 2600px;
   }
-  /* the remaining-pages edge peeking past the right side — a plain stack of
-     thin sheets that counts down as you flip forward (page-stack function) */
-  .ledger-book::after {
-    content: ''; position: absolute; top: 14px; bottom: 14px; right: -6px; width: 6px;
-    border-radius: 0 10px 10px 0;
-    background: var(--surface);
-    border: 1px solid var(--line); border-left: none;
-    box-shadow: 3px 0 0 -1px var(--surface), 4px 0 0 0 var(--line);
-    opacity: .55; pointer-events: none;
-  }
-  .ledger-book[data-page="1"]::after { box-shadow: none; }   /* one sheet left */
-  .ledger-book[data-page="2"]::after { display: none; }      /* last page — no stack */
 
-  /* ---- leaves ---- */
+  /* ---- leaves — pages crossfade (outgoing fades out under the incoming) ---- */
   .ledger-leaf {
     position: absolute; inset: 0;
-    border-radius: 12px;
     overflow: hidden;
-    visibility: hidden; pointer-events: none;
+    opacity: 0; visibility: hidden; pointer-events: none;
     z-index: 1;
+    transition: opacity .3s ease, visibility 0s .3s;
   }
-  .ledger-leaf.active { visibility: visible; pointer-events: auto; z-index: 2; }
+  .ledger-leaf.active {
+    opacity: 1; visibility: visible; pointer-events: auto; z-index: 2;
+    transition: opacity .3s ease, visibility 0s;
+  }
+  @media (prefers-reduced-motion: reduce) { .ledger-leaf { transition: none; } }
   .leaf-inner { position: relative; width: 100%; height: 100%; }
   .leaf-folio {
     position: absolute; bottom: 10px; right: 20px;
@@ -1348,7 +1334,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     position: relative; min-height: 0; height: 100%;
     display: flex; flex-direction: column; gap: 14px;
     overflow-y: auto; scrollbar-width: thin;
-    padding: 20px 20px 24px;
+    padding: 56px 54px 24px 20px;   /* top clears the fixed action icons; right clears the edge tabs */
     background: var(--surface);
     border-left: 1px solid var(--line);
   }
@@ -1362,13 +1348,13 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .ledger-col .stat-split .stat-half:first-child { padding-right: 34px; }
 
   /* the bill: a modal again, but it prints down over the info-panel area —
-     the printer housing sits at the panel's top edge (stage padding 24px +
-     1px book border; panel = the book's right 360px, inside the 76px tab
-     gutter), not centered over the map */
+     the printer housing sits at the panel's top edge (the panel is the
+     viewport's right 360px now that pages are full-bleed), not centered
+     over the map */
   .overlay[data-act="overlay-budget"] {
     justify-content: flex-end;
     align-items: flex-start;
-    padding: 25px 77px 30px 20px;
+    padding: 0 0 30px 20px;
     /* no scrim on the ledger — the map stays crisp; only what's directly
        behind the bill is hidden (below) */
     background: none;
@@ -1386,7 +1372,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .leaf-plan .leaf-inner,
   .leaf-days .leaf-inner {
     display: flex; flex-direction: column;
-    padding: 24px 30px 30px 42px;
+    padding: 24px 54px 30px 42px;   /* right room clears the edge tabs */
     background:
       linear-gradient(90deg, transparent 30px, var(--ledger-margin) 30px, var(--ledger-margin) 31px, transparent 31px),
       repeating-linear-gradient(180deg, transparent 0 32px, var(--ledger-rule) 32px 33px);
@@ -1426,9 +1412,9 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .leaf-days .iti-left { padding-left: 0; }
   .leaf-days .cal { margin-top: 10px; }
 
-  /* ---- divider tabs on the fore-edge ---- */
+  /* ---- page tabs, flush to the viewport's right edge ---- */
   .ledger-tabs {
-    position: absolute; top: 48px; right: -46px; width: 46px;
+    position: absolute; top: 48px; right: 0; width: 40px;
     display: flex; flex-direction: column; gap: 10px;
     z-index: 7;
   }
@@ -1436,14 +1422,14 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     writing-mode: vertical-rl;
     font-family: var(--caps); font-size: 12.5px; letter-spacing: .15em; text-transform: uppercase;
     color: var(--ink-soft); background: var(--surface);
-    border: 1px solid var(--line); border-left: none;
-    border-radius: 0 9px 9px 0;
+    border: 1px solid var(--line); border-right: none;
+    border-radius: 9px 0 0 9px;
     padding: 14px 5px; cursor: pointer;
-    box-shadow: 3px 3px 10px rgba(35, 20, 12, .12);
+    box-shadow: -3px 3px 10px rgba(35, 20, 12, .10);
     transition: transform .18s, color .15s, background .15s;
   }
-  .ledger-tab:hover { transform: translateX(3px); color: var(--ink); }
-  .ledger-tab.on { background: var(--brown); color: var(--on-brown); border-color: var(--brown); transform: translateX(2px); }
+  .ledger-tab:hover { transform: translateX(-3px); color: var(--ink); }
+  .ledger-tab.on { background: var(--brown); color: var(--on-brown); border-color: var(--brown); transform: translateX(-2px); }
 
   /* ---- fore-edge / spine page-turn zones ---- */
   .ledger-edge {
@@ -1460,41 +1446,6 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .ledger-edge.next { right: -1px; }
   .ledger-book[data-page="2"] .ledger-edge.next { visibility: hidden; }
 
-  /* ---- the turning leaf ---- */
-  .ledger-turnsheet {
-    position: absolute; inset: 0;
-    transform-origin: left center;
-    visibility: hidden;
-    z-index: 8;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    background:
-      linear-gradient(90deg, rgba(35, 20, 12, .07), transparent 16%),
-      linear-gradient(90deg, transparent 30px, var(--ledger-margin) 30px, var(--ledger-margin) 31px, transparent 31px),
-      repeating-linear-gradient(180deg, transparent 0 32px, var(--ledger-rule) 32px 33px),
-      var(--surface);
-    backface-visibility: hidden;   /* the sheet vanishes edge-on past 90° — the reveal */
-    display: flex; align-items: center; justify-content: center;
-  }
-  .ledger-turnsheet .ts-label {
-    font-family: var(--serif); font-style: italic; font-size: 21px;
-    color: var(--ink-mute); letter-spacing: .02em;
-  }
-  .ledger-turnsheet.turn-fwd  { visibility: visible; animation: ledgerTurnFwd  .9s cubic-bezier(0.4, 0, 0.2, 1) both; }
-  .ledger-turnsheet.turn-back { visibility: visible; animation: ledgerTurnBack .9s cubic-bezier(0.4, 0, 0.2, 1) both; }
-  @keyframes ledgerTurnFwd {
-    0%   { transform: rotateY(0deg);    box-shadow: 0 0 0 rgba(35, 20, 12, 0); }
-    25%  { box-shadow: 30px 16px 46px rgba(35, 20, 12, .30); }
-    100% { transform: rotateY(-178deg); box-shadow: 0 0 0 rgba(35, 20, 12, 0); }
-  }
-  @keyframes ledgerTurnBack {
-    0%   { transform: rotateY(-178deg); }
-    30%  { box-shadow: 30px 16px 46px rgba(35, 20, 12, .30); }
-    100% { transform: rotateY(0deg);    box-shadow: 0 0 0 rgba(35, 20, 12, 0); }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .ledger-turnsheet.turn-fwd, .ledger-turnsheet.turn-back { animation: none; visibility: hidden; }
-  }
 }
 
 /* ============================================================

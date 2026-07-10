@@ -2693,7 +2693,6 @@
       <div class="ledger-stage">
         <div class="ledger-book${this.budgetOpen ? ' bill-open' : ''}" data-page="${page}">
           ${routeLeaf}${planLeaf}${daysLeaf}
-          <div class="ledger-turnsheet" aria-hidden="true"><span class="ts-label"></span></div>
           <button class="ledger-edge prev" data-act="ledger-prev" title="Previous page" aria-label="Previous page">‹</button>
           <button class="ledger-edge next" data-act="ledger-next" title="Next page" aria-label="Next page">›</button>
           <nav class="ledger-tabs" aria-label="Pages">${tabs}</nav>
@@ -2701,33 +2700,18 @@
       </div>`;
     }
 
-    // flip to page i with the turnsheet rotating around the left spine;
-    // the live leaves swap beneath it edge-on (~mid-turn)
+    // switch to page i — the leaves crossfade via the .active class transition
+    // (class toggling on live DOM; ordinary re-renders don't animate)
     magGoto(i) {
       if (!this._webMag()) return;
       i = Math.max(0, Math.min(2, i));
       if (i === this.magIdx || this._magAnimating) return;
-      const dir = i > this.magIdx ? 1 : -1;
-      const from = this.magIdx;
       this.magIdx = i;
-      const book = this.root.querySelector('.ledger-book');
-      const sheet = book && book.querySelector('.ledger-turnsheet');
-      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (!book || !sheet || reduced) { this._syncLeafClasses(); this._afterFlip(); return; }
-      this._magAnimating = true;
-      const titles = ['Route', 'Transport & Hotels', 'Itinerary'];
-      const lbl = sheet.querySelector('.ts-label');
-      if (lbl) lbl.textContent = titles[dir > 0 ? from : i];   // fwd: the outgoing leaf lifts · back: the incoming one lays down
-      sheet.classList.remove('turn-fwd', 'turn-back');
-      void sheet.offsetWidth;   // restart the animation cleanly
-      sheet.classList.add(dir > 0 ? 'turn-fwd' : 'turn-back');
-      clearTimeout(this._flipMidT); clearTimeout(this._flipEndT);
-      this._flipMidT = setTimeout(() => this._syncLeafClasses(), 400);
-      this._flipEndT = setTimeout(() => {
-        sheet.classList.remove('turn-fwd', 'turn-back');
-        this._magAnimating = false;
-        this._afterFlip();
-      }, 900);
+      this._magAnimating = true;   // brief lock so a wheel gesture turns one page, not three
+      clearTimeout(this._flipEndT);
+      this._flipEndT = setTimeout(() => { this._magAnimating = false; }, 340);
+      this._syncLeafClasses();
+      this._afterFlip();
     }
     _syncLeafClasses() {
       const book = this.root.querySelector('.ledger-book'); if (!book) return;
