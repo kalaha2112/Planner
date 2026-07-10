@@ -365,7 +365,28 @@
     'athens': [37.9838, 23.7275], 'istanbul': [41.0082, 28.9784], 'valletta': [35.8997, 14.5147],
     'tirana': [41.3275, 19.8189], 'podgorica': [42.4304, 19.2594],
     // North America
-    'toronto': [43.6532, -79.3832], 'montreal': [45.5017, -73.5673], 'los_angeles': [34.0522, -118.2437]
+    'toronto': [43.6532, -79.3832], 'montreal': [45.5017, -73.5673], 'los angeles': [34.0522, -118.2437],
+    'san francisco': [37.7749, -122.4194], 'chicago': [41.8781, -87.6298], 'boston': [42.3601, -71.0589],
+    'seattle': [47.6062, -122.3321], 'washington': [38.9072, -77.0369], 'miami': [25.7617, -80.1918],
+    'calgary': [51.0447, -114.0719], 'mexico city': [19.4326, -99.1332],
+    // Asia
+    'tokyo': [35.6762, 139.6503], 'osaka': [34.6937, 135.5023], 'kyoto': [35.0116, 135.7681],
+    'seoul': [37.5665, 126.9780], 'busan': [35.1796, 129.0756],
+    'beijing': [39.9042, 116.4074], 'shanghai': [31.2304, 121.4737], 'hong kong': [22.3193, 114.1694],
+    'taipei': [25.0330, 121.5654], 'singapore': [1.3521, 103.8198], 'bangkok': [13.7563, 100.5018],
+    'chiang mai': [18.7883, 98.9853], 'hanoi': [21.0285, 105.8542],
+    'ho chi minh city': [10.8231, 106.6297], 'ho chi minh': [10.8231, 106.6297], 'saigon': [10.8231, 106.6297],
+    'da nang': [16.0544, 108.2022], 'phnom penh': [11.5564, 104.9282], 'siem reap': [13.3671, 103.8448],
+    'kuala lumpur': [3.1390, 101.6869], 'jakarta': [-6.2088, 106.8456], 'bali': [-8.4095, 115.1889],
+    'denpasar': [-8.6705, 115.2126], 'manila': [14.5995, 120.9842],
+    'delhi': [28.6139, 77.2090], 'mumbai': [19.0760, 72.8777],
+    // Middle East / Africa
+    'dubai': [25.2048, 55.2708], 'doha': [25.2854, 51.5310], 'tel aviv': [32.0853, 34.7818],
+    'cairo': [30.0444, 31.2357], 'marrakech': [31.6295, -7.9811], 'cape town': [-33.9249, 18.4241],
+    // Oceania / South America
+    'sydney': [-33.8688, 151.2093], 'melbourne': [-37.8136, 144.9631], 'auckland': [-36.8509, 174.7645],
+    'rio de janeiro': [-22.9068, -43.1729], 'sao paulo': [-23.5505, -46.6333],
+    'buenos aires': [-34.6037, -58.3816], 'lima': [-12.0464, -77.0428]
   };
 
   const FX_CAD = {
@@ -1392,7 +1413,27 @@
       if (m) { const code = normKey(m[1]); if (CITY_COORDS[code]) return CITY_COORDS[code]; }
       const fw = base.split(/[, ]+/)[0];
       if (fw && CITY_COORDS[fw]) return CITY_COORDS[fw];
+      // city not in the static table (e.g. outside Europe) — fall back to the
+      // shared Nominatim geocoder. Sync path reads the cache; a miss kicks off
+      // one lookup, and the globe/maps refresh when the coordinate lands.
+      if (!base) return null;
+      const g = this._geoCache.get(base + '|');
+      if (g) return [g.lat, g.lng];
+      if (g === undefined) this._geocodeCity(label, base);   // null = known failure, don't retry
       return null;
+    }
+    _geocodeCity(label, key) {
+      if (!this._cityGeoPending) this._cityGeoPending = new Set();
+      if (this._cityGeoPending.has(key)) return;
+      this._cityGeoPending.add(key);
+      this.geocode(label.replace(/\(.*?\)/g, '').trim(), '').then((coord) => {
+        this._cityGeoPending.delete(key);
+        if (!coord) return;
+        // redraw everything that plots stops: route maps + the intro globe
+        this._lastCoordKey = '';
+        this.touchMap();
+        if (this._introGlobeRefresh) this._introGlobeRefresh();
+      }).catch(() => this._cityGeoPending.delete(key));
     }
     ensureMap(tries) {
       if (!this.mapEl.isConnected || !window.L) { if (tries < 80) setTimeout(() => this.ensureMap(tries + 1), 100); return; }
