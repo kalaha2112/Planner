@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-10T21:37:18.377Z
+  Built: 2026-07-10T21:48:31.538Z
 -->
 
 <html lang="en">
@@ -2013,12 +2013,14 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     position: relative;
     height: 100vh; height: 100dvh;
     overflow: hidden;
-    background: var(--surface);
+    /* base matches the intro + body shell so the intro->planner scroll seam
+       is invisible in dark mode (cards inside use --surface to sit above it) */
+    background: var(--shell);
   }
   .ledger-book {
     position: relative;
     width: 100%; height: 100%;
-    background: var(--surface);
+    background: var(--shell);
   }
 
   /* ---- leaves — pages crossfade (outgoing fades out under the incoming) ---- */
@@ -2059,7 +2061,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     display: flex; flex-direction: column; gap: 14px;
     overflow-y: auto; scrollbar-width: thin;
     padding: 56px 54px 24px 20px;   /* top clears the fixed action icons; right clears the edge tabs */
-    background: var(--surface);
+    background: var(--shell);
     border-left: 1px solid var(--line);
   }
   /* date range as prose — no box, no labels, darker green */
@@ -2118,7 +2120,8 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     padding: 24px 54px 30px 42px;   /* right room clears the edge tabs */
     background:
       linear-gradient(90deg, transparent 30px, var(--ledger-margin) 30px, var(--ledger-margin) 31px, transparent 31px),
-      repeating-linear-gradient(180deg, transparent 0 32px, var(--ledger-rule) 32px 33px);
+      repeating-linear-gradient(180deg, transparent 0 32px, var(--ledger-rule) 32px 33px),
+      var(--surface);   /* keep the lighter "paper" tone now the book base is --shell */
   }
   .leaf-head {
     display: flex; align-items: flex-end; justify-content: space-between; gap: 18px;
