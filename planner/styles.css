@@ -1266,38 +1266,216 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 }
 
 /* ============================================================
-   VIEWPORT-FIT MODE — everything in one screen height (≥ 800px)
-   Below 800px: aside stacks under map, page scrolls normally
+   WEB LEDGER (≥ 701px) — the planner as a left-bound horizontal
+   ledger notebook. The viewport is the desk; the book sits on it
+   with a stitched spine on the left, divider tabs on the right
+   edge, and one full-width leaf per page. Leaves keep layout
+   while hidden (visibility, not display) so Leaflet holds size.
+   Below 701px the app page renders instead — none of this applies.
    ============================================================ */
-@media (min-width: 800px) {
+@media (min-width: 701px) {
   html, body { overflow: hidden; }
-  .page {
+  :root {
+    --ledger-rule:   rgba(26, 26, 26, .05);    /* faint account-book ruling */
+    --ledger-margin: rgba(145, 4, 12, .16);    /* the red margin line */
+  }
+  [data-theme="dark"] {
+    --ledger-rule:   rgba(250, 250, 247, .055);
+    --ledger-margin: rgba(201, 58, 65, .22);
+  }
+
+  .ledger-stage {
+    position: relative;
     height: 100vh; height: 100dvh;
-    display: flex; flex-direction: column;
-    overflow: hidden; padding-bottom: 30px;
-  }
-  .body-cols {
-    flex: 1 1 0; min-height: 0;
-    flex-wrap: nowrap; overflow: hidden;
-    align-items: flex-start; /* map-route only as tall as its canvas */
-  }
-  /* map-route stretches to body-cols height so the Leaflet coordinate space
-     never exceeds the visible area — prevents pins clipping at the bottom edge */
-  .map-route {
-    align-self: stretch;
     overflow: hidden;
+    padding: 24px 76px 30px 30px;   /* right space hosts the divider tabs */
+    background: var(--shell);
   }
-  /* unset aspect-ratio so the map canvas fills the constrained height exactly */
-  .main-map-wrap {
-    height: 100%;
-    aspect-ratio: unset;
+  .ledger-book {
+    position: relative;
+    width: 100%; height: 100%;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 7px 14px 14px 7px;
+    box-shadow: 0 26px 60px rgba(35, 20, 12, .18);
+    perspective: 2600px;
   }
-  .aside {
-    flex: 0 0 290px; min-width: 0;
-    position: static; overflow-y: auto;
-    scrollbar-width: thin;
-    align-self: stretch; /* aside fills full body-cols height */
-    padding-bottom: 4px;
+  /* the stack of remaining leaves, peeking past the right edge */
+  .ledger-book::after {
+    content: ''; position: absolute; top: 12px; bottom: 12px; right: -5px; width: 5px;
+    background: repeating-linear-gradient(90deg, var(--line) 0 1px, var(--surface) 1px 2.6px);
+    opacity: .45; border-radius: 0 4px 4px 0;
+  }
+
+  /* ---- the left binding: gutter shade + stitching ---- */
+  .ledger-spine {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 30px;
+    border-right: 1px solid var(--line);
+    background: linear-gradient(90deg, rgba(35, 20, 12, .10), rgba(35, 20, 12, .02) 65%, transparent);
+    border-radius: 7px 0 0 7px;
+    z-index: 6; pointer-events: none;
+  }
+  .ledger-spine::before {   /* stitches */
+    content: ''; position: absolute; left: 13px; top: 20px; bottom: 20px; width: 2px;
+    background: repeating-linear-gradient(180deg, var(--ink) 0 12px, transparent 12px 34px);
+    opacity: .45; border-radius: 2px;
+  }
+
+  /* ---- leaves ---- */
+  .ledger-leaf {
+    position: absolute; inset: 0 0 0 30px;
+    border-radius: 0 13px 13px 0;
+    overflow: hidden;
+    visibility: hidden; pointer-events: none;
+    z-index: 1;
+  }
+  .ledger-leaf.active { visibility: visible; pointer-events: auto; z-index: 2; }
+  .leaf-inner { position: relative; width: 100%; height: 100%; }
+  .leaf-folio {
+    position: absolute; bottom: 10px; right: 20px;
+    font-family: var(--mono); font-size: 10px; letter-spacing: .28em;
+    color: var(--ink-mute); z-index: 6; pointer-events: none;
+  }
+  .leaf-route .leaf-folio { right: auto; left: 20px; }   /* the column owns the right edge there */
+
+  /* ---- page 1 · the route plate + ledger column ---- */
+  /* explicit 100% (not just inset:0) — leaf-inner has a definite height, and an
+     inset-only auto height collapses to 0 for this abs child */
+  .leaf-route .ledger-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; min-width: 0; }
+  .leaf-route .main-map-wrap { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: unset; }
+  .leaf-route .main-map-leaflet { border: none; border-radius: 0; }
+  .ledger-col {
+    position: absolute; top: 16px; right: 16px; bottom: 16px; width: 336px;
+    display: flex; flex-direction: column; gap: 14px;
+    overflow-y: auto; scrollbar-width: thin;
+    z-index: 5;
+    padding: 2px;
+  }
+  .ledger-col .meta-row {
+    background: var(--ep-glass); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    border: 1px solid var(--line); border-radius: var(--r-card);
+    padding: 10px 16px; margin: 0; flex-wrap: nowrap;
+  }
+  .ledger-col .summary,
+  .ledger-col .todos { box-shadow: 0 10px 28px rgba(35, 20, 12, .13); flex-shrink: 0; }
+  /* the split stat was sized for the app's 290px aside — trim its air here */
+  .ledger-col .stat-split .stat-half:first-child { padding-right: 34px; }
+  .ledger-receipt { flex-shrink: 0; }
+  .ledger-receipt .receipt-wrap { max-width: none; }
+  .ledger-receipt .receipt-clip { padding-bottom: 22px; }
+
+  /* ---- pages 2 & 3 share the ruled-leaf chrome ---- */
+  .leaf-plan .leaf-inner,
+  .leaf-days .leaf-inner {
+    display: flex; flex-direction: column;
+    padding: 24px 30px 30px 42px;
+    background:
+      linear-gradient(90deg, transparent 30px, var(--ledger-margin) 30px, var(--ledger-margin) 31px, transparent 31px),
+      repeating-linear-gradient(180deg, transparent 0 32px, var(--ledger-rule) 32px 33px);
+  }
+  .leaf-head {
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 18px;
+    border-bottom: 2px solid var(--line);
+    padding-bottom: 14px; margin-bottom: 4px; flex: none;
+  }
+  .leaf-head .eyebrow { margin-bottom: 6px; }
+  .leaf-title { font-family: var(--serif); font-size: 34px; font-weight: 700; letter-spacing: -.015em; line-height: 1; color: var(--ink); }
+  .leaf-sub { font-family: var(--script); font-style: italic; font-size: 14px; color: var(--green); margin-top: 6px; min-height: 17px; }
+  .leaf-pills { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; max-width: 46%; padding-bottom: 2px; }
+  .leaf-pill {
+    font-family: var(--sans); font-size: 12px; font-weight: 500;
+    color: var(--ink); background: var(--surface);
+    border: 1px solid var(--line); border-radius: var(--r-pill);
+    padding: 6px 14px; cursor: pointer;
+    transition: background .15s, color .15s;
+  }
+  .leaf-pill:hover { background: var(--hover-soft); }
+  .leaf-pill.on { background: var(--brown); color: var(--on-brown); border-color: var(--brown); }
+
+  /* page 2: transport | hotels ledger columns */
+  .leaf-plan-cols { display: flex; flex: 1 1 auto; min-height: 0; }
+  .plan-col { flex: 1 1 0; min-width: 0; overflow-y: auto; scrollbar-width: thin; padding: 18px 26px 24px 0; }
+  .plan-col + .plan-col { border-left: 1px solid var(--line); padding-left: 30px; padding-right: 4px; }
+  .plan-col-hd {
+    font-family: var(--caps); font-size: 13px; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--gold); margin-bottom: 14px;
+  }
+  .plan-col .transport-body { padding: 0; }   /* modal padding stays in the dialog */
+  .plan-col .accom-body { padding: 0; }
+
+  /* page 3: the itinerary working area fills the leaf */
+  .leaf-days .iti-body { flex: 1 1 auto; min-height: 0; margin-top: 8px; }
+  .leaf-days .iti-left { padding-left: 0; }
+  .leaf-days .cal { margin-top: 10px; }
+
+  /* ---- divider tabs on the fore-edge ---- */
+  .ledger-tabs {
+    position: absolute; top: 48px; right: -46px; width: 46px;
+    display: flex; flex-direction: column; gap: 10px;
+    z-index: 7;
+  }
+  .ledger-tab {
+    writing-mode: vertical-rl;
+    font-family: var(--caps); font-size: 12.5px; letter-spacing: .15em; text-transform: uppercase;
+    color: var(--ink-soft); background: var(--surface);
+    border: 1px solid var(--line); border-left: none;
+    border-radius: 0 9px 9px 0;
+    padding: 14px 5px; cursor: pointer;
+    box-shadow: 3px 3px 10px rgba(35, 20, 12, .12);
+    transition: transform .18s, color .15s, background .15s;
+  }
+  .ledger-tab:hover { transform: translateX(3px); color: var(--ink); }
+  .ledger-tab.on { background: var(--brown); color: var(--on-brown); border-color: var(--brown); transform: translateX(2px); }
+
+  /* ---- fore-edge / spine page-turn zones ---- */
+  .ledger-edge {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 32px; height: 84px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--sans); font-size: 26px; font-weight: 300; line-height: 1;
+    color: var(--ink-mute); background: transparent; border: none;
+    cursor: pointer; z-index: 7; opacity: .55;
+    transition: opacity .15s, color .15s;
+  }
+  .ledger-edge:hover { opacity: 1; color: var(--ink); }
+  .ledger-edge.prev { left: -1px; }
+  .ledger-edge.next { right: -1px; }
+  .ledger-book[data-page="2"] .ledger-edge.next { visibility: hidden; }
+
+  /* ---- the turning leaf ---- */
+  .ledger-turnsheet {
+    position: absolute; inset: 0 0 0 30px;
+    transform-origin: left center;
+    visibility: hidden;
+    z-index: 8;
+    border: 1px solid var(--line);
+    border-radius: 0 13px 13px 0;
+    background:
+      linear-gradient(90deg, rgba(35, 20, 12, .07), transparent 16%),
+      linear-gradient(90deg, transparent 30px, var(--ledger-margin) 30px, var(--ledger-margin) 31px, transparent 31px),
+      repeating-linear-gradient(180deg, transparent 0 32px, var(--ledger-rule) 32px 33px),
+      var(--surface);
+    backface-visibility: hidden;   /* the sheet vanishes edge-on past 90° — the reveal */
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ledger-turnsheet .ts-label {
+    font-family: var(--serif); font-style: italic; font-size: 21px;
+    color: var(--ink-mute); letter-spacing: .02em;
+  }
+  .ledger-turnsheet.turn-fwd  { visibility: visible; animation: ledgerTurnFwd  .9s cubic-bezier(0.4, 0, 0.2, 1) both; }
+  .ledger-turnsheet.turn-back { visibility: visible; animation: ledgerTurnBack .9s cubic-bezier(0.4, 0, 0.2, 1) both; }
+  @keyframes ledgerTurnFwd {
+    0%   { transform: rotateY(0deg);    box-shadow: 0 0 0 rgba(35, 20, 12, 0); }
+    25%  { box-shadow: 30px 16px 46px rgba(35, 20, 12, .30); }
+    100% { transform: rotateY(-178deg); box-shadow: 0 0 0 rgba(35, 20, 12, 0); }
+  }
+  @keyframes ledgerTurnBack {
+    0%   { transform: rotateY(-178deg); }
+    30%  { box-shadow: 30px 16px 46px rgba(35, 20, 12, .30); }
+    100% { transform: rotateY(0deg);    box-shadow: 0 0 0 rgba(35, 20, 12, 0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ledger-turnsheet.turn-fwd, .ledger-turnsheet.turn-back { animation: none; visibility: hidden; }
   }
 }
 

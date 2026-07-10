@@ -450,6 +450,14 @@
       this._lastCoordKey = '';
       this._history = [];
       this.stickerPanelOpen = false;
+      // ---- web ledger (≥701px): the planner reads as a left-bound horizontal
+      // ledger notebook — one full-width leaf per page, flipped around the left
+      // spine. Which leaf is open + the flip lock are pure view state.
+      this.magIdx = 0;              // 0 route · 1 transport&hotels · 2 itinerary
+      this._magAnimating = false;
+      this._wheelAcc = 0;           // trackpad delta accumulator for page turns
+      this._wheelT = 0;
+      this._printedOnce = false;    // the receipt prints once, when the notebook opens
       // ---- cloud sync ----
       this.sync = this.loadSyncRec();   // { id, rev, lastSyncedAt }
       this.syncOpen = false;            // sync modal open?
@@ -550,12 +558,18 @@
       this.render();
       this.ensureMap(0);
       this.initIntro();
+      this.initLedgerNav();
       this.initTouchPointer();
       // crossing the mobile-map breakpoint (resizing an iPad window, rotating)
-      // swaps pins-only popup mode ↔ floating cards live
+      // swaps the whole layout live: ≤700px the app page, ≥701px the web ledger.
+      // Leaving the ledger, its always-open leaf selections must not linger as
+      // "open modals" on the app side (and vice versa: entering it needs defaults).
       try {
         window.matchMedia('(max-width: 700px)').addEventListener('change', () => {
           this._openMapCardIdx = null; this._openMapCardFlipped = false;
+          if (!this._webMag()) { this.openStopIdx = null; this.accomOpenIdx = null; this.budgetOpen = false; }
+          this._magAnimating = false;
+          this.render();
           this.touchMap();
         });
       } catch (e) { /* very old Safari: no MQL addEventListener — a reload still applies the right mode */ }
@@ -659,8 +673,21 @@
       this.updateTopActions();
     }
     _anyModalOpen() {
+      // web ledger: itinerary/accom/budget live on always-open leaves, not
+      // modals — only the floating panels count as "open" there
+      if (this._webMag()) return this.syncOpen || this.stickerPanelOpen;
       return this.syncOpen || this.budgetOpen || this.stickerPanelOpen ||
         this.accomOpenIdx != null || this.transportOpenIdx != null || this.openStopIdx != null;
+    }
+    // sync pulls must not clobber content mid-edit. The app blocks while an
+    // editing modal is open; the ledger's leaves are always open, so there we
+    // block only while the user is actually typing in a field.
+    _syncEditGuard() {
+      if (this._webMag()) {
+        const ae = document.activeElement;
+        return !!(ae && (ae.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)));
+      }
+      return (this.openStopIdx != null || this.accomOpenIdx != null || this.budgetOpen);
     }
     updateTopActions() {
       const ta = this.topActionsEl; if (!ta) return;
@@ -767,6 +794,7 @@
         appRoot.style.willChange = '';                             // (so scroll + position:fixed work normally)
         document.documentElement.classList.remove('intro-lock');   // page scrolls natively again
         this._introParked = true; this.updateTopActions();         // hide the intro-only sync button
+        this._onIntroParked();                                     // web ledger: print the receipt once
       };
       const unpark = () => {
         if (!parked) return;
@@ -792,6 +820,9 @@
       // "at the very top of the app" — window unscrolled and no ancestor of the
       // event target scrolled down (aside lists, modals keep their own scroll)
       const atAppTop = (t) => {
+        // web ledger: only page 1 hands the gesture back to the cover —
+        // deeper pages flip back through the notebook first
+        if (this._webMag() && this.magIdx !== 0) return false;
         if (t && t.closest && t.closest('.overlay, .sticker-panel')) return false;
         let el = t instanceof Element ? t : null;
         while (el && el !== document.body) { if (el.scrollTop > 1) return false; el = el.parentElement; }
@@ -863,6 +894,8 @@
       document.addEventListener('keydown', onKey, true);
       // tests / power users: jump straight to the app
       this._introSkip = () => { target = 1; cur = 1; apply(); };
+      // web ledger: "close the notebook" — ease the cover back down
+      this._introReturn = () => { target = 0; kick(); };
     }
     skipIntro() { if (this._introSkip) this._introSkip(); }
 
@@ -943,6 +976,10 @@
 
     bump() { this.render(); this.scheduleSave(); this.touchMap(); if (this._introGlobeRefresh) this._introGlobeRefresh(); if (this._introTabsRefresh) this._introTabsRefresh(); }
     bumpModal() {
+      // web ledger: itinerary/accom/transport/budget render on the leaves inside
+      // #app, so a "modal" bump has to redraw the whole page (render() also
+      // refreshes the floating panels in modalEl)
+      if (this._webMag()) { this.render(); return; }
       const trip = this.currentTrip();
       const travelers = Math.max(1, Number(trip.travelers) || 1);
       const d = this.computeDates(trip);
@@ -960,9 +997,10 @@
       this.mountDayMap();
       this.updateTopActions();   // sticker toggle / sync-modal actions change cluster state
     }
-    // attach the persistent day-map node into the freshly-rendered modal and (re)init Leaflet
+    // attach the persistent day-map node into the freshly-rendered markup and
+    // (re)init Leaflet — the holder lives in the modal (app) or on leaf 3 (web)
     mountDayMap() {
-      const dayHolder = this.modalEl.querySelector('#day-map-holder');
+      const dayHolder = this.modalEl.querySelector('#day-map-holder') || this.root.querySelector('#day-map-holder');
       if (dayHolder) { dayHolder.appendChild(this.dayMapEl); this.ensureDayMap(0); if (this.dayMap) this.dayMap.invalidateSize(); this.scheduleDayMap(); }
     }
     snapshot() { this._history.push(clone(this.data)); if (this._history.length > 20) this._history.shift(); }
@@ -1233,10 +1271,9 @@
     }
     async pullCloud(opts = {}) {
       if (!this.isLinked() || this._syncBusy) return;
-      // don't clobber an itinerary/accom/budget modal the user is mid-edit in;
-      // an explicit "Sync now" (force) still goes through.
-      const editingOpen = (this.openStopIdx != null || this.accomOpenIdx != null || this.budgetOpen);
-      if (!opts.force && editingOpen) return;
+      // don't clobber content the user is mid-edit in (app: an open editing
+      // modal · web ledger: a focused field); "Sync now" (force) still goes through.
+      if (!opts.force && this._syncEditGuard()) return;
       this._syncBusy = true; if (opts.force) this.setSyncStatus('syncing', 'Checking…');
       try {
         const payload = await this.cloudGet(this.sync.id);
@@ -1287,8 +1324,8 @@
     }
     adoptLocal() {
       if (this._savePending) { this.adoptLocalSoon(); return; }   // our own edit is mid-flight; it wins
-      // same guard as pullCloud: never clobber a modal mid-edit — retry after it closes
-      if (this.openStopIdx != null || this.accomOpenIdx != null || this.budgetOpen) {
+      // same guard as pullCloud: never clobber a mid-edit — retry after it clears
+      if (this._syncEditGuard()) {
         clearTimeout(this._adoptTimer);
         this._adoptTimer = setTimeout(() => this.adoptLocal(), 4000);
         return;
@@ -1535,6 +1572,9 @@
     // ≤700px the map switches to pins-only + one tap-to-open popup card;
     // above it (laptop, full-screen iPad) the floating-cards design applies.
     _mobileMap() { return window.matchMedia('(max-width: 700px)').matches; }
+    // ≥701px the whole planner renders as the web ledger notebook instead of
+    // the app's single scrolling page — same state, different composition.
+    _webMag() { return window.matchMedia('(min-width: 701px)').matches; }
     _closeMapPopup() {
       if (this._openMapCardIdx != null) {
         const openCard = this.mainCardsOverlayEl.querySelector(`.map-stop[data-i="${this._openMapCardIdx}"]`);
@@ -2196,11 +2236,25 @@
     removeTodo(i) { this.snapshot(); this.data.meta.todos.splice(i, 1); this.bump(); }
 
     /* ---------- itinerary / accommodation ---------- */
-    openStop(idx) { this.openStopIdx = idx; this.activeDay = null; this._optimizeNote = null; this._selectedItem = null; this.bumpModal(); }
+    openStop(idx) {
+      this.openStopIdx = idx; this.activeDay = null; this._optimizeNote = null; this._selectedItem = null;
+      // web ledger: the itinerary is page 3 — flip to it with this stop selected
+      if (this._webMag()) { this.render(); this.magGoto(2); return; }
+      this.bumpModal();
+    }
     closeStop() { this.openStopIdx = null; this.bumpModal(); }
-    openAccom(idx) { this.accomOpenIdx = idx; this.bumpModal(); }
+    openAccom(idx) {
+      this.accomOpenIdx = idx;
+      // web ledger: hotels share page 2 with transport
+      if (this._webMag()) { this.render(); this.magGoto(1); return; }
+      this.bumpModal();
+    }
     closeAccom() { this.accomOpenIdx = null; this.bumpModal(); }
-    openTransport(idx) { this.transportOpenIdx = idx; this.bumpModal(); }
+    openTransport(idx) {
+      // web ledger: transport is inline on page 2 (same stop selector as hotels)
+      if (this._webMag()) { this.accomOpenIdx = idx; this.render(); this.magGoto(1); return; }
+      this.transportOpenIdx = idx; this.bumpModal();
+    }
     closeTransport() { this.transportOpenIdx = null; this.bumpModal(); }
     ensureItinerary(stop) {
       if (!Array.isArray(stop.itinerary)) stop.itinerary = [];
@@ -2390,8 +2444,20 @@
       const milesNeeded = legs.reduce((s, l) => s + (l.mode === 'flying-blue' ? (Number(l.miles) || 0) : 0), 0) * travelers;
       const budget = this.computeBudget(trip, travelers, nights);
 
+      const web = this._webMag();
+      if (web) {
+        // ledger leaves are always open: their stop selections must stay valid
+        const n = trip.stops.length;
+        if (n) {
+          if (this.openStopIdx == null || this.openStopIdx >= n) { this.openStopIdx = 0; this.activeDay = null; }
+          if (this.accomOpenIdx == null || this.accomOpenIdx >= n) this.accomOpenIdx = 0;
+        } else { this.openStopIdx = null; this.accomOpenIdx = null; }
+        this.magIdx = Math.max(0, Math.min(2, this.magIdx || 0));
+      }
 
-      const html = `
+      const html = web
+        ? this.renderLedger(trip, meta, travelers, d, fmt, nights, budget, milesNeeded)
+        : `
         <div class="page" style="position:relative">
           ${this.renderMeta(trip, travelers)}
           <div class="body-cols">
@@ -2416,13 +2482,14 @@
         </div>
       `;
       this.root.innerHTML = html;
-      this.modalEl.innerHTML =
-        this.renderStickerPanel() +
-        this.renderItineraryModal(trip, d, fmt) +
-        this.renderAccomModal(trip, d, fmt) +
-        this.renderTransportModal(trip) +
-        this.renderBudgetModal(budget, travelers, nights) +
-        this.renderSyncModal();
+      this.modalEl.innerHTML = web
+        ? this.renderStickerPanel() + this.renderSyncModal()   // leaves carry the rest in-page
+        : this.renderStickerPanel() +
+          this.renderItineraryModal(trip, d, fmt) +
+          this.renderAccomModal(trip, d, fmt) +
+          this.renderTransportModal(trip) +
+          this.renderBudgetModal(budget, travelers, nights) +
+          this.renderSyncModal();
 
       // re-attach persistent aside map node
       const holder = this.root.querySelector('#map-holder');
@@ -2448,6 +2515,214 @@
       this.mountDayMap();
       this.paintSaved();
       this.updateTopActions();
+    }
+
+    /* ============================================================
+       WEB LEDGER (≥701px) — the planner as a left-bound horizontal
+       ledger notebook. One full-width leaf per page, flipped around
+       the left spine; divider tabs on the right edge deep-link to
+       any page. Page 1 route map + stats/receipt/to-dos column ·
+       page 2 transport & hotels · page 3 itinerary. Same state and
+       handlers as the app — only the composition differs.
+       ============================================================ */
+    renderLedger(trip, meta, travelers, d, fmt, nights, budget, milesNeeded) {
+      const page = this.magIdx;
+      const state = (i) => i === page ? ' active' : (i < page ? ' past' : ' incoming');
+      const stopPills = (act, sel) => trip.stops.map((s, i) =>
+        `<button class="leaf-pill${i === sel ? ' on' : ''}" data-act="${act}" data-i="${i}">${esc(s.city || 'Stop ' + (i + 1))}</button>`).join('');
+      const nightsLbl = (st) => { const n = Math.max(1, Number(st.nights) || 1); return `${n} night${n === 1 ? '' : 's'}`; };
+
+      // ---- page 1 · the route: full-bleed map plate + the ledger column ----
+      const routeLeaf = `
+      <section class="ledger-leaf leaf-route${state(0)}" data-leaf="0">
+        <div class="leaf-inner">
+          <div class="route map-route ledger-map">
+            <div id="main-map-holder" class="main-map-wrap"></div>
+            <div class="map-ep map-origin">
+              <input value="${escA(trip.originLabel)}" data-ch="origin-label" placeholder="Flying from">
+              <span class="map-ep-date">${d ? fmt(d.origin) : ''}</span>
+            </div>
+            <div class="map-ep map-home">
+              <input value="${escA(trip.homeLabel)}" data-ch="home-label" placeholder="Flying home to">
+              <span class="map-ep-date">${d ? fmt(d.home) : ''}</span>
+            </div>
+            <button class="map-add-btn" data-act="add-stop" title="Add stop" aria-label="Add stop">+</button>
+          </div>
+          <aside class="ledger-col">
+            ${this.renderMeta(trip, travelers)}
+            ${this.renderSummary(nights, budget.grandTotal, budget.perPerson, milesNeeded, meta.milesBalance || 0, travelers)}
+            <div class="ledger-receipt">${this.renderReceipt(budget, travelers, nights, true)}</div>
+            ${this.renderTodos(meta)}
+          </aside>
+          <div class="placed-stickers-layer">${this.renderPlacedStickers()}</div>
+        </div>
+        <span class="leaf-folio">01 · 03</span>
+      </section>`;
+
+      // ---- page 2 · transport & hotels share the leaf, one stop at a time ----
+      const pIdx = this.accomOpenIdx;
+      const pStop = pIdx != null ? trip.stops[pIdx] : null;
+      const pRange = (pStop && d) ? d.stops[pIdx] : null;
+      const planLeaf = `
+      <section class="ledger-leaf leaf-plan${state(1)}" data-leaf="1">
+        <div class="leaf-inner">
+          <header class="leaf-head">
+            <div class="leaf-head-main">
+              <div class="eyebrow">Transport &amp; Hotels</div>
+              <div class="leaf-title">${pStop ? esc(pStop.city || 'Stop') : 'No stops yet'}</div>
+              <div class="leaf-sub">${pRange ? esc(fmt(pRange.start) + ' → ' + fmt(pRange.end)) + ' · ' : ''}${pStop ? nightsLbl(pStop) : ''}</div>
+            </div>
+            <div class="leaf-pills">${stopPills('ledger-stop-plan', pIdx)}</div>
+          </header>
+          ${pStop ? `
+          <div class="leaf-plan-cols">
+            <div class="plan-col plan-transport">
+              <div class="plan-col-hd">Getting there</div>
+              ${this.renderTransportBody(trip, pIdx)}
+            </div>
+            <div class="plan-col plan-hotels">
+              <div class="plan-col-hd">Sleeping</div>
+              ${this.renderAccomBody(trip, pIdx)}
+            </div>
+          </div>
+          <div class="placed-stickers-layer">${this.renderPlacedStickers('accom-' + pIdx)}</div>` : `
+          <p class="empty-note" style="margin:18px 4px">Add a stop on the route page first.</p>`}
+        </div>
+        <span class="leaf-folio">02 · 03</span>
+      </section>`;
+
+      // ---- page 3 · itinerary (calendar + closet | day planner + day map) ----
+      const iIdx = this.openStopIdx;
+      const iStop = iIdx != null ? trip.stops[iIdx] : null;
+      const iRange = (iStop && d) ? d.stops[iIdx] : null;
+      const iNights = iStop ? Math.max(1, Number(iStop.nights) || 1) : 0;
+      const hasDay = !!iStop && this.activeDay != null && this.activeDay >= 0 && this.activeDay < iNights;
+      const daysLeaf = `
+      <section class="ledger-leaf leaf-days${state(2)}" data-leaf="2">
+        <div class="leaf-inner">
+          <header class="leaf-head">
+            <div class="leaf-head-main">
+              <div class="eyebrow">Itinerary</div>
+              <div class="leaf-title">${iStop ? esc(iStop.city || 'Stop') : 'No stops yet'}</div>
+              <div class="leaf-sub">${iRange ? esc(fmt(iRange.start) + ' → ' + fmt(iRange.end)) + ' · ' : ''}${iStop ? nightsLbl(iStop) : ''}</div>
+            </div>
+            <div class="leaf-pills">${stopPills('ledger-stop-days', iIdx)}</div>
+          </header>
+          ${iStop ? this.renderItineraryBody(trip, d, fmt) : `
+          <p class="empty-note" style="margin:18px 4px">Add a stop on the route page first.</p>`}
+          ${hasDay ? `<div class="placed-stickers-layer">${this.renderPlacedStickers('iti-' + iIdx + '-day-' + this.activeDay)}</div>` : ''}
+        </div>
+        <span class="leaf-folio">03 · 03</span>
+      </section>`;
+
+      const tabs = ['Route', 'Transport & Hotels', 'Itinerary'].map((t, i) =>
+        `<button class="ledger-tab${i === page ? ' on' : ''}" data-act="ledger-goto" data-i="${i}">${esc(t)}</button>`).join('');
+      return `
+      <div class="ledger-stage">
+        <div class="ledger-book" data-page="${page}">
+          <div class="ledger-spine" aria-hidden="true"></div>
+          ${routeLeaf}${planLeaf}${daysLeaf}
+          <div class="ledger-turnsheet" aria-hidden="true"><span class="ts-label"></span></div>
+          <button class="ledger-edge prev" data-act="ledger-prev" title="Previous page" aria-label="Previous page">‹</button>
+          <button class="ledger-edge next" data-act="ledger-next" title="Next page" aria-label="Next page">›</button>
+          <nav class="ledger-tabs" aria-label="Pages">${tabs}</nav>
+        </div>
+      </div>`;
+    }
+
+    // flip to page i with the turnsheet rotating around the left spine;
+    // the live leaves swap beneath it edge-on (~mid-turn)
+    magGoto(i) {
+      if (!this._webMag()) return;
+      i = Math.max(0, Math.min(2, i));
+      if (i === this.magIdx || this._magAnimating) return;
+      const dir = i > this.magIdx ? 1 : -1;
+      const from = this.magIdx;
+      this.magIdx = i;
+      const book = this.root.querySelector('.ledger-book');
+      const sheet = book && book.querySelector('.ledger-turnsheet');
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!book || !sheet || reduced) { this._syncLeafClasses(); this._afterFlip(); return; }
+      this._magAnimating = true;
+      const titles = ['Route', 'Transport & Hotels', 'Itinerary'];
+      const lbl = sheet.querySelector('.ts-label');
+      if (lbl) lbl.textContent = titles[dir > 0 ? from : i];   // fwd: the outgoing leaf lifts · back: the incoming one lays down
+      sheet.classList.remove('turn-fwd', 'turn-back');
+      void sheet.offsetWidth;   // restart the animation cleanly
+      sheet.classList.add(dir > 0 ? 'turn-fwd' : 'turn-back');
+      clearTimeout(this._flipMidT); clearTimeout(this._flipEndT);
+      this._flipMidT = setTimeout(() => this._syncLeafClasses(), 400);
+      this._flipEndT = setTimeout(() => {
+        sheet.classList.remove('turn-fwd', 'turn-back');
+        this._magAnimating = false;
+        this._afterFlip();
+      }, 900);
+    }
+    _syncLeafClasses() {
+      const book = this.root.querySelector('.ledger-book'); if (!book) return;
+      book.dataset.page = String(this.magIdx);
+      book.querySelectorAll('.ledger-leaf').forEach(el => {
+        const i = Number(el.dataset.leaf);
+        el.classList.toggle('active', i === this.magIdx);
+        el.classList.toggle('past', i < this.magIdx);
+        el.classList.toggle('incoming', i > this.magIdx);
+      });
+      book.querySelectorAll('.ledger-tab').forEach(el => el.classList.toggle('on', Number(el.dataset.i) === this.magIdx));
+    }
+    // hidden leaves keep their layout (visibility, not display), but Leaflet
+    // still wants a nudge when its leaf comes back
+    _afterFlip() {
+      if (this.magIdx === 0 && this.mainLeafletMap) { this.mainLeafletMap.invalidateSize(); this.renderMainMap(); }
+      if (this.magIdx === 2 && this.dayMap) { this.dayMap.invalidateSize(); this.scheduleDayMap(); }
+    }
+    // the receipt prints once, the moment the notebook first opens (intro parks)
+    _onIntroParked() {
+      if (!this._webMag() || this._printedOnce) return;
+      this._printedOnce = true;
+      this._budgetPrint = true;
+      this.render();
+    }
+    initLedgerNav() {
+      // wheel: turn a page when the gesture isn't claimed by the intro (pull
+      // back to the cover), a floating panel, the maps (zoom/pan), or a
+      // scrollable region that can still move in that direction
+      document.addEventListener('wheel', (e) => {
+        if (!this._webMag() || !this._introParked || this._magAnimating) return;
+        if (e.defaultPrevented) return;
+        const t = e.target;
+        if (t && t.closest && t.closest('.overlay, .sticker-panel, .top-actions, .main-map-wrap, .leaflet-container, .daymap')) return;
+        const dy = e.deltaY + e.deltaX;
+        let el = t instanceof Element ? t : null;
+        while (el && el !== document.body) {
+          if (el.scrollHeight > el.clientHeight + 1) {
+            const canDown = el.scrollTop + el.clientHeight < el.scrollHeight - 1;
+            const canUp = el.scrollTop > 1;
+            if ((dy > 0 && canDown) || (dy < 0 && canUp)) return;
+          }
+          el = el.parentElement;
+        }
+        const now = performance.now();
+        if (now - this._wheelT > 480) this._wheelAcc = 0;   // a fresh gesture
+        this._wheelT = now;
+        this._wheelAcc += dy;
+        if (Math.abs(this._wheelAcc) < 110) return;
+        const dir = this._wheelAcc > 0 ? 1 : -1;
+        this._wheelAcc = 0;
+        if (dir < 0 && this.magIdx === 0) return;   // the intro driver owns "up from page 1"
+        this.magGoto(this.magIdx + dir);
+      }, { passive: true });
+      // ← → turn pages; ← on page 1 closes the notebook back to the cover
+      document.addEventListener('keydown', (e) => {
+        if (!this._webMag() || !this._introParked || this._anyModalOpen()) return;
+        const ae = document.activeElement;
+        if (ae && (ae.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))) return;
+        if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); this.magGoto(this.magIdx + 1); }
+        else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          if (this.magIdx > 0) this.magGoto(this.magIdx - 1);
+          else if (this._introReturn) this._introReturn();
+        }
+      });
     }
 
     renderTabs() {
@@ -2736,8 +3011,10 @@
       return months;
     }
 
-    renderItineraryModal(trip, d, fmt) {
-      if (this.openStopIdx == null || !trip.stops[this.openStopIdx]) return '';
+    // The itinerary's working area (calendar + closet | day planner + day map).
+    // Shared verbatim by the app's modal and the web ledger's page 3 — both
+    // read this.openStopIdx / this.activeDay.
+    renderItineraryBody(trip, d, fmt) {
       const sIdx = this.openStopIdx; const stop = trip.stops[sIdx];
       const nightsN = Math.max(1, Number(stop.nights) || 1);
       this.ensureItinerary(stop);
@@ -2807,6 +3084,31 @@
         dayBlock = '';
       }
 
+      return `<div class="iti-body">
+        <div class="iti-left">
+          <div class="cal">${cal}</div>
+          <div class="closet">
+            <div class="hd"><div class="t">Closet</div><span class="hint">add an outfit, then drag it onto any date</span></div>
+            <div class="strip">${stripCells}
+              <div class="add-outfit" data-act="closet-add" data-drop="closet-zone" tabindex="0" title="Paste, drop, or tap to add an outfit">
+                ${svg(I.plus, { w: 16, h: 16, sw: 2.2, stroke: 'currentColor' })}<span>Add</span></div>
+              <div class="add-outfit paste-tile" data-act="closet-paste" tabindex="0" title="Paste a copied/lifted image">
+                ${svg(I.clipboard, { w: 15, h: 15, sw: 2, stroke: 'currentColor' })}<span>Paste</span></div>
+              <input type="file" accept="image/*" class="closet-file" data-ch="closet-file" style="display:none">
+            </div>
+          </div>
+        </div>
+        ${hasDay ? `<div class="iti-right">${dayBlock}</div>` : ''}
+      </div>`;
+    }
+
+    renderItineraryModal(trip, d, fmt) {
+      if (this.openStopIdx == null || !trip.stops[this.openStopIdx]) return '';
+      const sIdx = this.openStopIdx; const stop = trip.stops[sIdx];
+      const nightsN = Math.max(1, Number(stop.nights) || 1);
+      const range = d ? d.stops[sIdx] : null;
+      const hasDay = this.activeDay != null && this.activeDay >= 0 && this.activeDay < nightsN;
+      const activeDay = hasDay ? this.activeDay : -1;
       return `<div class="overlay" data-act="overlay-iti">
         <div class="dialog iti-dialog" data-stop data-sticker-target="iti-${sIdx}">
           <div class="head">
@@ -2822,33 +3124,17 @@
               </div>
             </div>
           </div>
-          <div class="iti-body">
-            <div class="iti-left">
-              <div class="cal">${cal}</div>
-              <div class="closet">
-                <div class="hd"><div class="t">Closet</div><span class="hint">add an outfit, then drag it onto any date</span></div>
-                <div class="strip">${stripCells}
-                  <div class="add-outfit" data-act="closet-add" data-drop="closet-zone" tabindex="0" title="Paste, drop, or tap to add an outfit">
-                    ${svg(I.plus, { w: 16, h: 16, sw: 2.2, stroke: 'currentColor' })}<span>Add</span></div>
-                  <div class="add-outfit paste-tile" data-act="closet-paste" tabindex="0" title="Paste a copied/lifted image">
-                    ${svg(I.clipboard, { w: 15, h: 15, sw: 2, stroke: 'currentColor' })}<span>Paste</span></div>
-                  <input type="file" accept="image/*" class="closet-file" data-ch="closet-file" style="display:none">
-                </div>
-              </div>
-            </div>
-            ${hasDay ? `<div class="iti-right">${dayBlock}</div>` : ''}
-          </div>
+          ${this.renderItineraryBody(trip, d, fmt)}
         </div>
         ${hasDay ? `<div class="placed-stickers-layer placed-stickers-layer--modal">${this.renderPlacedStickers('iti-' + sIdx + '-day-' + activeDay)}</div>` : ''}
       </div>`;
     }
 
-    renderAccomModal(trip, d, fmt) {
-      if (this.accomOpenIdx == null || !trip.stops[this.accomOpenIdx]) return '';
-      const idx = this.accomOpenIdx; const stop = trip.stops[idx];
+    // Lodging options list for one stop — shared by the app's modal and the
+    // web ledger's page 2. Handlers key off this.accomOpenIdx, which both keep.
+    renderAccomBody(trip, idx) {
+      const stop = trip.stops[idx];
       if (!stop.accom) stop.accom = { options: [] };
-      const range = d ? d.stops[idx] : null;
-      const nightsN = Math.max(1, Number(stop.nights) || 1);
       const accomList = stop.accom.options;
       const opts = accomList.map((o, oi) => `<div class="opt${o.chosen ? ' chosen' : ''}">
         <div class="top">
@@ -2864,6 +3150,18 @@
           <div class="fld"><label>Features</label><input value="${escA(o.features)}" data-ch="accom-features" data-i="${oi}" placeholder="e.g. breakfast, pool, A/C"></div>
         </div>
       </div>`).join('');
+      return `<div class="accom-body">
+        ${stop.accom.options.length === 0 ? `<p class="empty-note" style="margin:4px 0">No options yet — add one below to start researching.</p>` : ''}
+        ${opts}
+        <button class="add-option" data-act="accom-add" style="width:100%">+</button>
+      </div>`;
+    }
+
+    renderAccomModal(trip, d, fmt) {
+      if (this.accomOpenIdx == null || !trip.stops[this.accomOpenIdx]) return '';
+      const idx = this.accomOpenIdx; const stop = trip.stops[idx];
+      const range = d ? d.stops[idx] : null;
+      const nightsN = Math.max(1, Number(stop.nights) || 1);
       return `<div class="overlay" data-act="overlay-accom">
         <div class="dialog accom-dialog" data-stop data-sticker-target="accom-${idx}">
           <div class="head"><div class="row">
@@ -2874,21 +3172,16 @@
             </div>
             <button class="modal-x" data-act="close-accom">✕</button>
           </div></div>
-          <div class="accom-body">
-            ${stop.accom.options.length === 0 ? `<p class="empty-note" style="margin:4px 0">No options yet — add one below to start researching.</p>` : ''}
-            ${opts}
-            <button class="add-option" data-act="accom-add" style="width:100%">+</button>
-          </div>
+          ${this.renderAccomBody(trip, idx)}
         </div>
         <div class="placed-stickers-layer placed-stickers-layer--modal">${this.renderPlacedStickers('accom-' + idx)}</div>
       </div>`;
     }
 
-    renderTransportModal(trip) {
-      if (this.transportOpenIdx == null || !trip.stops[this.transportOpenIdx]) return '';
-      const idx = this.transportOpenIdx;
+    // One leg's editor (mode pills + times + cost/miles) for the leg that
+    // reaches stop `idx` — shared by the app's modal and the ledger's page 2.
+    renderTransportBody(trip, idx) {
       const leg = this.legByIndex(idx);
-      const stop = trip.stops[idx];
       const isFB = leg.mode === 'flying-blue';
       const modeColor = MODE_HEX[leg.mode] || '#7a7260';
       const fmtCost = n => { const v = Number(n) || 0; return v >= 1000 ? v.toLocaleString('en-US') : (v || ''); };
@@ -2899,16 +3192,7 @@
       const costLabel = isFB ? 'Miles / pp' : 'Cost / pp';
       const costUnit = isFB ? 'mi' : '$';
       const costVal = escA(fmtCost(isFB ? (leg.miles ?? 0) : (leg.cost ?? 0)));
-      return `<div class="overlay" data-act="overlay-transport">
-        <div class="dialog transport-dialog">
-          <div class="head"><div class="row">
-            <div style="flex:1;min-width:0">
-              <div class="eyebrow">Getting there</div>
-              <div class="transport-city">${esc(stop.city || 'Stop')}</div>
-            </div>
-            <button class="modal-x" data-act="close-transport">✕</button>
-          </div></div>
-          <div class="transport-body">
+      return `<div class="transport-body">
             <div class="t-pills">${pills}</div>
             <div class="t-row-3">
               <div class="t-fld">
@@ -2937,13 +3221,30 @@
                 </div>
               </div>
             </div>
-          </div>
+          </div>`;
+    }
+
+    renderTransportModal(trip) {
+      if (this.transportOpenIdx == null || !trip.stops[this.transportOpenIdx]) return '';
+      const idx = this.transportOpenIdx;
+      const stop = trip.stops[idx];
+      return `<div class="overlay" data-act="overlay-transport">
+        <div class="dialog transport-dialog">
+          <div class="head"><div class="row">
+            <div style="flex:1;min-width:0">
+              <div class="eyebrow">Getting there</div>
+              <div class="transport-city">${esc(stop.city || 'Stop')}</div>
+            </div>
+            <button class="modal-x" data-act="close-transport">✕</button>
+          </div></div>
+          ${this.renderTransportBody(trip, idx)}
         </div>
       </div>`;
     }
 
-    renderBudgetModal(budget, travelers, nights) {
-      if (!this.budgetOpen) return '';
+    // The printed receipt (printer housing + paper + barcode). `inline` drops
+    // the close button — on the web ledger the receipt sits on page 1, in-flow.
+    renderReceipt(budget, travelers, nights, inline) {
       const lines = budget.lines.map(line => {
         const editable = !!line.key;
         let right;
@@ -2953,16 +3254,15 @@
         return `<div class="bline"><div class="info"><div class="l">${esc(line.label)}</div><div class="m">${esc(line.mult)}</div></div>${mid}${right}</div>`;
       }).join('');
       // print-feed animation runs only on the render right after opening —
-      // edits re-render the modal live and must not replay the animation
+      // edits re-render live and must not replay the animation
       const printing = this._budgetPrint ? ' printing' : '';
       if (this._budgetPrint) { clearTimeout(this._budgetPrintTimer); this._budgetPrintTimer = setTimeout(() => { this._budgetPrint = false; }, 1900); }
-      return `<div class="overlay" data-act="overlay-budget">
-        <div class="receipt-wrap" data-stop>
+      return `<div class="receipt-wrap" data-stop>
           <div class="printer-slot" aria-hidden="true"></div>
           <div class="receipt-clip">
             <div class="dialog budget-dialog${printing}">
               <div class="head">
-                <button class="modal-x" data-act="close-budget">✕</button>
+                ${inline ? '' : `<button class="modal-x" data-act="close-budget">✕</button>`}
                 <div class="eyebrow">Budget breakdown</div>
                 <div class="budget-sub">${esc(money(budget.perPerson))} / person · ${travelers} travelers · ${nights} nights</div>
               </div>
@@ -2975,7 +3275,13 @@
               </div>
             </div>
           </div>
-        </div>
+        </div>`;
+    }
+
+    renderBudgetModal(budget, travelers, nights) {
+      if (!this.budgetOpen) return '';
+      return `<div class="overlay" data-act="overlay-budget">
+        ${this.renderReceipt(budget, travelers, nights, false)}
       </div>`;
     }
 
@@ -3076,8 +3382,11 @@
       });
     }
     onEscape() {
-      if (this.syncOpen) { this.syncOpen = false; this.bumpModal(); }
-      else if (this.budgetOpen) { this.budgetOpen = false; this.bumpModal(); }
+      if (this.syncOpen) { this.syncOpen = false; this.bumpModal(); return; }
+      // ledger leaves aren't dismissable — openStopIdx/accomOpenIdx are the
+      // pages' stop selections there, not modals
+      if (this._webMag()) { if (this.stickerPanelOpen) { this.stickerPanelOpen = false; this.bumpModal(); } return; }
+      if (this.budgetOpen) { this.budgetOpen = false; this.bumpModal(); }
       else if (this.accomOpenIdx != null) { this.closeAccom(); }
       else if (this.transportOpenIdx != null) { this.closeTransport(); }
       else if (this.openStopIdx != null) { this.closeStop(); }
@@ -3106,7 +3415,20 @@
         case 'todo-toggle': { const td = this.data.meta.todos[i]; td.done = !td.done; this.bump(); break; }
         case 'todo-remove': this.removeTodo(i); break;
         case 'add-todo': this.addTodo(); break;
-        case 'open-budget': this.budgetOpen = true; this._budgetPrint = true; this.bumpModal(); break;
+        case 'open-budget':
+          if (this._webMag()) {
+            // the receipt already sits on page 1 — replay the print and show it
+            this._budgetPrint = true; this.render();
+            const rc = this.root.querySelector('.ledger-receipt');
+            if (rc && rc.scrollIntoView) rc.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            break;
+          }
+          this.budgetOpen = true; this._budgetPrint = true; this.bumpModal(); break;
+        case 'ledger-goto': this.magGoto(i); break;
+        case 'ledger-prev': if (this.magIdx > 0) this.magGoto(this.magIdx - 1); else if (this._introReturn) this._introReturn(); break;
+        case 'ledger-next': this.magGoto(this.magIdx + 1); break;
+        case 'ledger-stop-plan': if (this.accomOpenIdx !== i) { this.accomOpenIdx = i; this.render(); } break;
+        case 'ledger-stop-days': if (this.openStopIdx !== i) { this.openStopIdx = i; this.activeDay = null; this._optimizeNote = null; this._selectedItem = null; this.render(); } break;
         case 'close-budget': this.budgetOpen = false; this.bumpModal(); break;
         case 'overlay-budget': if (e.target === t) { this.budgetOpen = false; this.bumpModal(); } break;
         case 'open-sync': this.syncOpen = true; this.bumpModal(); break;
