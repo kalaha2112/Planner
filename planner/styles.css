@@ -1348,13 +1348,13 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .ledger-col .stat-split .stat-half:first-child { padding-right: 34px; }
 
   /* the bill: a modal again, but it prints down over the info-panel area —
-     the printer housing sits at the panel's top edge (the panel is the
-     viewport's right 360px now that pages are full-bleed), not centered
-     over the map */
+     the printer housing lines up with the top of the date-range block (the
+     panel's first row, 56px down), not the top page edge, and the panel is
+     the viewport's right 360px now that pages are full-bleed */
   .overlay[data-act="overlay-budget"] {
     justify-content: flex-end;
     align-items: flex-start;
-    padding: 0 0 30px 20px;
+    padding: 56px 0 30px 20px;
     /* no scrim on the ledger — the map stays crisp; only what's directly
        behind the bill is hidden (below) */
     background: none;
