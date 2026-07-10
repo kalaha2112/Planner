@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-10T20:49:56.815Z
+  Built: 2026-07-10T21:08:19.347Z
 -->
 
 <html lang="en">
@@ -3609,15 +3609,47 @@ html { -webkit-tap-highlight-color: transparent; }
 
     // Transparent wireframe globe (orthographic): graticule + continent outlines
     // + every stop as a red dot, consecutive stops linked by dashed route lines.
+    // Big view changes (switching trips across regions) don't snap — the globe
+    // SPINS horizontally to face the new trip, easing lng around the shortest
+    // arc (lat follows) and re-projecting every frame.
     _buildIntroGlobe(svg) {
       if (!svg) return;
-      const W = 400, R = 186, CX = 200, CY = 200;
       const stops = this.currentTrip().stops
         .map(s => this.resolveCoord(s.city))
         .filter(Boolean);
-      // center the view on the trip so the stops face us (fallback: Europe)
-      const lat0 = (stops.length ? stops.reduce((a, c) => a + c[0], 0) / stops.length : 47) * Math.PI / 180;
-      const lng0 = (stops.length ? stops.reduce((a, c) => a + c[1], 0) / stops.length : 12) * Math.PI / 180;
+      // target view: the trip's centroid (fallback: Europe)
+      const tLat = stops.length ? stops.reduce((a, c) => a + c[0], 0) / stops.length : 47;
+      const tLng = stops.length ? stops.reduce((a, c) => a + c[1], 0) / stops.length : 12;
+      cancelAnimationFrame(this._globeAnim || 0);
+      const cur = this._globeView;
+      const dLng = cur ? ((tLng - cur.lng + 540) % 360) - 180 : 0;   // shortest way around
+      const dLat = cur ? tLat - cur.lat : 0;
+      const dist = cur ? Math.hypot(dLng, dLat) : 0;
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      // small nudges (a stop added nearby, re-theme, atlas landing) draw instantly;
+      // only a real region change earns the spin
+      if (!cur || reduced || dist < 12) {
+        this._globeView = { lat: tLat, lng: tLng };
+        this._drawGlobe(svg, tLat, tLng, stops);
+        return;
+      }
+      const from = { lat: cur.lat, lng: cur.lng };
+      const t0 = performance.now();
+      const D = Math.min(1600, 700 + dist * 6);   // farther hops spin a little longer
+      const ease = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      const step = (now) => {
+        const k = Math.min(1, (now - t0) / D);
+        const e = ease(k);
+        this._globeView = { lat: from.lat + dLat * e, lng: from.lng + dLng * e };
+        this._drawGlobe(svg, this._globeView.lat, this._globeView.lng, stops);
+        if (k < 1) this._globeAnim = requestAnimationFrame(step);
+      };
+      this._globeAnim = requestAnimationFrame(step);
+    }
+    _drawGlobe(svg, lat0deg, lng0deg, stops) {
+      const W = 400, R = 186, CX = 200, CY = 200;
+      const lat0 = lat0deg * Math.PI / 180;
+      const lng0 = lng0deg * Math.PI / 180;
       const sin0 = Math.sin(lat0), cos0 = Math.cos(lat0);
       const proj = (lat, lng) => {
         const φ = lat * Math.PI / 180, λ = lng * Math.PI / 180 - lng0;
