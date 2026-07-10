@@ -1360,9 +1360,19 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .ledger-col .todos { flex-shrink: 0; }
   /* the split stat was sized for the app's 290px aside — trim its air here */
   .ledger-col .stat-split .stat-half:first-child { padding-right: 34px; }
-  .ledger-receipt { flex-shrink: 0; }
-  .ledger-receipt .receipt-wrap { max-width: none; }
-  .ledger-receipt .receipt-clip { padding-bottom: 22px; }
+
+  /* the bill: a modal again, but it prints down over the info-panel area —
+     the printer housing sits at the panel's top edge (stage padding 24px +
+     1px book border; panel = the book's right 360px, inside the 76px tab
+     gutter), not centered over the map */
+  .overlay[data-act="overlay-budget"] {
+    justify-content: flex-end;
+    align-items: flex-start;
+    padding: 25px 77px 30px 20px;
+  }
+  .overlay[data-act="overlay-budget"] .receipt-wrap {
+    width: 360px; max-width: 360px; flex: 0 0 360px;
+  }
 
   /* ---- pages 2 & 3 share the ruled-leaf chrome ---- */
   .leaf-plan .leaf-inner,

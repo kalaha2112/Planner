@@ -457,7 +457,6 @@
       this._magAnimating = false;
       this._wheelAcc = 0;           // trackpad delta accumulator for page turns
       this._wheelT = 0;
-      this._printedOnce = false;    // the receipt prints once, when the notebook opens
       // ---- cloud sync ----
       this.sync = this.loadSyncRec();   // { id, rev, lastSyncedAt }
       this.syncOpen = false;            // sync modal open?
@@ -673,9 +672,9 @@
       this.updateTopActions();
     }
     _anyModalOpen() {
-      // web ledger: itinerary/accom/budget live on always-open leaves, not
-      // modals — only the floating panels count as "open" there
-      if (this._webMag()) return this.syncOpen || this.stickerPanelOpen;
+      // web ledger: itinerary/accom/transport live on always-open leaves, not
+      // modals — only the bill and the floating panels count as "open" there
+      if (this._webMag()) return this.syncOpen || this.budgetOpen || this.stickerPanelOpen;
       return this.syncOpen || this.budgetOpen || this.stickerPanelOpen ||
         this.accomOpenIdx != null || this.transportOpenIdx != null || this.openStopIdx != null;
     }
@@ -794,7 +793,6 @@
         appRoot.style.willChange = '';                             // (so scroll + position:fixed work normally)
         document.documentElement.classList.remove('intro-lock');   // page scrolls natively again
         this._introParked = true; this.updateTopActions();         // hide the intro-only sync button
-        this._onIntroParked();                                     // web ledger: print the receipt once
       };
       const unpark = () => {
         if (!parked) return;
@@ -2483,7 +2481,9 @@
       `;
       this.root.innerHTML = html;
       this.modalEl.innerHTML = web
-        ? this.renderStickerPanel() + this.renderSyncModal()   // leaves carry the rest in-page
+        ? this.renderStickerPanel() +                          // leaves carry itinerary/accom/transport
+          this.renderBudgetModal(budget, travelers, nights) +  // the bill prints over the panel area
+          this.renderSyncModal()
         : this.renderStickerPanel() +
           this.renderItineraryModal(trip, d, fmt) +
           this.renderAccomModal(trip, d, fmt) +
@@ -2551,7 +2551,6 @@
           <aside class="ledger-col">
             ${this.renderMeta(trip, travelers)}
             ${this.renderSummary(nights, budget.grandTotal, budget.perPerson, milesNeeded, meta.milesBalance || 0, travelers)}
-            <div class="ledger-receipt">${this.renderReceipt(budget, travelers, nights, true)}</div>
             ${this.renderTodos(meta)}
           </aside>
           <div class="placed-stickers-layer">${this.renderPlacedStickers()}</div>
@@ -2673,13 +2672,6 @@
     _afterFlip() {
       if (this.magIdx === 0 && this.mainLeafletMap) { this.mainLeafletMap.invalidateSize(); this.renderMainMap(); }
       if (this.magIdx === 2 && this.dayMap) { this.dayMap.invalidateSize(); this.scheduleDayMap(); }
-    }
-    // the receipt prints once, the moment the notebook first opens (intro parks)
-    _onIntroParked() {
-      if (!this._webMag() || this._printedOnce) return;
-      this._printedOnce = true;
-      this._budgetPrint = true;
-      this.render();
     }
     initLedgerNav() {
       // wheel: turn a page when the gesture isn't claimed by the intro (pull
@@ -3383,8 +3375,12 @@
     onEscape() {
       if (this.syncOpen) { this.syncOpen = false; this.bumpModal(); return; }
       // ledger leaves aren't dismissable — openStopIdx/accomOpenIdx are the
-      // pages' stop selections there, not modals
-      if (this._webMag()) { if (this.stickerPanelOpen) { this.stickerPanelOpen = false; this.bumpModal(); } return; }
+      // pages' stop selections there, not modals. The bill IS a modal on web.
+      if (this._webMag()) {
+        if (this.budgetOpen) { this.budgetOpen = false; this.bumpModal(); }
+        else if (this.stickerPanelOpen) { this.stickerPanelOpen = false; this.bumpModal(); }
+        return;
+      }
       if (this.budgetOpen) { this.budgetOpen = false; this.bumpModal(); }
       else if (this.accomOpenIdx != null) { this.closeAccom(); }
       else if (this.transportOpenIdx != null) { this.closeTransport(); }
@@ -3414,15 +3410,7 @@
         case 'todo-toggle': { const td = this.data.meta.todos[i]; td.done = !td.done; this.bump(); break; }
         case 'todo-remove': this.removeTodo(i); break;
         case 'add-todo': this.addTodo(); break;
-        case 'open-budget':
-          if (this._webMag()) {
-            // the receipt already sits on page 1 — replay the print and show it
-            this._budgetPrint = true; this.render();
-            const rc = this.root.querySelector('.ledger-receipt');
-            if (rc && rc.scrollIntoView) rc.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            break;
-          }
-          this.budgetOpen = true; this._budgetPrint = true; this.bumpModal(); break;
+        case 'open-budget': this.budgetOpen = true; this._budgetPrint = true; this.bumpModal(); break;
         case 'ledger-goto': this.magGoto(i); break;
         case 'ledger-prev': if (this.magIdx > 0) this.magGoto(this.magIdx - 1); else if (this._introReturn) this._introReturn(); break;
         case 'ledger-next': this.magGoto(this.magIdx + 1); break;
