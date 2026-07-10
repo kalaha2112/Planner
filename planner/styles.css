@@ -1326,11 +1326,12 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     grid-template-columns: minmax(0, 1fr) 360px;
     grid-template-rows: 100%;
   }
-  /* the map is a framed block inset from the page edges — equal left/right
-     margin (24px each) plus top/bottom breathing room */
+  /* the map is a framed block inset from the page edges — left/top/bottom
+     keep 24px of page margin; the right edge (facing the dock) is tighter
+     at 12px to match the dock↔tabs gap */
   .leaf-route .ledger-map {
     position: relative; min-width: 0; min-height: 0;
-    margin: 24px;                       /* left = right; adds top/bottom too */
+    margin: 24px 12px 24px 24px;
     height: calc(100% - 48px);          /* fill the row minus top+bottom margin */
     border: 1px solid var(--line);
     border-radius: var(--r-card);
@@ -1338,16 +1339,16 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   }
   .leaf-route .main-map-wrap { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: unset; }
   .leaf-route .main-map-leaflet { border: none; border-radius: 0; }
-  .leaf-route .placed-stickers-layer { position: absolute; inset: 24px; z-index: 4; }
+  .leaf-route .placed-stickers-layer { position: absolute; inset: 24px 12px 24px 24px; z-index: 4; }
   /* the info panel is a real column beside the map, not an overlay on top of it */
   .ledger-col {
     position: relative; min-height: 0; height: 100%;
     display: flex; flex-direction: column; gap: 14px;
     overflow-y: auto; scrollbar-width: thin;
     padding: 56px 20px 24px 20px;   /* top clears the fixed action icons */
-    /* right margin = tab width (40px) + the same 24px gap the map keeps on
-       its own right edge, so dock↔map and dock↔tabs read as equal spacing */
-    margin-right: 64px;
+    /* right margin = tab width (40px) + a 12px gap, matching the map's own
+       12px gap on its right — dock↔map and dock↔tabs read as equal spacing */
+    margin-right: 52px;
     background: var(--shell);
   }
   /* date range as prose — no box, no labels, darker green */
@@ -1385,7 +1386,9 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .overlay[data-act="overlay-budget"] {
     justify-content: flex-end;
     align-items: flex-start;
-    padding: 56px 0 30px 20px;
+    /* right padding nudges the bill left so it lands exactly on the map's
+       new (12px-inset) right edge, instead of hugging the page's far edge */
+    padding: 56px 12px 30px 20px;
     /* no scrim on the ledger — the map stays crisp; only what's directly
        behind the bill is hidden (below) */
     background: none;

@@ -475,7 +475,7 @@
       // ---- web ledger (≥701px): the planner reads as a left-bound horizontal
       // ledger notebook — one full-width leaf per page, flipped around the left
       // spine. Which leaf is open + the flip lock are pure view state.
-      this.magIdx = 0;              // 0 route · 1 transport&hotels · 2 itinerary
+      this.magIdx = 0;              // 0 route · 1 itinerary · 2 transport&hotels
       this._magAnimating = false;
       this._wheelAcc = 0;           // trackpad delta accumulator for page turns
       this._wheelT = 0;
@@ -2310,21 +2310,21 @@
     /* ---------- itinerary / accommodation ---------- */
     openStop(idx) {
       this.openStopIdx = idx; this.activeDay = null; this._optimizeNote = null; this._selectedItem = null;
-      // web ledger: the itinerary is page 3 — flip to it with this stop selected
-      if (this._webMag()) { this.render(); this.magGoto(2); return; }
+      // web ledger: the itinerary is page 2 — flip to it with this stop selected
+      if (this._webMag()) { this.render(); this.magGoto(1); return; }
       this.bumpModal();
     }
     closeStop() { this.openStopIdx = null; this.bumpModal(); }
     openAccom(idx) {
       this.accomOpenIdx = idx;
-      // web ledger: hotels share page 2 with transport
-      if (this._webMag()) { this.render(); this.magGoto(1); return; }
+      // web ledger: hotels share page 3 with transport
+      if (this._webMag()) { this.render(); this.magGoto(2); return; }
       this.bumpModal();
     }
     closeAccom() { this.accomOpenIdx = null; this.bumpModal(); }
     openTransport(idx) {
-      // web ledger: transport is inline on page 2 (same stop selector as hotels)
-      if (this._webMag()) { this.accomOpenIdx = idx; this.render(); this.magGoto(1); return; }
+      // web ledger: transport is inline on page 3 (same stop selector as hotels)
+      if (this._webMag()) { this.accomOpenIdx = idx; this.render(); this.magGoto(2); return; }
       this.transportOpenIdx = idx; this.bumpModal();
     }
     closeTransport() { this.transportOpenIdx = null; this.bumpModal(); }
@@ -2632,12 +2632,36 @@
         <span class="leaf-folio">01 · 03</span>
       </section>`;
 
-      // ---- page 2 · transport & hotels share the leaf, one stop at a time ----
+      // ---- page 2 · itinerary (calendar + closet | day planner + day map) ----
+      const iIdx = this.openStopIdx;
+      const iStop = iIdx != null ? trip.stops[iIdx] : null;
+      const iRange = (iStop && d) ? d.stops[iIdx] : null;
+      const iNights = iStop ? Math.max(1, Number(iStop.nights) || 1) : 0;
+      const hasDay = !!iStop && this.activeDay != null && this.activeDay >= 0 && this.activeDay < iNights;
+      const daysLeaf = `
+      <section class="ledger-leaf leaf-days${state(1)}" data-leaf="1">
+        <div class="leaf-inner">
+          <header class="leaf-head">
+            <div class="leaf-head-main">
+              <div class="eyebrow">Itinerary</div>
+              <div class="leaf-title">${iStop ? esc(iStop.city || 'Stop') : 'No stops yet'}</div>
+              <div class="leaf-sub">${iRange ? esc(fmt(iRange.start) + ' → ' + fmt(iRange.end)) + ' · ' : ''}${iStop ? nightsLbl(iStop) : ''}</div>
+            </div>
+            <div class="leaf-pills">${stopPills('ledger-stop-days', iIdx)}</div>
+          </header>
+          ${iStop ? this.renderItineraryBody(trip, d, fmt) : `
+          <p class="empty-note" style="margin:18px 4px">Add a stop on the route page first.</p>`}
+          ${hasDay ? `<div class="placed-stickers-layer">${this.renderPlacedStickers('iti-' + iIdx + '-day-' + this.activeDay)}</div>` : ''}
+        </div>
+        <span class="leaf-folio">02 · 03</span>
+      </section>`;
+
+      // ---- page 3 · transport & hotels share the leaf, one stop at a time ----
       const pIdx = this.accomOpenIdx;
       const pStop = pIdx != null ? trip.stops[pIdx] : null;
       const pRange = (pStop && d) ? d.stops[pIdx] : null;
       const planLeaf = `
-      <section class="ledger-leaf leaf-plan${state(1)}" data-leaf="1">
+      <section class="ledger-leaf leaf-plan${state(2)}" data-leaf="2">
         <div class="leaf-inner">
           <header class="leaf-head">
             <div class="leaf-head-main">
@@ -2661,30 +2685,6 @@
           <div class="placed-stickers-layer">${this.renderPlacedStickers('accom-' + pIdx)}</div>` : `
           <p class="empty-note" style="margin:18px 4px">Add a stop on the route page first.</p>`}
         </div>
-        <span class="leaf-folio">02 · 03</span>
-      </section>`;
-
-      // ---- page 3 · itinerary (calendar + closet | day planner + day map) ----
-      const iIdx = this.openStopIdx;
-      const iStop = iIdx != null ? trip.stops[iIdx] : null;
-      const iRange = (iStop && d) ? d.stops[iIdx] : null;
-      const iNights = iStop ? Math.max(1, Number(iStop.nights) || 1) : 0;
-      const hasDay = !!iStop && this.activeDay != null && this.activeDay >= 0 && this.activeDay < iNights;
-      const daysLeaf = `
-      <section class="ledger-leaf leaf-days${state(2)}" data-leaf="2">
-        <div class="leaf-inner">
-          <header class="leaf-head">
-            <div class="leaf-head-main">
-              <div class="eyebrow">Itinerary</div>
-              <div class="leaf-title">${iStop ? esc(iStop.city || 'Stop') : 'No stops yet'}</div>
-              <div class="leaf-sub">${iRange ? esc(fmt(iRange.start) + ' → ' + fmt(iRange.end)) + ' · ' : ''}${iStop ? nightsLbl(iStop) : ''}</div>
-            </div>
-            <div class="leaf-pills">${stopPills('ledger-stop-days', iIdx)}</div>
-          </header>
-          ${iStop ? this.renderItineraryBody(trip, d, fmt) : `
-          <p class="empty-note" style="margin:18px 4px">Add a stop on the route page first.</p>`}
-          ${hasDay ? `<div class="placed-stickers-layer">${this.renderPlacedStickers('iti-' + iIdx + '-day-' + this.activeDay)}</div>` : ''}
-        </div>
         <span class="leaf-folio">03 · 03</span>
       </section>`;
 
@@ -2692,14 +2692,14 @@
       // set, currentColor so it inherits the tab's ink/on-brown state); the
       // other two stay as vertical wordmarks
       const tabDefs = [
-        { label: 'Route', icon: true }, { label: 'Transport & Hotels' }, { label: 'Itinerary' },
+        { label: 'Route', icon: true }, { label: 'Itinerary' }, { label: 'Transport & Hotels' },
       ];
       const tabs = tabDefs.map((t, i) =>
         `<button class="ledger-tab${t.icon ? ' ledger-tab--icon' : ''}${i === page ? ' on' : ''}" data-act="ledger-goto" data-i="${i}" aria-label="${esc(t.label)}" title="${esc(t.label)}">${t.icon ? svg(I.home, { w: 18, h: 18, sw: 1.8 }) : esc(t.label)}</button>`).join('');
       return `
       <div class="ledger-stage">
         <div class="ledger-book${this.budgetOpen ? ' bill-open' : ''}" data-page="${page}">
-          ${routeLeaf}${planLeaf}${daysLeaf}
+          ${routeLeaf}${daysLeaf}${planLeaf}
           <button class="ledger-edge prev" data-act="ledger-prev" title="Previous page" aria-label="Previous page">‹</button>
           <button class="ledger-edge next" data-act="ledger-next" title="Next page" aria-label="Next page">›</button>
           <nav class="ledger-tabs" aria-label="Pages">${tabs}</nav>
@@ -2735,7 +2735,7 @@
     // still wants a nudge when its leaf comes back
     _afterFlip() {
       if (this.magIdx === 0 && this.mainLeafletMap) { this.mainLeafletMap.invalidateSize(); this.renderMainMap(); }
-      if (this.magIdx === 2 && this.dayMap) { this.dayMap.invalidateSize(); this.scheduleDayMap(); }
+      if (this.magIdx === 1 && this.dayMap) { this.dayMap.invalidateSize(); this.scheduleDayMap(); }
     }
     initLedgerNav() {
       // wheel: turn a page when the gesture isn't claimed by the intro (pull
