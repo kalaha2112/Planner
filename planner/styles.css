@@ -1898,17 +1898,17 @@ html { -webkit-tap-highlight-color: transparent; }
    Appended last so its cursor rules win over earlier grab/pointer
    declarations by source order. Hotspot = arrowhead tip (21,20).
    ============================================================ */
-:root { --cur-arrow-img: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABdElEQVR4nOyWv0uFUBTHj/pExaEl8Ac9Xkm0BQX9Ay1tbf0DzdHW1NjQn9C/EDTWEC0NTUVbEW+KlhB8lNDTRDK1r4MQb/Led8HlfuCAHrjn+/Xc49UB9cyAekYakAZ6N6ARI77vLxqGsZBlWUoCUImRuq4fdF0/J0EwGXAcx1YUJUC8kiCYZiCKom+YWC/L8pMEwbwFYBkdcEgQzG+BpmlnqqpOcLlFAuDpwC1is5kHEgCPgaOqqjaaeWgTnucdI2546jEvCMPwA+LPELzHmXCJlI4YYi52cL9PjPB0oKV5E3YhulcUxQnOhwxxipzJUoT5JGwxTfMKAzlN0/TCsqw1iP9iOLdt2/5B7q5rHYUEgO14g4ERtiFuvGFGAmzTpMta7g78Q0c3puhGgOsvmBiiE1aSJNddFnN/DV3XPYDQIZ58FaKzDzLqWofbAMRXIL4E8UfcjtH2F+Se8jwfx3H83rWOkBmYB/lHJA1IA9JA7wb+AAAA//9MzyZTAAAABklEQVQDANz7a+07w93XAAAAAElFTkSuQmCC); }
+:root { --cur-arrow-img: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABo0lEQVR4AeyUv0vDQBTH2ystVWuHGOgPurkI4ig6C9LNXXAp6OLqIgouiiK66qirg5Nu/QccVXSuitI0JaOCNG3q5yRTRbiLJyIkvC/v7vK475fvvTuR+OMvFhA7EDsQO/C/HLAsq1Iul+eLxeIa+QRclUqlV/Jh1AdV2QFILrLZ7DNEdSGEJKz1+/3pZDL5EgTBA+uRQlkAuz+BBKS34L7T6aw4jjPUbDYnWq3WkfwXBcoCer3eNsRvkFTIk+l0epOxD34UygJc121DvI/lYzAek5fy+bzF0azbtj3KWqRQFiB3x+oDRLQhr3EEjVwuV2V9DzfOyJFCSwAM75BvgGFItzj/c9YugXSFpB+6AhKQnuJCHSp5I3zmCzTjbKFQmOI4bNa1QlsAuwcQVsEu48+AfEQIccNEXk+Segj10u8raVB5O66pmANaYUSAZOx2u8tc1VU51oExAfSFC/Ej0ApjAjKZzE4qlbqT/aCjwJgAHBgHjbAflDUYE+D7/iLvw4wyc1hoTIDneQ5vghfuq5yMCVBmHCiMBcQO/LoDAz33ZfoBAAD//0CvMfMAAAAGSURBVAMAlF+PQV5ggZIAAAAASUVORK5CYII=); }
 /* dark mode: the ink arrow vanishes on dark surfaces — swap to a white one
    (same shape, inverted). Applies to the custom cursor and the touch arrow. */
-[data-theme="dark"] { --cur-arrow-img: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABl0lEQVR4AeyUPUvDUBSGbUpKoIEOtbVpLWpnRR39A910cnDVUdeKKLoIiouri0IXwd2tCM6Kowgubv2CWhdRIR/Ep3I7N/cmIJSUc3hPQu55H869t9rEP/9igHgC8QSkJ9Butyd7vZ4V1e2VBsD40XGcGzSSkALodrtp3/cr5Fsk7jSRAigUCl/JZHIhlUodsjaSkAIQjrNMYErUoUUawPO8C9d1r0I7iwbSAIlE4p61y4PzgIYOaQAca5qmLQ3OA/VfcDUPyAZbI91PekGxWHzH/LnVaj2Qt5jqUJTRKhCb1FIhDTDszlb0qVcxXdd1/Zjnb/IUEIP3gUMZANMNDPdN02zYtl2hrmOe52zsBnbnQ2WAXC73yXacZTKZD8yv6bWN9oHYAyLPc6BQBhh2x5Bh6CfoC++aaJqrekQdKJQBOp3ODofwFf1hCy4xnicXheuM0JGiDIDZHCOfRp9wqXM1a2jVMIxyqVRaow4UygDsf400MVshtyzLOkfvstlsM5Cz+EgZQKwPLTFAPIF4AuM/gVF/FL8AAAD//84jpP8AAAAGSURBVAMAdPqUQf6alLsAAAAASUVORK5CYII=); }
+[data-theme="dark"] { --cur-arrow-img: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABnElEQVR4AeyUvUvDQBjGW/sBKi5qoV+biyCOorMg3dwFl4Iuri6i4KIooquOujo46dZ/wFFF56rUNrU1QyBCSEji70C3onfxRAop78N7H+WeH+/dm4HEP/9igLgCcQXiCvRXBUzTLDebzQXDMNbJp+i61WrZ6CjqB1W6AphdOo7TwKgWBIEwrCaTyZkwDF/Ij6xHCmkATn9GCczu0EM2m10tFAqDpVJpknws9qJIGiCVSu1g/I5JmTzled4W2WP+q5AGyOfzHQwPKPkYjifkZcuyRrn/jW63O8JapJAGEKcDcQhEB/MqV1C3bbvCeJ9qnIv9KFICwNzBcBMNYbpdLBYvML1iLqrCUD2UAMTxmJ4BUmPcIHs8wkU01263p7mOcdaVQhkA0wCICtr7csJ8mNa8ZS7akyQfygC9juZtiO644Srme+1/t6YFQBik0+kVWnVNjFWkDYCrecX4CSmFNgDXdXd9378X70GFQBsAFZhA9c/3IM2gDSCTySzhOouUQhtALpczaM03JXf+rA2AsyJFDBBX4M8r8NPL/AAAAP//tVCE+QAAAAZJREFUAwAmgI9Bb851jgAAAABJRU5ErkJggg==); }
 @media (pointer: fine) {
   html, body,
   a, button, select, summary, label,
   [data-act], [data-drag], [data-map-drag], [data-grip-stop],
   .cal-cell, .stop, .map-stop, .grip, .item-grip,
   .todo .box, .outfit, .stock-item, .placed-sticker,
-  .opt .choose, .leaflet-container { cursor: var(--cur-arrow-img) 21 20, auto; }
+  .opt .choose, .leaflet-container { cursor: var(--cur-arrow-img) 10 11, auto; }
   /* text entry keeps an I-beam so the caret stays findable */
   input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]):not([type=range]),
   textarea, [contenteditable="true"] { cursor: text; }
