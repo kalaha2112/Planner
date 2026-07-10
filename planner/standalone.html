@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-10T17:18:44.205Z
+  Built: 2026-07-10T20:44:32.742Z
 -->
 
 <html lang="en">
@@ -2093,10 +2093,18 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     justify-content: flex-end;
     align-items: flex-start;
     padding: 25px 77px 30px 20px;
+    /* no scrim on the ledger — the map stays crisp; only what's directly
+       behind the bill is hidden (below) */
+    background: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
   .overlay[data-act="overlay-budget"] .receipt-wrap {
     width: 360px; max-width: 360px; flex: 0 0 360px;
   }
+  /* the bill covers the info panel exactly — blank the panel's contents while
+     it's open (the panel surface itself stays, as the paper's backing) */
+  .ledger-book.bill-open .ledger-col > * { visibility: hidden; }
 
   /* ---- pages 2 & 3 share the ruled-leaf chrome ---- */
   .leaf-plan .leaf-inner,
@@ -5299,7 +5307,7 @@ html { -webkit-tap-highlight-color: transparent; }
         `<button class="ledger-tab${i === page ? ' on' : ''}" data-act="ledger-goto" data-i="${i}">${esc(t)}</button>`).join('');
       return `
       <div class="ledger-stage">
-        <div class="ledger-book" data-page="${page}">
+        <div class="ledger-book${this.budgetOpen ? ' bill-open' : ''}" data-page="${page}">
           ${routeLeaf}${planLeaf}${daysLeaf}
           <div class="ledger-turnsheet" aria-hidden="true"><span class="ts-label"></span></div>
           <button class="ledger-edge prev" data-act="ledger-prev" title="Previous page" aria-label="Previous page">‹</button>

@@ -2618,7 +2618,7 @@
         `<button class="ledger-tab${i === page ? ' on' : ''}" data-act="ledger-goto" data-i="${i}">${esc(t)}</button>`).join('');
       return `
       <div class="ledger-stage">
-        <div class="ledger-book" data-page="${page}">
+        <div class="ledger-book${this.budgetOpen ? ' bill-open' : ''}" data-page="${page}">
           ${routeLeaf}${planLeaf}${daysLeaf}
           <div class="ledger-turnsheet" aria-hidden="true"><span class="ts-label"></span></div>
           <button class="ledger-edge prev" data-act="ledger-prev" title="Previous page" aria-label="Previous page">‹</button>
