@@ -2620,7 +2620,6 @@
       return `
       <div class="ledger-stage">
         <div class="ledger-book" data-page="${page}">
-          <div class="ledger-spine" aria-hidden="true"></div>
           ${routeLeaf}${planLeaf}${daysLeaf}
           <div class="ledger-turnsheet" aria-hidden="true"><span class="ts-label"></span></div>
           <button class="ledger-edge prev" data-act="ledger-prev" title="Previous page" aria-label="Previous page">‹</button>

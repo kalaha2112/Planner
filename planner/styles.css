@@ -1291,40 +1291,34 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     padding: 24px 76px 30px 30px;   /* right space hosts the divider tabs */
     background: var(--shell);
   }
+  /* a clean sheet, not a skeuomorphic book — a soft-shadowed panel with a
+     hairline edge, no spine binding or peeking page stack */
   .ledger-book {
     position: relative;
     width: 100%; height: 100%;
     background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: 7px 14px 14px 7px;
-    box-shadow: 0 26px 60px rgba(35, 20, 12, .18);
+    border-radius: 12px;
+    box-shadow: 0 20px 50px rgba(35, 20, 12, .14);
     perspective: 2600px;
   }
-  /* the stack of remaining leaves, peeking past the right edge */
+  /* the remaining-pages edge peeking past the right side — a plain stack of
+     thin sheets that counts down as you flip forward (page-stack function) */
   .ledger-book::after {
-    content: ''; position: absolute; top: 12px; bottom: 12px; right: -5px; width: 5px;
-    background: repeating-linear-gradient(90deg, var(--line) 0 1px, var(--surface) 1px 2.6px);
-    opacity: .45; border-radius: 0 4px 4px 0;
+    content: ''; position: absolute; top: 14px; bottom: 14px; right: -6px; width: 6px;
+    border-radius: 0 10px 10px 0;
+    background: var(--surface);
+    border: 1px solid var(--line); border-left: none;
+    box-shadow: 3px 0 0 -1px var(--surface), 4px 0 0 0 var(--line);
+    opacity: .55; pointer-events: none;
   }
-
-  /* ---- the left binding: gutter shade + stitching ---- */
-  .ledger-spine {
-    position: absolute; left: 0; top: 0; bottom: 0; width: 30px;
-    border-right: 1px solid var(--line);
-    background: linear-gradient(90deg, rgba(35, 20, 12, .10), rgba(35, 20, 12, .02) 65%, transparent);
-    border-radius: 7px 0 0 7px;
-    z-index: 6; pointer-events: none;
-  }
-  .ledger-spine::before {   /* stitches */
-    content: ''; position: absolute; left: 13px; top: 20px; bottom: 20px; width: 2px;
-    background: repeating-linear-gradient(180deg, var(--ink) 0 12px, transparent 12px 34px);
-    opacity: .45; border-radius: 2px;
-  }
+  .ledger-book[data-page="1"]::after { box-shadow: none; }   /* one sheet left */
+  .ledger-book[data-page="2"]::after { display: none; }      /* last page — no stack */
 
   /* ---- leaves ---- */
   .ledger-leaf {
-    position: absolute; inset: 0 0 0 30px;
-    border-radius: 0 13px 13px 0;
+    position: absolute; inset: 0;
+    border-radius: 12px;
     overflow: hidden;
     visibility: hidden; pointer-events: none;
     z-index: 1;
@@ -1336,28 +1330,34 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     font-family: var(--mono); font-size: 10px; letter-spacing: .28em;
     color: var(--ink-mute); z-index: 6; pointer-events: none;
   }
-  .leaf-route .leaf-folio { right: auto; left: 20px; }   /* the column owns the right edge there */
+  .leaf-route .leaf-folio { right: auto; left: 20px; z-index: 6; }
 
-  /* ---- page 1 · the route plate + ledger column ---- */
-  /* explicit 100% (not just inset:0) — leaf-inner has a definite height, and an
-     inset-only auto height collapses to 0 for this abs child */
-  .leaf-route .ledger-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; min-width: 0; }
+  /* ---- page 1 · map and info side by side, so the map is never covered ---- */
+  .leaf-route .leaf-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    grid-template-rows: 100%;
+  }
+  /* the map fills its own grid cell (definite height from the row) */
+  .leaf-route .ledger-map { position: relative; min-width: 0; min-height: 0; height: 100%; }
   .leaf-route .main-map-wrap { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: unset; }
   .leaf-route .main-map-leaflet { border: none; border-radius: 0; }
+  .leaf-route .placed-stickers-layer { position: absolute; inset: 0; z-index: 4; }
+  /* the info panel is a real column beside the map, not an overlay on top of it */
   .ledger-col {
-    position: absolute; top: 16px; right: 16px; bottom: 16px; width: 336px;
+    position: relative; min-height: 0; height: 100%;
     display: flex; flex-direction: column; gap: 14px;
     overflow-y: auto; scrollbar-width: thin;
-    z-index: 5;
-    padding: 2px;
+    padding: 20px 20px 24px;
+    background: var(--surface);
+    border-left: 1px solid var(--line);
   }
   .ledger-col .meta-row {
-    background: var(--ep-glass); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
     border: 1px solid var(--line); border-radius: var(--r-card);
     padding: 10px 16px; margin: 0; flex-wrap: nowrap;
   }
   .ledger-col .summary,
-  .ledger-col .todos { box-shadow: 0 10px 28px rgba(35, 20, 12, .13); flex-shrink: 0; }
+  .ledger-col .todos { flex-shrink: 0; }
   /* the split stat was sized for the app's 290px aside — trim its air here */
   .ledger-col .stat-split .stat-half:first-child { padding-right: 34px; }
   .ledger-receipt { flex-shrink: 0; }
@@ -1444,12 +1444,12 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 
   /* ---- the turning leaf ---- */
   .ledger-turnsheet {
-    position: absolute; inset: 0 0 0 30px;
+    position: absolute; inset: 0;
     transform-origin: left center;
     visibility: hidden;
     z-index: 8;
     border: 1px solid var(--line);
-    border-radius: 0 13px 13px 0;
+    border-radius: 12px;
     background:
       linear-gradient(90deg, rgba(35, 20, 12, .07), transparent 16%),
       linear-gradient(90deg, transparent 30px, var(--ledger-margin) 30px, var(--ledger-margin) 31px, transparent 31px),
