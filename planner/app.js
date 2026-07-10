@@ -2622,7 +2622,7 @@
             <button class="map-add-btn" data-act="add-stop" title="Add stop" aria-label="Add stop">+</button>
           </div>
           <aside class="ledger-col">
-            ${this.renderMeta(trip, travelers)}
+            ${this.renderMetaRange(trip)}
             ${this.renderSummary(nights, budget.grandTotal, budget.perPerson, milesNeeded, meta.milesBalance || 0, travelers)}
             ${this.renderTodos(meta)}
           </aside>
@@ -2796,6 +2796,26 @@
       return `<div class="meta-row">
         <div class="meta-field"><label>Depart</label><input type="date" value="${escA(trip.depart)}" data-ch="depart"></div>
         <div class="meta-field"><label>Return</label><input type="date" value="${escA(trip.returnDate)}" data-ch="return"></div>
+        <span class="saved" style="opacity:0">saved</span>
+      </div>`;
+    }
+    // Web ledger: the date range shown as prose — "September 14 – September 30,
+    // 2026" in darker green, no box or labels. Each date opens the native date
+    // picker (an invisible <input type=date> the click drives via showPicker).
+    renderMetaRange(trip) {
+      const parse = s => { const dt = new Date((s || '') + 'T00:00:00'); return isNaN(dt.getTime()) ? null : dt; };
+      const dep = parse(trip.depart), ret = parse(trip.returnDate);
+      const md = dt => dt ? dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }) : 'Add date';
+      const sameYear = dep && ret && dep.getFullYear() === ret.getFullYear();
+      const withYear = (dt, base) => (dep && ret && !sameYear && dt) ? `${base}, ${dt.getFullYear()}` : base;
+      const depTxt = withYear(dep, md(dep)), retTxt = withYear(ret, md(ret));
+      const yearTxt = sameYear ? `, ${dep.getFullYear()}` : (dep && !ret ? `, ${dep.getFullYear()}` : (ret && !dep ? `, ${ret.getFullYear()}` : ''));
+      const seg = (which, txt, val) => `<span class="date-seg" data-act="pick-date" data-for="${which}" role="button" tabindex="0" title="Choose date">
+        <span class="date-txt">${esc(txt)}</span>
+        <input type="date" class="date-native" data-ch="${which}" value="${escA(val)}" tabindex="-1" aria-label="${which === 'depart' ? 'Depart date' : 'Return date'}">
+      </span>`;
+      return `<div class="meta-range">
+        ${seg('depart', depTxt, trip.depart)}<span class="date-dash">–</span><span class="date-tail">${seg('return', retTxt, trip.returnDate)}<span class="date-year">${esc(yearTxt)}</span></span>
         <span class="saved" style="opacity:0">saved</span>
       </div>`;
     }
@@ -3468,6 +3488,11 @@
         case 'todo-remove': this.removeTodo(i); break;
         case 'add-todo': this.addTodo(); break;
         case 'open-budget': this.budgetOpen = true; this._budgetPrint = true; this.bumpModal(); break;
+        case 'pick-date': {
+          const inp = t.querySelector('.date-native') || (t.closest('.meta-range') || document).querySelector(`.date-native[data-ch="${t.dataset.for}"]`);
+          if (inp) { if (inp.showPicker) { try { inp.showPicker(); } catch (err) { inp.focus(); } } else inp.focus(); }
+          break;
+        }
         case 'ledger-goto': this.magGoto(i); break;
         case 'ledger-prev': if (this.magIdx > 0) this.magGoto(this.magIdx - 1); else if (this._introReturn) this._introReturn(); break;
         case 'ledger-next': this.magGoto(this.magIdx + 1); break;

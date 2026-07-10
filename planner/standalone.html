@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-10T21:29:20.714Z
+  Built: 2026-07-10T21:37:18.377Z
 -->
 
 <html lang="en">
@@ -2062,10 +2062,29 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     background: var(--surface);
     border-left: 1px solid var(--line);
   }
-  .ledger-col .meta-row {
-    border: 1px solid var(--line); border-radius: var(--r-card);
-    padding: 10px 16px; margin: 0; flex-wrap: nowrap;
+  /* date range as prose — no box, no labels, darker green */
+  .ledger-col .meta-range {
+    display: flex; align-items: baseline; flex-wrap: wrap; gap: 0;
+    margin: 0; padding: 2px 0; flex-shrink: 0;
+    font-family: var(--serif); font-size: 17px; font-weight: 600; letter-spacing: -.01em;
+    color: var(--green-dark);
   }
+  .meta-range .date-tail { white-space: nowrap; }   /* year never orphans from the return date */
+  .meta-range .date-seg { position: relative; display: inline-block; cursor: pointer; color: inherit; white-space: nowrap; }
+  .meta-range .date-seg:hover .date-txt,
+  .meta-range .date-seg:focus-visible .date-txt {
+    text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px;
+  }
+  .meta-range .date-seg:focus-visible { outline: none; }
+  /* the native picker input: invisible, parked just below its date so the
+     calendar drops down under the line; clicks land on the seg (showPicker) */
+  .meta-range .date-native {
+    position: absolute; left: 0; top: 100%; width: 1px; height: 1px;
+    opacity: 0; border: none; padding: 0; margin: 0; pointer-events: none;
+  }
+  .meta-range .date-dash { margin: 0 8px; color: var(--green-dark); }
+  .meta-range .date-year { color: var(--green-dark); }
+  .meta-range .saved { display: none; }
   .ledger-col .summary,
   .ledger-col .todos { flex-shrink: 0; }
   /* the split stat was sized for the app's 290px aside — trim its air here */
@@ -2136,12 +2155,14 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .leaf-days .iti-left { padding-left: 0; }
   .leaf-days .cal { margin-top: 10px; }
 
-  /* ---- page tabs, flush to the viewport's right edge ---- */
+  /* ---- page tabs, flush to the viewport's lower-right edge ---- */
   .ledger-tabs {
-    position: absolute; top: 48px; right: 0; width: 40px;
+    position: absolute; bottom: 30px; right: 0; width: 40px;
     display: flex; flex-direction: column; gap: 10px;
     z-index: 7;
   }
+  /* hide the tabs while the bill prints so nothing peeks past the receipt */
+  .ledger-book.bill-open .ledger-tabs { display: none; }
   .ledger-tab {
     writing-mode: vertical-rl;
     font-family: var(--caps); font-size: 12.5px; letter-spacing: .15em; text-transform: uppercase;
@@ -5262,7 +5283,7 @@ html { -webkit-tap-highlight-color: transparent; }
             <button class="map-add-btn" data-act="add-stop" title="Add stop" aria-label="Add stop">+</button>
           </div>
           <aside class="ledger-col">
-            ${this.renderMeta(trip, travelers)}
+            ${this.renderMetaRange(trip)}
             ${this.renderSummary(nights, budget.grandTotal, budget.perPerson, milesNeeded, meta.milesBalance || 0, travelers)}
             ${this.renderTodos(meta)}
           </aside>
@@ -5436,6 +5457,26 @@ html { -webkit-tap-highlight-color: transparent; }
       return `<div class="meta-row">
         <div class="meta-field"><label>Depart</label><input type="date" value="${escA(trip.depart)}" data-ch="depart"></div>
         <div class="meta-field"><label>Return</label><input type="date" value="${escA(trip.returnDate)}" data-ch="return"></div>
+        <span class="saved" style="opacity:0">saved</span>
+      </div>`;
+    }
+    // Web ledger: the date range shown as prose — "September 14 – September 30,
+    // 2026" in darker green, no box or labels. Each date opens the native date
+    // picker (an invisible <input type=date> the click drives via showPicker).
+    renderMetaRange(trip) {
+      const parse = s => { const dt = new Date((s || '') + 'T00:00:00'); return isNaN(dt.getTime()) ? null : dt; };
+      const dep = parse(trip.depart), ret = parse(trip.returnDate);
+      const md = dt => dt ? dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }) : 'Add date';
+      const sameYear = dep && ret && dep.getFullYear() === ret.getFullYear();
+      const withYear = (dt, base) => (dep && ret && !sameYear && dt) ? `${base}, ${dt.getFullYear()}` : base;
+      const depTxt = withYear(dep, md(dep)), retTxt = withYear(ret, md(ret));
+      const yearTxt = sameYear ? `, ${dep.getFullYear()}` : (dep && !ret ? `, ${dep.getFullYear()}` : (ret && !dep ? `, ${ret.getFullYear()}` : ''));
+      const seg = (which, txt, val) => `<span class="date-seg" data-act="pick-date" data-for="${which}" role="button" tabindex="0" title="Choose date">
+        <span class="date-txt">${esc(txt)}</span>
+        <input type="date" class="date-native" data-ch="${which}" value="${escA(val)}" tabindex="-1" aria-label="${which === 'depart' ? 'Depart date' : 'Return date'}">
+      </span>`;
+      return `<div class="meta-range">
+        ${seg('depart', depTxt, trip.depart)}<span class="date-dash">–</span><span class="date-tail">${seg('return', retTxt, trip.returnDate)}<span class="date-year">${esc(yearTxt)}</span></span>
         <span class="saved" style="opacity:0">saved</span>
       </div>`;
     }
@@ -6108,6 +6149,11 @@ html { -webkit-tap-highlight-color: transparent; }
         case 'todo-remove': this.removeTodo(i); break;
         case 'add-todo': this.addTodo(); break;
         case 'open-budget': this.budgetOpen = true; this._budgetPrint = true; this.bumpModal(); break;
+        case 'pick-date': {
+          const inp = t.querySelector('.date-native') || (t.closest('.meta-range') || document).querySelector(`.date-native[data-ch="${t.dataset.for}"]`);
+          if (inp) { if (inp.showPicker) { try { inp.showPicker(); } catch (err) { inp.focus(); } } else inp.focus(); }
+          break;
+        }
         case 'ledger-goto': this.magGoto(i); break;
         case 'ledger-prev': if (this.magIdx > 0) this.magGoto(this.magIdx - 1); else if (this._introReturn) this._introReturn(); break;
         case 'ledger-next': this.magGoto(this.magIdx + 1); break;

@@ -1338,10 +1338,29 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     background: var(--surface);
     border-left: 1px solid var(--line);
   }
-  .ledger-col .meta-row {
-    border: 1px solid var(--line); border-radius: var(--r-card);
-    padding: 10px 16px; margin: 0; flex-wrap: nowrap;
+  /* date range as prose — no box, no labels, darker green */
+  .ledger-col .meta-range {
+    display: flex; align-items: baseline; flex-wrap: wrap; gap: 0;
+    margin: 0; padding: 2px 0; flex-shrink: 0;
+    font-family: var(--serif); font-size: 17px; font-weight: 600; letter-spacing: -.01em;
+    color: var(--green-dark);
   }
+  .meta-range .date-tail { white-space: nowrap; }   /* year never orphans from the return date */
+  .meta-range .date-seg { position: relative; display: inline-block; cursor: pointer; color: inherit; white-space: nowrap; }
+  .meta-range .date-seg:hover .date-txt,
+  .meta-range .date-seg:focus-visible .date-txt {
+    text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px;
+  }
+  .meta-range .date-seg:focus-visible { outline: none; }
+  /* the native picker input: invisible, parked just below its date so the
+     calendar drops down under the line; clicks land on the seg (showPicker) */
+  .meta-range .date-native {
+    position: absolute; left: 0; top: 100%; width: 1px; height: 1px;
+    opacity: 0; border: none; padding: 0; margin: 0; pointer-events: none;
+  }
+  .meta-range .date-dash { margin: 0 8px; color: var(--green-dark); }
+  .meta-range .date-year { color: var(--green-dark); }
+  .meta-range .saved { display: none; }
   .ledger-col .summary,
   .ledger-col .todos { flex-shrink: 0; }
   /* the split stat was sized for the app's 290px aside — trim its air here */
@@ -1412,12 +1431,14 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .leaf-days .iti-left { padding-left: 0; }
   .leaf-days .cal { margin-top: 10px; }
 
-  /* ---- page tabs, flush to the viewport's right edge ---- */
+  /* ---- page tabs, flush to the viewport's lower-right edge ---- */
   .ledger-tabs {
-    position: absolute; top: 48px; right: 0; width: 40px;
+    position: absolute; bottom: 30px; right: 0; width: 40px;
     display: flex; flex-direction: column; gap: 10px;
     z-index: 7;
   }
+  /* hide the tabs while the bill prints so nothing peeks past the receipt */
+  .ledger-book.bill-open .ledger-tabs { display: none; }
   .ledger-tab {
     writing-mode: vertical-rl;
     font-family: var(--caps); font-size: 12.5px; letter-spacing: .15em; text-transform: uppercase;
