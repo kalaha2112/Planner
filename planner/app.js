@@ -856,16 +856,21 @@
           e.preventDefault();
           return;
         }
+        // Web ledger: the cover is a discrete open/close, not a scrubbable
+        // scroll — a wheel notch snaps the transition all the way (target 0/1)
+        // so it never settles half-open (the "half intro, half page" state).
+        // The phone app keeps the 1:1 incremental drag (with flick inertia).
+        const web = this._webMag();
         if (parked) {
           if (e.deltaY < 0 && atAppTop(e.target)) {      // pull the intro back down
             e.preventDefault();
-            target = clamp01(target + e.deltaY * 1.3 / window.innerHeight);
+            target = web ? 0 : clamp01(target + e.deltaY * 1.3 / window.innerHeight);
             kick();
           }
           return;                                        // otherwise: native scroll
         }
         e.preventDefault();
-        target = clamp01(target + e.deltaY * 1.3 / window.innerHeight);   // 1.3x wheel gain — crosses a bit faster
+        target = web ? (e.deltaY > 0 ? 1 : 0) : clamp01(target + e.deltaY * 1.3 / window.innerHeight);
         kick();
       };
       let touchY = null, touchV = 0, touchT = 0, touchDriving = false;
@@ -937,9 +942,12 @@
       const dLat = cur ? tLat - cur.lat : 0;
       const dist = cur ? Math.hypot(dLng, dLat) : 0;
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      // small nudges (a stop added nearby, re-theme, atlas landing) draw instantly;
-      // only a real region change earns the spin
-      if (!cur || reduced || dist < 12) {
+      // Instant draw (no spin) when: first paint · reduced-motion · a small
+      // nudge (nearby stop, re-theme, atlas landing) · OR the intro is parked
+      // (web ledger). Parked, the globe is off-screen, so a multi-frame spin
+      // is invisible work that steals the main thread from the map's flyTo on
+      // a trip switch — just snap the view so it's correct when the cover returns.
+      if (!cur || reduced || dist < 12 || this._introParked) {
         this._globeView = { lat: tLat, lng: tLng };
         this._drawGlobe(svg, tLat, tLng, stops);
         return;
@@ -1486,10 +1494,24 @@
         clearTimeout(this._mapTimer);
         this._mapTimer = setTimeout(() => { this.leafletMap.invalidateSize(); this.renderMap(); }, 220);
       }
-      if (this.mainLeafletMap) {
-        this.mainLeafletMap.invalidateSize();
-        setTimeout(() => this.renderMainMap(), 250);
+      this._scheduleMainMap(60);
+    }
+    // A single debounced main-map render+invalidate. render() and touchMap()
+    // both want to refresh the map after a bump(); routing both through one
+    // shared timer collapses them into ONE renderMainMap, so the flyToBounds
+    // animation runs once uninterrupted instead of a second call snapping it
+    // to the end mid-flight (the jank/lag on a trip switch).
+    _scheduleMainMap(delay = 60) {
+      clearTimeout(this._mainMapTimer);
+      this._mainMapTimer = setTimeout(() => this._doMainMap(0), delay);
+    }
+    _doMainMap(tries) {
+      if (!this.mainLeafletMap) {   // Leaflet still spinning up (ensureMainMap retries)
+        if (tries < 40) this._mainMapTimer = setTimeout(() => this._doMainMap(tries + 1), 100);
+        return;
       }
+      this.mainLeafletMap.invalidateSize();
+      this.renderMainMap();
     }
     renderMap() {
       if (!this.leafletMap || !window.L) return;
@@ -2583,13 +2605,9 @@
         mainHolder.appendChild(this.mainLeadersEl);
         mainHolder.appendChild(this.mainCardsOverlayEl);
         this.ensureMainMap(0);
-        // Invalidate after layout so Leaflet reads the correct dimensions
-        setTimeout(() => {
-          if (this.mainLeafletMap) {
-            this.mainLeafletMap.invalidateSize();
-            this.renderMainMap();
-          }
-        }, 50);
+        // Invalidate + render after layout (shared debounced timer, so a
+        // following touchMap() in the same bump() doesn't double-render)
+        this._scheduleMainMap(50);
       }
       // re-attach the per-day itinerary map (it lives inside the modal root)
       this.mountDayMap();
