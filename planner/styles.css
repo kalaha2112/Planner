@@ -600,6 +600,16 @@ a { color: inherit; }
 /* ---- day-plan route optimizer ---- */
 .day-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
 .day-head .day-title { margin-bottom: 0; }
+/* weather chip on the day header — forecast (or typical, muted) for the date */
+.day-wx { display: inline-flex; align-items: baseline; gap: 5px; flex-shrink: 0;
+  font-family: var(--sans); font-size: 12px; line-height: 1; color: var(--ink); }
+.day-wx .ic { font-size: 14px; line-height: 1; }
+.day-wx .tmp { font-weight: 600; letter-spacing: .01em; }
+.day-wx .lo { font-weight: 400; color: var(--ink-mute); margin-left: 1px; }
+.day-wx.typical { color: var(--ink-mute); }
+.day-wx.typical .tmp { font-weight: 500; }
+.day-wx .tag { font-size: 8.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--red); align-self: center; }
 .optimize-btn {
   margin-left: auto; flex-shrink: 0;
   display: inline-flex; align-items: center; gap: 6px;

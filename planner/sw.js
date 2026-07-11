@@ -144,5 +144,5 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(staleWhileRevalidate(req));
     return;
   }
-  // everything else (nominatim, sync backends, external links): network only
+  // everything else (nominatim, open-meteo weather, sync backends, external links): network only
 });

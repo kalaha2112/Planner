@@ -62,6 +62,7 @@
   };
 
   const STORAGE_KEY = 'europe-trip-state-v1';
+  const WX_CACHE_KEY = 'europe-trip-weather-v1';       // cached daily weather per (coord, stay)
 
   /* ---- cross-device cloud sync (keyless, no-signup JSON stores) ----
      No single free bin service is reliable across every network, so we
@@ -302,6 +303,23 @@
   ];
   const MODE_HEX = { 'flight': '#91040C', 'train': '#5E8475', 'bus': '#4A7098', 'overnight-train': '#46604F', 'flying-blue': '#C8901F' };
 
+  // WMO weather-interpretation codes (Open-Meteo `weather_code`) → a small
+  // emoji + label set. Grouped into the buckets that read at a glance on a
+  // day header; the full code list collapses into ~9 conditions.
+  function wxInfo(code) {
+    if (code == null) return { icon: '', label: '' };
+    if (code === 0) return { icon: '☀️', label: 'Clear' };
+    if (code === 1) return { icon: '🌤️', label: 'Mainly clear' };
+    if (code === 2) return { icon: '⛅', label: 'Partly cloudy' };
+    if (code === 3) return { icon: '☁️', label: 'Overcast' };
+    if (code === 45 || code === 48) return { icon: '🌫️', label: 'Fog' };
+    if (code >= 51 && code <= 57) return { icon: '🌦️', label: 'Drizzle' };
+    if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82)) return { icon: '🌧️', label: 'Rain' };
+    if ((code >= 71 && code <= 77) || code === 85 || code === 86) return { icon: '🌨️', label: 'Snow' };
+    if (code >= 95) return { icon: '⛈️', label: 'Thunderstorm' };
+    return { icon: '', label: '' };
+  }
+
   const CITY_COORDS = {
     'new york': [40.6413, -73.7781], 'jfk': [40.6413, -73.7781],
     'newark': [40.6895, -74.1745], 'ewr': [40.6895, -74.1745],
@@ -506,6 +524,9 @@
       this._geoCache = new Map();   // normalized address -> {lat,lng} | null (runtime only)
       this._geoQueue = Promise.resolve();
       this._geoLast = 0;
+      this._wxCache = new Map();     // "lat,lng|start|end" -> { kind, ts, days:{ iso:{code,hi,lo,pop} } }
+      this._wxPending = new Set();   // in-flight weather keys (dedupe fetches)
+      this._loadWeather();           // rehydrate non-stale cached weather
       this._flashItem = null;       // item index to flash once after a pin click
       this._selectedItem = null;    // item index persistently highlighted by pin toggle
       this._optimizeNote = null;    // result banner from the route optimizer
@@ -2009,6 +2030,113 @@
       this._geoQueue = run.catch(() => {});
       return run;
     }
+
+    /* ---------- daily weather (Open-Meteo — keyless & CORS-open, like the
+       geocoder). One request covers a whole stay. Near-term stays (inside the
+       16-day forecast window) get a real forecast; stays further out — or fully
+       in the past — fall back to the archive API for the same calendar dates,
+       shown as "typical" weather for future trips. Cached in-memory and in
+       localStorage: forecasts go stale after 3h; typical/archive values are
+       stable, so they live 30 days. Nothing blocks a render — a cache miss
+       serves nothing and kicks off a fetch that re-renders on arrival, exactly
+       like the geocoder feeding the day map. ---------- */
+    _wxISO(d) { const p = n => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
+    _wxParseISO(s) { const a = s.split('-').map(Number); return new Date(a[0], a[1] - 1, a[2]); }
+    _wxShiftYear(d, n) { const x = new Date(d); x.setFullYear(x.getFullYear() + n); return x; }
+    _wxKey(coord, start, end) { return coord[0].toFixed(2) + ',' + coord[1].toFixed(2) + '|' + this._wxISO(start) + '|' + this._wxISO(end); }
+    _wxStale(entry) {
+      const age = Date.now() - (entry.ts || 0);
+      return age > (entry.kind === 'forecast' ? 3 * 3600e3 : 30 * 86400e3);
+    }
+    // Weather for a single stay day, resolved through the stop's city coord.
+    // Returns { code, hi, lo, pop, typical } or null when nothing is cached yet.
+    dayWeather(stop, range, dayIdx) {
+      if (!range || dayIdx == null || dayIdx < 0) return null;
+      const coord = this.resolveCoord(stop && stop.city);   // also kicks off geocoding on a miss
+      if (!coord) return null;
+      const entry = this._weatherForStay(coord, range.start, range.end);
+      if (!entry) return null;
+      const dt = new Date(range.start); dt.setDate(dt.getDate() + dayIdx);
+      const wx = entry.days[this._wxISO(dt)];
+      return wx ? Object.assign({ typical: entry.kind === 'typical' }, wx) : null;
+    }
+    _weatherForStay(coord, start, end) {
+      const key = this._wxKey(coord, start, end);
+      const hit = this._wxCache.get(key);
+      if (hit && !this._wxStale(hit)) return hit;      // fresh → use it
+      this._fetchWeather(key, coord, start, end);      // miss/stale → refresh
+      return hit || null;                              // serve stale (if any) meanwhile
+    }
+    _fetchWeather(key, coord, start, end) {
+      if (this._wxPending.has(key)) return;
+      this._wxPending.add(key);
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const dayMs = 86400e3;
+      const startOut = Math.round((start - today) / dayMs);
+      const endOut = Math.round((end - today) / dayMs);
+      const lat = coord[0].toFixed(3), lng = coord[1].toFixed(3);
+      let url, kind, yearShift = 0;
+      if (startOut >= -1 && endOut <= 15) {
+        // whole stay sits inside the live forecast window (yesterday → +16d)
+        kind = 'forecast';
+        url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lng +
+          '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max' +
+          '&timezone=auto&forecast_days=16';
+      } else {
+        // outside the window: read the archive for the same calendar dates.
+        // Future trips shift back to the last finished year → "typical"; past
+        // trips read their own dates → actual recorded weather.
+        kind = startOut > 15 ? 'typical' : 'actual';
+        if (kind === 'typical') { yearShift = new Date().getFullYear() - start.getFullYear(); if (yearShift <= 0) yearShift = 1; }
+        const s = this._wxShiftYear(start, -yearShift);
+        const e = this._wxShiftYear(end, -yearShift);
+        url = 'https://archive-api.open-meteo.com/v1/archive?latitude=' + lat + '&longitude=' + lng +
+          '&start_date=' + this._wxISO(s) + '&end_date=' + this._wxISO(e) +
+          '&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto';
+      }
+      fetch(url)
+        .then(r => r.ok ? r.json() : null)
+        .then(j => {
+          const days = {};
+          const dd = j && j.daily;
+          if (dd && Array.isArray(dd.time)) {
+            for (let i = 0; i < dd.time.length; i++) {
+              // re-key shifted archive dates back onto the stay's own dates
+              let iso = dd.time[i];
+              if (yearShift) iso = this._wxISO(this._wxShiftYear(this._wxParseISO(iso), yearShift));
+              const hi = dd.temperature_2m_max, lo = dd.temperature_2m_min, pp = dd.precipitation_probability_max;
+              days[iso] = {
+                code: dd.weather_code ? dd.weather_code[i] : null,
+                hi: (hi && hi[i] != null) ? Math.round(hi[i]) : null,
+                lo: (lo && lo[i] != null) ? Math.round(lo[i]) : null,
+                pop: (pp && pp[i] != null) ? pp[i] : null,
+              };
+            }
+          }
+          return days;
+        })
+        .catch(() => ({}))     // offline / blocked → cache an empty entry so we don't hammer
+        .then(days => {
+          this._wxCache.set(key, { kind, ts: Date.now(), days });
+          this._persistWeather();
+          this._wxPending.delete(key);
+          // re-render only if the itinerary is still open (day header shows the
+          // chip); if the modal was closed meanwhile the value simply waits in cache
+          if (this.openStopIdx != null) this.bumpModal();
+        });
+    }
+    _persistWeather() {
+      try {
+        const o = {}; this._wxCache.forEach((v, k) => { o[k] = v; });
+        localStorage.setItem(WX_CACHE_KEY, JSON.stringify(o));
+      } catch (e) {}
+    }
+    _loadWeather() {
+      try {
+        const o = JSON.parse(localStorage.getItem(WX_CACHE_KEY) || '{}');
+        Object.keys(o).forEach(k => { const v = o[k]; if (v && v.days && !this._wxStale(v)) this._wxCache.set(k, v); });
+      } catch (e) {}
+    }
     ensureDayMap(tries) {
       if (!this.dayMapEl.isConnected || !window.L) { if ((tries || 0) < 80) setTimeout(() => this.ensureDayMap((tries || 0) + 1), 100); return; }
       if (this.dayMap) { this.dayMap.invalidateSize(); this.renderDayMap(); return; }
@@ -3165,11 +3293,21 @@
           <div class="daymap-cap"></div>
         </aside>` : '';
         const note = this._optimizeNote;
+        const wx = this.dayWeather(stop, range, activeDay);
+        const wxChip = (wx && wx.hi != null) ? (() => {
+          const info = wxInfo(wx.code);
+          const tip = (wx.typical ? 'Typical for these dates (same week last year)' : 'Forecast') +
+            (info.label ? ' · ' + info.label : '') + (wx.pop != null ? ' · ' + wx.pop + '% precip' : '');
+          return `<span class="day-wx${wx.typical ? ' typical' : ''}" title="${escA(tip)}">` +
+            (info.icon ? `<span class="ic">${info.icon}</span>` : '') +
+            `<span class="tmp">${wx.hi}°${wx.lo != null ? `<span class="lo">/${wx.lo}°</span>` : ''}</span>` +
+            (wx.typical ? `<span class="tag">typical</span>` : '') + `</span>`;
+        })() : '';
         dayBlock = `<div class="iti-foot">
           <div class="day-cols">
             <div class="day-main">
               <div class="day-head">
-                <div class="day-title">Day ${activeDay + 1}${dayDate(activeDay) ? ' · ' + esc(dayDate(activeDay)) : ''}</div>
+                <div class="day-title">Day ${activeDay + 1}${dayDate(activeDay) ? ' · ' + esc(dayDate(activeDay)) : ''}</div>${wxChip}
                 <button class="optimize-btn" data-act="optimize-day" ${placedCount < 2 ? 'disabled' : ''} title="${placedCount < 2 ? 'Add an address to at least 2 activities first' : 'Reorder the day to avoid backtracking'}">${svg(I.spark, { w: 13, h: 13, sw: 1.6 })}<span>Optimize route</span></button>
               </div>
               ${note ? `<div class="optimize-note${note.kind === 'warn' ? ' warn' : ''}"><span>${esc(note.text)}</span><button class="on-x" data-act="optimize-dismiss" title="Dismiss">✕</button></div>` : ''}
