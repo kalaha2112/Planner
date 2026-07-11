@@ -2812,7 +2812,7 @@
     renderMetaRange(trip) {
       const parse = s => { const dt = new Date((s || '') + 'T00:00:00'); return isNaN(dt.getTime()) ? null : dt; };
       const dep = parse(trip.depart), ret = parse(trip.returnDate);
-      const md = dt => dt ? dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }) : 'Add date';
+      const md = dt => dt ? dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Add date';
       const sameYear = dep && ret && dep.getFullYear() === ret.getFullYear();
       const withYear = (dt, base) => (dep && ret && !sameYear && dt) ? `${base}, ${dt.getFullYear()}` : base;
       const depTxt = withYear(dep, md(dep)), retTxt = withYear(ret, md(ret));
