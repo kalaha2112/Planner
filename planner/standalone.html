@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-10T22:16:30.680Z
+  Built: 2026-07-11T04:06:42.847Z
 -->
 
 <html lang="en">
@@ -2119,12 +2119,11 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
-  /* stays at the dock's original 360px width for readable line items — it
-     overhangs slightly past the (now narrower) dock into the tab gutter,
-     but that area shares the same --shell background and the tabs hide
-     while the bill is open, so there's no visible seam */
+  /* 12px narrower than the dock's original 360px — the box stays right-
+     aligned, so this opens a matching 12px gap to the map on the left
+     without touching the existing 12px gap to the page's right edge */
   .overlay[data-act="overlay-budget"] .receipt-wrap {
-    width: 360px; max-width: 360px; flex: 0 0 360px;
+    width: 348px; max-width: 348px; flex: 0 0 348px;
   }
   /* the bill covers the info panel exactly — blank the panel's contents while
      it's open (the panel surface itself stays, as the paper's backing) */
