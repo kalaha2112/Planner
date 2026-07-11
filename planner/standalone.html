@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-11T04:44:15.213Z
+  Built: 2026-07-11T05:06:40.066Z
 -->
 
 <html lang="en">
@@ -1618,6 +1618,11 @@ a { color: inherit; }
 .t-cost-row .t-line-inp { border-bottom: none; }
 .t-unit { font-family: var(--sans); font-size: 12px; color: var(--ink-soft); flex-shrink: 0; }
 .t-cost-row:focus-within { border-bottom-color: var(--ink); }
+/* reward points live alongside cost on a Flight leg — gold ties it to the
+   miles stat's accent color elsewhere in the app */
+.t-fld.t-reward { margin-top: 18px; }
+.t-fld.t-reward label { color: var(--gold); }
+.t-fld.t-reward .t-unit { color: var(--gold); }
 
 /* mc-transport-btn tints the route icon with mode color */
 .mc-back .mc-transport-btn { border-color: currentColor; opacity: 0.85; }
@@ -2079,7 +2084,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .ledger-col .meta-range {
     display: flex; align-items: baseline; flex-wrap: wrap; gap: 0;
     margin: 0; padding: 2px 0; flex-shrink: 0;
-    font-family: var(--serif); font-size: 17px; font-weight: 600; letter-spacing: -.01em;
+    font-family: var(--serif); font-size: 21px; font-weight: 600; letter-spacing: -.01em;
     color: var(--green-dark);
   }
   .meta-range .date-tail { white-space: nowrap; }   /* year never orphans from the return date */
@@ -2960,8 +2965,8 @@ html { -webkit-tap-highlight-color: transparent; }
         stops: [
           { city: 'Prague', nights: 4, note: '', leg: { mode: 'train', duration: '~6h direct', cost: 35 } },
           { city: 'Kraków', nights: 4, note: '', leg: { mode: 'overnight-train', duration: '~9h sleeper · saves a hotel night', cost: 80 } },
-          { city: 'Budapest', nights: 4, note: '', leg: { mode: 'flying-blue', duration: '~2h15m AF · same ticket as flight home', cost: 0, miles: 0 } },
-          { city: 'Paris', nights: 2, note: '', leg: { mode: 'flying-blue', duration: '9h45m nonstop · Air France', cost: 220, miles: 0 } }
+          { city: 'Budapest', nights: 4, note: '', leg: { mode: 'flight', duration: '~2h15m AF · same ticket as flight home', cost: 0, miles: 0 } },
+          { city: 'Paris', nights: 2, note: '', leg: { mode: 'flight', duration: '9h45m nonstop · Air France', cost: 220, miles: 0 } }
         ],
         homeLabel: 'Vancouver (YVR)'
       },
@@ -2974,8 +2979,8 @@ html { -webkit-tap-highlight-color: transparent; }
           { city: 'Copenhagen', nights: 2, note: '', leg: { mode: 'flight', duration: '~1h30m · SAS / Norwegian', cost: 130 } },
           { city: 'Bergen', nights: 3, note: '', leg: { mode: 'train', duration: '~6h45m · Bergen Railway (scenic)', cost: 90 } },
           { city: 'Oslo', nights: 4, note: '', leg: { mode: 'train', duration: '~5-6h', cost: 80 } },
-          { city: 'Stockholm', nights: 4, note: '', leg: { mode: 'flying-blue', duration: '~2h40m AF · same ticket as flight home', cost: 0, miles: 0 } },
-          { city: 'Paris', nights: 2, note: '', leg: { mode: 'flying-blue', duration: '9h45m nonstop · Air France', cost: 220, miles: 0 } }
+          { city: 'Stockholm', nights: 4, note: '', leg: { mode: 'flight', duration: '~2h40m AF · same ticket as flight home', cost: 0, miles: 0 } },
+          { city: 'Paris', nights: 2, note: '', leg: { mode: 'flight', duration: '9h45m nonstop · Air France', cost: 220, miles: 0 } }
         ],
         homeLabel: 'Vancouver (YVR)'
       }
@@ -2984,7 +2989,6 @@ html { -webkit-tap-highlight-color: transparent; }
 
   const MODE_OPTIONS = [
     { value: 'flight', label: 'Flight' },
-    { value: 'flying-blue', label: 'Rewards' },
     { value: 'train', label: 'Train' },
     { value: 'bus', label: 'Bus' }
   ];
@@ -3767,19 +3771,20 @@ html { -webkit-tap-highlight-color: transparent; }
     }
     migrate() {
       const d = this.data;
+      // Rewards used to be a separate "flying-blue" mode; it's now folded into
+      // Flight (a reward-points field alongside cost). Convert any leg still
+      // carrying the old mode, keep its miles value, and make sure every
+      // flight leg has a numeric miles field for the reward-points input.
       Object.values(d.trips || {}).forEach(trip => {
-        // Reset outbound leg from flying-blue to flight (seed data previously defaulted to flying-blue)
-        if (trip.outboundLeg && trip.outboundLeg.mode === 'flying-blue') {
-          trip.outboundLeg.mode = 'flight';
-          trip.outboundLeg.cost = trip.outboundLeg.cost || 0;
-          delete trip.outboundLeg.miles;
-        }
-        // Zero out the default seed miles (25000) on any flying-blue leg that still carries it unchanged
-        (trip.stops || []).forEach(s => {
-          if (s.leg && s.leg.mode === 'flying-blue' && s.leg.miles === 25000 && !s._milesEdited) s.leg.miles = 0;
-        });
         const legs = [trip.outboundLeg, ...(trip.stops || []).map(s => s.leg)];
-        legs.forEach(l => { if (l && l.mode === 'flying-blue' && l.miles == null) l.miles = 0; });
+        legs.forEach(l => {
+          if (!l) return;
+          if (l.mode === 'flying-blue') {
+            l.mode = 'flight';
+            if (l.miles === 25000) l.miles = 0;   // clear the untouched seed default
+          }
+          if (l.mode === 'flight' && l.miles == null) l.miles = 0;
+        });
       });
       if (d.meta && d.meta.title == null) d.meta.title = '';
       if (d.meta && d.meta.introText == null) d.meta.introText = DEFAULT_INTRO_TEXT;
@@ -4211,7 +4216,7 @@ html { -webkit-tap-highlight-color: transparent; }
         const a = resolved[i], b = resolved[i + 1], leg = legs[i];
         if (!a.coord || !b.coord) continue;
         const color = MODE_HEX[leg.mode] || '#7a7260';
-        const dashed = leg.mode === 'flight' || leg.mode === 'flying-blue';
+        const dashed = leg.mode === 'flight';
         this.mapLines.addLayer(L.polyline([a.coord, b.coord], { color, weight: 3, opacity: .85, dashArray: dashed ? '6 6' : null, className: 'leg-' + leg.mode }));
       }
       if (bounds.length === 1) changed ? this.leafletMap.flyTo(bounds[0], 5, { duration: .8 }) : this.leafletMap.setView(bounds[0], 5);
@@ -4409,16 +4414,17 @@ html { -webkit-tap-highlight-color: transparent; }
       this._updateMainLeaders();
     }
 
+    // compact map-card editor: mode + duration + cost only — reward points
+    // for a flight leg are edited on the Transport & Hotels page
     _legFields(leg, legIdx) {
-      const isFB = leg.mode === 'flying-blue';
       const opts = MODE_OPTIONS.map(o => `<option value="${o.value}"${o.value === leg.mode ? ' selected' : ''}>${o.label}</option>`).join('');
       return `<div class="map-leg-row">
         <span class="mode-dot" style="background:${MODE_HEX[leg.mode] || '#7a7260'}"></span>
         <select data-ch="leg-mode" data-leg="${legIdx}">${opts}</select>
         <input class="dur" value="${escA(leg.duration)}" data-ch="leg-dur" data-leg="${legIdx}" placeholder="notes">
-        ${SHOW_COSTS ? `<span class="cost-wrap${isFB ? ' cost-wrap--fb' : ''}">
-          <input class="cost" type="text" inputmode="numeric" value="${escA(isFB ? (leg.miles ?? 0) : (leg.cost ?? 0))}" data-ch="leg-cost" data-leg="${legIdx}">
-          <span class="unit">${isFB ? 'mi/pp' : '$/pp'}</span></span>` : ''}
+        ${SHOW_COSTS ? `<span class="cost-wrap">
+          <input class="cost" type="text" inputmode="numeric" value="${escA(leg.cost ?? 0)}" data-ch="leg-cost" data-leg="${legIdx}">
+          <span class="unit">$/pp</span></span>` : ''}
       </div>`;
     }
 
@@ -4428,7 +4434,10 @@ html { -webkit-tap-highlight-color: transparent; }
         const r = d ? d.stops[idx] : null;
         const chosenNames = (stop.accom && stop.accom.options || []).filter(o => o.chosen && o.name && o.name.trim()).map(o => o.name.trim());
         const accomSet = chosenNames.length > 0;
-        const modeColor = MODE_HEX[(legs[idx] || {}).mode] || '#7a7260';
+        // each stop's own .leg is the leg that arrives at it (legByIndex(idx+1)
+        // is the equivalent lookup) — index into the shifted `legs` array here
+        // was off by one and showed the PREVIOUS stop's transport color
+        const modeColor = MODE_HEX[(stop.leg || {}).mode] || '#7a7260';
         const dim = this._dragStopIdx === idx ? 0.38 : 1;
         html += `<div class="stop map-stop" data-i="${idx}" style="opacity:${dim}">
           <div class="card mc-flip">
@@ -5148,7 +5157,7 @@ html { -webkit-tap-highlight-color: transparent; }
       const legs = [trip.outboundLeg, ...trip.stops.map(s => s.leg)];
       const bud = meta.budget;
       const flightCost = legs.reduce((s, l) => s + (l.mode === 'flight' ? (Number(l.cost) || 0) : 0), 0) * travelers;
-      const intercityCost = legs.reduce((s, l) => s + (l.mode !== 'flight' && l.mode !== 'flying-blue' ? (Number(l.cost) || 0) : 0), 0) * travelers;
+      const intercityCost = legs.reduce((s, l) => s + (l.mode !== 'flight' ? (Number(l.cost) || 0) : 0), 0) * travelers;
       const cityPassLines = trip.stops.map(st => {
         const p = CITY_PASS_LOCAL[normKey(st.city)] || DEFAULT_PASS;
         const known = !!CITY_PASS_LOCAL[normKey(st.city)];
@@ -5200,7 +5209,9 @@ html { -webkit-tap-highlight-color: transparent; }
       const fmt = (x) => this.formatDate(x);
       const nights = trip.stops.reduce((s, st) => s + (Number(st.nights) || 0), 0);
       const legs = [trip.outboundLeg, ...trip.stops.map(s => s.leg)];
-      const milesNeeded = legs.reduce((s, l) => s + (l.mode === 'flying-blue' ? (Number(l.miles) || 0) : 0), 0) * travelers;
+      // reward points now live on the flight leg itself (grouped with cost),
+      // not a separate "flying-blue" mode
+      const milesNeeded = legs.reduce((s, l) => s + (l.mode === 'flight' ? (Number(l.miles) || 0) : 0), 0) * travelers;
       const budget = this.computeBudget(trip, travelers, nights);
 
       const web = this._webMag();
@@ -5942,47 +5953,60 @@ html { -webkit-tap-highlight-color: transparent; }
 
     // One leg's editor (mode pills + times + cost/miles) for the leg that
     // reaches stop `idx` — shared by the app's modal and the ledger's page 2.
+    // `idx` is the STOP index (matches renderAccomBody's convention and the
+    // header's trip.stops[idx] lookup) — the leg belonging to that stop
+    // (its own departure leg, stored as stops[idx].leg) is legByIndex(idx+1).
+    // Using legByIndex(idx) directly here used to fetch the PREVIOUS stop's
+    // leg (off by one) for every field: depart/arrive/cost/mode/etc.
     renderTransportBody(trip, idx) {
-      const leg = this.legByIndex(idx);
-      const isFB = leg.mode === 'flying-blue';
+      const legIdx = idx + 1;
+      const leg = this.legByIndex(legIdx);
+      const isFlight = leg.mode === 'flight';
       const modeColor = MODE_HEX[leg.mode] || '#7a7260';
       const fmtCost = n => { const v = Number(n) || 0; return v >= 1000 ? v.toLocaleString('en-US') : (v || ''); };
       const pills = MODE_OPTIONS.map(o =>
-        `<button class="t-pill${leg.mode === o.value ? ' active' : ''}" data-act="transport-mode" data-leg="${idx}" data-mode="${escA(o.value)}" style="${leg.mode === o.value ? `background:${modeColor};border-color:${modeColor}` : ''}">${esc(o.label)}</button>`
+        `<button class="t-pill${leg.mode === o.value ? ' active' : ''}" data-act="transport-mode" data-leg="${legIdx}" data-mode="${escA(o.value)}" style="${leg.mode === o.value ? `background:${modeColor};border-color:${modeColor}` : ''}">${esc(o.label)}</button>`
       ).join('');
-      const idLabel = (leg.mode === 'flight' || isFB) ? 'Flight No.' : leg.mode === 'train' ? 'Train No.' : 'Line';
-      const costLabel = isFB ? 'Miles / pp' : 'Cost / pp';
-      const costUnit = isFB ? 'mi' : '$';
-      const costVal = escA(fmtCost(isFB ? (leg.miles ?? 0) : (leg.cost ?? 0)));
+      const idLabel = isFlight ? 'Flight No.' : leg.mode === 'train' ? 'Train No.' : 'Line';
+      const costVal = escA(fmtCost(leg.cost ?? 0));
+      const rewardVal = escA(fmtCost(leg.miles ?? 0));
       return `<div class="transport-body">
             <div class="t-pills">${pills}</div>
             <div class="t-row-3">
               <div class="t-fld">
                 <label>Depart</label>
-                <input class="t-line-inp" value="${escA(leg.departure || '')}" data-ch="transport-depart" data-leg="${idx}" placeholder="09:00">
+                <input class="t-line-inp" value="${escA(leg.departure || '')}" data-ch="transport-depart" data-leg="${legIdx}" placeholder="09:00">
               </div>
               <div class="t-fld">
                 <label>Arrive</label>
-                <input class="t-line-inp" value="${escA(leg.arrival || '')}" data-ch="transport-arrival" data-leg="${idx}" placeholder="17:30">
+                <input class="t-line-inp" value="${escA(leg.arrival || '')}" data-ch="transport-arrival" data-leg="${legIdx}" placeholder="17:30">
               </div>
               <div class="t-fld">
                 <label>Transfer</label>
-                <input class="t-line-inp t-transfer" type="number" min="0" value="${escA(leg.transfers ?? '')}" data-ch="transport-transfers" data-leg="${idx}" placeholder="0">
+                <input class="t-line-inp t-transfer" type="number" min="0" value="${escA(leg.transfers ?? '')}" data-ch="transport-transfers" data-leg="${legIdx}" placeholder="0">
               </div>
             </div>
             <div class="t-row-2">
               <div class="t-fld">
                 <label>${esc(idLabel)}</label>
-                <input class="t-line-inp" value="${escA(leg.vehicleId || '')}" data-ch="transport-id" data-leg="${idx}" placeholder="—">
+                <input class="t-line-inp" value="${escA(leg.vehicleId || '')}" data-ch="transport-id" data-leg="${legIdx}" placeholder="—">
               </div>
               <div class="t-fld">
-                <label>${esc(costLabel)}</label>
+                <label>Cost / pp</label>
                 <div class="t-cost-row">
-                  <span class="t-unit">${costUnit}</span>
-                  <input class="t-line-inp" inputmode="numeric" value="${costVal}" data-ch="transport-cost" data-leg="${idx}">
+                  <span class="t-unit">$</span>
+                  <input class="t-line-inp" inputmode="numeric" value="${costVal}" data-ch="transport-cost" data-leg="${legIdx}">
                 </div>
               </div>
             </div>
+            ${isFlight ? `
+            <div class="t-fld t-reward">
+              <label>Reward points / pp</label>
+              <div class="t-cost-row">
+                <span class="t-unit">pts</span>
+                <input class="t-line-inp" inputmode="numeric" value="${rewardVal}" data-ch="transport-reward" data-leg="${legIdx}">
+              </div>
+            </div>` : ''}
           </div>`;
     }
 
@@ -6219,7 +6243,7 @@ html { -webkit-tap-highlight-color: transparent; }
         case 'overlay-accom': if (e.target === t) this.closeAccom(); break;
         case 'close-transport': this.closeTransport(); break;
         case 'overlay-transport': if (e.target === t) this.closeTransport(); break;
-        case 'transport-mode': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.mode = t.dataset.mode; if (leg.mode === 'flying-blue' && leg.miles == null) leg.miles = 25000; this.bump(); break; }
+        case 'transport-mode': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.mode = t.dataset.mode; if (leg.mode === 'flight' && leg.miles == null) leg.miles = 0; this.bump(); break; }
         case 'cal-day': { this.activeDay = (this.activeDay === i ? null : i); this._optimizeNote = null; this._selectedItem = null; this.bumpModal(); break; }
         case 'optimize-day': this.optimizeDay(); break;
         case 'optimize-dismiss': this._optimizeNote = null; this.bumpModal(); break;
@@ -6252,10 +6276,15 @@ html { -webkit-tap-highlight-color: transparent; }
         case 'travelers': trip.travelers = Math.max(1, Number(v) || 1); this.bump(); break;
         case 'origin-label': trip.originLabel = v; this.bump(); break;
         case 'home-label': trip.homeLabel = v; this.bump(); break;
-        case 'leg-mode': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.mode = v; if (leg.mode === 'flying-blue' && leg.miles == null) leg.miles = 25000; this.bump(); break; }
+        case 'leg-mode': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.mode = v; if (leg.mode === 'flight' && leg.miles == null) leg.miles = 0; this.bump(); break; }
         case 'leg-dur': this.legByIndex(Number(t.dataset.leg)).duration = v; this.bump(); break;
-        case 'leg-cost': { const leg = this.legByIndex(Number(t.dataset.leg)); const num = Number((v+'').replace(/,/g,'')) || 0; if (leg.mode === 'flying-blue') leg.miles = num; else leg.cost = num; this.bump(); break; }
-        case 'transport-cost': { const leg = this.legByIndex(Number(t.dataset.leg)); const num = Number(v.replace(/,/g, '')) || 0; if (leg.mode === 'flying-blue') leg.miles = num; else leg.cost = num; this.scheduleSave(); break; }
+        case 'leg-cost': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.cost = Number((v+'').replace(/,/g,'')) || 0; this.bump(); break; }
+        // 'change' fires once on blur (not per keystroke), so a full bump()
+        // here is safe and keeps the budget/reward-points stats in sync the
+        // moment either field is edited, instead of only after the next
+        // unrelated render
+        case 'transport-cost': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.cost = Number(v.replace(/,/g, '')) || 0; this.bump(); break; }
+        case 'transport-reward': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.miles = Number(v.replace(/,/g, '')) || 0; this.bump(); break; }
         case 'transport-depart': { this.legByIndex(Number(t.dataset.leg)).departure = v; this.scheduleSave(); break; }
         case 'transport-arrival': { this.legByIndex(Number(t.dataset.leg)).arrival = v; this.scheduleSave(); break; }
         case 'transport-transfers': { this.legByIndex(Number(t.dataset.leg)).transfers = Number(v) || 0; this.scheduleSave(); break; }

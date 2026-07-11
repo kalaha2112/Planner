@@ -894,6 +894,11 @@ a { color: inherit; }
 .t-cost-row .t-line-inp { border-bottom: none; }
 .t-unit { font-family: var(--sans); font-size: 12px; color: var(--ink-soft); flex-shrink: 0; }
 .t-cost-row:focus-within { border-bottom-color: var(--ink); }
+/* reward points live alongside cost on a Flight leg — gold ties it to the
+   miles stat's accent color elsewhere in the app */
+.t-fld.t-reward { margin-top: 18px; }
+.t-fld.t-reward label { color: var(--gold); }
+.t-fld.t-reward .t-unit { color: var(--gold); }
 
 /* mc-transport-btn tints the route icon with mode color */
 .mc-back .mc-transport-btn { border-color: currentColor; opacity: 0.85; }
@@ -1355,7 +1360,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .ledger-col .meta-range {
     display: flex; align-items: baseline; flex-wrap: wrap; gap: 0;
     margin: 0; padding: 2px 0; flex-shrink: 0;
-    font-family: var(--serif); font-size: 17px; font-weight: 600; letter-spacing: -.01em;
+    font-family: var(--serif); font-size: 21px; font-weight: 600; letter-spacing: -.01em;
     color: var(--green-dark);
   }
   .meta-range .date-tail { white-space: nowrap; }   /* year never orphans from the return date */
