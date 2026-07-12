@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-12T18:26:11.082Z
+  Built: 2026-07-12T23:31:13.795Z
 -->
 
 <html lang="en">
@@ -2002,6 +2002,30 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   font-size: 9px; line-height: 22px;
 }
 
+/* stop pins drop in when the map scrolls into view (JS toggles the container
+   class on .main-pins-overlay: pins-wait → pins-drop → settled/no-class) */
+@keyframes pinDrop {
+  0%   { transform: translateY(-22px) scale(.4); opacity: 0; }
+  55%  { opacity: 1; }
+  72%  { transform: translateY(3px) scale(1.06); }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+.main-pins-overlay.pins-wait .map-pin-main { opacity: 0; }
+.main-pins-overlay.pins-drop .map-pin-main {
+  transform-origin: center bottom;
+  animation: pinDrop .5s cubic-bezier(.34, 1.4, .64, 1) both;
+}
+.main-pins-overlay.pins-drop .map-pin-outer:nth-child(1) .map-pin-main { animation-delay: 0ms; }
+.main-pins-overlay.pins-drop .map-pin-outer:nth-child(2) .map-pin-main { animation-delay: 70ms; }
+.main-pins-overlay.pins-drop .map-pin-outer:nth-child(3) .map-pin-main { animation-delay: 140ms; }
+.main-pins-overlay.pins-drop .map-pin-outer:nth-child(4) .map-pin-main { animation-delay: 210ms; }
+.main-pins-overlay.pins-drop .map-pin-outer:nth-child(5) .map-pin-main { animation-delay: 280ms; }
+.main-pins-overlay.pins-drop .map-pin-outer:nth-child(6) .map-pin-main { animation-delay: 350ms; }
+.main-pins-overlay.pins-drop .map-pin-outer:nth-child(n+7) .map-pin-main { animation-delay: 420ms; }
+@media (prefers-reduced-motion: reduce) {
+  .main-pins-overlay.pins-drop .map-pin-main { animation: none; }
+}
+
 /* ============================================================
    WEB LEDGER (≥ 701px) — the planner as a left-bound horizontal
    ledger notebook. The viewport is the desk; the book sits on it
@@ -3455,7 +3479,19 @@ html { -webkit-tap-highlight-color: transparent; }
         this._positionMainCards();   // re-clamp at the larger editing width so it stays inside the map
       });
       this.mainPinsOverlayEl = document.createElement('div');
-      this.mainPinsOverlayEl.className = 'main-pins-overlay';
+      this.mainPinsOverlayEl.className = 'main-pins-overlay pins-wait';
+      // stop pins drop in when the map scrolls into view (same scroll-trigger
+      // feel as the packing sheet). The overlay is a persistent node that rides
+      // inside whichever #main-map-holder is active, so one observer covers both
+      // the phone map and the web ledger's route leaf. The container class
+      // (pins-wait → pins-drop → settled) persists across renderMainMap's
+      // innerHTML rebuilds, so freshly-built pins inherit the right state.
+      this._pinsDropped = false;
+      this._pinIO = ('IntersectionObserver' in window) ? new IntersectionObserver((es) => es.forEach(e => {
+        if (e.isIntersecting && e.intersectionRatio >= .35) this._dropPins();
+        else if (!e.isIntersecting) this._resetPins();
+      }), { threshold: [0, .35] }) : null;
+      if (this._pinIO) this._pinIO.observe(this.mainPinsOverlayEl);
       // web ledger: hovering a pin previews that stop in the column's card
       // slot (patched in place — no full re-render on a hover)
       this.stopInfoIdx = null;
@@ -4605,6 +4641,26 @@ html { -webkit-tap-highlight-color: transparent; }
       this.mainPinsOverlayEl.querySelectorAll('.map-pin-outer').forEach(p => {
         p.classList.toggle('pin-open', mobile && Number(p.dataset.pin) === this._openMapCardIdx);
       });
+    }
+    // pins fall in, staggered, when the map first scrolls into view. Runs the
+    // keyframe for its window, then drops back to the settled default so later
+    // renderMainMap rebuilds (pan/coord updates) don't re-trigger the drop.
+    _dropPins() {
+      if (this._pinsDropped) return;
+      this._pinsDropped = true;
+      const el = this.mainPinsOverlayEl;
+      el.classList.remove('pins-wait');
+      clearTimeout(this._pinDropT);
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;   // just show them
+      el.classList.add('pins-drop');
+      const n = el.querySelectorAll('.map-pin-outer').length;
+      this._pinDropT = setTimeout(() => el.classList.remove('pins-drop'), 600 + Math.min(n, 7) * 70);
+    }
+    _resetPins() {
+      this._pinsDropped = false;
+      clearTimeout(this._pinDropT);
+      this.mainPinsOverlayEl.classList.remove('pins-drop');
+      this.mainPinsOverlayEl.classList.add('pins-wait');
     }
     // mirrors the CSS card widths on .main-cards-overlay .map-stop (styles.css):
     // clamp(100px, 15.4cqw, 155px) on wide screens, fixed 185px popup ≤700px —

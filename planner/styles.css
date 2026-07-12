@@ -1278,6 +1278,30 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   font-size: 9px; line-height: 22px;
 }
 
+/* stop pins drop in when the map scrolls into view (JS toggles the container
+   class on .main-pins-overlay: pins-wait → pins-drop → settled/no-class) */
+@keyframes pinDrop {
+  0%   { transform: translateY(-22px) scale(.4); opacity: 0; }
+  55%  { opacity: 1; }
+  72%  { transform: translateY(3px) scale(1.06); }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+.main-pins-overlay.pins-wait .map-pin-main { opacity: 0; }
+.main-pins-overlay.pins-drop .map-pin-main {
+  transform-origin: center bottom;
+  animation: pinDrop .5s cubic-bezier(.34, 1.4, .64, 1) both;
+}
+.main-pins-overlay.pins-drop .map-pin-outer:nth-child(1) .map-pin-main { animation-delay: 0ms; }
+.main-pins-overlay.pins-drop .map-pin-outer:nth-child(2) .map-pin-main { animation-delay: 70ms; }
+.main-pins-overlay.pins-drop .map-pin-outer:nth-child(3) .map-pin-main { animation-delay: 140ms; }
+.main-pins-overlay.pins-drop .map-pin-outer:nth-child(4) .map-pin-main { animation-delay: 210ms; }
+.main-pins-overlay.pins-drop .map-pin-outer:nth-child(5) .map-pin-main { animation-delay: 280ms; }
+.main-pins-overlay.pins-drop .map-pin-outer:nth-child(6) .map-pin-main { animation-delay: 350ms; }
+.main-pins-overlay.pins-drop .map-pin-outer:nth-child(n+7) .map-pin-main { animation-delay: 420ms; }
+@media (prefers-reduced-motion: reduce) {
+  .main-pins-overlay.pins-drop .map-pin-main { animation: none; }
+}
+
 /* ============================================================
    WEB LEDGER (≥ 701px) — the planner as a left-bound horizontal
    ledger notebook. The viewport is the desk; the book sits on it
