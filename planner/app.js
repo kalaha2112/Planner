@@ -520,7 +520,7 @@
       this.packOpen = null;         // packing slot whose popover is pinned open (view state)
       this._pkAnim = 'closed';      // packing sheet animation state: closed → open
       this._pkIO = ('IntersectionObserver' in window) ? new IntersectionObserver((es) => es.forEach(e => {
-        if (e.isIntersecting && e.intersectionRatio >= .35) this._playPackAnim(650);
+        if (e.isIntersecting && e.intersectionRatio >= .35) this._playPackAnim(325);
         else if (!e.isIntersecting) this._setPackAnim('closed');
       }), { threshold: [0, .35] }) : null;
       this._wheelAcc = 0;           // trackpad delta accumulator for page turns
@@ -3375,7 +3375,7 @@
       if (this._pkAnim === 'open') return;
       clearTimeout(this._pkAnimT);
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      this._pkAnimT = setTimeout(() => this._setPackAnim('open'), reduced ? 0 : (delay || 650));
+      this._pkAnimT = setTimeout(() => this._setPackAnim('open'), reduced ? 0 : (delay || 325));
     }
     _watchPackSheet() {
       if (!this._pkIO) return;
