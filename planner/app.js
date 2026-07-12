@@ -3386,7 +3386,6 @@
       return `<div class="pk-bp">
         <svg class="pk-case" viewBox="0 0 640 560" fill="none" aria-hidden="true">${leaders}${caseArt}</svg>
         ${slots}
-        <div class="pk-cap">${esc(trip.label || 'Trip')} essentials.</div>
       </div>`;
     }
     // the checklist panel docked in the empty space LEFT of the sheet, so it

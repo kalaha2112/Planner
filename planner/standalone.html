@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-12T01:51:08.134Z
+  Built: 2026-07-12T02:27:21.786Z
 -->
 
 <html lang="en">
@@ -2350,13 +2350,6 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .pk-none { font-family: var(--sans); font-size: 12px; color: var(--ink-mute); margin: 6px 0 8px; }
 .pk-card .add-todo { margin-top: 2px; }
 
-/* caption under the case, like the reference sheet */
-.pk-cap {
-  position: absolute; bottom: 1%; left: 50%; transform: translateX(-50%);
-  font-family: var(--script); font-style: italic; font-weight: 300;
-  font-size: 21px; color: var(--red); white-space: nowrap;
-}
-
 /* phone app: the sheet lives in a .todos-style card — everything scales down,
    and the checklist opens inline UNDER the sheet instead of docked beside it */
 .pack-block { padding-bottom: 13px; }
@@ -2365,7 +2358,6 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .pack-block .pk-glyph svg { width: 42px; height: 42px; }
 .pack-block .pk-lab { font-size: 7.5px; letter-spacing: .16em; margin-top: 1px; }
 .pack-block .pk-cnt { font-size: 9px; }
-.pack-block .pk-cap { font-size: 15px; }
 .pack-block .pk-panel { display: block; margin-top: 10px; }
 .pack-block .pk-panel:has(.pk-hint) { margin-top: 6px; }
 .pack-block .pk-hint { padding: 12px 14px; font-size: 11px; }
@@ -6225,7 +6217,6 @@ html { -webkit-tap-highlight-color: transparent; }
       return `<div class="pk-bp">
         <svg class="pk-case" viewBox="0 0 640 560" fill="none" aria-hidden="true">${leaders}${caseArt}</svg>
         ${slots}
-        <div class="pk-cap">${esc(trip.label || 'Trip')} essentials.</div>
       </div>`;
     }
     // the checklist panel docked in the empty space LEFT of the sheet, so it
