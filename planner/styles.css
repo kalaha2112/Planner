@@ -1572,37 +1572,64 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    PACKING SHEET — shared by the web ledger's page 4 and the
    phone app's Packing card (between the stats and the to-dos).
    ============================================================ */
-/* the sheet IS the print — the cropped "Work trip essentials." illustration */
+/* the sheet: dot-grid paper, the line-art carry-on tinted with theme ink.
+   Closed by default; .anim-open crossfades to the open case and the chips
+   rise out of it on their dashed leaders. */
 .pk-bp {
-  position: relative; width: 100%; max-width: 500px; aspect-ratio: 880 / 1045;
+  position: relative; width: 100%; max-width: 620px; aspect-ratio: 640 / 560;
   max-height: 100%; margin: auto;
+  background-image: radial-gradient(var(--ledger-rule, rgba(26, 26, 26, .05)) 1px, transparent 1.3px);
+  background-size: 24px 24px;
 }
-.pk-img {
-  position: absolute; inset: 0; width: 100%; height: 100%;
-  object-fit: cover; border-radius: 6px;
-  user-select: none; -webkit-user-drag: none;
+.pk-art {
+  position: absolute; background: var(--ink);
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  -webkit-mask-size: contain; mask-size: contain;
+  -webkit-mask-position: center; mask-position: center;
+  transition: opacity .42s ease, transform .48s cubic-bezier(.22, .61, .36, 1);
 }
-[data-theme="dark"] .pk-img { filter: brightness(.88); }
+.pk-art--closed { left: 33%; top: 22%; width: 34%; height: 70%; }
+.pk-art--open { left: 12%; top: 34%; width: 76%; height: 62%; }
+.pk-bp:not(.anim-open) .pk-art--open { opacity: 0; transform: scale(.9); }
+.pk-bp.anim-open .pk-art--closed { opacity: 0; transform: scale(.94) translateY(8px); }
 
-/* invisible hot-spot over a drawn object + its label/count chip */
-.pk-slot {
-  position: absolute; transform: translate(-50%, -50%);
-  width: 98px; height: 74px; cursor: pointer; z-index: 5; border-radius: 12px;
+/* dashed leaders grow up out of the case (origin at the case end) */
+.pk-leads { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.pk-leads line {
+  stroke: var(--ink-faint); stroke-width: 1.6; stroke-dasharray: 2 6; stroke-linecap: round;
+  transform-box: fill-box; transform-origin: center bottom;
+  transform: scaleY(0); transition: transform .5s ease;
 }
+.pk-leads circle { fill: var(--ink-faint); opacity: 0; transition: opacity .4s ease; }
+.pk-bp.anim-open .pk-leads line { transform: scaleY(1); }
+.pk-bp.anim-open .pk-leads circle { opacity: 1; }
+
+/* a rising chip: label + count pill, also the hover/tap checklist target */
+.pk-slot {
+  position: absolute; width: 112px; height: 44px; cursor: pointer; z-index: 5; border-radius: 999px;
+  opacity: 0; transform: translate(-50%, calc(-50% + 42px));
+  transition: opacity .5s ease, transform .55s cubic-bezier(.22, .61, .36, 1);
+  pointer-events: none;
+}
+.pk-bp.anim-open .pk-slot { opacity: 1; transform: translate(-50%, -50%); pointer-events: auto; }
 .pk-slot:hover, .pk-slot:focus-within, .pk-slot.open { z-index: 30; }
 .pk-slot::before {
-  content: ''; position: absolute; inset: 0; border-radius: 12px;
+  content: ''; position: absolute; inset: 0; border-radius: 999px;
   border: 1.5px dashed transparent; transition: border-color .15s;
 }
 .pk-slot:hover::before, .pk-slot.open::before { border-color: color-mix(in srgb, var(--red) 55%, transparent); }
 .pk-chip {
-  position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%);
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   display: flex; align-items: baseline; gap: 6px; white-space: nowrap;
-  background: rgba(250, 247, 238, .82); border-radius: 999px; padding: 2px 9px 3px;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 999px; padding: 3px 10px 4px;
 }
-.pk-lab { font-family: var(--mono); font-size: 8.5px; letter-spacing: .18em; text-transform: uppercase; color: #6f6754; }
+.pk-lab { font-family: var(--mono); font-size: 8.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-mute); }
 .pk-cnt { font-family: var(--sans); font-size: 10px; font-weight: 700; color: var(--red); font-variant-numeric: tabular-nums; }
 .pk-cnt.full { color: var(--green); }
+@media (prefers-reduced-motion: reduce) {
+  .pk-art, .pk-slot, .pk-leads line, .pk-leads circle { transition: none !important; }
+}
 
 /* the checklist card inside the panel */
 .pk-card {
@@ -1630,8 +1657,9 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    and the checklist opens inline UNDER the sheet instead of docked beside it */
 .pack-block { border: none; background: none; padding: 17px 0 13px; }
 .pack-block .pk-bp { max-width: 100%; }
-.pack-block .pk-slot { width: 78px; height: 60px; }
-.pack-block .pk-lab { font-size: 7.5px; letter-spacing: .14em; }
+.pack-block .pk-slot { width: 92px; height: 38px; }
+.pack-block .pk-chip { padding: 2px 7px 3px; gap: 4px; }
+.pack-block .pk-lab { font-size: 7px; letter-spacing: .1em; }
 .pack-block .pk-cnt { font-size: 9px; }
 .pack-block .pk-panel { display: block; margin-top: 10px; }
 .pack-block .pk-panel:empty { margin-top: 0; }
