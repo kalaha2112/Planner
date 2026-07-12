@@ -3388,12 +3388,14 @@
         ${slots}
       </div>`;
     }
-    // the checklist panel docked in the empty space LEFT of the sheet, so it
-    // never covers the drawing. Hovering an object fills it (and it stays);
-    // Escape, ✕ or a click elsewhere clears it back to the hint.
+    // the checklist panel docked in the empty space LEFT of the sheet (web
+    // layout only), so it never covers the drawing. Hovering an object fills
+    // it (and it stays); Escape, ✕ or a click elsewhere clears it back to the
+    // hint. On the phone the checklist opens inline under the sheet instead —
+    // nothing renders here until something is selected.
     renderPackPanel(trip) {
       const s = PACK_SLOTS.find(x => x.k === this.packOpen);
-      if (!s) return `<div class="pk-hint">${this._webMag() ? 'Hover' : 'Tap'} an object on the sheet to open its checklist.</div>`;
+      if (!s) return this._webMag() ? `<div class="pk-hint">Hover an object on the sheet to open its checklist.</div>` : '';
       const list = (trip.packing || {})[s.k] || [];
       const done = list.filter(x => x.done).length;
       const rows = list.map((it, ii) => `<div class="todo">

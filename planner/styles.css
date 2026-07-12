@@ -1635,8 +1635,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .pack-block .pk-lab { font-size: 7.5px; letter-spacing: .16em; margin-top: 1px; }
 .pack-block .pk-cnt { font-size: 9px; }
 .pack-block .pk-panel { display: block; margin-top: 10px; }
-.pack-block .pk-panel:has(.pk-hint) { margin-top: 6px; }
-.pack-block .pk-hint { padding: 12px 14px; font-size: 11px; }
+.pack-block .pk-panel:empty { margin-top: 0; }
 .pack-block .pk-card { box-shadow: none; }
 
 /* ============================================================
