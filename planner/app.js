@@ -3300,8 +3300,7 @@
             (info.label ? ' · ' + info.label : '') + (wx.pop != null ? ' · ' + wx.pop + '% precip' : '');
           return `<span class="day-wx${wx.typical ? ' typical' : ''}" title="${escA(tip)}">` +
             (info.icon ? `<span class="ic">${info.icon}</span>` : '') +
-            `<span class="tmp">${wx.hi}°${wx.lo != null ? `<span class="lo">/${wx.lo}°</span>` : ''}</span>` +
-            (wx.typical ? `<span class="tag">typical</span>` : '') + `</span>`;
+            `<span class="tmp">${wx.hi}°${wx.lo != null ? `<span class="lo">/${wx.lo}°</span>` : ''}</span></span>`;
         })() : '';
         dayBlock = `<div class="iti-foot">
           <div class="day-cols">

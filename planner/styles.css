@@ -608,8 +608,6 @@ a { color: inherit; }
 .day-wx .lo { font-weight: 400; color: var(--ink-mute); margin-left: 1px; }
 .day-wx.typical { color: var(--ink-mute); }
 .day-wx.typical .tmp { font-weight: 500; }
-.day-wx .tag { font-size: 8.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
-  color: var(--red); align-self: center; }
 .optimize-btn {
   margin-left: auto; flex-shrink: 0;
   display: inline-flex; align-items: center; gap: 6px;
