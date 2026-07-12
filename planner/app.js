@@ -2750,6 +2750,7 @@
             </div>
             <aside class="aside">
               ${this.renderSummary(nights, budget.grandTotal, budget.perPerson, milesNeeded, meta.milesBalance || 0, travelers)}
+              ${this.renderPackBlock(trip)}
               ${this.renderTodos(meta)}
             </aside>
           </div>
@@ -3393,7 +3394,7 @@
     // Escape, ✕ or a click elsewhere clears it back to the hint.
     renderPackPanel(trip) {
       const s = PACK_SLOTS.find(x => x.k === this.packOpen);
-      if (!s) return `<div class="pk-hint">Hover an object on the sheet to open its checklist.</div>`;
+      if (!s) return `<div class="pk-hint">${this._webMag() ? 'Hover' : 'Tap'} an object on the sheet to open its checklist.</div>`;
       const list = (trip.packing || {})[s.k] || [];
       const done = list.filter(x => x.done).length;
       const rows = list.map((it, ii) => `<div class="todo">
@@ -3405,6 +3406,19 @@
         <div class="pk-hd"><span class="t">${esc(s.label)}</span><span class="p">${done} / ${list.length}</span><button class="x" data-act="pk-close" title="Close" aria-label="Close">✕</button></div>
         ${rows || `<p class="pk-none">Nothing yet — add the first item.</p>`}
         <button class="add-todo" data-act="add-pack" data-slot="${s.k}" title="Add item" aria-label="Add item">+</button>
+      </div>`;
+    }
+    // phone app: the same carry-on sheet as a card between the stats and the
+    // to-dos — tapping an object opens its checklist inline under the sheet
+    renderPackBlock(trip) {
+      const totals = PACK_SLOTS.reduce((a, s) => {
+        const L = (trip.packing || {})[s.k] || [];
+        a.d += L.filter(x => x.done).length; a.t += L.length; return a;
+      }, { d: 0, t: 0 });
+      return `<div class="todos pack-block">
+        <div class="hd"><div class="t">Packing</div><div class="p">${totals.t ? totals.d + ' / ' + totals.t + ' packed' : ''}</div></div>
+        ${this.renderPackBody(trip)}
+        <div class="pk-panel">${this.renderPackPanel(trip)}</div>
       </div>`;
     }
     // hover switches are patched in place — no full re-render mid-mouse-move
@@ -3908,6 +3922,15 @@
       if (this.packOpen != null && !(e.target.closest && e.target.closest('.pk-slot, .pk-panel'))) {
         this.packOpen = null;
         this._paintPackPanel();
+      }
+      // tapping an object opens its checklist — the touch path (phone app) and
+      // a click fallback for the web's hover
+      {
+        const slotEl = e.target.closest && e.target.closest('.pk-slot');
+        if (slotEl && slotEl.dataset.slot !== this.packOpen) {
+          this.packOpen = slotEl.dataset.slot;
+          this._paintPackPanel();
+        }
       }
       const t = e.target.closest('[data-act]'); if (!t) return;
       const act = t.dataset.act;
