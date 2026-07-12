@@ -1026,8 +1026,18 @@ a { color: inherit; }
   overflow: hidden;
   cursor: grab;
   flex-shrink: 0;
+  touch-action: none;   /* the tile drives its own pointer drag onto the page */
 }
 .stock-item:active { cursor: grabbing; }
+/* floating preview under the finger while dragging a memory out of the tray */
+.sticker-drag-ghost {
+  position: fixed; z-index: 1200; pointer-events: none;
+  width: 80px; height: auto;
+  transform: translate(-50%, -50%);
+  border-radius: var(--r-btn);
+  filter: drop-shadow(0 6px 18px rgba(35,20,12,.35));
+  opacity: .92;
+}
 .stock-item img { width: 100%; height: 100%; object-fit: contain; border-radius: var(--r-btn); }
 .stock-item__del {
   position: absolute;

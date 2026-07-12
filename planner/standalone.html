@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-12T23:37:40.605Z
+  Built: 2026-07-12T23:44:10.801Z
 -->
 
 <html lang="en">
@@ -1750,8 +1750,18 @@ a { color: inherit; }
   overflow: hidden;
   cursor: grab;
   flex-shrink: 0;
+  touch-action: none;   /* the tile drives its own pointer drag onto the page */
 }
 .stock-item:active { cursor: grabbing; }
+/* floating preview under the finger while dragging a memory out of the tray */
+.sticker-drag-ghost {
+  position: fixed; z-index: 1200; pointer-events: none;
+  width: 80px; height: auto;
+  transform: translate(-50%, -50%);
+  border-radius: var(--r-btn);
+  filter: drop-shadow(0 6px 18px rgba(35,20,12,.35));
+  opacity: .92;
+}
 .stock-item img { width: 100%; height: 100%; object-fit: contain; border-radius: var(--r-btn); }
 .stock-item__del {
   position: absolute;
@@ -7036,21 +7046,29 @@ html { -webkit-tap-highlight-color: transparent; }
       if (this._stockStickerDrag) { e.preventDefault(); return; }
       const t = e.target.closest('[data-drop]'); if (t) e.preventDefault();
     }
+    // Place a memory from the tray at a viewport point, onto whatever page or
+    // dialog sits under it. Shared by native HTML5 drop (mouse) and the
+    // pointer-based touch drag below — iOS Safari never fires DnD from touch.
+    placeStockAtPoint(stockId, clientX, clientY, hitEl) {
+      const dialogEl = hitEl && hitEl.closest ? hitEl.closest('[data-sticker-target]') : null;
+      if (dialogEl) {
+        let target = dialogEl.dataset.stickerTarget;
+        if (target.startsWith('iti-') && this.activeDay != null) target = target + '-day-' + this.activeDay;
+        this.placeSticker(stockId, clientX - 40, clientY - 40, target);
+        return true;
+      }
+      const pageEl = this.root.querySelector('.page');
+      if (pageEl) {
+        const rect = pageEl.getBoundingClientRect();
+        this.placeSticker(stockId, clientX - rect.left - 40, clientY - rect.top - 40, 'page');
+        return true;
+      }
+      return false;
+    }
     onDrop(e) {
       if (this._stockStickerDrag) {
         e.preventDefault();
-        const dialogEl = e.target.closest('[data-sticker-target]');
-        if (dialogEl) {
-          let target = dialogEl.dataset.stickerTarget;
-          if (target.startsWith('iti-') && this.activeDay != null) target = target + '-day-' + this.activeDay;
-          this.placeSticker(this._stockStickerDrag, e.clientX - 40, e.clientY - 40, target);
-        } else {
-          const pageEl = this.root.querySelector('.page');
-          if (pageEl) {
-            const rect = pageEl.getBoundingClientRect();
-            this.placeSticker(this._stockStickerDrag, e.clientX - rect.left - 40, e.clientY - rect.top - 40, 'page');
-          }
-        }
+        this.placeStockAtPoint(this._stockStickerDrag, e.clientX, e.clientY, e.target);
         this._stockStickerDrag = null;
         return;
       }
@@ -7290,6 +7308,13 @@ html { -webkit-tap-highlight-color: transparent; }
       // pointer-based stop reorder (works on touch + mouse; native HTML5 DnD doesn't fire from touch on iOS)
       const grip = e.target.closest('.grip[data-grip-stop]');
       if (grip) { e.preventDefault(); this._startStopDrag(e, grip); return; }
+      // memory tray: drag a stock sticker out onto the page/dialog. Native HTML5
+      // DnD carries this on mouse; touch needs the pointer path (iOS never fires
+      // DnD from touch). Threshold-armed so a plain tap still isn't a drag.
+      if (e.pointerType === 'touch') {
+        const stockEl = e.target.closest('.stock-item[data-drag="stock-sticker"]');
+        if (stockEl && !e.target.closest('.stock-item__del')) { this._armStockStickerDrag(e, stockEl); return; }
+      }
       const sticker = e.target.closest('.placed-sticker');
       if (!sticker) return;
       if (e.target.closest('.placed-sticker__delete')) return;
@@ -7352,6 +7377,46 @@ html { -webkit-tap-highlight-color: transparent; }
       document.removeEventListener('pointermove', this._onPM);
       this._resizingSticker = null;
       this.scheduleSave();
+    }
+    /* ---- pointer-based memory drag out of the tray (touch; native HTML5 DnD
+       handles the mouse). Armed on pointerdown, but a floating ghost only
+       appears once the finger crosses the drag threshold, so a tap on a tray
+       tile stays a tap. On release the memory lands wherever the finger is —
+       the trip page or an open itinerary/accom dialog. ---- */
+    _armStockStickerDrag(e, el) {
+      const stockId = el.dataset.id;
+      const stock = (this.data.stickerStock || []).find(s => s.id === stockId);
+      if (!stock) return;
+      this._stockTouchDrag = { stockId, image: stock.image, ghost: null, srcEl: el, pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, moved: false };
+      this._onSSM = (ev) => this._doStockStickerDrag(ev);
+      this._onSSU = (ev) => this._endStockStickerDrag(ev);
+      document.addEventListener('pointermove', this._onSSM, { passive: false });
+      document.addEventListener('pointerup', this._onSSU, { once: true });
+      document.addEventListener('pointercancel', this._onSSU, { once: true });
+    }
+    _doStockStickerDrag(e) {
+      const d = this._stockTouchDrag; if (!d) return;
+      if (!d.moved) {
+        if (Math.abs(e.clientX - d.startX) < 4 && Math.abs(e.clientY - d.startY) < 4) return;
+        d.moved = true;
+        const ghost = document.createElement('img');
+        ghost.src = d.image; ghost.className = 'sticker-drag-ghost';
+        document.body.appendChild(ghost);
+        d.ghost = ghost;
+        try { d.srcEl.setPointerCapture(d.pointerId); } catch (_) {}
+      }
+      if (e.cancelable) e.preventDefault();
+      d.ghost.style.left = e.clientX + 'px';
+      d.ghost.style.top = e.clientY + 'px';
+    }
+    _endStockStickerDrag(e) {
+      const d = this._stockTouchDrag; if (!d) return;
+      document.removeEventListener('pointermove', this._onSSM);
+      this._stockTouchDrag = null;
+      if (d.ghost) d.ghost.remove();   // off before the hit-test so it never reads itself
+      if (!d.moved) return;            // a tap, not a drag — leave the tile in the tray
+      const hit = document.elementFromPoint(e.clientX, e.clientY);
+      this.placeStockAtPoint(d.stockId, e.clientX, e.clientY, hit);
     }
   }
 
