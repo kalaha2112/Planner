@@ -1773,7 +1773,7 @@
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;   // just show them
       el.classList.add('pins-drop');
       const n = el.querySelectorAll('.map-pin-outer').length;
-      this._pinDropT = setTimeout(() => el.classList.remove('pins-drop'), 600 + Math.min(n, 7) * 70);
+      this._pinDropT = setTimeout(() => el.classList.remove('pins-drop'), 900 + Math.min(n, 7) * 110);
     }
     _resetPins() {
       this._pinsDropped = false;

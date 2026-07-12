@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-12T23:31:13.795Z
+  Built: 2026-07-12T23:37:40.605Z
 -->
 
 <html lang="en">
@@ -2003,25 +2003,30 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 }
 
 /* stop pins drop in when the map scrolls into view (JS toggles the container
-   class on .main-pins-overlay: pins-wait → pins-drop → settled/no-class) */
+   class on .main-pins-overlay: pins-wait → pins-drop → settled/no-class).
+   Falls from well above with gravity acceleration, then a squash + bounce
+   landing so the drop reads clearly. Per-keyframe timing functions shape it. */
 @keyframes pinDrop {
-  0%   { transform: translateY(-22px) scale(.4); opacity: 0; }
-  55%  { opacity: 1; }
-  72%  { transform: translateY(3px) scale(1.06); }
+  0%   { transform: translateY(-90px) scale(.85); opacity: 0; animation-timing-function: cubic-bezier(.4, 0, .75, .2); }
+  14%  { opacity: 1; }
+  46%  { transform: translateY(0) scale(1); animation-timing-function: ease-out; }        /* impact */
+  60%  { transform: translateY(0) scaleX(1.28) scaleY(.74); animation-timing-function: ease-out; }  /* squash */
+  76%  { transform: translateY(-13px) scaleX(.96) scaleY(1.05); animation-timing-function: ease-in; } /* rebound */
+  90%  { transform: translateY(0) scaleX(1.08) scaleY(.93); animation-timing-function: ease-out; }   /* land again */
   100% { transform: translateY(0) scale(1); opacity: 1; }
 }
 .main-pins-overlay.pins-wait .map-pin-main { opacity: 0; }
 .main-pins-overlay.pins-drop .map-pin-main {
   transform-origin: center bottom;
-  animation: pinDrop .5s cubic-bezier(.34, 1.4, .64, 1) both;
+  animation: pinDrop .8s both;
 }
 .main-pins-overlay.pins-drop .map-pin-outer:nth-child(1) .map-pin-main { animation-delay: 0ms; }
-.main-pins-overlay.pins-drop .map-pin-outer:nth-child(2) .map-pin-main { animation-delay: 70ms; }
-.main-pins-overlay.pins-drop .map-pin-outer:nth-child(3) .map-pin-main { animation-delay: 140ms; }
-.main-pins-overlay.pins-drop .map-pin-outer:nth-child(4) .map-pin-main { animation-delay: 210ms; }
-.main-pins-overlay.pins-drop .map-pin-outer:nth-child(5) .map-pin-main { animation-delay: 280ms; }
-.main-pins-overlay.pins-drop .map-pin-outer:nth-child(6) .map-pin-main { animation-delay: 350ms; }
-.main-pins-overlay.pins-drop .map-pin-outer:nth-child(n+7) .map-pin-main { animation-delay: 420ms; }
+.main-pins-overlay.pins-drop .map-pin-outer:nth-child(2) .map-pin-main { animation-delay: 110ms; }
+.main-pins-overlay.pins-drop .map-pin-outer:nth-child(3) .map-pin-main { animation-delay: 220ms; }
+.main-pins-overlay.pins-drop .map-pin-outer:nth-child(4) .map-pin-main { animation-delay: 330ms; }
+.main-pins-overlay.pins-drop .map-pin-outer:nth-child(5) .map-pin-main { animation-delay: 440ms; }
+.main-pins-overlay.pins-drop .map-pin-outer:nth-child(6) .map-pin-main { animation-delay: 550ms; }
+.main-pins-overlay.pins-drop .map-pin-outer:nth-child(n+7) .map-pin-main { animation-delay: 660ms; }
 @media (prefers-reduced-motion: reduce) {
   .main-pins-overlay.pins-drop .map-pin-main { animation: none; }
 }
@@ -4654,7 +4659,7 @@ html { -webkit-tap-highlight-color: transparent; }
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;   // just show them
       el.classList.add('pins-drop');
       const n = el.querySelectorAll('.map-pin-outer').length;
-      this._pinDropT = setTimeout(() => el.classList.remove('pins-drop'), 600 + Math.min(n, 7) * 70);
+      this._pinDropT = setTimeout(() => el.classList.remove('pins-drop'), 900 + Math.min(n, 7) * 110);
     }
     _resetPins() {
       this._pinsDropped = false;
