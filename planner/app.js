@@ -308,17 +308,16 @@
   ];
   const MODE_HEX = { 'flight': '#91040C', 'train': '#5E8475', 'bus': '#4A7098', 'overnight-train': '#46604F', 'flying-blue': '#C8901F' };
 
-  // Packing-list slots — each is one drawn object floating above the suitcase
+  // Packing-list slots — each is one drawn object floating above the carry-on
   // blueprint. cx/cy are the slot's centre as a fraction of the blueprint box
   // (the SVG leader lines below use the same fractions, so they stay attached).
-  // pop: which way the checklist popover opens so it never leaves the leaf.
   const PACK_SLOTS = [
-    { k: 'tech',       label: 'Electronics', cx: .17, cy: .13, pop: 'right' },
-    { k: 'toiletries', label: 'Toiletries',  cx: .45, cy: .11, pop: 'right' },
-    { k: 'documents',  label: 'Documents',   cx: .74, cy: .14, pop: 'left' },
-    { k: 'clothes',    label: 'Clothes',     cx: .10, cy: .38, pop: 'right' },
-    { k: 'shoes',      label: 'Shoes',       cx: .40, cy: .35, pop: 'right' },
-    { k: 'extras',     label: 'Extras',      cx: .84, cy: .40, pop: 'left' },
+    { k: 'tech',       label: 'Electronics', cx: .17, cy: .13 },
+    { k: 'toiletries', label: 'Toiletries',  cx: .45, cy: .11 },
+    { k: 'documents',  label: 'Documents',   cx: .74, cy: .14 },
+    { k: 'clothes',    label: 'Clothes',     cx: .10, cy: .38 },
+    { k: 'shoes',      label: 'Shoes',       cx: .40, cy: .35 },
+    { k: 'extras',     label: 'Extras',      cx: .84, cy: .40 },
   ];
 
   // WMO weather-interpretation codes (Open-Meteo `weather_code`) → a small
@@ -590,6 +589,18 @@
       });
       this.mainPinsOverlayEl = document.createElement('div');
       this.mainPinsOverlayEl.className = 'main-pins-overlay';
+      // web ledger: hovering a pin previews that stop in the column's card
+      // slot (patched in place — no full re-render on a hover)
+      this.stopInfoIdx = null;
+      this.mainPinsOverlayEl.addEventListener('mouseover', (e) => {
+        if (!this._webMag()) return;
+        const pin = e.target.closest('.map-pin-outer');
+        if (!pin) return;
+        const idx = Number(pin.dataset.pin);
+        if (idx === this.stopInfoIdx) return;
+        this.stopInfoIdx = idx;
+        this._paintStopSpot();
+      });
       // mobile: tapping a pin opens that stop's card as a popup
       this.mainPinsOverlayEl.addEventListener('click', (e) => {
         if (!this._mobileMap()) return;
@@ -2436,14 +2447,28 @@
     /* ---------- mutators: stops / trips / todos ---------- */
     insertStop(idx) {
       this.currentTrip().stops.splice(idx, 0, { city: '', nights: 2, note: '', leg: { mode: 'train', duration: '', cost: 0 } });
-      this._editingStopIdx = idx;
-      if (this._mobileMap()) { this._openMapCardIdx = idx; this._openMapCardFlipped = true; }   // new stop pops up in edit mode
+      if (this._webMag()) {
+        // web ledger: the new stop is entered in the column's card slot — the
+        // floating map card must NOT claim edit mode (it would steal focus)
+        this.stopInfoIdx = idx;
+      } else {
+        this._editingStopIdx = idx;
+        if (this._mobileMap()) { this._openMapCardIdx = idx; this._openMapCardFlipped = true; }   // new stop pops up in edit mode
+      }
       this.bump();
+      if (this._webMag()) {
+        const ci = this.root.querySelector('.stop-spot input.city');
+        if (ci) { ci.focus(); ci.select(); }
+      }
     }
     removeStop(idx) {
       this.snapshot(); this.currentTrip().stops.splice(idx, 1);
       if (this.openStopIdx === idx) this.openStopIdx = null;
       if (this._openMapCardIdx != null) { this._openMapCardIdx = null; this._openMapCardFlipped = false; }
+      if (this.stopInfoIdx != null) {
+        if (this.stopInfoIdx === idx) this.stopInfoIdx = null;
+        else if (this.stopInfoIdx > idx) this.stopInfoIdx--;
+      }
       this.bump();
     }
     reorderStop(from, to) {
@@ -2451,6 +2476,7 @@
       const st = this.currentTrip().stops; const [it] = st.splice(from, 1); st.splice(to, 0, it);
       if (this.openStopIdx === from) this.openStopIdx = to;
       if (this._openMapCardIdx === from) this._openMapCardIdx = to;   // popup follows its stop
+      if (this.stopInfoIdx === from) this.stopInfoIdx = to;           // column preview follows too
       this.bump();
     }
     addTrip() {
@@ -2799,6 +2825,7 @@
           <aside class="ledger-col">
             ${this.renderMetaRange(trip)}
             ${this.renderSummary(nights, budget.grandTotal, budget.perPerson, milesNeeded, meta.milesBalance || 0, travelers)}
+            <div class="stop-spot">${this.renderStopSpot(trip, d, fmt)}</div>
           </aside>
           <div class="placed-stickers-layer">${this.renderPlacedStickers()}</div>
         </div>
@@ -2872,11 +2899,12 @@
           <header class="leaf-head">
             <div class="leaf-head-main">
               <div class="eyebrow">Packing &amp; To-do</div>
-              <div class="leaf-title">The Suitcase</div>
+              <div class="leaf-title">The Carry-on</div>
               <div class="leaf-sub">${pkTotals.t ? pkTotals.d + ' of ' + pkTotals.t + ' packed' : 'Hover an object to start its list'}</div>
             </div>
           </header>
           <div class="pack-cols">
+            <aside class="pk-panel">${this.renderPackPanel(trip)}</aside>
             <div class="pk-wrap">${this.renderPackBody(trip)}</div>
             <aside class="pack-side">${this.renderTodos(meta)}</aside>
           </div>
@@ -3001,9 +3029,9 @@
         if (!this._webMag() || !this._introParked || this._anyModalOpen()) return;
         if (e.defaultPrevented) return;
         const ae = document.activeElement;
-        if (e.key === 'Escape' && this.packOpen != null) {   // close a pinned packing popover, even mid-edit
+        if (e.key === 'Escape' && this.packOpen != null) {   // clear the packing checklist panel, even mid-edit
           if (ae && ae.blur) ae.blur();
-          this.packOpen = null; this.render(); return;
+          this.packOpen = null; this._paintPackPanel(); return;
         }
         if (ae && (ae.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))) return;
         if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown') { e.preventDefault(); this.magGoto(this.magIdx + 1); }
@@ -3250,6 +3278,43 @@
       </div>`;
     }
 
+    /* ---------- stop preview card (web route page) — fills the column slot
+       where the to-do list used to live. Hovering a map pin previews that
+       stop; "+" (add stop) opens a fresh card here to type the city into.
+       Dates + nights are read-only, fed from the same computed ranges the
+       itinerary page shows — nights aren't edited here. ---------- */
+    renderStopSpot(trip, d, fmt) {
+      const idx = this.stopInfoIdx;
+      const stop = idx != null ? trip.stops[idx] : null;
+      if (!stop) return `<div class="ss-hint">Hover a pin on the map to preview a stop — or hit <b>+</b> to add one.</div>`;
+      const r = d ? d.stops[idx] : null;
+      const nightsN = Math.max(1, Number(stop.nights) || 1);
+      const leg = stop.leg || {};
+      const modeLbl = (MODE_OPTIONS.find(o => o.value === leg.mode) || {}).label || '';
+      const chosen = (stop.accom && stop.accom.options || []).filter(o => o.chosen && o.name && o.name.trim()).map(o => o.name.trim());
+      return `<div class="ss-card">
+        <div class="ss-top">
+          <span class="ss-num">${idx + 1}</span>
+          <input class="city" value="${escA(stop.city)}" data-ch="stop-city" data-i="${idx}" placeholder="City name…">
+          <button class="ss-x" data-act="stop-delete" data-i="${idx}" title="Remove stop" aria-label="Remove stop">${svg(I.trash, { w: 13, h: 13, sw: 2.2 })}</button>
+        </div>
+        <div class="ss-dates">${r ? esc(fmt(r.start) + ' → ' + fmt(r.end)) + ` · ${nightsN} night${nightsN === 1 ? '' : 's'}` : `${nightsN} night${nightsN === 1 ? '' : 's'}`}</div>
+        ${(modeLbl || leg.duration) ? `<div class="ss-leg"><span class="mode-dot" style="background:${MODE_HEX[leg.mode] || '#7a7260'}"></span>${esc(modeLbl)}${leg.duration ? ' · ' + esc(leg.duration) : ''}</div>` : ''}
+        ${chosen.length ? `<div class="ss-hotel">${svg(I.bed, { w: 12, h: 12 })} ${chosen.map(n => esc(n)).join(' · ')}</div>` : ''}
+        <div class="ss-btns">
+          <button data-act="stop-iti" data-i="${idx}">Itinerary</button>
+          <button data-act="stop-accom" data-i="${idx}">Hotels</button>
+          <button data-act="stop-transport" data-i="${idx}">Transport</button>
+        </div>
+      </div>`;
+    }
+    _paintStopSpot() {
+      const el = this.root.querySelector('.stop-spot');
+      if (!el) return;
+      const trip = this.currentTrip();
+      el.innerHTML = this.renderStopSpot(trip, this.computeDates(trip), (x) => this.formatDate(x));
+    }
+
     /* ---------- packing list — a luggage-blueprint drawing (web leaf 4).
        An exploded technical sketch: an open suitcase with each packing
        category as a line-drawn object floating above it, dashed leaders
@@ -3284,38 +3349,37 @@
         const [x1, y1] = ends[s.k];
         return `<line class="ld" x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}"/><circle class="ldd" cx="${x1}" cy="${y1}" r="2.2"/>`;
       }).join('');
-      // the open case: lid tray opened up-left, base tray down-right, hinge gap
+      // the open carry-on, hand-drawn: a turbulence-displaced sketch stroke
+      // (the same trick as the Wanderbook book outline) over soft moulded-
+      // shell trays — zipper ticks around the lid, elastic X-strap in the
+      // base, telescopic trolley tubes off the right edge, two spinner wheels.
       const caseArt = `
-        <g class="case">
-          <path class="tray" d="M86 296 L358 240 L458 342 L186 398 Z"/>
-          <path class="inner" d="M104 297 L346 247 L434 338 L192 388 Z"/>
-          <path class="a pocket" d="M150 315 L330 278 M170 337 L350 300"/>
-          <path class="tray" d="M196 408 L468 352 L560 398 L288 458 Z"/>
-          <path class="inner" d="M216 410 L452 362 L534 400 L304 448 Z"/>
-          <path class="a strap" d="M216 410 L534 400 M452 362 L304 448"/>
-          <path d="M288 458 L288 486 L560 426 L560 398"/>
-          <path d="M196 408 L196 436 L288 486"/>
-          <path class="a" d="M196 403 l-8 -7 M468 347 l-8 -7"/>
-          <path class="hnd" d="M404 466 q-5 15 9 17 l24 -4.6 q14 -3.6 6 -17"/>
-          <path class="a" d="M300 470 l0 9 M540 421 l0 9"/>
+        <defs><filter id="pk-wobble" x="-6%" y="-6%" width="112%" height="112%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.012 0.016" numOctaves="2" seed="7" result="n"/>
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="3.4"/>
+        </filter></defs>
+        <g class="case" filter="url(#pk-wobble)">
+          <path class="tray" d="M98 303 Q85 298 100 292 L342 243 Q358 239 369 249 L446 330 Q456 341 441 346 L202 394 Q187 399 176 389 Z"/>
+          <path class="inner" d="M117 300 L338 255 Q349 253 356 260 L422 328 L203 379 Q193 381 187 375 Z"/>
+          <path class="zip" d="M106 297 l7 -1.5 M128 293 l7 -1.5 M150 289 l7 -1.5 M172 284 l7 -1.5 M194 280 l7 -1.5 M216 275 l7 -1.5 M238 271 l7 -1.5 M260 266 l7 -1.5 M282 262 l7 -1.5 M304 258 l7 -1.5 M326 253 l7 -1.5"/>
+          <path class="a pocket" d="M162 318 Q252 297 336 283 M184 340 Q272 319 356 305"/>
+          <path class="tray" d="M208 413 Q195 407 210 402 L452 353 Q468 349 479 356 L551 392 Q563 399 548 404 L304 453 Q289 457 278 450 Z"/>
+          <path class="inner" d="M227 410 L448 365 Q459 363 466 367 L528 398 L307 442 Q297 444 291 440 Z"/>
+          <path class="a strap" d="M227 410 Q380 402 528 398 M448 365 Q372 406 307 442"/>
+          <path d="M278 450 Q276 471 283 476 L534 428 Q553 424 548 404"/>
+          <path d="M208 413 Q206 433 212 438 L283 476"/>
+          <circle class="whl" cx="246" cy="463" r="9"/><circle class="whl" cx="498" cy="446" r="9"/>
+          <path d="M239 452 q7 -4.5 14 0 M491 435 q7 -4.5 14 0" stroke-width="1.4"/>
+          <path class="hnd" d="M556 394 L592 387 M562 408 L598 401 M592 387 Q603 385 604 392 L605 396 Q605 403 598 401"/>
+          <path class="a" d="M214 407 l-10 -6 M458 357 l-10 -6"/>
         </g>`;
       const slots = PACK_SLOTS.map(s => {
         const list = pack[s.k] || [];
         const done = list.filter(x => x.done).length;
-        const rows = list.map((it, ii) => `<div class="todo">
-          <button class="box${it.done ? ' done' : ''}" data-act="pack-toggle" data-slot="${s.k}" data-i="${ii}" aria-label="Toggle item">${it.done ? svg(I.check, { w: 11, h: 11, sw: 3.5 }) : ''}</button>
-          <input class="txt${it.done ? ' done' : ''}" value="${escA(it.text)}" data-ch="pack-text" data-slot="${s.k}" data-i="${ii}" placeholder="New item…">
-          <button class="x" data-act="pack-remove" data-slot="${s.k}" data-i="${ii}" aria-label="Remove item">✕</button>
-        </div>`).join('');
-        return `<div class="pk-slot pop-${s.pop}${this.packOpen === s.k ? ' open' : ''}" data-slot="${s.k}" style="left:${s.cx * 100}%;top:${s.cy * 100}%">
+        return `<div class="pk-slot${this.packOpen === s.k ? ' open' : ''}" data-slot="${s.k}" style="left:${s.cx * 100}%;top:${s.cy * 100}%">
           <div class="pk-glyph"><svg viewBox="0 0 56 56" aria-hidden="true">${G[s.k]}</svg></div>
           <div class="pk-lab">${esc(s.label)}</div>
           <div class="pk-cnt${list.length && done === list.length ? ' full' : ''}">${list.length ? done + '/' + list.length : '+ add'}</div>
-          <div class="pk-pop" role="dialog" aria-label="${escA(s.label)} checklist">
-            <div class="pk-hd"><span class="t">${esc(s.label)}</span><span class="p">${done} / ${list.length}</span><button class="x" data-act="pk-close" title="Close" aria-label="Close">✕</button></div>
-            ${rows || `<p class="pk-none">Nothing yet — add the first item.</p>`}
-            <button class="add-todo" data-act="add-pack" data-slot="${s.k}" title="Add item" aria-label="Add item">+</button>
-          </div>
         </div>`;
       }).join('');
       return `<div class="pk-bp">
@@ -3323,6 +3387,33 @@
         ${slots}
         <div class="pk-cap">${esc(trip.label || 'Trip')} essentials.</div>
       </div>`;
+    }
+    // the checklist panel docked in the empty space LEFT of the sheet, so it
+    // never covers the drawing. Hovering an object fills it (and it stays);
+    // Escape, ✕ or a click elsewhere clears it back to the hint.
+    renderPackPanel(trip) {
+      const s = PACK_SLOTS.find(x => x.k === this.packOpen);
+      if (!s) return `<div class="pk-hint">Hover an object on the sheet to open its checklist.</div>`;
+      const list = (trip.packing || {})[s.k] || [];
+      const done = list.filter(x => x.done).length;
+      const rows = list.map((it, ii) => `<div class="todo">
+        <button class="box${it.done ? ' done' : ''}" data-act="pack-toggle" data-slot="${s.k}" data-i="${ii}" aria-label="Toggle item">${it.done ? svg(I.check, { w: 11, h: 11, sw: 3.5 }) : ''}</button>
+        <input class="txt${it.done ? ' done' : ''}" value="${escA(it.text)}" data-ch="pack-text" data-slot="${s.k}" data-i="${ii}" placeholder="New item…">
+        <button class="x" data-act="pack-remove" data-slot="${s.k}" data-i="${ii}" aria-label="Remove item">✕</button>
+      </div>`).join('');
+      return `<div class="pk-card" role="dialog" aria-label="${escA(s.label)} checklist">
+        <div class="pk-hd"><span class="t">${esc(s.label)}</span><span class="p">${done} / ${list.length}</span><button class="x" data-act="pk-close" title="Close" aria-label="Close">✕</button></div>
+        ${rows || `<p class="pk-none">Nothing yet — add the first item.</p>`}
+        <button class="add-todo" data-act="add-pack" data-slot="${s.k}" title="Add item" aria-label="Add item">+</button>
+      </div>`;
+    }
+    // hover switches are patched in place — no full re-render mid-mouse-move
+    _paintPackPanel() {
+      const panel = this.root.querySelector('.pk-panel');
+      if (!panel) return;
+      panel.innerHTML = this.renderPackPanel(this.currentTrip());
+      this.root.querySelectorAll('.pk-slot').forEach(el =>
+        el.classList.toggle('open', el.dataset.slot === this.packOpen));
     }
 
     renderStickerPanel() {
@@ -3761,6 +3852,15 @@
       r.addEventListener('dragend', (e) => this.onDragEnd(e));
       r.addEventListener('paste', (e) => this.onPaste(e));
       r.addEventListener('pointerdown', (e) => this.onPointerDown(e));
+      // packing sheet: hovering an object fills the docked checklist panel
+      r.addEventListener('mouseover', (e) => {
+        const s = e.target.closest && e.target.closest('.pk-slot');
+        if (!s || !this._webMag()) return;
+        const k = s.dataset.slot;
+        if (k === this.packOpen) return;
+        this.packOpen = k;
+        this._paintPackPanel();
+      });
       const m = this.modalEl;
       m.addEventListener('click', (e) => this.onClick(e));
       m.addEventListener('change', (e) => this.onChange(e));
@@ -3804,10 +3904,10 @@
     }
 
     onClick(e) {
-      // a click anywhere outside the packing slots unpins an open checklist
-      if (this.packOpen != null && !(e.target.closest && e.target.closest('.pk-slot'))) {
+      // a click outside the packing slots AND the docked panel clears the checklist
+      if (this.packOpen != null && !(e.target.closest && e.target.closest('.pk-slot, .pk-panel'))) {
         this.packOpen = null;
-        this.render();
+        this._paintPackPanel();
       }
       const t = e.target.closest('[data-act]'); if (!t) return;
       const act = t.dataset.act;
@@ -3836,7 +3936,7 @@
         case 'pack-toggle': { const L = this.packList(trip, t.dataset.slot); if (L[i]) L[i].done = !L[i].done; this.packOpen = t.dataset.slot; this.bump(); break; }
         case 'pack-remove': this.snapshot(); this.packList(trip, t.dataset.slot).splice(i, 1); this.packOpen = t.dataset.slot; this.bump(); break;
         case 'add-pack': this.packList(trip, t.dataset.slot).push({ text: '', done: false }); this.packOpen = t.dataset.slot; this.bump(); break;
-        case 'pk-close': this.packOpen = null; this.render(); break;
+        case 'pk-close': this.packOpen = null; this._paintPackPanel(); break;
         case 'open-budget': this.budgetOpen = true; this._budgetPrint = true; this.bumpModal(); break;
         case 'pick-date': {
           const inp = t.querySelector('.date-native') || (t.closest('.meta-range') || document).querySelector(`.date-native[data-ch="${t.dataset.for}"]`);
