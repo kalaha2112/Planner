@@ -1301,7 +1301,10 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .ledger-stage {
     position: relative;
     height: 100vh; height: 100dvh;
-    overflow: hidden;
+    /* clip, not hidden: the waiting leaves sit translated a full viewport
+       below, and a hidden-overflow stage could still be scrolled to them
+       programmatically (focus jumps) — clip can never scroll */
+    overflow: hidden; overflow: clip;
     /* base matches the intro + body shell so the intro->planner scroll seam
        is invisible in dark mode (cards inside use --surface to sit above it) */
     background: var(--shell);
@@ -1312,17 +1315,23 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     background: var(--shell);
   }
 
-  /* ---- leaves — pages crossfade (outgoing fades out under the incoming) ---- */
+  /* ---- leaves — vertical slide, same motion as the intro→trip scroll:
+     the outgoing page slides UP out of view while the incoming one rises
+     from BELOW to replace it. past = parked above, incoming = below fold. ---- */
   .ledger-leaf {
     position: absolute; inset: 0;
     overflow: hidden;
-    opacity: 0; visibility: hidden; pointer-events: none;
+    background: var(--shell);           /* opaque so leaves never show through mid-slide */
+    visibility: hidden; pointer-events: none;
     z-index: 1;
-    transition: opacity .3s ease, visibility 0s .3s;
+    transform: translate3d(0, 100%, 0);
+    transition: transform .62s cubic-bezier(0.22, 0.61, 0.36, 1), visibility 0s .62s;
   }
+  .ledger-leaf.past { transform: translate3d(0, -100%, 0); }
   .ledger-leaf.active {
-    opacity: 1; visibility: visible; pointer-events: auto; z-index: 2;
-    transition: opacity .3s ease, visibility 0s;
+    transform: translate3d(0, 0, 0);
+    visibility: visible; pointer-events: auto; z-index: 2;
+    transition: transform .62s cubic-bezier(0.22, 0.61, 0.36, 1), visibility 0s;
   }
   @media (prefers-reduced-motion: reduce) { .ledger-leaf { transition: none; } }
   .leaf-inner { position: relative; width: 100%; height: 100%; }

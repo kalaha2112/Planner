@@ -489,9 +489,10 @@
       this._lastCoordKey = '';
       this._history = [];
       this.stickerPanelOpen = false;
-      // ---- web ledger (≥701px): the planner reads as a left-bound horizontal
-      // ledger notebook — one full-width leaf per page, flipped around the left
-      // spine. Which leaf is open + the flip lock are pure view state.
+      // ---- web ledger (≥701px): a vertical stack of full-width leaves —
+      // scrolling down slides the next page up from below, the same motion
+      // as the intro→trip scroll. Which leaf is open + the slide lock are
+      // pure view state.
       this.magIdx = 0;              // 0 route · 1 itinerary · 2 transport&hotels
       this._magAnimating = false;
       this._wheelAcc = 0;           // trackpad delta accumulator for page turns
@@ -2744,10 +2745,11 @@
     }
 
     /* ============================================================
-       WEB LEDGER (≥701px) — the planner as a left-bound horizontal
-       ledger notebook. One full-width leaf per page, flipped around
-       the left spine; divider tabs on the right edge deep-link to
-       any page. Page 1 route map + stats/receipt/to-dos column ·
+       WEB LEDGER (≥701px) — the planner as a stack of full-width
+       leaves. Scrolling down slides the next leaf up from below —
+       the same continuous motion as the intro→trip scroll — and
+       divider tabs on the right edge deep-link to any page.
+       Page 1 route map + stats/receipt/to-dos column ·
        page 2 transport & hotels · page 3 itinerary. Same state and
        handlers as the app — only the composition differs.
        ============================================================ */
@@ -2868,7 +2870,7 @@
       this.magIdx = i;
       this._magAnimating = true;   // brief lock so a wheel gesture turns one page, not three
       clearTimeout(this._flipEndT);
-      this._flipEndT = setTimeout(() => { this._magAnimating = false; }, 340);
+      this._flipEndT = setTimeout(() => { this._magAnimating = false; }, 640);   // covers the .62s leaf slide
       this._syncLeafClasses();
       this._afterFlip();
     }
@@ -2889,6 +2891,23 @@
       if (this.magIdx === 0 && this.mainLeafletMap) { this.mainLeafletMap.invalidateSize(); this.renderMainMap(); }
       if (this.magIdx === 1 && this.dayMap) { this.dayMap.invalidateSize(); this.scheduleDayMap(); }
     }
+    // true when an ancestor of t is a real scroll region (overflow-y auto/
+    // scroll) that can still move in the gesture's direction — that region
+    // keeps the gesture instead of a page turn. Must ignore overflow:hidden/
+    // clip wrappers: the off-screen leaves sit translated ±100%, which
+    // inflates the stage's scrollHeight without making it scrollable.
+    _scrollClaims(t, dy) {
+      let el = t instanceof Element ? t : null;
+      while (el && el !== document.body) {
+        if (el.scrollHeight > el.clientHeight + 1 && /(auto|scroll|overlay)/.test(getComputedStyle(el).overflowY)) {
+          const canDown = el.scrollTop + el.clientHeight < el.scrollHeight - 1;
+          const canUp = el.scrollTop > 1;
+          if ((dy > 0 && canDown) || (dy < 0 && canUp)) return true;
+        }
+        el = el.parentElement;
+      }
+      return false;
+    }
     initLedgerNav() {
       // wheel: turn a page when the gesture isn't claimed by the intro (pull
       // back to the cover), a floating panel, the maps (zoom/pan), or a
@@ -2899,15 +2918,7 @@
         const t = e.target;
         if (t && t.closest && t.closest('.overlay, .sticker-panel, .top-actions, .main-map-wrap, .leaflet-container, .daymap')) return;
         const dy = e.deltaY + e.deltaX;
-        let el = t instanceof Element ? t : null;
-        while (el && el !== document.body) {
-          if (el.scrollHeight > el.clientHeight + 1) {
-            const canDown = el.scrollTop + el.clientHeight < el.scrollHeight - 1;
-            const canUp = el.scrollTop > 1;
-            if ((dy > 0 && canDown) || (dy < 0 && canUp)) return;
-          }
-          el = el.parentElement;
-        }
+        if (this._scrollClaims(t, dy)) return;
         const now = performance.now();
         if (now - this._wheelT > 480) this._wheelAcc = 0;   // a fresh gesture
         this._wheelT = now;
@@ -2918,13 +2929,39 @@
         if (dir < 0 && this.magIdx === 0) return;   // the intro driver owns "up from page 1"
         this.magGoto(this.magIdx + dir);
       }, { passive: true });
-      // ← → turn pages; ← on page 1 closes the notebook back to the cover
+      // touch: a vertical swipe turns the page too (tablets) — same claim
+      // rules as the wheel. The page-0 pull-back-to-cover swipe stays with
+      // the intro driver, so only next-page and deeper-page-up act here.
+      let swipeY = null, swipeX = null, swipeEl = null;
+      document.addEventListener('touchstart', (e) => {
+        swipeY = null;
+        if (!this._webMag() || !this._introParked || this._magAnimating) return;
+        const t = e.target;
+        if (t && t.closest && t.closest('.overlay, .sticker-panel, .top-actions, .main-map-wrap, .leaflet-container, .daymap')) return;
+        swipeY = e.touches[0].clientY; swipeX = e.touches[0].clientX; swipeEl = t instanceof Element ? t : null;
+      }, { passive: true });
+      document.addEventListener('touchend', (e) => {
+        if (swipeY == null || this._magAnimating) { swipeY = null; return; }
+        const dy = swipeY - e.changedTouches[0].clientY;   // >0 = finger up = next page
+        const dx = swipeX - e.changedTouches[0].clientX;
+        swipeY = null;
+        if (Math.abs(dy) < 70 || Math.abs(dy) < Math.abs(dx) * 1.2) return;   // too short / mostly horizontal
+        if (this._scrollClaims(swipeEl, dy)) return;       // a region that scrolls that way keeps the gesture
+        const dir = dy > 0 ? 1 : -1;
+        if (dir < 0 && this.magIdx === 0) return;          // intro driver owns the pull back to the cover
+        this.magGoto(this.magIdx + dir);
+      }, { passive: true });
+      // pages now slide vertically (same motion as the intro→trip scroll), so
+      // ↓/↑ turn them too; ←/→ kept for muscle memory. ↑ (or ←) on page 1
+      // closes the notebook back to the cover — the intro driver claims that
+      // key first when it applies (defaultPrevented), so don't double-handle.
       document.addEventListener('keydown', (e) => {
         if (!this._webMag() || !this._introParked || this._anyModalOpen()) return;
+        if (e.defaultPrevented) return;
         const ae = document.activeElement;
         if (ae && (ae.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))) return;
-        if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); this.magGoto(this.magIdx + 1); }
-        else if (e.key === 'ArrowLeft') {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown') { e.preventDefault(); this.magGoto(this.magIdx + 1); }
+        else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
           e.preventDefault();
           if (this.magIdx > 0) this.magGoto(this.magIdx - 1);
           else if (this._introReturn) this._introReturn();
