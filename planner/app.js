@@ -277,7 +277,12 @@
           { city: 'Budapest', nights: 4, note: '', leg: { mode: 'flight', duration: '~2h15m AF · same ticket as flight home', cost: 0, miles: 0 } },
           { city: 'Paris', nights: 2, note: '', leg: { mode: 'flight', duration: '9h45m nonstop · Air France', cost: 220, miles: 0 } }
         ],
-        homeLabel: 'Vancouver (YVR)'
+        homeLabel: 'Vancouver (YVR)',
+        packing: {
+          documents: [{ text: 'Passports', done: false }, { text: 'Rail tickets (offline PDF)', done: false }],
+          tech: [{ text: 'Phone + charger', done: false }, { text: 'EU plug adapter', done: false }],
+          clothes: [{ text: 'Layers — Sep evenings get cold', done: false }]
+        }
       },
       scandinavia: {
         label: 'Scandinavia',
@@ -302,6 +307,19 @@
     { value: 'bus', label: 'Bus' }
   ];
   const MODE_HEX = { 'flight': '#91040C', 'train': '#5E8475', 'bus': '#4A7098', 'overnight-train': '#46604F', 'flying-blue': '#C8901F' };
+
+  // Packing-list slots — each is one drawn object floating above the suitcase
+  // blueprint. cx/cy are the slot's centre as a fraction of the blueprint box
+  // (the SVG leader lines below use the same fractions, so they stay attached).
+  // pop: which way the checklist popover opens so it never leaves the leaf.
+  const PACK_SLOTS = [
+    { k: 'tech',       label: 'Electronics', cx: .17, cy: .13, pop: 'right' },
+    { k: 'toiletries', label: 'Toiletries',  cx: .45, cy: .11, pop: 'right' },
+    { k: 'documents',  label: 'Documents',   cx: .74, cy: .14, pop: 'left' },
+    { k: 'clothes',    label: 'Clothes',     cx: .10, cy: .38, pop: 'right' },
+    { k: 'shoes',      label: 'Shoes',       cx: .40, cy: .35, pop: 'right' },
+    { k: 'extras',     label: 'Extras',      cx: .84, cy: .40, pop: 'left' },
+  ];
 
   // WMO weather-interpretation codes (Open-Meteo `weather_code`) → a small
   // emoji + label set. Grouped into the buckets that read at a glance on a
@@ -493,8 +511,9 @@
       // scrolling down slides the next page up from below, the same motion
       // as the intro→trip scroll. Which leaf is open + the slide lock are
       // pure view state.
-      this.magIdx = 0;              // 0 route · 1 itinerary · 2 transport&hotels
+      this.magIdx = 0;              // 0 route · 1 itinerary · 2 transport&hotels · 3 packing&to-do
       this._magAnimating = false;
+      this.packOpen = null;         // packing slot whose popover is pinned open (view state)
       this._wheelAcc = 0;           // trackpad delta accumulator for page turns
       this._wheelT = 0;
       // ---- cloud sync ----
@@ -1134,6 +1153,7 @@
         if (trip.returnDate == null) trip.returnDate = d.meta.returnDate;
         if (trip.travelers == null) trip.travelers = d.meta.travelers || 2;
         if (!Array.isArray(trip.closet)) trip.closet = [];
+        if (!trip.packing || typeof trip.packing !== 'object' || Array.isArray(trip.packing)) trip.packing = {};
         (trip.stops || []).forEach(s => {
           (s.itinerary || []).forEach(day => {
             if (day && !Array.isArray(day.outfits)) day.outfits = [];
@@ -2681,7 +2701,7 @@
           if (this.openStopIdx == null || this.openStopIdx >= n) { this.openStopIdx = 0; this.activeDay = null; }
           if (this.accomOpenIdx == null || this.accomOpenIdx >= n) this.accomOpenIdx = 0;
         } else { this.openStopIdx = null; this.accomOpenIdx = null; }
-        this.magIdx = Math.max(0, Math.min(2, this.magIdx || 0));
+        this.magIdx = Math.max(0, Math.min(3, this.magIdx || 0));
       }
 
       const html = web
@@ -2779,11 +2799,10 @@
           <aside class="ledger-col">
             ${this.renderMetaRange(trip)}
             ${this.renderSummary(nights, budget.grandTotal, budget.perPerson, milesNeeded, meta.milesBalance || 0, travelers)}
-            ${this.renderTodos(meta)}
           </aside>
           <div class="placed-stickers-layer">${this.renderPlacedStickers()}</div>
         </div>
-        <span class="leaf-folio">01 · 03</span>
+        <span class="leaf-folio">01 · 04</span>
       </section>`;
 
       // ---- page 2 · itinerary (calendar + closet | day planner + day map) ----
@@ -2807,7 +2826,7 @@
           <p class="empty-note" style="margin:18px 4px">Add a stop on the route page first.</p>`}
           ${hasDay ? `<div class="placed-stickers-layer">${this.renderPlacedStickers('iti-' + iIdx + '-day-' + this.activeDay)}</div>` : ''}
         </div>
-        <span class="leaf-folio">02 · 03</span>
+        <span class="leaf-folio">02 · 04</span>
       </section>`;
 
       // ---- page 3 · transport & hotels share the leaf, one stop at a time ----
@@ -2839,21 +2858,44 @@
           <div class="placed-stickers-layer">${this.renderPlacedStickers('accom-' + pIdx)}</div>` : `
           <p class="empty-note" style="margin:18px 4px">Add a stop on the route page first.</p>`}
         </div>
-        <span class="leaf-folio">03 · 03</span>
+        <span class="leaf-folio">03 · 04</span>
+      </section>`;
+
+      // ---- page 4 · packing blueprint + the pre-trip to-do list ----
+      const pkTotals = PACK_SLOTS.reduce((a, s) => {
+        const L = (trip.packing || {})[s.k] || [];
+        a.d += L.filter(x => x.done).length; a.t += L.length; return a;
+      }, { d: 0, t: 0 });
+      const packLeaf = `
+      <section class="ledger-leaf leaf-pack${state(3)}" data-leaf="3">
+        <div class="leaf-inner">
+          <header class="leaf-head">
+            <div class="leaf-head-main">
+              <div class="eyebrow">Packing &amp; To-do</div>
+              <div class="leaf-title">The Suitcase</div>
+              <div class="leaf-sub">${pkTotals.t ? pkTotals.d + ' of ' + pkTotals.t + ' packed' : 'Hover an object to start its list'}</div>
+            </div>
+          </header>
+          <div class="pack-cols">
+            <div class="pk-wrap">${this.renderPackBody(trip)}</div>
+            <aside class="pack-side">${this.renderTodos(meta)}</aside>
+          </div>
+        </div>
+        <span class="leaf-folio">04 · 04</span>
       </section>`;
 
       // the Route tab reads as a house glyph (matches the design's line-icon
       // set, currentColor so it inherits the tab's ink/on-brown state); the
-      // other two stay as vertical wordmarks
+      // others stay as vertical wordmarks
       const tabDefs = [
-        { label: 'Route', icon: true }, { label: 'Itinerary' }, { label: 'Transport & Hotels' },
+        { label: 'Route', icon: true }, { label: 'Itinerary' }, { label: 'Transport & Hotels' }, { label: 'Packing' },
       ];
       const tabs = tabDefs.map((t, i) =>
         `<button class="ledger-tab${t.icon ? ' ledger-tab--icon' : ''}${i === page ? ' on' : ''}" data-act="ledger-goto" data-i="${i}" aria-label="${esc(t.label)}" title="${esc(t.label)}">${t.icon ? svg(I.home, { w: 18, h: 18, sw: 1.8 }) : esc(t.label)}</button>`).join('');
       return `
       <div class="ledger-stage">
         <div class="ledger-book${this.budgetOpen ? ' bill-open' : ''}" data-page="${page}">
-          ${routeLeaf}${daysLeaf}${planLeaf}
+          ${routeLeaf}${daysLeaf}${planLeaf}${packLeaf}
           <button class="ledger-edge prev" data-act="ledger-prev" title="Previous page" aria-label="Previous page">‹</button>
           <button class="ledger-edge next" data-act="ledger-next" title="Next page" aria-label="Next page">›</button>
           <nav class="ledger-tabs" aria-label="Pages">${tabs}</nav>
@@ -2865,7 +2907,7 @@
     // (class toggling on live DOM; ordinary re-renders don't animate)
     magGoto(i) {
       if (!this._webMag()) return;
-      i = Math.max(0, Math.min(2, i));
+      i = Math.max(0, Math.min(3, i));
       if (i === this.magIdx || this._magAnimating) return;
       this.magIdx = i;
       this._magAnimating = true;   // brief lock so a wheel gesture turns one page, not three
@@ -2959,6 +3001,10 @@
         if (!this._webMag() || !this._introParked || this._anyModalOpen()) return;
         if (e.defaultPrevented) return;
         const ae = document.activeElement;
+        if (e.key === 'Escape' && this.packOpen != null) {   // close a pinned packing popover, even mid-edit
+          if (ae && ae.blur) ae.blur();
+          this.packOpen = null; this.render(); return;
+        }
         if (ae && (ae.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))) return;
         if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown') { e.preventDefault(); this.magGoto(this.magIdx + 1); }
         else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
@@ -3201,6 +3247,81 @@
         <div class="hd"><div class="t">Pre-trip to-do</div><div class="p">${done} / ${todos.length}</div></div>
         <div>${rows}</div>
         <button class="add-todo" data-act="add-todo" title="Add task" aria-label="Add task">+</button>
+      </div>`;
+    }
+
+    /* ---------- packing list — a luggage-blueprint drawing (web leaf 4).
+       An exploded technical sketch: an open suitcase with each packing
+       category as a line-drawn object floating above it, dashed leaders
+       dropping into the case. Hovering (or tapping) an object opens its
+       checklist popover in place; edits pin it open across re-renders. ---- */
+    packList(trip, k) {
+      const p = trip.packing || (trip.packing = {});
+      return p[k] || (p[k] = []);
+    }
+    renderPackBody(trip) {
+      const pack = trip.packing || {};
+      // the drawn objects, 56×56 line art: ink strokes + red accents (.a)
+      const G = {
+        tech: `<path d="M16 12 L41 8 L47 23 L22 27 Z"/><path d="M19 16 L38 13 L42 22 L24 25 Z" class="f"/>
+          <path d="M13 31 L39 27 L47 38 L19 42 Z"/><path class="a" d="M27 34 l9 -1.4"/>`,
+        toiletries: `<rect class="a" x="21" y="9" width="9" height="6" rx="1.2"/>
+          <path d="M22 15 h7 v4 q5 2.4 5 9 v13 q0 4 -4 4 h-9 q-4 0 -4 -4 v-13 q0 -6.6 5 -9 z"/>
+          <path d="M19 30 h14"/><circle cx="43" cy="41" r="5.5"/><path class="a" d="M39.5 36.5 q3.5 -2.6 7 0"/>`,
+        documents: `<rect x="17" y="9" width="23" height="34" rx="3"/><circle cx="28.5" cy="23" r="6"/>
+          <path d="M22.5 23 h12 M28.5 17 v12" stroke-width="1.2"/><path class="a" d="M23 35.5 h11"/>`,
+        clothes: `<rect x="11" y="16" width="34" height="27" rx="2.5"/><path d="M22.5 16 l5.5 6 l5.5 -6"/>
+          <path d="M11 31 h34" stroke-width="1.2"/><path class="a" d="M15 38 h6"/>`,
+        shoes: `<path d="M9 37 q1 -9 9.5 -10 q5.5 -.8 7.5 -5.5 q6.5 3.4 14 4 q4.5 .4 5.5 5 l.8 3 q1 4.5 -4.2 4.5 h-28 q-5.1 0 -5.1 -1z"/>
+          <path class="a" d="M17.5 31.5 l3.2 3.2 M23 29 l3.2 3.2"/><path d="M9 41 h37" stroke-width="1.2"/>`,
+        extras: `<path d="M17 31 q1.4 -13.5 11 -13.5 q9.6 0 11 13.5"/><path d="M8 32.5 q20 9.5 40 0"/>
+          <path class="a" d="M17.5 28.5 h21"/>`,
+      };
+      // where each object's dashed leader lands inside the case (viewBox coords)
+      const ends = { tech: [138, 312], toiletries: [294, 278], documents: [474, 369], clothes: [168, 350], shoes: [256, 370], extras: [534, 390] };
+      const leaders = PACK_SLOTS.map(s => {
+        const x0 = Math.round(s.cx * 640), y0 = Math.round(s.cy * 560 + 56);
+        const [x1, y1] = ends[s.k];
+        return `<line class="ld" x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}"/><circle class="ldd" cx="${x1}" cy="${y1}" r="2.2"/>`;
+      }).join('');
+      // the open case: lid tray opened up-left, base tray down-right, hinge gap
+      const caseArt = `
+        <g class="case">
+          <path class="tray" d="M86 296 L358 240 L458 342 L186 398 Z"/>
+          <path class="inner" d="M104 297 L346 247 L434 338 L192 388 Z"/>
+          <path class="a pocket" d="M150 315 L330 278 M170 337 L350 300"/>
+          <path class="tray" d="M196 408 L468 352 L560 398 L288 458 Z"/>
+          <path class="inner" d="M216 410 L452 362 L534 400 L304 448 Z"/>
+          <path class="a strap" d="M216 410 L534 400 M452 362 L304 448"/>
+          <path d="M288 458 L288 486 L560 426 L560 398"/>
+          <path d="M196 408 L196 436 L288 486"/>
+          <path class="a" d="M196 403 l-8 -7 M468 347 l-8 -7"/>
+          <path class="hnd" d="M404 466 q-5 15 9 17 l24 -4.6 q14 -3.6 6 -17"/>
+          <path class="a" d="M300 470 l0 9 M540 421 l0 9"/>
+        </g>`;
+      const slots = PACK_SLOTS.map(s => {
+        const list = pack[s.k] || [];
+        const done = list.filter(x => x.done).length;
+        const rows = list.map((it, ii) => `<div class="todo">
+          <button class="box${it.done ? ' done' : ''}" data-act="pack-toggle" data-slot="${s.k}" data-i="${ii}" aria-label="Toggle item">${it.done ? svg(I.check, { w: 11, h: 11, sw: 3.5 }) : ''}</button>
+          <input class="txt${it.done ? ' done' : ''}" value="${escA(it.text)}" data-ch="pack-text" data-slot="${s.k}" data-i="${ii}" placeholder="New item…">
+          <button class="x" data-act="pack-remove" data-slot="${s.k}" data-i="${ii}" aria-label="Remove item">✕</button>
+        </div>`).join('');
+        return `<div class="pk-slot pop-${s.pop}${this.packOpen === s.k ? ' open' : ''}" data-slot="${s.k}" style="left:${s.cx * 100}%;top:${s.cy * 100}%">
+          <div class="pk-glyph"><svg viewBox="0 0 56 56" aria-hidden="true">${G[s.k]}</svg></div>
+          <div class="pk-lab">${esc(s.label)}</div>
+          <div class="pk-cnt${list.length && done === list.length ? ' full' : ''}">${list.length ? done + '/' + list.length : '+ add'}</div>
+          <div class="pk-pop" role="dialog" aria-label="${escA(s.label)} checklist">
+            <div class="pk-hd"><span class="t">${esc(s.label)}</span><span class="p">${done} / ${list.length}</span><button class="x" data-act="pk-close" title="Close" aria-label="Close">✕</button></div>
+            ${rows || `<p class="pk-none">Nothing yet — add the first item.</p>`}
+            <button class="add-todo" data-act="add-pack" data-slot="${s.k}" title="Add item" aria-label="Add item">+</button>
+          </div>
+        </div>`;
+      }).join('');
+      return `<div class="pk-bp">
+        <svg class="pk-case" viewBox="0 0 640 560" fill="none" aria-hidden="true">${leaders}${caseArt}</svg>
+        ${slots}
+        <div class="pk-cap">${esc(trip.label || 'Trip')} essentials.</div>
       </div>`;
     }
 
@@ -3683,6 +3804,11 @@
     }
 
     onClick(e) {
+      // a click anywhere outside the packing slots unpins an open checklist
+      if (this.packOpen != null && !(e.target.closest && e.target.closest('.pk-slot'))) {
+        this.packOpen = null;
+        this.render();
+      }
       const t = e.target.closest('[data-act]'); if (!t) return;
       const act = t.dataset.act;
       const i = t.dataset.i != null ? Number(t.dataset.i) : null;
@@ -3705,6 +3831,12 @@
         case 'todo-toggle': { const td = this.data.meta.todos[i]; td.done = !td.done; this.bump(); break; }
         case 'todo-remove': this.removeTodo(i); break;
         case 'add-todo': this.addTodo(); break;
+        // packing checklist — every mutation pins the popover open (packOpen)
+        // so it survives the re-render instead of relying on :hover coming back
+        case 'pack-toggle': { const L = this.packList(trip, t.dataset.slot); if (L[i]) L[i].done = !L[i].done; this.packOpen = t.dataset.slot; this.bump(); break; }
+        case 'pack-remove': this.snapshot(); this.packList(trip, t.dataset.slot).splice(i, 1); this.packOpen = t.dataset.slot; this.bump(); break;
+        case 'add-pack': this.packList(trip, t.dataset.slot).push({ text: '', done: false }); this.packOpen = t.dataset.slot; this.bump(); break;
+        case 'pk-close': this.packOpen = null; this.render(); break;
         case 'open-budget': this.budgetOpen = true; this._budgetPrint = true; this.bumpModal(); break;
         case 'pick-date': {
           const inp = t.querySelector('.date-native') || (t.closest('.meta-range') || document).querySelector(`.date-native[data-ch="${t.dataset.for}"]`);
@@ -3793,6 +3925,7 @@
         case 'stop-nights': trip.stops[i].nights = Number(v) || 0; this.bump(); break;
         case 'stop-order': { const newIdx = Math.max(0, Math.min(trip.stops.length - 1, (Number(v) || 1) - 1)); if (newIdx !== i) { this.snapshot(); this.reorderStop(i, newIdx); } break; }
         case 'todo-text': meta.todos[i].text = v; this.bump(); break;
+        case 'pack-text': { const L = this.packList(trip, t.dataset.slot); if (L[i]) L[i].text = v; this.packOpen = t.dataset.slot; this.bump(); break; }
         case 'sync-code-in': this._syncCodeDraft = v; break;
         // itinerary modal
         case 'iti-city': trip.stops[this.openStopIdx].city = v; this.bump(); break;
