@@ -2387,23 +2387,31 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .pk-slot:hover::before, .pk-slot.open::before { border-color: color-mix(in srgb, var(--red) 55%, transparent); }
 /* the category's line-art icon (once uploaded) replaces the text label and
    floats just above the count pill — it's the primary identifier now, sized
-   as a fraction of the sheet's own width (see container-type on .pk-bp) so
-   it scales in lockstep with the carry-on drawing. It's the enlarged tap
-   target that OPENS the category's checklist (items are added from inside the
-   panel). pointer-events:inherit gates it behind the slot's own rise, so it
-   isn't clickable until the sheet animates open. */
+   as a fraction of the sheet's own width (see container-type on .pk-bp) so it
+   scales in lockstep with the carry-on drawing. It's the enlarged tap target
+   that adds an item + opens the category's checklist (no separate add button).
+   pointer-events:inherit gates it behind the slot's own rise, so it isn't
+   clickable until the sheet animates open. */
 .pk-icon {
   position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%);
-  width: 11.25cqw; height: 11.25cqw; background: var(--ink);
+  width: 15cqw; height: 15cqw; background: var(--ink);
   -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
   -webkit-mask-size: contain; mask-size: contain;
   -webkit-mask-position: center; mask-position: center;
   border: none; padding: 0; cursor: pointer; pointer-events: inherit;
+  /* dilate the masked line-art in 8 directions to fatten every stroke */
+  filter:
+    drop-shadow(.6px 0 0 var(--ink)) drop-shadow(-.6px 0 0 var(--ink))
+    drop-shadow(0 .6px 0 var(--ink)) drop-shadow(0 -.6px 0 var(--ink))
+    drop-shadow(.45px .45px 0 var(--ink)) drop-shadow(-.45px .45px 0 var(--ink))
+    drop-shadow(.45px -.45px 0 var(--ink)) drop-shadow(-.45px -.45px 0 var(--ink));
   transition: transform .15s ease, opacity .15s ease;
 }
 .pk-icon:hover { transform: translateX(-50%) scale(1.08); }
 .pk-icon:active { transform: translateX(-50%) scale(.94); }
 .pk-icon:focus-visible { outline: 2px solid var(--red); outline-offset: 3px; }
+/* icon-less categories: the label chip itself is the add button */
+.pk-chip--btn { cursor: pointer; font: inherit; color: inherit; pointer-events: inherit; }
 .pk-chip {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   display: flex; align-items: baseline; gap: 6px; white-space: nowrap;
@@ -2439,12 +2447,11 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .pk-hd .x:hover { color: var(--ink); }
 .pk-card .todo { padding: 4px 0; }
 .pk-none { font-family: var(--sans); font-size: 12px; color: var(--ink-mute); margin: 6px 0 8px; }
-.pk-card .add-todo { margin-top: 2px; }
 
 /* phone app: the sheet lives in a .todos-style card — everything scales down,
    and the checklist opens inline UNDER the sheet instead of docked beside it */
 .pack-block { border: none; background: none; padding: 17px 0 13px; }
-.pack-block .pk-bp { max-width: 100%; margin-top: 52px; }   /* headroom for the 1.5×-scaled icons rising above the topmost chips */
+.pack-block .pk-bp { max-width: 100%; margin-top: 64px; }   /* headroom for the 2×-scaled icons rising above the topmost chips */
 .pack-block .pk-slot { width: 92px; height: 38px; }
 /* icon size comes from the base cqw rule (scales with .pk-bp's own width,
    already narrower here) — only the gap needs a smaller phone value */
@@ -6377,14 +6384,19 @@ html { -webkit-tap-highlight-color: transparent; }
         const list = pack[s.k] || [];
         const done = list.filter(x => x.done).length;
         const icon = PK_ICONS[s.k];
-        // the icon is the enlarged tap target that OPENS this category's
-        // checklist — the slot's click handler picks it up; items are added
-        // from inside the panel. Icon-less categories open via their label chip.
-        const iconHtml = icon ? `<button class="pk-icon" title="Open ${escA(s.label)} checklist" aria-label="Open ${escA(s.label)} checklist" style="-webkit-mask-image:url(${icon});mask-image:url(${icon})"></button>` : '';
-        const labelHtml = icon ? '' : `<span class="pk-lab">${esc(s.label)}</span>`;
+        // clicking the icon (or, for icon-less categories, the label chip) adds
+        // a fresh item to this category and opens its checklist — there's no
+        // separate add button. The count pill stays hidden until the first item.
+        const cntTxt = list.length ? done + '/' + list.length : '';
+        const cntHtml = cntTxt ? `<span class="pk-cnt${done === list.length ? ' full' : ''}">${cntTxt}</span>` : '';
+        const add = `data-act="add-pack" data-slot="${s.k}" title="Add ${escA(s.label)} item" aria-label="Add ${escA(s.label)} item"`;
+        const iconHtml = icon ? `<button class="pk-icon" ${add} style="-webkit-mask-image:url(${icon});mask-image:url(${icon})"></button>` : '';
+        const chipHtml = icon
+          ? (cntHtml ? `<div class="pk-chip">${cntHtml}</div>` : '')
+          : `<button class="pk-chip pk-chip--btn" ${add}><span class="pk-lab">${esc(s.label)}</span>${cntHtml}</button>`;
         return `<div class="pk-slot${icon ? ' has-icon' : ''}${this.packOpen === s.k ? ' open' : ''}" data-slot="${s.k}" title="${escA(s.label)}" style="left:${s.cx * 100}%;top:${s.cy * 100}%;transition-delay:${220 + i * 90}ms">
           ${iconHtml}
-          <div class="pk-chip">${labelHtml}<span class="pk-cnt${list.length && done === list.length ? ' full' : ''}">${list.length ? done + '/' + list.length : '+ add'}</span></div>
+          ${chipHtml}
         </div>`;
       }).join('');
       return `<div class="pk-bp${open ? ' anim-open' : ''}">
@@ -6431,8 +6443,7 @@ html { -webkit-tap-highlight-color: transparent; }
       </div>`).join('');
       return `<div class="pk-card" role="dialog" aria-label="${escA(s.label)} checklist">
         <div class="pk-hd"><span class="t">${esc(s.label)}</span><span class="p">${done} / ${list.length}</span><button class="x" data-act="pk-close" title="Close" aria-label="Close">✕</button></div>
-        ${rows || `<p class="pk-none">Nothing yet — add the first item.</p>`}
-        <button class="add-todo" data-act="add-pack" data-slot="${s.k}" title="Add item" aria-label="Add item">+</button>
+        ${rows || `<p class="pk-none">Nothing packed yet — click the icon to add an item.</p>`}
       </div>`;
     }
     // phone app: the same suitcase print as a card between the stats and the
