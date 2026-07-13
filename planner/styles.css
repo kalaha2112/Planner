@@ -1657,6 +1657,17 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   border: 1.5px dashed transparent; transition: border-color .15s;
 }
 .pk-slot:hover::before, .pk-slot.open::before { border-color: color-mix(in srgb, var(--red) 55%, transparent); }
+/* the category's line-art icon (once uploaded) floats just above its chip —
+   decorative only, so it rides the same rise/fade transform as the chip
+   (it's a child of .pk-slot) without touching the chip's own tuned position */
+.pk-icon {
+  position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%);
+  width: 42px; height: 42px; background: var(--ink);
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  -webkit-mask-size: contain; mask-size: contain;
+  -webkit-mask-position: center; mask-position: center;
+  pointer-events: none;
+}
 .pk-chip {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   display: flex; align-items: baseline; gap: 6px; white-space: nowrap;
@@ -1695,8 +1706,9 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 /* phone app: the sheet lives in a .todos-style card — everything scales down,
    and the checklist opens inline UNDER the sheet instead of docked beside it */
 .pack-block { border: none; background: none; padding: 17px 0 13px; }
-.pack-block .pk-bp { max-width: 100%; }
+.pack-block .pk-bp { max-width: 100%; margin-top: 38px; }   /* headroom for icons rising above the topmost chips */
 .pack-block .pk-slot { width: 92px; height: 38px; }
+.pack-block .pk-icon { width: 30px; height: 30px; bottom: calc(100% + 4px); }
 .pack-block .pk-chip { padding: 2px 7px 3px; gap: 4px; }
 .pack-block .pk-lab { font-size: 7px; letter-spacing: .1em; }
 .pack-block .pk-cnt { font-size: 9px; }
