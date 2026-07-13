@@ -2323,22 +2323,25 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   /* ---- page 4 · packing blueprint + to-dos ---- */
   .leaf-pack .leaf-inner { display: flex; flex-direction: column; }
   .pack-cols { display: flex; gap: 22px; flex: 1 1 auto; min-height: 0; padding: 0 24px 20px; }
-  /* the sheet keeps a protected width and grows to fill; the two side panels
-     are slim by default and shrink first so the carry-on is never starved
-     (e.g. on an iPad-portrait ledger) */
-  .pk-wrap { flex: 1 1 auto; min-width: 320px; display: flex; align-items: center; justify-content: center; }
+  /* the carry-on and its checklist share the main column; the to-do panel
+     stays on the right. On wide screens the checklist docks to the LEFT of the
+     sheet (order:-1); on narrow screens it drops below it (see media query). */
+  .pk-main { flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; gap: 22px; }
+  .pk-wrap { flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; }
   .pack-side { flex: 0 1 280px; min-width: 180px; overflow-y: auto; padding: 4px 4px 10px 0; }
-  /* docked checklist panel in the empty space left of the sheet — the sheet
-     itself is never covered */
-  .pk-panel { flex: 0 1 230px; min-width: 160px; overflow-y: auto; padding: 4px 0 10px; display: flex; flex-direction: column; justify-content: center; }
+  .pk-panel { order: -1; flex: 0 1 230px; min-width: 160px; align-self: center; overflow-y: auto; padding: 4px 0 10px; display: flex; flex-direction: column; justify-content: center; }
 
 }
 
-@media (min-width: 701px) and (max-width: 767px) {
-  .pack-cols { gap: 12px; padding: 0 12px 14px; }
-  .pk-wrap { min-width: 260px; }
-  .pk-panel { min-width: 138px; }
-  .pack-side { min-width: 150px; }
+/* narrow ledger (e.g. iPad portrait): the carry-on takes the full main column
+   and its checklist drops BELOW it, so the sheet is never squeezed */
+@media (min-width: 701px) and (max-width: 900px) {
+  .pack-cols { gap: 16px; padding: 0 16px 16px; }
+  .pk-main { flex-direction: column; gap: 14px; justify-content: center; }
+  .pk-wrap { flex: 0 1 auto; }
+  .pk-panel { order: 0; flex: 0 1 auto; width: 100%; max-width: 460px; min-width: 0;
+              max-height: 42%; align-self: center; justify-content: flex-start; }
+  .pack-side { min-width: 158px; }
 }
 
 /* ============================================================
@@ -5966,8 +5969,10 @@ html { -webkit-tap-highlight-color: transparent; }
             </div>
           </header>
           <div class="pack-cols">
-            <aside class="pk-panel">${this.renderPackPanel(trip)}</aside>
-            <div class="pk-wrap">${this.renderPackBody(trip)}</div>
+            <div class="pk-main">
+              <div class="pk-wrap">${this.renderPackBody(trip)}</div>
+              <aside class="pk-panel">${this.renderPackPanel(trip)}</aside>
+            </div>
             <aside class="pack-side">${this.renderTodos(meta)}</aside>
           </div>
         </div>
