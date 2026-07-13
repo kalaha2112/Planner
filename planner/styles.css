@@ -1619,6 +1619,10 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   max-height: 100%; margin: auto;
   background-image: radial-gradient(var(--ledger-rule, rgba(26, 26, 26, .05)) 1px, transparent 1.3px);
   background-size: 24px 24px;
+  /* cqw below ties icon size to the sheet's own rendered width, so icons
+     scale with the carry-on drawing itself (web's big sheet vs. the
+     phone card's small one) instead of needing separate fixed-px tuning */
+  container-type: inline-size;
 }
 .pk-art {
   position: absolute; background: var(--ink);
@@ -1657,12 +1661,15 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   border: 1.5px dashed transparent; transition: border-color .15s;
 }
 .pk-slot:hover::before, .pk-slot.open::before { border-color: color-mix(in srgb, var(--red) 55%, transparent); }
-/* the category's line-art icon (once uploaded) floats just above its chip —
-   decorative only, so it rides the same rise/fade transform as the chip
-   (it's a child of .pk-slot) without touching the chip's own tuned position */
+/* the category's line-art icon (once uploaded) replaces the text label and
+   floats just above the count pill — it's the primary identifier now, sized
+   as a fraction of the sheet's own width (see container-type on .pk-bp) so
+   it scales in lockstep with the carry-on drawing. Decorative/non-interactive:
+   it rides the same rise/fade transform as the chip since it's a child of
+   .pk-slot, without touching the chip's own tuned position. */
 .pk-icon {
   position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%);
-  width: 42px; height: 42px; background: var(--ink);
+  width: 7.5cqw; height: 7.5cqw; background: var(--ink);
   -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
   -webkit-mask-size: contain; mask-size: contain;
   -webkit-mask-position: center; mask-position: center;
@@ -1677,6 +1684,8 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .pk-lab { font-family: var(--mono); font-size: 8.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-mute); }
 .pk-cnt { font-family: var(--sans); font-size: 10px; font-weight: 700; color: var(--red); font-variant-numeric: tabular-nums; }
 .pk-cnt.full { color: var(--green); }
+/* icon-bearing slots don't need the wider label pill — narrower, cqw-scaled */
+.pk-slot.has-icon { width: 11cqw; min-width: 56px; }
 @media (prefers-reduced-motion: reduce) {
   .pk-art, .pk-slot, .pk-leads line, .pk-leads circle { transition: none !important; }
 }
@@ -1708,7 +1717,10 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .pack-block { border: none; background: none; padding: 17px 0 13px; }
 .pack-block .pk-bp { max-width: 100%; margin-top: 38px; }   /* headroom for icons rising above the topmost chips */
 .pack-block .pk-slot { width: 92px; height: 38px; }
-.pack-block .pk-icon { width: 30px; height: 30px; bottom: calc(100% + 4px); }
+/* icon size comes from the base cqw rule (scales with .pk-bp's own width,
+   already narrower here) — only the gap needs a smaller phone value */
+.pack-block .pk-icon { bottom: calc(100% + 4px); }
+.pack-block .pk-slot.has-icon { width: 11cqw; min-width: 44px; }
 .pack-block .pk-chip { padding: 2px 7px 3px; gap: 4px; }
 .pack-block .pk-lab { font-size: 7px; letter-spacing: .1em; }
 .pack-block .pk-cnt { font-size: 9px; }

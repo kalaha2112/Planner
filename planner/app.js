@@ -3452,10 +3452,13 @@
         const list = pack[s.k] || [];
         const done = list.filter(x => x.done).length;
         const icon = PK_ICONS[s.k];
+        // the icon replaces the text label (it's the category's identifier
+        // now); keep the label as a title for accessibility/hover-tooltip
         const iconHtml = icon ? `<div class="pk-icon" style="-webkit-mask-image:url(${icon});mask-image:url(${icon})"></div>` : '';
-        return `<div class="pk-slot${icon ? ' has-icon' : ''}${this.packOpen === s.k ? ' open' : ''}" data-slot="${s.k}" style="left:${s.cx * 100}%;top:${s.cy * 100}%;transition-delay:${220 + i * 90}ms">
+        const labelHtml = icon ? '' : `<span class="pk-lab">${esc(s.label)}</span>`;
+        return `<div class="pk-slot${icon ? ' has-icon' : ''}${this.packOpen === s.k ? ' open' : ''}" data-slot="${s.k}" title="${escA(s.label)}" style="left:${s.cx * 100}%;top:${s.cy * 100}%;transition-delay:${220 + i * 90}ms">
           ${iconHtml}
-          <div class="pk-chip"><span class="pk-lab">${esc(s.label)}</span><span class="pk-cnt${list.length && done === list.length ? ' full' : ''}">${list.length ? done + '/' + list.length : '+ add'}</span></div>
+          <div class="pk-chip">${labelHtml}<span class="pk-cnt${list.length && done === list.length ? ' full' : ''}">${list.length ? done + '/' + list.length : '+ add'}</span></div>
         </div>`;
       }).join('');
       return `<div class="pk-bp${open ? ' anim-open' : ''}">
