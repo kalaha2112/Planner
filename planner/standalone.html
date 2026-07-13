@@ -3255,9 +3255,9 @@ html { -webkit-tap-highlight-color: transparent; }
   const PACK_SLOTS = [
     { k: 'tech',       label: 'Electronics', cx: .20, cy: .12, sz: 14 },
     { k: 'toiletries', label: 'Toiletries',  cx: .50, cy: .12, sz: 14 },
-    { k: 'documents',  label: 'Documents',   cx: .80, cy: .12, sz: 12 },
+    { k: 'documents',  label: 'Documents',   cx: .80, cy: .12, sz: 10, gap: 2 },
     { k: 'clothes',    label: 'Clothes',     cx: .06, cy: .30, sz: 14 },
-    { k: 'shoes',      label: 'Shoes',       cx: .35, cy: .31, sz: 8 },
+    { k: 'shoes',      label: 'Shoes',       cx: .35, cy: .31, sz: 8, gap: 2 },
     { k: 'extras',     label: 'Extras',      cx: .66, cy: .30, sz: 14 },
   ];
 
@@ -6397,10 +6397,11 @@ html { -webkit-tap-highlight-color: transparent; }
         const cntTxt = list.length ? done + '/' + list.length : '';
         const cntHtml = cntTxt ? `<span class="pk-cnt${done === list.length ? ' full' : ''}">${cntTxt}</span>` : '';
         const add = `data-act="add-pack" data-slot="${s.k}" title="Add ${escA(s.label)} item" aria-label="Add ${escA(s.label)} item"`;
-        const sz = s.sz || 12;
+        const sz = s.sz || 12, gap = s.gap || 0;
+        const szStyle = `width:${sz}cqw;height:${sz}cqw${gap ? `;bottom:calc(100% + 6px + ${gap}cqw)` : ''}`;
         const iconHtml = photoIcon
-          ? `<button class="pk-icon pk-icon--photo" ${add} style="width:${sz}cqw;height:${sz}cqw"><img src="${photoIcon}" alt="" draggable="false"></button>`
-          : maskIcon ? `<button class="pk-icon" ${add} style="width:${sz}cqw;height:${sz}cqw;-webkit-mask-image:url(${maskIcon});mask-image:url(${maskIcon})"></button>` : '';
+          ? `<button class="pk-icon pk-icon--photo" ${add} style="${szStyle}"><img src="${photoIcon}" alt="" draggable="false"></button>`
+          : maskIcon ? `<button class="pk-icon" ${add} style="${szStyle};-webkit-mask-image:url(${maskIcon});mask-image:url(${maskIcon})"></button>` : '';
         const chipHtml = icon
           ? (cntHtml ? `<div class="pk-chip">${cntHtml}</div>` : '')
           : `<button class="pk-chip pk-chip--btn" ${add}><span class="pk-lab">${esc(s.label)}</span>${cntHtml}</button>`;
