@@ -4196,6 +4196,19 @@ html { -webkit-tap-highlight-color: transparent; }
         });
         d.meta._flightSeedsCleared = true;
       }
+      // One-time: same story for reward points — secondary flight legs used to
+      // carry a 25,000-point placeholder that inflated the "reward points
+      // needed" total. Zero any stop flight leg still holding exactly the old
+      // seed. Separate flag so it runs even for data already migrated above.
+      if (d.meta && !d.meta._flightPointSeedsCleared) {
+        Object.values(d.trips || {}).forEach(trip => {
+          (trip.stops || []).forEach(s => {
+            const l = s && s.leg;
+            if (l && l.mode === 'flight' && Number(l.miles) === 25000) l.miles = 0;
+          });
+        });
+        d.meta._flightPointSeedsCleared = true;
+      }
       Object.values(d.trips || {}).forEach(trip => {
         if (trip.depart == null) trip.depart = d.meta.depart;
         if (trip.returnDate == null) trip.returnDate = d.meta.returnDate;
