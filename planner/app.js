@@ -709,18 +709,21 @@
         return url;
       };
       const d = this.data;
+      // shrink the source images (closet + memory tray) …
       for (const s of d.stickerStock || []) s.image = await shrink(s.image);
+      for (const trip of Object.values(d.trips || {})) for (const o of trip.closet || []) o.image = await shrink(o.image);
+      // … then drop embedded duplicate copies wherever the source still holds the
+      // picture (orphans are shrunk in place so a deleted source stays visible)
       for (const ps of d.placedStickers || []) {
         const st = (d.stickerStock || []).find(s => s.id === ps.stockId);
-        if (st && st.image != null) { if (ps.image !== st.image) { ps.image = st.image; changed = true; } }
-        else ps.image = await shrink(ps.image);
+        if (st && st.image != null) { if (ps.image != null) { delete ps.image; changed = true; } }
+        else if (ps.image != null) { const out = await shrink(ps.image); if (out !== ps.image) { ps.image = out; changed = true; } }
       }
       for (const trip of Object.values(d.trips || {})) {
-        for (const o of trip.closet || []) o.image = await shrink(o.image);
         for (const stop of trip.stops || []) for (const day of stop.itinerary || []) for (const outfit of (day && day.outfits) || []) {
           const co = (trip.closet || []).find(c => c.id === outfit.id);
-          if (co && co.image != null) { if (outfit.image !== co.image) { outfit.image = co.image; changed = true; } }
-          else outfit.image = await shrink(outfit.image);
+          if (co && co.image != null) { if (outfit.image != null) { delete outfit.image; changed = true; } }
+          else if (outfit.image != null) { const out = await shrink(outfit.image); if (out !== outfit.image) { outfit.image = out; changed = true; } }
         }
       }
       if (!changed) return;
@@ -1192,11 +1195,31 @@
       clearTimeout(this._saveTimer);
       this._savePending = true;   // guards adoptLocal from reverting an unflushed edit
       this._saveTimer = setTimeout(() => {
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data)); this.flashSaved(); } catch (e) {}
+        if (this._writeLocal()) this.flashSaved();
         this._savePending = false;
         // a local edit advances our revision and queues a cloud upload (if linked)
         if (this.isLinked()) { this.sync.rev = Date.now(); this.persistSyncRec(); this.scheduleCloudPush(); }
       }, 450);
+    }
+    _isQuotaError(e) {
+      return !!e && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 22 || e.code === 1014);
+    }
+    // Persist state to localStorage. Returns true on success. On a full-storage
+    // error the write is retried once after stripping duplicate image data (so a
+    // dropped sticker/outfit isn't silently lost on refresh); if it still can't
+    // fit, the user is told once rather than losing edits invisibly.
+    _writeLocal() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data)); return true; }
+      catch (e) {
+        if (!this._isQuotaError(e)) return false;
+        this.migrate();   // idempotent: re-strip any embedded duplicate images
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data)); return true; }
+        catch (e2) { this._warnStorageFull(); return false; }
+      }
+    }
+    _warnStorageFull() {
+      if (this._storageWarned) return; this._storageWarned = true;
+      try { alert('This device’s storage is full — recent photos may not be saved. Remove a few memories or outfits to free up space.'); } catch (_) {}
     }
     flashSaved() {
       this._savedShow = true; this.paintSaved();
@@ -1278,9 +1301,24 @@
       });
       if (!Array.isArray(d.stickerStock)) d.stickerStock = [];
       if (!Array.isArray(d.placedStickers)) d.placedStickers = [];
+      d.placedStickers.forEach(ps => { if (!ps.target) ps.target = 'page'; });
+      // De-duplicate image data: outfits/placedStickers reference the closet /
+      // stickerStock as the single source of truth. Drop any embedded image copy
+      // where the source still holds the picture (orphaned copies are kept so a
+      // deleted source doesn't blank its placements). This runs on every load /
+      // sync-pull, so bloated state saved by older builds shrinks in place —
+      // small enough to persist to localStorage and cross devices via the sync
+      // stores' size caps.
+      Object.values(d.trips || {}).forEach(trip => {
+        const closet = trip.closet || [];
+        (trip.stops || []).forEach(s => (s.itinerary || []).forEach(day => {
+          if (day && Array.isArray(day.outfits)) day.outfits.forEach(o => {
+            if (o && o.image != null && closet.some(c => c.id === o.id)) delete o.image;
+          });
+        }));
+      });
       d.placedStickers.forEach(ps => {
-        if (!ps.target) ps.target = 'page';
-        if (!ps.image) { const s = d.stickerStock.find(s => s.id === ps.stockId); if (s) ps.image = s.image; }
+        if (ps.image != null && d.stickerStock.some(s => s.id === ps.stockId)) delete ps.image;
       });
     }
 
@@ -1301,7 +1339,7 @@
     }
     persistSyncRec() { try { localStorage.setItem(SYNC_KEY, JSON.stringify(this.sync)); } catch (e) {} }
     isLinked() { return !!(this.sync && this.sync.id); }
-    saveLocalNow() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data)); } catch (e) {} }
+    saveLocalNow() { this._writeLocal(); }
 
     cloudPayload() { return JSON.stringify({ app: APP_TAG, rev: this.sync.rev || Date.now(), data: this.data }); }
     // parse "<tag>-<id>" (tolerating a pasted full URL) into a backend + id
@@ -2673,10 +2711,26 @@
 
     /* ---------- outfit closet ---------- */
     ensureCloset() { const t = this.currentTrip(); if (!Array.isArray(t.closet)) t.closet = []; return t.closet; }
+    // Image data lives once — in the closet (outfits) and stickerStock (memories).
+    // Everywhere an outfit/memory is placed we store only its id and look the
+    // picture up at render time. Keeps one source of truth, so a placement can
+    // never desync into a blank sticker, and keeps the state (localStorage +
+    // synced payload) small enough to persist and cross devices. Legacy data with
+    // an embedded `image` still resolves via the fallback.
+    closetImage(id, closet) { const c = (closet || (this.currentTrip() && this.currentTrip().closet) || []).find(o => o.id === id); return c ? c.image : ''; }
+    stockImage(stockId) { const s = (this.data.stickerStock || []).find(x => x.id === stockId); return s ? s.image : ''; }
     dayOutfits(stop, dayIdx) { this.ensureItinerary(stop); const d = stop.itinerary[dayIdx] || (stop.itinerary[dayIdx] = { items: [], outfits: [] }); if (!Array.isArray(d.outfits)) d.outfits = []; return d.outfits; }
     toggleOutfitOnDay(id, stopIdx, dayIdx) { const arr = this.dayOutfits(this.currentTrip().stops[stopIdx], dayIdx); const i = arr.findIndex(e => e.id === id); if (i >= 0) arr.splice(i, 1); this.bump(); }
     removeOutfitFromCloset(id) {
       const t = this.currentTrip();
+      const src = (t.closet || []).find(o => o.id === id);
+      // days reference the closet by id — re-embed the picture into any day that
+      // still uses this outfit so removing it from the closet doesn't blank them
+      if (src && src.image) {
+        (t.stops || []).forEach(s => (s.itinerary || []).forEach(day => {
+          (day && day.outfits || []).forEach(o => { if (o.id === id && o.image == null) o.image = src.image; });
+        }));
+      }
       t.closet = (t.closet || []).filter(o => o.id !== id);
       this.bump();
     }
@@ -2684,13 +2738,13 @@
       const drag = this._plannerDrag; if (!drag) return;
       if (drag.kind === 'closet') {
         const arr = this.dayOutfits(this.currentTrip().stops[targetStopIdx], targetDayIdx);
-        if (!arr.some(e => e.id === drag.id)) arr.push({ id: drag.id, image: drag.image });
+        if (!arr.some(e => e.id === drag.id)) arr.push({ id: drag.id });
       } else if (drag.kind === 'day') {
         if (drag.stopIdx === targetStopIdx && drag.dayIdx === targetDayIdx) { this._plannerDrag = null; return; }
         const fromArr = this.dayOutfits(this.currentTrip().stops[drag.stopIdx], drag.dayIdx);
         const i = fromArr.findIndex(e => e.id === drag.id); if (i >= 0) fromArr.splice(i, 1);
         const toArr = this.dayOutfits(this.currentTrip().stops[targetStopIdx], targetDayIdx);
-        if (!toArr.some(e => e.id === drag.id)) toArr.push({ id: drag.id, image: drag.image });
+        if (!toArr.some(e => e.id === drag.id)) toArr.push({ id: drag.id });
       } else if (drag.kind === 'activity') {
         if (drag.stopIdx === targetStopIdx && drag.dayIdx === targetDayIdx) { this._plannerDrag = null; return; }
         const stop = this.currentTrip().stops[targetStopIdx];
@@ -2711,10 +2765,10 @@
       const closet = this.ensureCloset();
       const id = 'o' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       closet.push({ id, image: dataUrl });
-      // auto-assign to the open day if any
+      // auto-assign to the open day if any (id-only reference — image lives in the closet)
       if (this.openStopIdx != null && this.activeDay != null) {
         const arr = this.dayOutfits(this.currentTrip().stops[this.openStopIdx], this.activeDay);
-        if (!arr.some(e => e.id === id)) arr.push({ id, image: dataUrl });
+        if (!arr.some(e => e.id === id)) arr.push({ id });
       }
       this.bump();
     }
@@ -2777,6 +2831,12 @@
       this.bump();
     }
     removeFromStickerStock(id) {
+      // placed memories reference the tray by stockId — re-embed the picture into
+      // any placement of this memory so removing it from the tray keeps them
+      const src = (this.data.stickerStock || []).find(s => s.id === id);
+      if (src && src.image) {
+        (this.data.placedStickers || []).forEach(ps => { if (ps.stockId === id && ps.image == null) ps.image = src.image; });
+      }
       this.data.stickerStock = this.data.stickerStock.filter(s => s.id !== id);
       this.bump();
     }
@@ -2784,7 +2844,8 @@
       const id = 'ps' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
       const stock = this.data.stickerStock.find(s => s.id === stockId);
       if (!stock) return;
-      this.data.placedStickers.push({ id, stockId, image: stock.image, x: Math.round(x), y: Math.round(y), w: 80, target });
+      // store the reference only — the image is looked up from stickerStock at render
+      this.data.placedStickers.push({ id, stockId, x: Math.round(x), y: Math.round(y), w: 80, target });
       this.bump();
     }
     removePlacedSticker(id) {
@@ -3047,6 +3108,7 @@
             <div class="pk-wrap">${this.renderPackBody(trip)}</div>
             <aside class="pack-side">${this.renderTodos(meta)}</aside>
           </div>
+          <div class="placed-stickers-layer">${this.renderPlacedStickers('pack')}</div>
         </div>
         <span class="leaf-folio">04 · 04</span>
       </section>`;
@@ -3586,7 +3648,7 @@
 
     renderPlacedStickers(target = 'page') {
       return (this.data.placedStickers || []).filter(ps => (ps.target || 'page') === target).map(ps => {
-        const img = ps.image;
+        const img = this.stockImage(ps.stockId) || ps.image;
         if (!img) return '';
         return `<div class="placed-sticker" data-placed-id="${escA(ps.id)}" style="left:${ps.x}px;top:${ps.y}px;width:${ps.w || 80}px">
           <img src="${escA(img)}" draggable="false">
@@ -3617,7 +3679,8 @@
           if (idx == null) { cells += `<div class="cal-off">${dd}</div>`; continue; }
           const active = idx === activeDay;
           const outfits = (itinerary[idx] && Array.isArray(itinerary[idx].outfits)) ? itinerary[idx].outfits : [];
-          const img = outfits[0] ? outfits[0].image : null;
+          const first = outfits[0];
+          const img = first ? (this.closetImage(first.id, closet) || first.image || null) : null;
           const hasOotd = !!img;
           cells += `<button class="cal-cell${active ? ' active' : ''}" data-act="cal-day" data-drop="cell" data-i="${idx}"${hasOotd ? ` draggable="true" data-drag="cell" data-i="${idx}"` : ''}>
             <span>${dd}</span>${img ? `<img src="${escA(img)}" draggable="false">` : ''}</button>`;
@@ -4231,9 +4294,10 @@
         const dayIdx = Number(t.dataset.i); const stop = this.currentTrip().stops[this.openStopIdx];
         const outfits = (stop.itinerary[dayIdx] && stop.itinerary[dayIdx].outfits) || [];
         if (outfits.length) {
-          this._plannerDrag = { kind: 'day', id: outfits[0].id, image: outfits[0].image, stopIdx: this.openStopIdx, dayIdx };
+          const ghostImg = this.closetImage(outfits[0].id, this.currentTrip().closet) || outfits[0].image || '';
+          this._plannerDrag = { kind: 'day', id: outfits[0].id, stopIdx: this.openStopIdx, dayIdx };
           const di = document.createElement('img');
-          di.src = outfits[0].image;
+          di.src = ghostImg;
           Object.assign(di.style, { position: 'fixed', top: '-200px', left: '-200px', width: '52px', height: '62px', objectFit: 'contain', borderRadius: '8px', filter: 'drop-shadow(0 4px 12px rgba(35,20,12,.3))' });
           document.body.appendChild(di);
           e.dataTransfer.setDragImage(di, 26, 31);
@@ -4288,6 +4352,8 @@
         } else if (leaf.classList.contains('leaf-plan')) {
           if (this.accomOpenIdx == null) return null;
           target = 'accom-' + this.accomOpenIdx;
+        } else if (leaf.classList.contains('leaf-pack')) {
+          target = 'pack';
         }
         return { target, layer };
       }
