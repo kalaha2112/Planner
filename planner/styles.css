@@ -1598,13 +1598,26 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 
   /* ---- page 4 · packing blueprint + to-dos ---- */
   .leaf-pack .leaf-inner { display: flex; flex-direction: column; }
-  .pack-cols { display: flex; gap: 30px; flex: 1 1 auto; min-height: 0; padding: 0 34px 20px; }
-  .pk-wrap { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; justify-content: center; }
-  .pack-side { flex: 0 0 320px; overflow-y: auto; padding: 4px 4px 10px 0; }
-  /* docked checklist panel in the empty space left of the sheet — the sheet
-     itself is never covered */
-  .pk-panel { flex: 0 0 272px; overflow-y: auto; padding: 4px 0 10px; display: flex; flex-direction: column; justify-content: center; }
+  .pack-cols { display: flex; gap: 22px; flex: 1 1 auto; min-height: 0; padding: 0 24px 20px; }
+  /* the carry-on and its checklist share the main column; the to-do panel
+     stays on the right. On wide screens the checklist docks to the LEFT of the
+     sheet (order:-1); on narrow screens it drops below it (see media query). */
+  .pk-main { flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; gap: 22px; }
+  .pk-wrap { flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  .pack-side { flex: 0 1 280px; min-width: 180px; overflow-y: auto; padding: 4px 4px 10px 0; }
+  .pk-panel { order: -1; flex: 0 1 230px; min-width: 160px; align-self: center; overflow-y: auto; padding: 4px 0 10px; display: flex; flex-direction: column; justify-content: center; }
 
+}
+
+/* narrow ledger (e.g. iPad portrait): the carry-on takes the full main column
+   and its checklist drops BELOW it, so the sheet is never squeezed */
+@media (min-width: 701px) and (max-width: 900px) {
+  .pack-cols { gap: 16px; padding: 0 16px 16px; }
+  .pk-main { flex-direction: column; gap: 14px; justify-content: center; }
+  .pk-wrap { flex: 0 1 auto; }
+  .pk-panel { order: 0; flex: 0 1 auto; width: 100%; max-width: 460px; min-width: 0;
+              max-height: 42%; align-self: center; justify-content: flex-start; }
+  .pack-side { min-width: 158px; }
 }
 
 /* ============================================================
@@ -1615,7 +1628,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    Closed by default; .anim-open crossfades to the open case and the chips
    rise out of it on their dashed leaders. */
 .pk-bp {
-  position: relative; width: 100%; max-width: 620px; aspect-ratio: 640 / 560;
+  position: relative; width: 100%; max-width: 860px; aspect-ratio: 640 / 560;
   max-height: 100%; margin: auto;
   background-image: radial-gradient(var(--ledger-rule, rgba(26, 26, 26, .05)) 1px, transparent 1.3px);
   background-size: 24px 24px;
@@ -1661,20 +1674,37 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   border: 1.5px dashed transparent; transition: border-color .15s;
 }
 .pk-slot:hover::before, .pk-slot.open::before { border-color: color-mix(in srgb, var(--red) 55%, transparent); }
-/* the category's line-art icon (once uploaded) replaces the text label and
-   floats just above the count pill — it's the primary identifier now, sized
-   as a fraction of the sheet's own width (see container-type on .pk-bp) so
-   it scales in lockstep with the carry-on drawing. Decorative/non-interactive:
-   it rides the same rise/fade transform as the chip since it's a child of
-   .pk-slot, without touching the chip's own tuned position. */
+/* the category's icon floats just above the count pill — the primary
+   identifier, sized as a fraction of the sheet's own width (see container-type
+   on .pk-bp) so it scales in lockstep with the carry-on drawing. Ink line-art
+   is a theme-tinted mask (dilated in 8 directions to fatten the stroke to the
+   case weight); an uploaded full-colour icon uses .pk-icon--photo instead.
+   pointer-events:inherit gates it behind the slot's rise. */
 .pk-icon {
   position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%);
-  width: 7.5cqw; height: 7.5cqw; background: var(--ink);
+  width: 12cqw; height: 12cqw; background: var(--ink);
   -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
   -webkit-mask-size: contain; mask-size: contain;
   -webkit-mask-position: center; mask-position: center;
-  pointer-events: none;
+  border: none; padding: 0; cursor: pointer; pointer-events: inherit;
+  filter:
+    drop-shadow(.6px 0 0 var(--ink)) drop-shadow(-.6px 0 0 var(--ink))
+    drop-shadow(0 .6px 0 var(--ink)) drop-shadow(0 -.6px 0 var(--ink))
+    drop-shadow(.45px .45px 0 var(--ink)) drop-shadow(-.45px .45px 0 var(--ink))
+    drop-shadow(.45px -.45px 0 var(--ink)) drop-shadow(-.45px -.45px 0 var(--ink));
+  transition: transform .15s ease, opacity .15s ease;
 }
+/* uploaded full-colour icon: an image, not an ink mask */
+.pk-icon--photo {
+  background: none; -webkit-mask-image: none; mask-image: none; filter: none;
+  display: grid; place-items: center;
+}
+.pk-icon--photo img { width: 100%; height: 100%; object-fit: contain; object-position: center bottom; display: block; pointer-events: none; }
+.pk-icon:hover { transform: translateX(-50%) scale(1.08); }
+.pk-icon:active { transform: translateX(-50%) scale(.94); }
+.pk-icon:focus-visible { outline: 2px solid var(--red); outline-offset: 3px; }
+/* icon-less categories: the label chip itself is the add button */
+.pk-chip--btn { cursor: pointer; font: inherit; color: inherit; pointer-events: inherit; }
 .pk-chip {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   display: flex; align-items: baseline; gap: 6px; white-space: nowrap;
@@ -1715,7 +1745,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 /* phone app: the sheet lives in a .todos-style card — everything scales down,
    and the checklist opens inline UNDER the sheet instead of docked beside it */
 .pack-block { border: none; background: none; padding: 17px 0 13px; }
-.pack-block .pk-bp { max-width: 100%; margin-top: 38px; }   /* headroom for icons rising above the topmost chips */
+.pack-block .pk-bp { max-width: 100%; margin-top: 64px; }   /* headroom for the 2×-scaled icons rising above the topmost chips */
 .pack-block .pk-slot { width: 92px; height: 38px; }
 /* icon size comes from the base cqw rule (scales with .pk-bp's own width,
    already narrower here) — only the gap needs a smaller phone value */
