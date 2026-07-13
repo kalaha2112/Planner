@@ -689,6 +689,44 @@
       } else if (this.isLinked()) {
         this.pullCloud();   // pick up edits made on another device
       }
+      // one-time cleanup: shrink any full-res images saved before stickers were
+      // downscaled on intake. A single oversized sticker bloats the payload past
+      // the store's cap and blocks ALL sync, so this unsticks devices that were
+      // already carrying big memories/closet photos.
+      setTimeout(() => this.compactStoredImages(), 1500);
+    }
+    // Re-encode oversized stored images (legacy full-res stickers/outfits) through
+    // the same downscale+WebP pipeline new images already use. Runs at most once
+    // per device; only rewrites images that actually shrink, then saves + syncs.
+    async compactStoredImages() {
+      if (this._compactedImages) return;
+      this._compactedImages = true;
+      const BIG = 260000;   // ~260KB of base64 — comfortably above a compacted sticker, below a raw photo
+      let changed = false;
+      const shrink = async (url) => {
+        if (typeof url !== 'string' || url.length <= BIG || url.indexOf('data:image/') !== 0) return url;
+        try { const out = await this.autoCutout(url); if (out && out.length < url.length) { changed = true; return out; } } catch (e) {}
+        return url;
+      };
+      const d = this.data;
+      for (const s of d.stickerStock || []) s.image = await shrink(s.image);
+      for (const ps of d.placedStickers || []) {
+        const st = (d.stickerStock || []).find(s => s.id === ps.stockId);
+        if (st && st.image != null) { if (ps.image !== st.image) { ps.image = st.image; changed = true; } }
+        else ps.image = await shrink(ps.image);
+      }
+      for (const trip of Object.values(d.trips || {})) {
+        for (const o of trip.closet || []) o.image = await shrink(o.image);
+        for (const stop of trip.stops || []) for (const day of stop.itinerary || []) for (const outfit of (day && day.outfits) || []) {
+          const co = (trip.closet || []).find(c => c.id === outfit.id);
+          if (co && co.image != null) { if (outfit.image !== co.image) { outfit.image = co.image; changed = true; } }
+          else outfit.image = await shrink(outfit.image);
+        }
+      }
+      if (!changed) return;
+      this.saveLocalNow();
+      if (this.isLinked()) { this.sync.rev = Date.now(); this.persistSyncRec(); this.scheduleCloudPush(); }
+      this.render(); this.bumpModal(); this.touchMap();
     }
     /* Touch pointer indicator: iOS/iPadOS have no cursor, so show the same
        dashed arrow at the fingertip — but only for taps and drags. When the
@@ -2654,17 +2692,25 @@
       this.bump();
     }
     autoCutout(dataUrl) {
+      // Cap every incoming image to STICKER_MAX_PX on its longest side before it
+      // enters state. Phone photos are multi-megapixel; unscaled base64 bloats
+      // the synced payload past the free JSON stores' size caps, so stickers
+      // (and every edit after them) silently fail to sync to other devices.
+      const MAX = 512;
       return new Promise(resolve => {
         const img = new Image();
         img.onload = () => {
-          const W = img.width, H = img.height;
+          const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+          const W = Math.max(1, Math.round(img.width * scale));
+          const H = Math.max(1, Math.round(img.height * scale));
           const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
-          const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0);
-          let d; try { d = ctx.getImageData(0, 0, W, H); } catch (e) { resolve(dataUrl); return; }
+          const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, W, H);
+          const scaled = () => this._encodeSticker(canvas, dataUrl);
+          let d; try { d = ctx.getImageData(0, 0, W, H); } catch (e) { resolve(scaled()); return; }
           const px = d.data;
           let hasAlpha = false;
           for (let i = 3; i < px.length; i += 4) { if (px[i] < 200) { hasAlpha = true; break; } }
-          if (hasAlpha) { resolve(dataUrl); return; }
+          if (hasAlpha) { resolve(scaled()); return; }   // keep existing transparency, just downscaled
           const samp = (x, y) => { const i = (y * W + x) * 4; return [px[i], px[i + 1], px[i + 2]]; };
           const corners = [samp(0, 0), samp(W - 1, 0), samp(0, H - 1), samp(W - 1, H - 1)];
           const bg = corners.reduce((a, c) => [a[0] + c[0], a[1] + c[1], a[2] + c[2]], [0, 0, 0]).map(v => v / 4);
@@ -2673,11 +2719,23 @@
             const dist = Math.sqrt(dr * dr + dg * dg + db * db);
             if (dist < 42) px[i + 3] = 0; else if (dist < 85) px[i + 3] = Math.round((dist - 42) / 43 * 255);
           }
-          ctx.putImageData(d, 0, 0); resolve(canvas.toDataURL('image/png'));
+          ctx.putImageData(d, 0, 0); resolve(this._encodeSticker(canvas, dataUrl));
         };
         img.onerror = () => resolve(dataUrl);
         img.src = dataUrl;
       });
+    }
+    // Encode a (downscaled) sticker canvas as compactly as the browser allows.
+    // WebP is lossy AND keeps the alpha the cutout produces, so it's ~5-10× the
+    // size of the equivalent PNG — the difference between a sticker that syncs
+    // and one that overflows the store. Falls back to PNG (alpha-safe) where
+    // WebP isn't supported, and to the original data URL only if encoding fails.
+    _encodeSticker(canvas, fallbackUrl) {
+      try {
+        const webp = canvas.toDataURL('image/webp', 0.82);
+        if (webp.indexOf('data:image/webp') === 0) return webp;
+      } catch (e) {}
+      try { return canvas.toDataURL('image/png'); } catch (e) { return fallbackUrl; }
     }
 
     /* ---------- page stickers ---------- */
