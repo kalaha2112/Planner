@@ -4154,20 +4154,46 @@
     // dialog sits under it. Shared by native HTML5 drop (mouse) and the
     // pointer-based touch drag below — iOS Safari never fires DnD from touch.
     placeStockAtPoint(stockId, clientX, clientY, hitEl) {
-      const dialogEl = hitEl && hitEl.closest ? hitEl.closest('[data-sticker-target]') : null;
+      const drop = this._stickerDropTarget(hitEl);
+      if (!drop) return false;
+      let x, y;
+      if (drop.fixed) { x = clientX - 40; y = clientY - 40; }   // modal layer is fixed inset:0 — viewport coords map straight in
+      else { const r = drop.layer.getBoundingClientRect(); x = clientX - r.left - 40; y = clientY - r.top - 40; }
+      this.placeSticker(stockId, x, y, drop.target);
+      return true;
+    }
+    // Resolve where a dropped memory lands: the mobile modal dialog, a web-ledger
+    // leaf, or the mobile phone page. Returns { target, layer } (coords are taken
+    // from the layer's box) or { target, fixed:true } for the fixed modal layer.
+    _stickerDropTarget(hitEl) {
+      const near = (sel) => (hitEl && hitEl.closest) ? hitEl.closest(sel) : null;
+      // mobile: itinerary/accom opened as a modal dialog over the page
+      const dialogEl = near('[data-sticker-target]');
       if (dialogEl) {
         let target = dialogEl.dataset.stickerTarget;
         if (target.startsWith('iti-') && this.activeDay != null) target = target + '-day-' + this.activeDay;
-        this.placeSticker(stockId, clientX - 40, clientY - 40, target);
-        return true;
+        return { target, fixed: true };
       }
+      // web ledger (iPad + desktop): whichever leaf the drop lands on picks the
+      // target, matching the per-leaf targets renderLedger renders with
+      const leaf = near('.ledger-leaf');
+      if (leaf) {
+        const layer = leaf.querySelector('.placed-stickers-layer');
+        if (!layer) return null;   // a leaf with no active stop/day has no layer
+        let target = 'page';
+        if (leaf.classList.contains('leaf-days')) {
+          if (this.openStopIdx == null || this.activeDay == null) return null;
+          target = 'iti-' + this.openStopIdx + '-day-' + this.activeDay;
+        } else if (leaf.classList.contains('leaf-plan')) {
+          if (this.accomOpenIdx == null) return null;
+          target = 'accom-' + this.accomOpenIdx;
+        }
+        return { target, layer };
+      }
+      // mobile phone: the single scrolling page
       const pageEl = this.root.querySelector('.page');
-      if (pageEl) {
-        const rect = pageEl.getBoundingClientRect();
-        this.placeSticker(stockId, clientX - rect.left - 40, clientY - rect.top - 40, 'page');
-        return true;
-      }
-      return false;
+      if (pageEl) return { target: 'page', layer: pageEl.querySelector('.placed-stickers-layer') || pageEl };
+      return null;
     }
     onDrop(e) {
       if (this._stockStickerDrag) {
