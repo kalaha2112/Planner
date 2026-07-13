@@ -2451,6 +2451,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .pk-hd .x:hover { color: var(--ink); }
 .pk-card .todo { padding: 4px 0; }
 .pk-none { font-family: var(--sans); font-size: 12px; color: var(--ink-mute); margin: 6px 0 8px; }
+.pk-card .add-todo { margin-top: 2px; }
 
 /* phone app: the sheet lives in a .todos-style card — everything scales down,
    and the checklist opens inline UNDER the sheet instead of docked beside it */
@@ -6391,20 +6392,20 @@ html { -webkit-tap-highlight-color: transparent; }
         const list = pack[s.k] || [];
         const done = list.filter(x => x.done).length;
         const maskIcon = PK_ICONS[s.k], photoIcon = PK_PHOTO_ICONS[s.k], icon = maskIcon || photoIcon;
-        // clicking the icon (or, for icon-less categories, the label chip) adds
-        // a fresh item to this category and opens its checklist — there's no
-        // separate add button. The count pill stays hidden until the first item.
+        // clicking the icon (or, for icon-less categories, the label chip)
+        // opens this category's checklist (handled by the slot click handler);
+        // items are added from inside the list. Count pill hidden until item 1.
         const cntTxt = list.length ? done + '/' + list.length : '';
         const cntHtml = cntTxt ? `<span class="pk-cnt${done === list.length ? ' full' : ''}">${cntTxt}</span>` : '';
-        const add = `data-act="add-pack" data-slot="${s.k}" title="Add ${escA(s.label)} item" aria-label="Add ${escA(s.label)} item"`;
+        const open = `title="Open ${escA(s.label)} checklist" aria-label="Open ${escA(s.label)} checklist"`;
         const sz = s.sz || 12, gap = s.gap || 0;
         const szStyle = `width:${sz}cqw;height:${sz}cqw${gap ? `;bottom:calc(100% + 6px + ${gap}cqw)` : ''}`;
         const iconHtml = photoIcon
-          ? `<button class="pk-icon pk-icon--photo" ${add} style="${szStyle}"><img src="${photoIcon}" alt="" draggable="false"></button>`
-          : maskIcon ? `<button class="pk-icon" ${add} style="${szStyle};-webkit-mask-image:url(${maskIcon});mask-image:url(${maskIcon})"></button>` : '';
+          ? `<button class="pk-icon pk-icon--photo" ${open} style="${szStyle}"><img src="${photoIcon}" alt="" draggable="false"></button>`
+          : maskIcon ? `<button class="pk-icon" ${open} style="${szStyle};-webkit-mask-image:url(${maskIcon});mask-image:url(${maskIcon})"></button>` : '';
         const chipHtml = icon
           ? (cntHtml ? `<div class="pk-chip">${cntHtml}</div>` : '')
-          : `<button class="pk-chip pk-chip--btn" ${add}><span class="pk-lab">${esc(s.label)}</span>${cntHtml}</button>`;
+          : `<button class="pk-chip pk-chip--btn" ${open}><span class="pk-lab">${esc(s.label)}</span>${cntHtml}</button>`;
         return `<div class="pk-slot${icon ? ' has-icon' : ''}${this.packOpen === s.k ? ' open' : ''}" data-slot="${s.k}" title="${escA(s.label)}" style="left:${s.cx * 100}%;top:${s.cy * 100}%;transition-delay:${220 + i * 90}ms">
           ${iconHtml}
           ${chipHtml}
@@ -6454,7 +6455,8 @@ html { -webkit-tap-highlight-color: transparent; }
       </div>`).join('');
       return `<div class="pk-card" role="dialog" aria-label="${escA(s.label)} checklist">
         <div class="pk-hd"><span class="t">${esc(s.label)}</span><span class="p">${done} / ${list.length}</span><button class="x" data-act="pk-close" title="Close" aria-label="Close">✕</button></div>
-        ${rows || `<p class="pk-none">Nothing packed yet — click the icon to add an item.</p>`}
+        ${rows || `<p class="pk-none">Nothing packed yet — add the first item.</p>`}
+        <button class="add-todo" data-act="add-pack" data-slot="${s.k}" title="Add item" aria-label="Add item">+</button>
       </div>`;
     }
     // phone app: the same suitcase print as a card between the stats and the
