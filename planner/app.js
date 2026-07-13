@@ -73,6 +73,10 @@
      `get` returns the stored JSON text; `put` overwrites it. */
   const SYNC_KEY  = 'europe-trip-sync-v1';            // local record of the link {id, rev, lastSyncedAt}
   const APP_TAG   = 'europe-trip-planner';            // payload marker so we only adopt our own data
+  // Bump on each deploy. Shown in the Sync modal so both devices can confirm
+  // they're running the same (latest) build — rawgithack/browser caching can
+  // otherwise leave one device on an old copy where sticker fixes aren't present.
+  const BUILD_TAG = '2026-07-14 · stickers-2';
   const SYNC_POLL_MS  = 20000;                        // how often to pull while the tab is visible
   const CLOUD_PUSH_DEBOUNCE_MS = 900;                 // coalesce rapid edits into one upload
 
@@ -3639,7 +3643,7 @@
       if (!this.stickerPanelOpen) return '';
       const stock = this.data.stickerStock || [];
       const items = stock.map(s => `<div class="stock-item" draggable="true" data-drag="stock-sticker" data-id="${escA(s.id)}" title="Drag onto the page to place">
-        <img src="${escA(s.image)}" draggable="false">
+        <img src="${escA(s.image)}" draggable="false" onerror="this.style.display='none'">
         <button class="stock-item__del" data-act="stock-delete" data-id="${escA(s.id)}" title="Remove from stock">−</button>
       </div>`).join('');
       return `<div class="sticker-panel">
@@ -3666,7 +3670,7 @@
         const img = this.stockImage(ps.stockId) || ps.image;
         if (!img) return '';
         return `<div class="placed-sticker" data-placed-id="${escA(ps.id)}" style="left:${ps.x}px;top:${ps.y}px;width:${ps.w || 80}px">
-          <img src="${escA(img)}" draggable="false">
+          <img src="${escA(img)}" draggable="false" onerror="var s=this.closest('.placed-sticker'); if(s) s.style.display='none'">
           <button class="placed-sticker__delete" data-act="placed-delete" data-id="${escA(ps.id)}" title="Remove">×</button>
           <div class="placed-sticker__resize" title="Drag to resize"></div>
         </div>`;
@@ -3698,7 +3702,7 @@
           const img = first ? (this.closetImage(first.id, closet) || first.image || null) : null;
           const hasOotd = !!img;
           cells += `<button class="cal-cell${active ? ' active' : ''}" data-act="cal-day" data-drop="cell" data-i="${idx}"${hasOotd ? ` draggable="true" data-drag="cell" data-i="${idx}"` : ''}>
-            <span>${dd}</span>${img ? `<img src="${escA(img)}" draggable="false">` : ''}</button>`;
+            <span>${dd}</span>${img ? `<img src="${escA(img)}" draggable="false" onerror="this.style.display='none'">` : ''}</button>`;
         }
         const dow = WEEK.map(l => `<div class="cal-dow">${l}</div>`).join('');
         months += `<div class="cal-month"><div class="label">${esc(label)}</div><div class="cal-grid">${dow}${cells}</div></div>`;
@@ -3723,7 +3727,7 @@
       const dayDate = (i) => { if (!range) return ''; const dt = new Date(range.start); dt.setDate(dt.getDate() + i); return fmt(dt); };
 
       const stripCells = closet.map(o => `<div class="outfit" draggable="true" data-drag="closet" data-id="${escA(o.id)}" title="Drag onto a date">
-        <img src="${escA(o.image)}"><button class="del" data-act="outfit-delete" data-id="${escA(o.id)}" title="Remove from closet">−</button></div>`).join('');
+        <img src="${escA(o.image)}" onerror="this.style.display='none'"><button class="del" data-act="outfit-delete" data-id="${escA(o.id)}" title="Remove from closet">−</button></div>`).join('');
 
       let dayBlock;
       if (hasDay) {
@@ -4054,7 +4058,9 @@
             </div>
             <button class="modal-x" data-act="close-sync">✕</button>
           </div></div>
-          <div class="sync-body">${body}</div>
+          <div class="sync-body">${body}
+            <p class="sync-note" style="text-align:center;opacity:.6;margin-top:10px">build ${esc(BUILD_TAG)}</p>
+          </div>
         </div>
       </div>`;
     }
