@@ -4182,6 +4182,20 @@ html { -webkit-tap-highlight-color: transparent; }
       if (d.meta && !Array.isArray(d.meta.todos)) d.meta.todos = clone(DEFAULT_STATE.meta.todos);
       if (d.meta && !d.meta.budget) d.meta.budget = clone(DEFAULT_STATE.meta.budget);
       if (d.meta && d.meta.budget && d.meta.budget.cityPassOverride === 0) d.meta.budget.cityPassOverride = null;
+      // One-time: seed trips used to pre-fill secondary (intercity/return)
+      // flight legs with placeholder fares ($130, $220) that inflated the
+      // Flights budget line. Zero any stop flight leg still holding exactly
+      // an old seed value; the flag makes sure a fare you re-enter later is
+      // never wiped.
+      if (d.meta && !d.meta._flightSeedsCleared) {
+        Object.values(d.trips || {}).forEach(trip => {
+          (trip.stops || []).forEach(s => {
+            const l = s && s.leg;
+            if (l && l.mode === 'flight' && (Number(l.cost) === 130 || Number(l.cost) === 220)) l.cost = 0;
+          });
+        });
+        d.meta._flightSeedsCleared = true;
+      }
       Object.values(d.trips || {}).forEach(trip => {
         if (trip.depart == null) trip.depart = d.meta.depart;
         if (trip.returnDate == null) trip.returnDate = d.meta.returnDate;
