@@ -76,7 +76,7 @@
   // Bump on each deploy. Shown in the Sync modal so both devices can confirm
   // they're running the same (latest) build — rawgithack/browser caching can
   // otherwise leave one device on an old copy where sticker fixes aren't present.
-  const BUILD_TAG = '2026-07-14 · stickers-4';
+  const BUILD_TAG = '2026-07-14 · stickers-5';
   const SYNC_POLL_MS  = 20000;                        // how often to pull while the tab is visible
   const CLOUD_PUSH_DEBOUNCE_MS = 900;                 // coalesce rapid edits into one upload
 
@@ -2926,13 +2926,14 @@
       this.data.stickerStock = this.data.stickerStock.filter(s => s.id !== id);
       this.bump();
     }
-    placeSticker(stockId, x, y, target = 'page') {
+    placeSticker(stockId, x, y, target = 'page', fx = null, fy = null) {
       const id = 'ps' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
       const stock = this.data.stickerStock.find(s => s.id === stockId);
       if (!stock) return;
       // embed the image so the placement is self-contained — any app version
-      // (old or new) can render it without resolving the stockId reference
-      this.data.placedStickers.push({ id, stockId, image: stock.image, x: Math.round(x), y: Math.round(y), w: 80, target });
+      // (old or new) can render it without resolving the stockId reference.
+      // fx/fy are the fractional position (0–1) used for cross-layout sync.
+      this.data.placedStickers.push({ id, stockId, image: stock.image, x: Math.round(x), y: Math.round(y), fx, fy, w: 80, target });
       this.bump();
     }
     removePlacedSticker(id) {
@@ -3075,6 +3076,29 @@
       this._watchPackSheet();   // (re)observe the packing sheet for its open animation
       this.paintSaved();
       this.updateTopActions();
+      this._backfillStickerFractions();   // upgrade legacy pixel-only placements to fractional
+    }
+    // Older placements stored only pixel coords. Once they're on-screen, capture
+    // their current position as a fraction of the layer so they carry across to
+    // the other layout (web <-> app). Pure upgrade: pixels and the fraction line
+    // up at the current size, so nothing visibly moves.
+    _backfillStickerFractions() {
+      const need = (this.data.placedStickers || []).some(ps => ps.image != null || this.stockImage(ps.stockId));
+      if (!need) return;
+      requestAnimationFrame(() => {
+        let changed = false;
+        (this.data.placedStickers || []).forEach(ps => {
+          if (ps.fx != null && ps.fy != null) return;
+          const el = this.root.querySelector(`.placed-sticker[data-placed-id="${CSS.escape(ps.id)}"]`)
+                  || this.modalEl.querySelector(`.placed-sticker[data-placed-id="${CSS.escape(ps.id)}"]`);
+          const layer = el && el.offsetParent;
+          if (!layer) return;
+          const lw = layer.clientWidth, lh = layer.clientHeight;
+          if (!lw || !lh) return;
+          ps.fx = el.offsetLeft / lw; ps.fy = el.offsetTop / lh; changed = true;
+        });
+        if (changed) this.scheduleSave();
+      });
     }
 
     /* ============================================================
@@ -3749,7 +3773,13 @@
       return (this.data.placedStickers || []).filter(ps => (ps.target || 'page') === target).map(ps => {
         const img = ps.image || this.stockImage(ps.stockId);
         if (!img) return '';
-        return `<div class="placed-sticker" data-placed-id="${escA(ps.id)}" style="left:${ps.x}px;top:${ps.y}px;width:${ps.w || 80}px">
+        // position by fraction of the layer (percent) so it lands at the same
+        // relative spot on web and app; fall back to the stored pixels for
+        // placements from before fractional coords existed
+        const pos = (ps.fx != null && ps.fy != null)
+          ? `left:${(ps.fx * 100).toFixed(3)}%;top:${(ps.fy * 100).toFixed(3)}%`
+          : `left:${ps.x}px;top:${ps.y}px`;
+        return `<div class="placed-sticker" data-placed-id="${escA(ps.id)}" style="${pos};width:${ps.w || 80}px">
           <img src="${escA(img)}" draggable="false" onerror="var s=this.closest('.placed-sticker'); if(s) s.style.display='none'">
           <button class="placed-sticker__delete" data-act="placed-delete" data-id="${escA(ps.id)}" title="Remove">×</button>
           <div class="placed-sticker__resize" title="Drag to resize"></div>
@@ -4422,10 +4452,14 @@
     placeStockAtPoint(stockId, clientX, clientY, hitEl) {
       const drop = this._stickerDropTarget(hitEl);
       if (!drop) return false;
-      let x, y;
-      if (drop.fixed) { x = clientX - 40; y = clientY - 40; }   // modal layer is fixed inset:0 — viewport coords map straight in
-      else { const r = drop.layer.getBoundingClientRect(); x = clientX - r.left - 40; y = clientY - r.top - 40; }
-      this.placeSticker(stockId, x, y, drop.target);
+      let x, y, lw, lh;
+      if (drop.fixed) { x = clientX - 40; y = clientY - 40; lw = window.innerWidth; lh = window.innerHeight; }   // modal layer is fixed inset:0
+      else { const r = drop.layer.getBoundingClientRect(); x = clientX - r.left - 40; y = clientY - r.top - 40; lw = r.width; lh = r.height; }
+      // store the drop point as a FRACTION of the layer too — web and app pages
+      // are different sizes, so a raw pixel offset lands in the wrong place (or
+      // off-screen) on the other device; a fraction renders at the same relative
+      // spot everywhere. x/y are kept for older builds that read pixels.
+      this.placeSticker(stockId, x, y, drop.target, lw ? x / lw : null, lh ? y / lh : null);
       return true;
     }
     // Resolve where a dropped memory lands: the mobile modal dialog, a web-ledger
@@ -4719,11 +4753,13 @@
       e.preventDefault();
       const id = sticker.dataset.placedId;
       if (e.target.closest('.placed-sticker__resize')) {
-        this._resizingSticker = { id, el: sticker, startX: e.clientX, origW: parseFloat(sticker.style.width) || 80 };
+        this._resizingSticker = { id, el: sticker, startX: e.clientX, origW: sticker.offsetWidth || 80 };
         this._onPM = ev => this._doStickerResize(ev);
         this._onPU = ev => this._endStickerResize(ev);
       } else {
-        this._movingSticker = { id, el: sticker, startX: e.clientX, startY: e.clientY, origLeft: parseFloat(sticker.style.left) || 0, origTop: parseFloat(sticker.style.top) || 0 };
+        // offsetLeft/Top are pixels within the layer regardless of whether the
+        // element was positioned via % (fractional) or px (legacy)
+        this._movingSticker = { id, el: sticker, startX: e.clientX, startY: e.clientY, origLeft: sticker.offsetLeft, origTop: sticker.offsetTop };
         this._onPM = ev => this._doStickerMove(ev);
         this._onPU = ev => this._endStickerMove(ev);
       }
@@ -4743,23 +4779,21 @@
       this._movingSticker = null;
       const ps = this.data.placedStickers.find(s => s.id === id);
       if (!ps) return;
-      const x = Math.round(parseFloat(el.style.left) || 0);
-      const y = Math.round(parseFloat(el.style.top) || 0);
-      const w = parseFloat(el.style.width) || 80;
-      let outOfBounds;
-      if (ps.target === 'page') {
-        const pageEl = this.root.querySelector('.page');
-        const r = pageEl ? pageEl.getBoundingClientRect() : null;
-        outOfBounds = r && (x + w < 0 || y + 40 < 0 || x > r.width || y > r.height);
-      } else {
-        outOfBounds = x + w < 0 || y + 40 < 0 || x > window.innerWidth || y > window.innerHeight;
-      }
-      if (outOfBounds) {
+      const x = Math.round(el.offsetLeft);
+      const y = Math.round(el.offsetTop);
+      const layer = el.offsetParent;
+      const lw = layer ? layer.clientWidth : 0;
+      const lh = layer ? layer.clientHeight : 0;
+      const fx = lw ? x / lw : null;
+      const fy = lh ? y / lh : null;
+      // dragged well outside the page → remove it (fraction-based so it works on
+      // any layout size)
+      if (fx != null && (fx < -0.35 || fy < -0.35 || fx > 1.2 || fy > 1.2)) {
         this.data.placedStickers = this.data.placedStickers.filter(s => s.id !== id);
         this.bump();
         return;
       }
-      ps.x = x; ps.y = y;
+      ps.x = x; ps.y = y; ps.fx = fx; ps.fy = fy;
       this.scheduleSave();
     }
     _doStickerResize(e) {
