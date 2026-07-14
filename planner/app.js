@@ -76,7 +76,7 @@
   // Bump on each deploy. Shown in the Sync modal so both devices can confirm
   // they're running the same (latest) build — rawgithack/browser caching can
   // otherwise leave one device on an old copy where sticker fixes aren't present.
-  const BUILD_TAG = '2026-07-14 · stickers-5';
+  const BUILD_TAG = '2026-07-14 · stickers-6 (diag)';
   const SYNC_POLL_MS  = 20000;                        // how often to pull while the tab is visible
   const CLOUD_PUSH_DEBOUNCE_MS = 900;                 // coalesce rapid edits into one upload
 
@@ -4169,9 +4169,30 @@
             <button class="modal-x" data-act="close-sync">✕</button>
           </div></div>
           <div class="sync-body">${body}
+            ${this._syncDiagnostics()}
             <p class="sync-note" style="text-align:center;opacity:.6;margin-top:10px">build ${esc(BUILD_TAG)}</p>
           </div>
         </div>
+      </div>`;
+    }
+
+    // Make the black-box sync observable: the endpoint each device is linked to
+    // (BOTH devices must show the SAME one to share data), the payload size (free
+    // JSON stores reject oversized bodies — that silently blocks all sync), what
+    // is in the state, and the last status/error.
+    _syncDiagnostics() {
+      let sizeKB = 0; try { sizeKB = Math.round(this.cloudPayload().length / 1024); } catch (e) {}
+      const memories = (this.data.stickerStock || []).length;
+      const placed = (this.data.placedStickers || []).length;
+      const trips = Object.keys(this.data.trips || {}).length;
+      const activeTrip = (this.data.trips && this.data.trips[this.data.active] && this.data.trips[this.data.active].label) || this.data.active || '—';
+      const big = sizeKB > 900;
+      return `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line-2);font-size:11px;line-height:1.6;opacity:.8;text-align:left;word-break:break-all;font-family:var(--sans)">
+        <div><b>endpoint</b> · ${this.isLinked() ? escA(this.sync.id) : 'not linked'} ${this.isLinked() ? '' : '— this device is NOT sharing data with any other'}</div>
+        <div><b>this device shows</b> · trip "${escA(activeTrip)}" · ${memories} mem · ${placed} placed</div>
+        <div><b>data size</b> · <span style="color:${big ? 'var(--red)' : 'inherit'}">${sizeKB} KB${big ? ' — likely too big for the free store; sync may be failing' : ''}</span></div>
+        <div><b>status</b> · ${esc(this._syncStatus || 'off')}${this._syncMsg ? ' — ' + esc(this._syncMsg) : ''}</div>
+        <div style="opacity:.7;margin-top:4px">Both devices must show the SAME endpoint AND the same trip once synced. If they differ, they aren't linked to each other.</div>
       </div>`;
     }
 
