@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-14T04:12:02.691Z
+  Built: 2026-07-14T07:03:47.666Z
 -->
 
 <html lang="en">
@@ -3036,12 +3036,22 @@ html { -webkit-tap-highlight-color: transparent; }
   // Bump on each deploy. Shown in the Sync modal so both devices can confirm
   // they're running the same (latest) build — rawgithack/browser caching can
   // otherwise leave one device on an old copy where sticker fixes aren't present.
-  const BUILD_TAG = '2026-07-14 · outfit-paste-1';
+  const BUILD_TAG = '2026-07-14 · outfit-paste-2';
   // djb2 checksum over the serialized state. Embedded in the synced payload so a
   // reader can tell whether the free JSON store round-tripped the data intact —
   // large base64 images can get mangled in transit (a character-level change
   // that keeps the JSON valid but breaks the image → "FAILS TO LOAD" box).
   const syncChecksum = (str) => { let h = 5381; for (let i = 0; i < str.length; i++) h = (((h << 5) + h) ^ str.charCodeAt(i)) >>> 0; return h; };
+  // Free JSON stores corrupt large base64 in transit — classically turning '+'
+  // into a space (and '/' can trip form/URL handling too). Inside every image
+  // data URL, swap standard base64 for URL-safe base64 (+ -> -, / -> _) before
+  // upload, and swap back on download. The JSON structure is untouched (so the
+  // store's own extractors still work), and the payload doesn't grow. All copies
+  // must run this build for images to decode — which they do, sharing one URL.
+  const IMG_B64_RE = /(data:[^"\\]*?;base64,)([A-Za-z0-9+/=]+)/g;
+  const IMG_B64URL_RE = /(data:[^"\\]*?;base64,)([A-Za-z0-9\-_=]+)/g;
+  const toSyncSafe = (str) => str.replace(IMG_B64_RE, (m, pre, b64) => pre + b64.replace(/\+/g, '-').replace(/\//g, '_'));
+  const fromSyncSafe = (str) => str.replace(IMG_B64URL_RE, (m, pre, b64) => pre + b64.replace(/-/g, '+').replace(/_/g, '/'));
   const SYNC_POLL_MS  = 20000;                        // how often to pull while the tab is visible
   const CLOUD_PUSH_DEBOUNCE_MS = 900;                 // coalesce rapid edits into one upload
 
@@ -4395,7 +4405,8 @@ html { -webkit-tap-highlight-color: transparent; }
 
     cloudPayload() {
       const dataStr = JSON.stringify(this.data);
-      return JSON.stringify({ app: APP_TAG, rev: this.sync.rev || Date.now(), sum: syncChecksum(dataStr), data: this.data });
+      const raw = JSON.stringify({ app: APP_TAG, rev: this.sync.rev || Date.now(), sum: syncChecksum(dataStr), data: this.data });
+      return toSyncSafe(raw);   // URL-safe base64 for images so the store can't mangle '+'
     }
     // parse "<tag>-<id>" (tolerating a pasted full URL) into a backend + id
     parseCode(code) {
@@ -4423,7 +4434,9 @@ html { -webkit-tap-highlight-color: transparent; }
       try { txt = await be.get(id); } catch (e) { throw this.normErr(e); }
       if (!txt) throw _notFound();
       let payload;
-      try { payload = JSON.parse(txt); } catch (e) { throw new Error('Synced data was unreadable.'); }
+      // swap URL-safe base64 back to standard so images decode (no-op on legacy
+      // payloads, whose base64 has no '-'/'_')
+      try { payload = JSON.parse(fromSyncSafe(txt)); } catch (e) { throw new Error('Synced data was unreadable.'); }
       // Integrity note (non-blocking): if a big base64 image was mangled in
       // transit, the embedded checksum won't match. We do NOT reject the whole
       // payload for that — one bad image must never block text sync (that stranded
@@ -6846,7 +6859,10 @@ html { -webkit-tap-highlight-color: transparent; }
           const img = first ? (first.image || this.closetImage(first.id, closet) || null) : null;
           const hasOotd = !!img;
           const pastePad = (active && !hasOotd) ? `<span class="cal-paste" data-act="cal-paste" data-i="${idx}" title="Paste an outfit here (⌘/Ctrl-V)">+</span>` : '';
-          cells += `<button class="cal-cell${active ? ' active' : ''}" data-act="cal-day" data-drop="cell" data-i="${idx}"${hasOotd ? ` draggable="true" data-drag="cell" data-i="${idx}"` : ''}>
+          // outfit cells carry data-drag="cell" (a marker); dragging is driven by
+          // the pointer handler for mouse AND touch — no native draggable, which
+          // iOS never fires from touch and which interfered with the pointer drag
+          cells += `<button class="cal-cell${active ? ' active' : ''}" data-act="cal-day" data-drop="cell" data-i="${idx}"${hasOotd ? ` data-drag="cell" data-i="${idx}"` : ''}>
             <span>${dd}</span>${img ? `<img src="${escA(img)}" draggable="false" onerror="this.style.display='none'">` : ''}${pastePad}</button>`;
         }
         const dow = WEEK.map(l => `<div class="cal-dow">${l}</div>`).join('');
@@ -7857,12 +7873,14 @@ html { -webkit-tap-highlight-color: transparent; }
       // memory tray: drag a stock sticker out onto the page/dialog. Native HTML5
       // DnD carries this on mouse; touch needs the pointer path (iOS never fires
       // DnD from touch). Threshold-armed so a plain tap still isn't a drag.
+      // outfit box: drag to another day, or drag out of the calendar to remove.
+      // Pointer-driven for mouse AND touch (a tap still selects the day — the drag
+      // only starts past the move threshold).
+      const outfitCell = e.target.closest('.cal-cell[data-drag="cell"]');
+      if (outfitCell && !e.target.closest('.cal-paste')) { this._armOutfitDrag(e, outfitCell); return; }
       if (e.pointerType === 'touch') {
         const stockEl = e.target.closest('.stock-item[data-drag="stock-sticker"]');
         if (stockEl && !e.target.closest('.stock-item__del')) { this._armStockStickerDrag(e, stockEl); return; }
-        // outfit box: drag to another day, or drag out of the calendar to remove
-        const outfitCell = e.target.closest('.cal-cell[data-drag="cell"]');
-        if (outfitCell) { this._armOutfitDrag(e, outfitCell); return; }
       }
       const sticker = e.target.closest('.placed-sticker');
       if (!sticker) return;
@@ -7947,6 +7965,7 @@ html { -webkit-tap-highlight-color: transparent; }
     }
     _doOutfitDrag(e) {
       const d = this._outfitDrag; if (!d) return;
+      d.lastX = e.clientX; d.lastY = e.clientY;
       if (!d.moved) {
         if (Math.abs(e.clientX - d.startX) < 5 && Math.abs(e.clientY - d.startY) < 5) return;
         d.moved = true;
@@ -7974,13 +7993,24 @@ html { -webkit-tap-highlight-color: transparent; }
       if (d.srcCell) d.srcCell.classList.remove('drag-source');
       if (d.targetCell) d.targetCell.classList.remove('drag-target');
       if (!d.moved) return;   // a tap — let the click handler select the day
-      const targetIdx = d.targetCell ? Number(d.targetCell.dataset.i) : null;
-      if (targetIdx != null && targetIdx !== d.dayIdx) {
-        this._plannerDrag = { kind: 'day', id: d.id, stopIdx: this.openStopIdx, dayIdx: d.dayIdx };
-        this.plannerDrop(this.openStopIdx, targetIdx);   // move the outfit to the new day
-      } else if (targetIdx == null) {
-        this.toggleOutfitOnDay(d.id, this.openStopIdx, d.dayIdx);   // dropped off the calendar → remove
+      // resolve the drop from the actual release point (robust to rAF timing)
+      const x = (e && e.clientX != null) ? e.clientX : d.lastX;
+      const y = (e && e.clientY != null) ? e.clientY : d.lastY;
+      const under = (x != null) ? document.elementFromPoint(x, y) : null;
+      const cell = under ? under.closest('.cal-cell[data-drop="cell"]') : null;
+      if (cell) {
+        const targetIdx = Number(cell.dataset.i);
+        if (targetIdx !== d.dayIdx) {
+          this._plannerDrag = { kind: 'day', id: d.id, stopIdx: this.openStopIdx, dayIdx: d.dayIdx };
+          this.plannerDrop(this.openStopIdx, targetIdx);   // move to the new day
+        }
+        return;                                            // same day → keep as-is
       }
+      // no day under the release point: only remove if it's clearly OUTSIDE the
+      // calendar (a near-miss into a gap keeps the outfit rather than deleting it)
+      const cal = (d.srcCell.closest && d.srcCell.closest('.cal')) || document.querySelector('.cal');
+      const inside = cal && x != null && (() => { const r = cal.getBoundingClientRect(); return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; })();
+      if (!inside) this.toggleOutfitOnDay(d.id, this.openStopIdx, d.dayIdx);   // dragged out → cancel
     }
     /* ---- pointer-based memory drag out of the tray (touch; native HTML5 DnD
        handles the mouse). Armed on pointerdown, but a floating ghost only
