@@ -76,7 +76,12 @@
   // Bump on each deploy. Shown in the Sync modal so both devices can confirm
   // they're running the same (latest) build — rawgithack/browser caching can
   // otherwise leave one device on an old copy where sticker fixes aren't present.
-  const BUILD_TAG = '2026-07-14 · stickers-10';
+  const BUILD_TAG = '2026-07-14 · stickers-11';
+  // djb2 checksum over the serialized state. Embedded in the synced payload so a
+  // reader can tell whether the free JSON store round-tripped the data intact —
+  // large base64 images can get mangled in transit (a character-level change
+  // that keeps the JSON valid but breaks the image → "FAILS TO LOAD" box).
+  const syncChecksum = (str) => { let h = 5381; for (let i = 0; i < str.length; i++) h = (((h << 5) + h) ^ str.charCodeAt(i)) >>> 0; return h; };
   const SYNC_POLL_MS  = 20000;                        // how often to pull while the tab is visible
   const CLOUD_PUSH_DEBOUNCE_MS = 900;                 // coalesce rapid edits into one upload
 
@@ -159,7 +164,8 @@
         return JSON.stringify(r.obj);   // hand cloudGet clean JSON
       },
       async put(id, body) {
-        let wantRev; try { wantRev = JSON.parse(body).rev; } catch (e) {}
+        let wantRev, wantSum;
+        try { const b = JSON.parse(body); wantRev = b.rev; wantSum = b.sum; } catch (e) {}
         const writes = this._writes(id, body);
         const order = this._strat != null
           ? [this._strat, ...writes.map((_, i) => i).filter((i) => i !== this._strat)]
@@ -170,8 +176,13 @@
           try { res = await fetch(writes[i].url, writes[i].opt); } catch (e) { throw e; }  // unreachable → bubble up
           lastStatus = res.status;
           if (res.ok) {
-            const r = await this._readObj(id);   // confirm OUR write (matching rev) actually round-trips
-            if (r.obj && (wantRev == null || r.obj.rev === wantRev)) { this._strat = i; return; }
+            const r = await this._readObj(id);   // confirm OUR write round-trips — matching rev AND data intact
+            const revOk = r.obj && (wantRev == null || r.obj.rev === wantRev);
+            // reject a format that corrupts the data (e.g. mangles base64): the
+            // re-read data must still match its own embedded checksum
+            const dataOk = r.obj && (wantSum == null || (r.obj.data && syncChecksum(JSON.stringify(r.obj.data)) === r.obj.sum));
+            if (revOk && dataOk) { this._strat = i; return; }
+            this._strat = null;   // this format isn't safe — don't stick with it
           }
         }
         throw new Error('textdb: endpoint did not store the data (HTTP ' + (lastStatus || 0) + ').');
@@ -1428,7 +1439,10 @@
     isLinked() { return !!(this.sync && this.sync.id); }
     saveLocalNow() { this._writeLocal(); }
 
-    cloudPayload() { return JSON.stringify({ app: APP_TAG, rev: this.sync.rev || Date.now(), data: this.data }); }
+    cloudPayload() {
+      const dataStr = JSON.stringify(this.data);
+      return JSON.stringify({ app: APP_TAG, rev: this.sync.rev || Date.now(), sum: syncChecksum(dataStr), data: this.data });
+    }
     // parse "<tag>-<id>" (tolerating a pasted full URL) into a backend + id
     parseCode(code) {
       let c = (code || '').trim();
@@ -1454,7 +1468,18 @@
       let txt;
       try { txt = await be.get(id); } catch (e) { throw this.normErr(e); }
       if (!txt) throw _notFound();
-      try { return JSON.parse(txt); } catch (e) { throw new Error('Synced data was unreadable.'); }
+      let payload;
+      try { payload = JSON.parse(txt); } catch (e) { throw new Error('Synced data was unreadable.'); }
+      // integrity gate: if the store mangled the payload in transit (e.g. a big
+      // base64 image), the embedded checksum won't match — reject rather than
+      // adopt corrupt data that would render as a broken/empty box and then sync
+      // back. (Payloads from older builds have no sum; those pass through.)
+      if (payload && payload.sum != null && payload.data) {
+        if (syncChecksum(JSON.stringify(payload.data)) !== payload.sum) {
+          const err = new Error('Synced data was corrupted in transit.'); err.code = 'corrupt'; throw err;
+        }
+      }
+      return payload;
     }
     async cloudPut(code) {
       const { be, id } = this.parseCode(code);
