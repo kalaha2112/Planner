@@ -76,7 +76,7 @@
   // Bump on each deploy. Shown in the Sync modal so both devices can confirm
   // they're running the same (latest) build — rawgithack/browser caching can
   // otherwise leave one device on an old copy where sticker fixes aren't present.
-  const BUILD_TAG = '2026-07-14 · outfit-paste-3';
+  const BUILD_TAG = '2026-07-14 · outfit-paste-4';
   // djb2 checksum over the serialized state. Embedded in the synced payload so a
   // reader can tell whether the free JSON store round-tripped the data intact —
   // large base64 images can get mangled in transit (a character-level change
@@ -4917,7 +4917,7 @@
       // Pointer-driven for mouse AND touch (a tap still selects the day — the drag
       // only starts past the move threshold).
       const outfitCell = e.target.closest('.cal-cell[data-drag="cell"]');
-      if (outfitCell && !e.target.closest('.cal-paste')) { this._armOutfitDrag(e, outfitCell); return; }
+      if (outfitCell && !e.target.closest('.cal-paste')) { if (e.cancelable) e.preventDefault(); this._armOutfitDrag(e, outfitCell); return; }
       if (e.pointerType === 'touch') {
         const stockEl = e.target.closest('.stock-item[data-drag="stock-sticker"]');
         if (stockEl && !e.target.closest('.stock-item__del')) { this._armStockStickerDrag(e, stockEl); return; }
@@ -5034,7 +5034,13 @@
       if (d.ghost) d.ghost.remove();
       if (d.srcCell) d.srcCell.classList.remove('drag-source');
       if (d.targetCell) d.targetCell.classList.remove('drag-target');
-      if (!d.moved) return;   // a tap — let the click handler select the day
+      if (!d.moved) {
+        // a tap, not a drag — we preventDefault'd pointerdown (so iOS wouldn't
+        // scroll), which also suppresses the click, so select the day ourselves
+        this.activeDay = (this.activeDay === d.dayIdx ? null : d.dayIdx);
+        this._optimizeNote = null; this._selectedItem = null; this.bumpModal();
+        return;
+      }
       // resolve the drop from the actual release point (robust to rAF timing)
       const x = (e && e.clientX != null) ? e.clientX : d.lastX;
       const y = (e && e.clientY != null) ? e.clientY : d.lastY;

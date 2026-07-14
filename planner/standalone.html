@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-14T07:15:51.951Z
+  Built: 2026-07-14T07:25:50.400Z
 -->
 
 <html lang="en">
@@ -1297,7 +1297,8 @@ a { color: inherit; }
 .cal-cell.drag-target { outline: 3px solid var(--red); outline-offset: -2px; background: var(--cal-hover); }
 .cal-cell.drag-source { opacity: .4; }
 /* an outfit box drives its own pointer drag on touch — don't let the page scroll steal it */
-.cal-cell[data-drag="cell"] { touch-action: none; }
+.cal-cell[data-drag="cell"] { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.cal-cell[data-drag="cell"] img { -webkit-user-drag: none; }
 /* invisible-until-you-look paste target that appears in a highlighted empty day */
 .cal-paste {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
@@ -3036,7 +3037,7 @@ html { -webkit-tap-highlight-color: transparent; }
   // Bump on each deploy. Shown in the Sync modal so both devices can confirm
   // they're running the same (latest) build — rawgithack/browser caching can
   // otherwise leave one device on an old copy where sticker fixes aren't present.
-  const BUILD_TAG = '2026-07-14 · outfit-paste-3';
+  const BUILD_TAG = '2026-07-14 · outfit-paste-4';
   // djb2 checksum over the serialized state. Embedded in the synced payload so a
   // reader can tell whether the free JSON store round-tripped the data intact —
   // large base64 images can get mangled in transit (a character-level change
@@ -7877,7 +7878,7 @@ html { -webkit-tap-highlight-color: transparent; }
       // Pointer-driven for mouse AND touch (a tap still selects the day — the drag
       // only starts past the move threshold).
       const outfitCell = e.target.closest('.cal-cell[data-drag="cell"]');
-      if (outfitCell && !e.target.closest('.cal-paste')) { this._armOutfitDrag(e, outfitCell); return; }
+      if (outfitCell && !e.target.closest('.cal-paste')) { if (e.cancelable) e.preventDefault(); this._armOutfitDrag(e, outfitCell); return; }
       if (e.pointerType === 'touch') {
         const stockEl = e.target.closest('.stock-item[data-drag="stock-sticker"]');
         if (stockEl && !e.target.closest('.stock-item__del')) { this._armStockStickerDrag(e, stockEl); return; }
@@ -7994,7 +7995,13 @@ html { -webkit-tap-highlight-color: transparent; }
       if (d.ghost) d.ghost.remove();
       if (d.srcCell) d.srcCell.classList.remove('drag-source');
       if (d.targetCell) d.targetCell.classList.remove('drag-target');
-      if (!d.moved) return;   // a tap — let the click handler select the day
+      if (!d.moved) {
+        // a tap, not a drag — we preventDefault'd pointerdown (so iOS wouldn't
+        // scroll), which also suppresses the click, so select the day ourselves
+        this.activeDay = (this.activeDay === d.dayIdx ? null : d.dayIdx);
+        this._optimizeNote = null; this._selectedItem = null; this.bumpModal();
+        return;
+      }
       // resolve the drop from the actual release point (robust to rAF timing)
       const x = (e && e.clientX != null) ? e.clientX : d.lastX;
       const y = (e && e.clientY != null) ? e.clientY : d.lastY;

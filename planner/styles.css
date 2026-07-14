@@ -573,7 +573,8 @@ a { color: inherit; }
 .cal-cell.drag-target { outline: 3px solid var(--red); outline-offset: -2px; background: var(--cal-hover); }
 .cal-cell.drag-source { opacity: .4; }
 /* an outfit box drives its own pointer drag on touch — don't let the page scroll steal it */
-.cal-cell[data-drag="cell"] { touch-action: none; }
+.cal-cell[data-drag="cell"] { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.cal-cell[data-drag="cell"] img { -webkit-user-drag: none; }
 /* invisible-until-you-look paste target that appears in a highlighted empty day */
 .cal-paste {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
