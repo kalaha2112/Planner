@@ -76,7 +76,7 @@
   // Bump on each deploy. Shown in the Sync modal so both devices can confirm
   // they're running the same (latest) build — rawgithack/browser caching can
   // otherwise leave one device on an old copy where sticker fixes aren't present.
-  const BUILD_TAG = '2026-07-14 · outfit-paste-4';
+  const BUILD_TAG = '2026-07-14 · outfit-paste-5';
   // djb2 checksum over the serialized state. Embedded in the synced payload so a
   // reader can tell whether the free JSON store round-tripped the data intact —
   // large base64 images can get mangled in transit (a character-level change
@@ -5033,6 +5033,7 @@
       this._outfitDrag = null;
       if (d.ghost) d.ghost.remove();
       if (d.srcCell) d.srcCell.classList.remove('drag-source');
+      const target = d.targetCell;                 // the day highlighted during the drag
       if (d.targetCell) d.targetCell.classList.remove('drag-target');
       if (!d.moved) {
         // a tap, not a drag — we preventDefault'd pointerdown (so iOS wouldn't
@@ -5041,21 +5042,21 @@
         this._optimizeNote = null; this._selectedItem = null; this.bumpModal();
         return;
       }
-      // resolve the drop from the actual release point (robust to rAF timing)
-      const x = (e && e.clientX != null) ? e.clientX : d.lastX;
-      const y = (e && e.clientY != null) ? e.clientY : d.lastY;
-      const under = (x != null) ? document.elementFromPoint(x, y) : null;
-      const cell = under ? under.closest('.cal-cell[data-drop="cell"]') : null;
-      if (cell) {
-        const targetIdx = Number(cell.dataset.i);
+      // Use the cell that was under the finger on the LAST move (already tracked
+      // and highlighted) — NOT the pointerup coordinates, which iOS reports as
+      // stale/zero on touch-end (that made every drop read as "no target" and
+      // delete the outfit).
+      if (target) {
+        const targetIdx = Number(target.dataset.i);
         if (targetIdx !== d.dayIdx) {
           this._plannerDrag = { kind: 'day', id: d.id, stopIdx: this.openStopIdx, dayIdx: d.dayIdx };
           this.plannerDrop(this.openStopIdx, targetIdx);   // move to the new day
         }
-        return;                                            // same day → keep as-is
+        return;                                            // dropped on a day → never remove
       }
-      // no day under the release point: only remove if it's clearly OUTSIDE the
-      // calendar (a near-miss into a gap keeps the outfit rather than deleting it)
+      // no day was under the finger: remove only if the last move point was
+      // clearly OUTSIDE the calendar (a near-miss into a gap keeps the outfit)
+      const x = d.lastX, y = d.lastY;
       const cal = (d.srcCell.closest && d.srcCell.closest('.cal')) || document.querySelector('.cal');
       const inside = cal && x != null && (() => { const r = cal.getBoundingClientRect(); return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; })();
       if (!inside) this.toggleOutfitOnDay(d.id, this.openStopIdx, d.dayIdx);   // dragged out → cancel
