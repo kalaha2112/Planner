@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-14T02:50:52.434Z
+  Built: 2026-07-14T02:55:28.204Z
 -->
 
 <html lang="en">
@@ -3026,7 +3026,7 @@ html { -webkit-tap-highlight-color: transparent; }
   // Bump on each deploy. Shown in the Sync modal so both devices can confirm
   // they're running the same (latest) build — rawgithack/browser caching can
   // otherwise leave one device on an old copy where sticker fixes aren't present.
-  const BUILD_TAG = '2026-07-14 · stickers-9 (inspect2)';
+  const BUILD_TAG = '2026-07-14 · stickers-10';
   const SYNC_POLL_MS  = 20000;                        // how often to pull while the tab is visible
   const CLOUD_PUSH_DEBOUNCE_MS = 900;                 // coalesce rapid edits into one upload
 
@@ -3675,38 +3675,56 @@ html { -webkit-tap-highlight-color: transparent; }
         img.src = url;
       });
     }
-    // Drop stock memories / closet outfits whose stored image is essentially all
-    // transparent (>98%) — the signature of the old knockout-to-black bug. New
-    // cutouts never exceed 85% transparent, so this can't hit a good sticker.
-    async sweepBlankStickers() {
-      if (this._sweptBlanks) return;
-      this._sweptBlanks = true;
-      const dead = async (arr) => {
-        const out = [];
-        for (const it of arr || []) if (it && it.image && (await this._transparentFraction(it.image)) > 0.98) out.push(it.id);
-        return out;
-      };
-      let changed = false;
-      const badStock = await dead(this.data.stickerStock);
-      if (badStock.length) {
-        this.data.stickerStock = this.data.stickerStock.filter(s => !badStock.includes(s.id));
-        this.data.placedStickers = (this.data.placedStickers || []).filter(p => !badStock.includes(p.stockId));
-        changed = true;
-      }
-      for (const trip of Object.values(this.data.trips || {})) {
-        const badClo = await dead(trip.closet);
-        if (badClo.length) {
-          trip.closet = (trip.closet || []).filter(o => !badClo.includes(o.id));
-          (trip.stops || []).forEach(s => (s.itinerary || []).forEach(day => {
-            if (day && Array.isArray(day.outfits)) day.outfits = day.outfits.filter(o => !badClo.includes(o.id));
-          }));
-          changed = true;
+    // Remove every memory / outfit / placement whose EFFECTIVE image is
+    // essentially all transparent (>=99%) — the "empty box" corruption. Covers
+    // the memory tray, page placements, the closet, and day-assigned outfits,
+    // resolving each to its embedded image or its source. New imports never emit
+    // a >98.5% transparent image, so this can't hit a good sticker. Re-runnable
+    // (pass force) so blanks that arrive via a later sync pull get cleaned too.
+    async sweepBlankStickers(force) {
+      if (this._sweeping) return;
+      if (!force && this._sweptBlanks) return;
+      this._sweptBlanks = true; this._sweeping = true;
+      try {
+        const BLANK = 0.99;
+        const blank = async (url) => url != null && (await this._transparentFraction(url)) >= BLANK;
+        let changed = false;
+
+        // memory tray
+        const badStock = new Set();
+        for (const s of this.data.stickerStock || []) if (await blank(s.image)) badStock.add(s.id);
+        if (badStock.size) { this.data.stickerStock = this.data.stickerStock.filter(s => !badStock.has(s.id)); changed = true; }
+
+        // page placements — resolve embedded image or stock source
+        const keepPlaced = [];
+        for (const p of this.data.placedStickers || []) {
+          const img = p.image || this.stockImage(p.stockId);
+          if (img == null || await blank(img)) changed = true; else keepPlaced.push(p);
         }
-      }
-      if (!changed) return;
-      this.saveLocalNow();
-      if (this.isLinked()) { this.sync.rev = Date.now(); this.persistSyncRec(); this.scheduleCloudPush(); }
-      this.render(); this.bumpModal(); this.touchMap();
+        if (keepPlaced.length !== (this.data.placedStickers || []).length) this.data.placedStickers = keepPlaced;
+
+        // closet + day outfits, per trip
+        for (const trip of Object.values(this.data.trips || {})) {
+          const closet = trip.closet || [];
+          const badClo = new Set();
+          for (const o of closet) if (await blank(o.image)) badClo.add(o.id);
+          if (badClo.size) { trip.closet = closet.filter(o => !badClo.has(o.id)); changed = true; }
+          for (const s of trip.stops || []) for (const day of s.itinerary || []) {
+            if (!day || !Array.isArray(day.outfits)) continue;
+            const keep = [];
+            for (const o of day.outfits) {
+              const img = o.image || this.closetImage(o.id, trip.closet);
+              if (img == null || await blank(img)) changed = true; else keep.push(o);
+            }
+            if (keep.length !== day.outfits.length) day.outfits = keep;
+          }
+        }
+
+        if (!changed) return;
+        this.saveLocalNow();
+        if (this.isLinked()) { this.sync.rev = Date.now(); this.persistSyncRec(); this.scheduleCloudPush(); }
+        this.render(); this.bumpModal(); this.touchMap();
+      } finally { this._sweeping = false; }
     }
     // Re-encode oversized stored images (legacy full-res stickers/outfits) through
     // the same downscale+WebP pipeline new images already use. Runs at most once
@@ -4553,6 +4571,7 @@ html { -webkit-tap-highlight-color: transparent; }
           this.saveLocalNow();
           this._syncBusy = false; this.setSyncStatus('synced', 'Updated from another device');
           this.render(); this.bumpModal(); this.touchMap();
+          this.sweepBlankStickers(true);   // clean any blank stickers that just arrived
         } else if (remoteRev < localRev) {
           // we hold newer edits (e.g. made offline) — push them up
           this._syncBusy = false; this.setSyncStatus('synced', ''); this.scheduleCloudPush();
@@ -4605,6 +4624,7 @@ html { -webkit-tap-highlight-color: transparent; }
       this.data = next; this.migrate(); this._lastCoordKey = '';
       if (this.isLinked()) this.setSyncStatus('synced', 'Updated from another window');
       this.render(); this.bumpModal(); this.touchMap(); this.paintSyncStatus();
+      this.sweepBlankStickers(true);   // clean any blank stickers that just arrived
     }
 
     /* ----- status UI ----- */
@@ -5818,9 +5838,14 @@ html { -webkit-tap-highlight-color: transparent; }
           let d; try { d = ctx.getImageData(0, 0, W, H); } catch (e) { resolve(this._encodeOpaque(canvas, dataUrl)); return; }
           const px = d.data;
           const n = px.length / 4;
-          let srcAlpha = false;
-          for (let i = 3; i < px.length; i += 4) { if (px[i] < 200) { srcAlpha = true; break; } }
-          if (srcAlpha) { resolve(this._encodeAlpha(canvas, dataUrl)); return; }  // already transparent — keep it (PNG)
+          let anyAlpha = false, fullyClear = 0;
+          for (let i = 3; i < px.length; i += 4) { const a = px[i]; if (a < 200) anyAlpha = true; if (a < 10) fullyClear++; }
+          // If the canvas came out (almost) fully transparent, the source could
+          // not be drawn (undecodable format) or is itself blank. NEVER store that
+          // — a blank PNG renders as an empty box on every device. Keep the
+          // original data instead, so the real image survives.
+          if (fullyClear / n >= 0.985) { resolve(dataUrl); return; }
+          if (anyAlpha) { resolve(this._encodeAlpha(canvas, dataUrl)); return; }  // genuine source transparency — keep as PNG
           if (!cut) { resolve(this._encodeOpaque(canvas, dataUrl)); return; }     // pure downscale (compaction)
           const samp = (x, y) => { const i = (y * W + x) * 4; return [px[i], px[i + 1], px[i + 2]]; };
           const corners = [samp(0, 0), samp(W - 1, 0), samp(0, H - 1), samp(W - 1, H - 1)];
