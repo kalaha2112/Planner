@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-13T23:40:52.279Z
+  Built: 2026-07-14T01:49:13.427Z
 -->
 
 <html lang="en">
@@ -3026,7 +3026,7 @@ html { -webkit-tap-highlight-color: transparent; }
   // Bump on each deploy. Shown in the Sync modal so both devices can confirm
   // they're running the same (latest) build — rawgithack/browser caching can
   // otherwise leave one device on an old copy where sticker fixes aren't present.
-  const BUILD_TAG = '2026-07-14 · stickers-2';
+  const BUILD_TAG = '2026-07-14 · stickers-3';
   const SYNC_POLL_MS  = 20000;                        // how often to pull while the tab is visible
   const CLOUD_PUSH_DEBOUNCE_MS = 900;                 // coalesce rapid edits into one upload
 
@@ -3651,6 +3651,62 @@ html { -webkit-tap-highlight-color: transparent; }
       // the store's cap and blocks ALL sync, so this unsticks devices that were
       // already carrying big memories/closet photos.
       setTimeout(() => this.compactStoredImages(), 1500);
+      // one-time sweep: remove memories/outfits that an older build corrupted
+      // into a fully-transparent ("black" on the dark page) image — they can't
+      // be fixed and are hard to delete by hand once invisible.
+      setTimeout(() => this.sweepBlankStickers(), 1800);
+    }
+    // Decode a data URL and return the fraction of fully-transparent pixels.
+    _transparentFraction(url) {
+      return new Promise(resolve => {
+        if (typeof url !== 'string' || url.indexOf('data:image/') !== 0) { resolve(0); return; }
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+            const x = c.getContext('2d'); x.drawImage(img, 0, 0);
+            const px = x.getImageData(0, 0, c.width, c.height).data;
+            let clear = 0; const n = px.length / 4;
+            for (let i = 3; i < px.length; i += 4) if (px[i] < 8) clear++;
+            resolve(n ? clear / n : 0);
+          } catch (e) { resolve(0); }   // tainted/undecodable — don't touch it
+        };
+        img.onerror = () => resolve(0);   // broken image is handled by <img onerror>, not here
+        img.src = url;
+      });
+    }
+    // Drop stock memories / closet outfits whose stored image is essentially all
+    // transparent (>98%) — the signature of the old knockout-to-black bug. New
+    // cutouts never exceed 85% transparent, so this can't hit a good sticker.
+    async sweepBlankStickers() {
+      if (this._sweptBlanks) return;
+      this._sweptBlanks = true;
+      const dead = async (arr) => {
+        const out = [];
+        for (const it of arr || []) if (it && it.image && (await this._transparentFraction(it.image)) > 0.98) out.push(it.id);
+        return out;
+      };
+      let changed = false;
+      const badStock = await dead(this.data.stickerStock);
+      if (badStock.length) {
+        this.data.stickerStock = this.data.stickerStock.filter(s => !badStock.includes(s.id));
+        this.data.placedStickers = (this.data.placedStickers || []).filter(p => !badStock.includes(p.stockId));
+        changed = true;
+      }
+      for (const trip of Object.values(this.data.trips || {})) {
+        const badClo = await dead(trip.closet);
+        if (badClo.length) {
+          trip.closet = (trip.closet || []).filter(o => !badClo.includes(o.id));
+          (trip.stops || []).forEach(s => (s.itinerary || []).forEach(day => {
+            if (day && Array.isArray(day.outfits)) day.outfits = day.outfits.filter(o => !badClo.includes(o.id));
+          }));
+          changed = true;
+        }
+      }
+      if (!changed) return;
+      this.saveLocalNow();
+      if (this.isLinked()) { this.sync.rev = Date.now(); this.persistSyncRec(); this.scheduleCloudPush(); }
+      this.render(); this.bumpModal(); this.touchMap();
     }
     // Re-encode oversized stored images (legacy full-res stickers/outfits) through
     // the same downscale+WebP pipeline new images already use. Runs at most once
@@ -3662,7 +3718,10 @@ html { -webkit-tap-highlight-color: transparent; }
       let changed = false;
       const shrink = async (url) => {
         if (typeof url !== 'string' || url.length <= BIG || url.indexOf('data:image/') !== 0) return url;
-        try { const out = await this.autoCutout(url); if (out && out.length < url.length) { changed = true; return out; } } catch (e) {}
+        // pure downscale — never re-run the background knockout on already-stored
+        // images (that could change their appearance and, worse, sync the change
+        // to every other device). Alpha is preserved.
+        try { const out = await this.autoCutout(url, { cut: false }); if (out && out.length < url.length) { changed = true; return out; } } catch (e) {}
         return url;
       };
       const d = this.data;
@@ -5729,11 +5788,21 @@ html { -webkit-tap-highlight-color: transparent; }
       }
       this.bump();
     }
-    autoCutout(dataUrl) {
-      // Cap every incoming image to STICKER_MAX_PX on its longest side before it
-      // enters state. Phone photos are multi-megapixel; unscaled base64 bloats
-      // the synced payload past the free JSON stores' size caps, so stickers
-      // (and every edit after them) silently fail to sync to other devices.
+    // Downscale an incoming photo and (optionally) knock out a plain background.
+    // Two hard rules keep this from ever producing a "black" sticker — i.e. an
+    // image that turned fully/mostly transparent and shows the dark page behind:
+    //   • the cutout only runs when the four corners actually agree on one
+    //     background colour (a real product-style shot); on an ordinary travel
+    //     photo the corners disagree, so we keep the photo intact.
+    //   • if the knockout would still clear most of the image, we discard it and
+    //     keep the photo opaque.
+    // Encoding is alpha-SAFE and deterministic across browsers: PNG when the
+    // result has transparency (iOS Safari's WebP-with-alpha is unreliable and
+    // can flatten transparency to black), JPEG when it's opaque (small, and no
+    // alpha channel to mishandle). No WebP — its cross-browser alpha behaviour
+    // is exactly what corrupted stickers to black on sync.
+    autoCutout(dataUrl, opts) {
+      const cut = !opts || opts.cut !== false;
       const MAX = 512;
       return new Promise(resolve => {
         const img = new Image();
@@ -5743,36 +5812,43 @@ html { -webkit-tap-highlight-color: transparent; }
           const H = Math.max(1, Math.round(img.height * scale));
           const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
           const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, W, H);
-          const scaled = () => this._encodeSticker(canvas, dataUrl);
-          let d; try { d = ctx.getImageData(0, 0, W, H); } catch (e) { resolve(scaled()); return; }
+          let d; try { d = ctx.getImageData(0, 0, W, H); } catch (e) { resolve(this._encodeOpaque(canvas, dataUrl)); return; }
           const px = d.data;
-          let hasAlpha = false;
-          for (let i = 3; i < px.length; i += 4) { if (px[i] < 200) { hasAlpha = true; break; } }
-          if (hasAlpha) { resolve(scaled()); return; }   // keep existing transparency, just downscaled
+          const n = px.length / 4;
+          let srcAlpha = false;
+          for (let i = 3; i < px.length; i += 4) { if (px[i] < 200) { srcAlpha = true; break; } }
+          if (srcAlpha) { resolve(this._encodeAlpha(canvas, dataUrl)); return; }  // already transparent — keep it (PNG)
+          if (!cut) { resolve(this._encodeOpaque(canvas, dataUrl)); return; }     // pure downscale (compaction)
           const samp = (x, y) => { const i = (y * W + x) * 4; return [px[i], px[i + 1], px[i + 2]]; };
           const corners = [samp(0, 0), samp(W - 1, 0), samp(0, H - 1), samp(W - 1, H - 1)];
           const bg = corners.reduce((a, c) => [a[0] + c[0], a[1] + c[1], a[2] + c[2]], [0, 0, 0]).map(v => v / 4);
+          // corners must agree on one colour, or this isn't a knock-out-able background
+          const spread = corners.reduce((m, c) => Math.max(m, Math.hypot(c[0] - bg[0], c[1] - bg[1], c[2] - bg[2])), 0);
+          if (spread > 40) { resolve(this._encodeOpaque(canvas, dataUrl)); return; }  // real photo → leave intact
+          let cleared = 0;
           for (let i = 0; i < px.length; i += 4) {
             const dr = px[i] - bg[0], dg = px[i + 1] - bg[1], db = px[i + 2] - bg[2];
             const dist = Math.sqrt(dr * dr + dg * dg + db * db);
-            if (dist < 42) px[i + 3] = 0; else if (dist < 85) px[i + 3] = Math.round((dist - 42) / 43 * 255);
+            if (dist < 42) { px[i + 3] = 0; cleared++; } else if (dist < 85) px[i + 3] = Math.round((dist - 42) / 43 * 255);
           }
-          ctx.putImageData(d, 0, 0); resolve(this._encodeSticker(canvas, dataUrl));
+          // knockout ate almost everything → it wasn't a background; keep the photo
+          if (cleared / n > 0.85) { resolve(this._encodeOpaque(canvas, dataUrl)); return; }
+          ctx.putImageData(d, 0, 0); resolve(this._encodeAlpha(canvas, dataUrl));
         };
         img.onerror = () => resolve(dataUrl);
         img.src = dataUrl;
       });
     }
-    // Encode a (downscaled) sticker canvas as compactly as the browser allows.
-    // WebP is lossy AND keeps the alpha the cutout produces, so it's ~5-10× the
-    // size of the equivalent PNG — the difference between a sticker that syncs
-    // and one that overflows the store. Falls back to PNG (alpha-safe) where
-    // WebP isn't supported, and to the original data URL only if encoding fails.
-    _encodeSticker(canvas, fallbackUrl) {
-      try {
-        const webp = canvas.toDataURL('image/webp', 0.82);
-        if (webp.indexOf('data:image/webp') === 0) return webp;
-      } catch (e) {}
+    // Transparency present — PNG is the only format that keeps alpha identically
+    // on every browser (a cut-out is mostly transparent, so it still compresses
+    // small). Falls back to the original data URL only if encoding fails.
+    _encodeAlpha(canvas, fallbackUrl) {
+      try { return canvas.toDataURL('image/png'); } catch (e) { return fallbackUrl; }
+    }
+    // Opaque image — JPEG is small, universally decodable, and has no alpha to
+    // flatten to black. Falls back to PNG, then the original.
+    _encodeOpaque(canvas, fallbackUrl) {
+      try { const j = canvas.toDataURL('image/jpeg', 0.85); if (j.indexOf('data:image/jpeg') === 0) return j; } catch (e) {}
       try { return canvas.toDataURL('image/png'); } catch (e) { return fallbackUrl; }
     }
 
