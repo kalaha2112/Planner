@@ -76,7 +76,7 @@
   // Bump on each deploy. Shown in the Sync modal so both devices can confirm
   // they're running the same (latest) build — rawgithack/browser caching can
   // otherwise leave one device on an old copy where sticker fixes aren't present.
-  const BUILD_TAG = '2026-07-14 · stickers-3';
+  const BUILD_TAG = '2026-07-14 · stickers-4';
   const SYNC_POLL_MS  = 20000;                        // how often to pull while the tab is visible
   const CLOUD_PUSH_DEBOUNCE_MS = 900;                 // coalesce rapid edits into one upload
 
@@ -778,17 +778,18 @@
       // shrink the source images (closet + memory tray) …
       for (const s of d.stickerStock || []) s.image = await shrink(s.image);
       for (const trip of Object.values(d.trips || {})) for (const o of trip.closet || []) o.image = await shrink(o.image);
-      // … then drop embedded duplicate copies wherever the source still holds the
-      // picture (orphans are shrunk in place so a deleted source stays visible)
+      // … then make sure every placement carries its own (shrunk) image: prefer
+      // the source copy so it stays in step, otherwise shrink the embedded one.
+      // Placements stay self-contained so any app version can render them.
       for (const ps of d.placedStickers || []) {
         const st = (d.stickerStock || []).find(s => s.id === ps.stockId);
-        if (st && st.image != null) { if (ps.image != null) { delete ps.image; changed = true; } }
+        if (st && st.image != null) { if (ps.image !== st.image) { ps.image = st.image; changed = true; } }
         else if (ps.image != null) { const out = await shrink(ps.image); if (out !== ps.image) { ps.image = out; changed = true; } }
       }
       for (const trip of Object.values(d.trips || {})) {
         for (const stop of trip.stops || []) for (const day of stop.itinerary || []) for (const outfit of (day && day.outfits) || []) {
           const co = (trip.closet || []).find(c => c.id === outfit.id);
-          if (co && co.image != null) { if (outfit.image != null) { delete outfit.image; changed = true; } }
+          if (co && co.image != null) { if (outfit.image !== co.image) { outfit.image = co.image; changed = true; } }
           else if (outfit.image != null) { const out = await shrink(outfit.image); if (out !== outfit.image) { outfit.image = out; changed = true; } }
         }
       }
@@ -1368,23 +1369,24 @@
       if (!Array.isArray(d.stickerStock)) d.stickerStock = [];
       if (!Array.isArray(d.placedStickers)) d.placedStickers = [];
       d.placedStickers.forEach(ps => { if (!ps.target) ps.target = 'page'; });
-      // De-duplicate image data: outfits/placedStickers reference the closet /
-      // stickerStock as the single source of truth. Drop any embedded image copy
-      // where the source still holds the picture (orphaned copies are kept so a
-      // deleted source doesn't blank its placements). This runs on every load /
-      // sync-pull, so bloated state saved by older builds shrinks in place —
-      // small enough to persist to localStorage and cross devices via the sync
-      // stores' size caps.
+      // Make every placement self-contained: outfits/placedStickers each carry
+      // their OWN embedded image, populated from the closet / stickerStock source
+      // when missing. (An earlier build stripped these to bare id references to
+      // save space — but a device running that build syncs stripped data to a
+      // device running an older build, which can't resolve the reference and
+      // renders an empty sticker: black on the dark page, white on the light one.
+      // Keeping the image embedded means ANY version can read it.) Runs on every
+      // load / sync-pull, so it heals data an intermediate build had stripped.
       Object.values(d.trips || {}).forEach(trip => {
         const closet = trip.closet || [];
         (trip.stops || []).forEach(s => (s.itinerary || []).forEach(day => {
           if (day && Array.isArray(day.outfits)) day.outfits.forEach(o => {
-            if (o && o.image != null && closet.some(c => c.id === o.id)) delete o.image;
+            if (o && o.image == null) { const c = closet.find(c => c.id === o.id); if (c && c.image != null) o.image = c.image; }
           });
         }));
       });
       d.placedStickers.forEach(ps => {
-        if (ps.image != null && d.stickerStock.some(s => s.id === ps.stockId)) delete ps.image;
+        if (ps.image == null) { const s = d.stickerStock.find(s => s.id === ps.stockId); if (s && s.image != null) ps.image = s.image; }
       });
     }
 
@@ -2804,13 +2806,14 @@
       const drag = this._plannerDrag; if (!drag) return;
       if (drag.kind === 'closet') {
         const arr = this.dayOutfits(this.currentTrip().stops[targetStopIdx], targetDayIdx);
-        if (!arr.some(e => e.id === drag.id)) arr.push({ id: drag.id });
+        // embed the image so the day is self-contained for any app version
+        if (!arr.some(e => e.id === drag.id)) arr.push({ id: drag.id, image: this.closetImage(drag.id) });
       } else if (drag.kind === 'day') {
         if (drag.stopIdx === targetStopIdx && drag.dayIdx === targetDayIdx) { this._plannerDrag = null; return; }
         const fromArr = this.dayOutfits(this.currentTrip().stops[drag.stopIdx], drag.dayIdx);
         const i = fromArr.findIndex(e => e.id === drag.id); if (i >= 0) fromArr.splice(i, 1);
         const toArr = this.dayOutfits(this.currentTrip().stops[targetStopIdx], targetDayIdx);
-        if (!toArr.some(e => e.id === drag.id)) toArr.push({ id: drag.id });
+        if (!toArr.some(e => e.id === drag.id)) toArr.push({ id: drag.id, image: this.closetImage(drag.id) });
       } else if (drag.kind === 'activity') {
         if (drag.stopIdx === targetStopIdx && drag.dayIdx === targetDayIdx) { this._plannerDrag = null; return; }
         const stop = this.currentTrip().stops[targetStopIdx];
@@ -2831,10 +2834,10 @@
       const closet = this.ensureCloset();
       const id = 'o' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       closet.push({ id, image: dataUrl });
-      // auto-assign to the open day if any (id-only reference — image lives in the closet)
+      // auto-assign to the open day if any (self-contained — embed the image)
       if (this.openStopIdx != null && this.activeDay != null) {
         const arr = this.dayOutfits(this.currentTrip().stops[this.openStopIdx], this.activeDay);
-        if (!arr.some(e => e.id === id)) arr.push({ id });
+        if (!arr.some(e => e.id === id)) arr.push({ id, image: dataUrl });
       }
       this.bump();
     }
@@ -2927,8 +2930,9 @@
       const id = 'ps' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
       const stock = this.data.stickerStock.find(s => s.id === stockId);
       if (!stock) return;
-      // store the reference only — the image is looked up from stickerStock at render
-      this.data.placedStickers.push({ id, stockId, x: Math.round(x), y: Math.round(y), w: 80, target });
+      // embed the image so the placement is self-contained — any app version
+      // (old or new) can render it without resolving the stockId reference
+      this.data.placedStickers.push({ id, stockId, image: stock.image, x: Math.round(x), y: Math.round(y), w: 80, target });
       this.bump();
     }
     removePlacedSticker(id) {
@@ -3743,7 +3747,7 @@
 
     renderPlacedStickers(target = 'page') {
       return (this.data.placedStickers || []).filter(ps => (ps.target || 'page') === target).map(ps => {
-        const img = this.stockImage(ps.stockId) || ps.image;
+        const img = ps.image || this.stockImage(ps.stockId);
         if (!img) return '';
         return `<div class="placed-sticker" data-placed-id="${escA(ps.id)}" style="left:${ps.x}px;top:${ps.y}px;width:${ps.w || 80}px">
           <img src="${escA(img)}" draggable="false" onerror="var s=this.closest('.placed-sticker'); if(s) s.style.display='none'">
@@ -3775,7 +3779,7 @@
           const active = idx === activeDay;
           const outfits = (itinerary[idx] && Array.isArray(itinerary[idx].outfits)) ? itinerary[idx].outfits : [];
           const first = outfits[0];
-          const img = first ? (this.closetImage(first.id, closet) || first.image || null) : null;
+          const img = first ? (first.image || this.closetImage(first.id, closet) || null) : null;
           const hasOotd = !!img;
           cells += `<button class="cal-cell${active ? ' active' : ''}" data-act="cal-day" data-drop="cell" data-i="${idx}"${hasOotd ? ` draggable="true" data-drag="cell" data-i="${idx}"` : ''}>
             <span>${dd}</span>${img ? `<img src="${escA(img)}" draggable="false" onerror="this.style.display='none'">` : ''}</button>`;
