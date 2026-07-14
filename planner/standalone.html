@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-14T02:44:38.594Z
+  Built: 2026-07-14T02:50:52.434Z
 -->
 
 <html lang="en">
@@ -3026,7 +3026,7 @@ html { -webkit-tap-highlight-color: transparent; }
   // Bump on each deploy. Shown in the Sync modal so both devices can confirm
   // they're running the same (latest) build — rawgithack/browser caching can
   // otherwise leave one device on an old copy where sticker fixes aren't present.
-  const BUILD_TAG = '2026-07-14 · stickers-8 (inspect)';
+  const BUILD_TAG = '2026-07-14 · stickers-9 (inspect2)';
   const SYNC_POLL_MS  = 20000;                        // how often to pull while the tab is visible
   const CLOUD_PUSH_DEBOUNCE_MS = 900;                 // coalesce rapid edits into one upload
 
@@ -7160,7 +7160,13 @@ html { -webkit-tap-highlight-color: transparent; }
       const items = [];
       (this.data.stickerStock || []).forEach((s, i) => items.push(['mem ' + (i + 1), s.image]));
       (this.data.placedStickers || []).forEach((p, i) => items.push(['placed ' + (i + 1), p.image]));
-      if (!items.length) { host.textContent = 'no stickers stored on this device'; return; }
+      // also every closet outfit and day-assigned outfit, across all trips
+      Object.entries(this.data.trips || {}).forEach(([k, trip]) => {
+        (trip.closet || []).forEach((o, i) => items.push([`closet(${k}) ${i + 1}`, o.image]));
+        (trip.stops || []).forEach((s, si) => (s.itinerary || []).forEach((day, di) =>
+          (day && day.outfits || []).forEach((o) => items.push([`outfit(${k} s${si + 1}d${di + 1})`, o.image]))));
+      });
+      if (!items.length) { host.textContent = 'NO sticker/outfit images stored on this device at all — so nothing has synced here. Check the endpoint above matches the other device.'; return; }
       const lines = [];
       for (const [label, url] of items) {
         lines.push(await this._analyzeOneImage(label, url));
