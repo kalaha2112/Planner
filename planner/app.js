@@ -76,7 +76,7 @@
   // Bump on each deploy. Shown in the Sync modal so both devices can confirm
   // they're running the same (latest) build — rawgithack/browser caching can
   // otherwise leave one device on an old copy where sticker fixes aren't present.
-  const BUILD_TAG = '2026-07-14 · stickers-6 (diag)';
+  const BUILD_TAG = '2026-07-14 · stickers-7';
   const SYNC_POLL_MS  = 20000;                        // how often to pull while the tab is visible
   const CLOUD_PUSH_DEBOUNCE_MS = 900;                 // coalesce rapid edits into one upload
 
@@ -2841,21 +2841,20 @@
       }
       this.bump();
     }
-    // Downscale an incoming photo and (optionally) knock out a plain background.
-    // Two hard rules keep this from ever producing a "black" sticker — i.e. an
-    // image that turned fully/mostly transparent and shows the dark page behind:
-    //   • the cutout only runs when the four corners actually agree on one
-    //     background colour (a real product-style shot); on an ordinary travel
-    //     photo the corners disagree, so we keep the photo intact.
-    //   • if the knockout would still clear most of the image, we discard it and
-    //     keep the photo opaque.
-    // Encoding is alpha-SAFE and deterministic across browsers: PNG when the
-    // result has transparency (iOS Safari's WebP-with-alpha is unreliable and
-    // can flatten transparency to black), JPEG when it's opaque (small, and no
-    // alpha channel to mishandle). No WebP — its cross-browser alpha behaviour
-    // is exactly what corrupted stickers to black on sync.
+    // Import an image faithfully — the Goodnotes model. Goodnotes never guesses
+    // at a background: a sticker is transparent only because its source PNG was
+    // authored that way, and an inserted photo stays a photo. So by DEFAULT we do
+    // NOT knock anything out — we just downscale and re-encode, preserving the
+    // source's own transparency and NEVER creating new transparency. That kills
+    // the "black/white box" entirely: a photo becomes an opaque image, which
+    // cannot show the page through it on any device or theme.
+    //   • source already has alpha (a real sticker PNG) -> keep it, encode PNG.
+    //   • opaque photo -> encode JPEG (small, universal, no alpha to mishandle).
+    // The heuristic knockout survives behind opts.cut === true for a future
+    // opt-in "remove background" button, but is off by default. No WebP — its
+    // cross-browser alpha behaviour is what flattened stickers to black on sync.
     autoCutout(dataUrl, opts) {
-      const cut = !opts || opts.cut !== false;
+      const cut = !!(opts && opts.cut === true);   // faithful import by default; knockout is opt-in only
       const MAX = 512;
       return new Promise(resolve => {
         const img = new Image();
