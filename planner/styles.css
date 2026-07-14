@@ -571,6 +571,16 @@ a { color: inherit; }
 /* pointer-drag feedback when moving an activity onto another day */
 .item.drag-source { opacity: .4; }
 .cal-cell.drag-target { outline: 3px solid var(--red); outline-offset: -2px; background: var(--cal-hover); }
+.cal-cell.drag-source { opacity: .4; }
+/* an outfit box drives its own pointer drag on touch — don't let the page scroll steal it */
+.cal-cell[data-drag="cell"] { touch-action: none; }
+/* invisible-until-you-look paste target that appears in a highlighted empty day */
+.cal-paste {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-family: var(--sans); font-weight: 300; font-size: 30px; line-height: 1;
+  color: var(--ink-faint); opacity: .35; cursor: pointer; border-radius: var(--r-cell);
+}
+.cal-paste:hover { opacity: .85; color: var(--red); background: var(--cal-hover); }
 .drag-ghost {
   position: fixed; z-index: 1200; pointer-events: none;
   transform: translate(-50%, -150%);

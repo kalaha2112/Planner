@@ -76,7 +76,7 @@
   // Bump on each deploy. Shown in the Sync modal so both devices can confirm
   // they're running the same (latest) build — rawgithack/browser caching can
   // otherwise leave one device on an old copy where sticker fixes aren't present.
-  const BUILD_TAG = '2026-07-14 · stickers-12';
+  const BUILD_TAG = '2026-07-14 · outfit-paste-1';
   // djb2 checksum over the serialized state. Embedded in the synced payload so a
   // reader can tell whether the free JSON store round-tripped the data intact —
   // large base64 images can get mangled in transit (a character-level change
@@ -2827,6 +2827,37 @@
     stockImage(stockId) { const s = (this.data.stickerStock || []).find(x => x.id === stockId); return s ? s.image : ''; }
     dayOutfits(stop, dayIdx) { this.ensureItinerary(stop); const d = stop.itinerary[dayIdx] || (stop.itinerary[dayIdx] = { items: [], outfits: [] }); if (!Array.isArray(d.outfits)) d.outfits = []; return d.outfits; }
     toggleOutfitOnDay(id, stopIdx, dayIdx) { const arr = this.dayOutfits(this.currentTrip().stops[stopIdx], dayIdx); const i = arr.findIndex(e => e.id === id); if (i >= 0) arr.splice(i, 1); this.bump(); }
+    // Paste / drop an outfit image straight onto a calendar day box. The image is
+    // embedded on the day (self-contained → syncs and any build can render it),
+    // downscaled small to keep it under the sync store's fragile size for images.
+    async addOutfitToDay(file, stopIdx, dayIdx) {
+      if (!file || !file.type.startsWith('image/')) return;
+      if (stopIdx == null || dayIdx == null) return;
+      const url = await new Promise(r => { const fr = new FileReader(); fr.onload = e => r(e.target.result); fr.readAsDataURL(file); });
+      const dataUrl = await this.autoCutout(url, { maxPx: 384 });
+      const id = 'o' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      const arr = this.dayOutfits(this.currentTrip().stops[stopIdx], dayIdx);
+      arr.length = 0;                       // one outfit per day box
+      arr.push({ id, image: dataUrl });
+      this.bump();
+    }
+    // Touch / no-keyboard path: read the clipboard and drop the image on the
+    // highlighted day (⌘/Ctrl-V is handled in onPaste for keyboard users).
+    async pasteOutfitToActiveDay() {
+      if (this.openStopIdx == null || this.activeDay == null) return;
+      if (!(navigator.clipboard && navigator.clipboard.read)) { alert('Copy an outfit image first, then paste.'); return; }
+      try {
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+          const type = item.types.find(t => t.startsWith('image/'));
+          if (!type) continue;
+          const blob = await item.getType(type);
+          await this.addOutfitToDay(new File([blob], 'outfit.png', { type: blob.type || type }), this.openStopIdx, this.activeDay);
+          return;
+        }
+        alert('No image on the clipboard — copy or lift an outfit image first, then tap Paste.');
+      } catch (e) { alert('Couldn’t read the clipboard. Copy/lift an image, then tap the day again and allow clipboard access.'); }
+    }
     removeOutfitFromCloset(id) {
       const t = this.currentTrip();
       const src = (t.closet || []).find(o => o.id === id);
@@ -2893,7 +2924,7 @@
     // cross-browser alpha behaviour is what flattened stickers to black on sync.
     autoCutout(dataUrl, opts) {
       const cut = !!(opts && opts.cut === true);   // faithful import by default; knockout is opt-in only
-      const MAX = 512;
+      const MAX = (opts && opts.maxPx) || 512;      // callers can request a smaller cap (e.g. outfits, for sync)
       return new Promise(resolve => {
         const img = new Image();
         img.onload = () => {
@@ -3854,8 +3885,9 @@
           const first = outfits[0];
           const img = first ? (first.image || this.closetImage(first.id, closet) || null) : null;
           const hasOotd = !!img;
+          const pastePad = (active && !hasOotd) ? `<span class="cal-paste" data-act="cal-paste" data-i="${idx}" title="Paste an outfit here (⌘/Ctrl-V)">+</span>` : '';
           cells += `<button class="cal-cell${active ? ' active' : ''}" data-act="cal-day" data-drop="cell" data-i="${idx}"${hasOotd ? ` draggable="true" data-drag="cell" data-i="${idx}"` : ''}>
-            <span>${dd}</span>${img ? `<img src="${escA(img)}" draggable="false" onerror="this.style.display='none'">` : ''}</button>`;
+            <span>${dd}</span>${img ? `<img src="${escA(img)}" draggable="false" onerror="this.style.display='none'">` : ''}${pastePad}</button>`;
         }
         const dow = WEEK.map(l => `<div class="cal-dow">${l}</div>`).join('');
         months += `<div class="cal-month"><div class="label">${esc(label)}</div><div class="cal-grid">${dow}${cells}</div></div>`;
@@ -4435,6 +4467,7 @@
         case 'overlay-transport': if (e.target === t) this.closeTransport(); break;
         case 'transport-mode': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.mode = t.dataset.mode; if (leg.mode === 'flight' && leg.miles == null) leg.miles = 0; this.bump(); break; }
         case 'cal-day': { this.activeDay = (this.activeDay === i ? null : i); this._optimizeNote = null; this._selectedItem = null; this.bumpModal(); break; }
+        case 'cal-paste': { this.activeDay = i; this.pasteOutfitToActiveDay(); break; }
         case 'optimize-day': this.optimizeDay(); break;
         case 'optimize-dismiss': this._optimizeNote = null; this.bumpModal(); break;
         case 'add-item': this.addDayItem(trip.stops[this.openStopIdx], this.activeDay); break;
@@ -4621,7 +4654,12 @@
       e.preventDefault(); const drop = t.dataset.drop;
       if (drop === 'trip') { this.reorderTrips(this._dragKey, t.dataset.key); this._dragKey = null; }
       else if (drop === 'stop') { if (this._dragStopIdx != null) this.reorderStop(this._dragStopIdx, Number(t.dataset.i)); this._dragStopIdx = null; }
-      else if (drop === 'cell') { if (this.openStopIdx != null) this.plannerDrop(this.openStopIdx, Number(t.dataset.i)); }
+      else if (drop === 'cell') {
+        if (this.openStopIdx == null) return;
+        const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (f && f.type.startsWith('image/')) this.addOutfitToDay(f, this.openStopIdx, Number(t.dataset.i));  // dropped an image file → outfit on that day
+        else this.plannerDrop(this.openStopIdx, Number(t.dataset.i));                                          // moving an existing outfit
+      }
       else if (drop === 'closet-zone') { const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if (f && f.type.startsWith('image/')) this.addClosetSticker(f); }
       else if (drop === 'sticker-zone') {
         const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
@@ -4672,10 +4710,13 @@
         if (img) { e.preventDefault(); this.addClosetSticker(img.getAsFile()); }
         return;
       }
-      if (this.stickerPanelOpen) {
-        const items = (e.clipboardData && e.clipboardData.items) || [];
-        const img = [...items].find(it => it.type.startsWith('image/'));
-        if (img) { e.preventDefault(); this.addToStickerStock([img.getAsFile()]); }
+      const items = (e.clipboardData && e.clipboardData.items) || [];
+      const img = [...items].find(it => it.type.startsWith('image/'));
+      if (!img) return;
+      if (this.stickerPanelOpen) { e.preventDefault(); this.addToStickerStock([img.getAsFile()]); return; }
+      // a highlighted calendar day is the outfit paste target
+      if (this.openStopIdx != null && this.activeDay != null) {
+        e.preventDefault(); this.addOutfitToDay(img.getAsFile(), this.openStopIdx, this.activeDay);
       }
     }
     /* ---- pointer-based stop reordering (touch-friendly) ---- */
@@ -4859,6 +4900,9 @@
       if (e.pointerType === 'touch') {
         const stockEl = e.target.closest('.stock-item[data-drag="stock-sticker"]');
         if (stockEl && !e.target.closest('.stock-item__del')) { this._armStockStickerDrag(e, stockEl); return; }
+        // outfit box: drag to another day, or drag out of the calendar to remove
+        const outfitCell = e.target.closest('.cal-cell[data-drag="cell"]');
+        if (outfitCell) { this._armOutfitDrag(e, outfitCell); return; }
       }
       const sticker = e.target.closest('.placed-sticker');
       if (!sticker) return;
@@ -4922,6 +4966,61 @@
       document.removeEventListener('pointermove', this._onPM);
       this._resizingSticker = null;
       this.scheduleSave();
+    }
+    /* ---- pointer-based outfit drag between calendar days (touch; native HTML5
+       DnD never fires from touch on iOS). Armed on pointerdown; a floating ghost
+       appears once past the drag threshold so a tap still just selects the day.
+       Drop on another day → move; release off the calendar → remove. ---- */
+    _armOutfitDrag(e, cell) {
+      if (this.openStopIdx == null) return;
+      const dayIdx = Number(cell.dataset.i);
+      const stop = this.currentTrip().stops[this.openStopIdx];
+      const outfits = (stop.itinerary[dayIdx] && stop.itinerary[dayIdx].outfits) || [];
+      if (!outfits.length) return;
+      const image = outfits[0].image || this.closetImage(outfits[0].id);
+      this._outfitDrag = { id: outfits[0].id, image, dayIdx, srcCell: cell, ghost: null, targetCell: null, pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, moved: false };
+      this._onOFM = (ev) => this._doOutfitDrag(ev);
+      this._onOFU = (ev) => this._endOutfitDrag(ev);
+      document.addEventListener('pointermove', this._onOFM, { passive: false });
+      document.addEventListener('pointerup', this._onOFU, { once: true });
+      document.addEventListener('pointercancel', this._onOFU, { once: true });
+    }
+    _doOutfitDrag(e) {
+      const d = this._outfitDrag; if (!d) return;
+      if (!d.moved) {
+        if (Math.abs(e.clientX - d.startX) < 5 && Math.abs(e.clientY - d.startY) < 5) return;
+        d.moved = true;
+        const ghost = document.createElement('img');
+        ghost.src = d.image; ghost.className = 'sticker-drag-ghost';
+        document.body.appendChild(ghost); d.ghost = ghost;
+        d.srcCell.classList.add('drag-source');
+        try { d.srcCell.setPointerCapture(d.pointerId); } catch (_) {}
+      }
+      if (e.cancelable) e.preventDefault();
+      d.ghost.style.left = e.clientX + 'px'; d.ghost.style.top = e.clientY + 'px';
+      const under = document.elementFromPoint(e.clientX, e.clientY);
+      const cell = under ? under.closest('.cal-cell[data-drop="cell"]') : null;
+      if (cell !== d.targetCell) {
+        if (d.targetCell) d.targetCell.classList.remove('drag-target');
+        d.targetCell = cell;
+        if (cell) cell.classList.add('drag-target');
+      }
+    }
+    _endOutfitDrag(e) {
+      const d = this._outfitDrag; if (!d) return;
+      document.removeEventListener('pointermove', this._onOFM);
+      this._outfitDrag = null;
+      if (d.ghost) d.ghost.remove();
+      if (d.srcCell) d.srcCell.classList.remove('drag-source');
+      if (d.targetCell) d.targetCell.classList.remove('drag-target');
+      if (!d.moved) return;   // a tap — let the click handler select the day
+      const targetIdx = d.targetCell ? Number(d.targetCell.dataset.i) : null;
+      if (targetIdx != null && targetIdx !== d.dayIdx) {
+        this._plannerDrag = { kind: 'day', id: d.id, stopIdx: this.openStopIdx, dayIdx: d.dayIdx };
+        this.plannerDrop(this.openStopIdx, targetIdx);   // move the outfit to the new day
+      } else if (targetIdx == null) {
+        this.toggleOutfitOnDay(d.id, this.openStopIdx, d.dayIdx);   // dropped off the calendar → remove
+      }
     }
     /* ---- pointer-based memory drag out of the tray (touch; native HTML5 DnD
        handles the mouse). Armed on pointerdown, but a floating ghost only
