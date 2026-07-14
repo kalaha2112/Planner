@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-14T03:50:03.380Z
+  Built: 2026-07-14T03:59:50.211Z
 -->
 
 <html lang="en">
@@ -3026,7 +3026,7 @@ html { -webkit-tap-highlight-color: transparent; }
   // Bump on each deploy. Shown in the Sync modal so both devices can confirm
   // they're running the same (latest) build — rawgithack/browser caching can
   // otherwise leave one device on an old copy where sticker fixes aren't present.
-  const BUILD_TAG = '2026-07-14 · stickers-11';
+  const BUILD_TAG = '2026-07-14 · stickers-12';
   // djb2 checksum over the serialized state. Embedded in the synced payload so a
   // reader can tell whether the free JSON store round-tripped the data intact —
   // large base64 images can get mangled in transit (a character-level change
@@ -3114,8 +3114,7 @@ html { -webkit-tap-highlight-color: transparent; }
         return JSON.stringify(r.obj);   // hand cloudGet clean JSON
       },
       async put(id, body) {
-        let wantRev, wantSum;
-        try { const b = JSON.parse(body); wantRev = b.rev; wantSum = b.sum; } catch (e) {}
+        let wantRev; try { wantRev = JSON.parse(body).rev; } catch (e) {}
         const writes = this._writes(id, body);
         const order = this._strat != null
           ? [this._strat, ...writes.map((_, i) => i).filter((i) => i !== this._strat)]
@@ -3126,13 +3125,8 @@ html { -webkit-tap-highlight-color: transparent; }
           try { res = await fetch(writes[i].url, writes[i].opt); } catch (e) { throw e; }  // unreachable → bubble up
           lastStatus = res.status;
           if (res.ok) {
-            const r = await this._readObj(id);   // confirm OUR write round-trips — matching rev AND data intact
-            const revOk = r.obj && (wantRev == null || r.obj.rev === wantRev);
-            // reject a format that corrupts the data (e.g. mangles base64): the
-            // re-read data must still match its own embedded checksum
-            const dataOk = r.obj && (wantSum == null || (r.obj.data && syncChecksum(JSON.stringify(r.obj.data)) === r.obj.sum));
-            if (revOk && dataOk) { this._strat = i; return; }
-            this._strat = null;   // this format isn't safe — don't stick with it
+            const r = await this._readObj(id);   // confirm OUR write (matching rev) actually round-trips
+            if (r.obj && (wantRev == null || r.obj.rev === wantRev)) { this._strat = i; return; }
           }
         }
         throw new Error('textdb: endpoint did not store the data (HTTP ' + (lastStatus || 0) + ').');
@@ -4420,15 +4414,13 @@ html { -webkit-tap-highlight-color: transparent; }
       if (!txt) throw _notFound();
       let payload;
       try { payload = JSON.parse(txt); } catch (e) { throw new Error('Synced data was unreadable.'); }
-      // integrity gate: if the store mangled the payload in transit (e.g. a big
-      // base64 image), the embedded checksum won't match — reject rather than
-      // adopt corrupt data that would render as a broken/empty box and then sync
-      // back. (Payloads from older builds have no sum; those pass through.)
-      if (payload && payload.sum != null && payload.data) {
-        if (syncChecksum(JSON.stringify(payload.data)) !== payload.sum) {
-          const err = new Error('Synced data was corrupted in transit.'); err.code = 'corrupt'; throw err;
-        }
-      }
+      // Integrity note (non-blocking): if a big base64 image was mangled in
+      // transit, the embedded checksum won't match. We do NOT reject the whole
+      // payload for that — one bad image must never block text sync (that stranded
+      // the app offline). Broken images are hidden by <img onerror> and blank ones
+      // are removed by the sweep; the flag just surfaces it in diagnostics.
+      this._lastSyncCorrupt = !!(payload && payload.sum != null && payload.data
+        && syncChecksum(JSON.stringify(payload.data)) !== payload.sum);
       return payload;
     }
     async cloudPut(code) {
@@ -7193,6 +7185,7 @@ html { -webkit-tap-highlight-color: transparent; }
         <div><b>this device shows</b> · trip "${escA(activeTrip)}" · ${memories} mem · ${placed} placed</div>
         <div><b>data size</b> · <span style="color:${big ? 'var(--red)' : 'inherit'}">${sizeKB} KB${big ? ' — likely too big for the free store; sync may be failing' : ''}</span></div>
         <div><b>status</b> · ${esc(this._syncStatus || 'off')}${this._syncMsg ? ' — ' + esc(this._syncMsg) : ''}</div>
+        ${this._lastSyncCorrupt ? `<div style="color:var(--red)"><b>image integrity</b> · a photo was mangled in transit (text still syncs; that image won't cross until we store photos separately)</div>` : ''}
         <div style="opacity:.7;margin-top:4px">Both devices must show the SAME endpoint AND the same trip once synced. If they differ, they aren't linked to each other.</div>
         <div style="margin-top:8px"><b>sticker check</b> <span style="opacity:.6">(read this on the device that shows a box)</span></div>
         <div id="sticker-check" style="white-space:pre-wrap;font-size:10px;opacity:.9">analyzing…</div>
