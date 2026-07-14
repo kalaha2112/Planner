@@ -76,7 +76,7 @@
   // Bump on each deploy. Shown in the Sync modal so both devices can confirm
   // they're running the same (latest) build — rawgithack/browser caching can
   // otherwise leave one device on an old copy where sticker fixes aren't present.
-  const BUILD_TAG = '2026-07-14 · outfit-paste-5';
+  const BUILD_TAG = '2026-07-14 · outfit-paste-6';
   // djb2 checksum over the serialized state. Embedded in the synced payload so a
   // reader can tell whether the free JSON store round-tripped the data intact —
   // large base64 images can get mangled in transit (a character-level change
@@ -3899,10 +3899,10 @@
           const img = first ? (first.image || this.closetImage(first.id, closet) || null) : null;
           const hasOotd = !!img;
           const pastePad = (active && !hasOotd) ? `<span class="cal-paste" data-act="cal-paste" data-i="${idx}" title="Paste an outfit here (⌘/Ctrl-V)">+</span>` : '';
-          // outfit cells carry data-drag="cell" (a marker); dragging is driven by
-          // the pointer handler for mouse AND touch — no native draggable, which
-          // iOS never fires from touch and which interfered with the pointer drag
-          cells += `<button class="cal-cell${active ? ' active' : ''}" data-act="cal-day" data-drop="cell" data-i="${idx}"${hasOotd ? ` data-drag="cell" data-i="${idx}"` : ''}>
+          // outfit cells: native HTML5 drag on the web (mouse) — how it always
+          // worked; the pointer handler drives the drag on touch only (iOS never
+          // fires native DnD from touch), matching the memory-tray pattern.
+          cells += `<button class="cal-cell${active ? ' active' : ''}" data-act="cal-day" data-drop="cell" data-i="${idx}"${hasOotd ? ` draggable="true" data-drag="cell" data-i="${idx}"` : ''}>
             <span>${dd}</span>${img ? `<img src="${escA(img)}" draggable="false" onerror="this.style.display='none'">` : ''}${pastePad}</button>`;
         }
         const dow = WEEK.map(l => `<div class="cal-dow">${l}</div>`).join('');
@@ -4913,12 +4913,12 @@
       // memory tray: drag a stock sticker out onto the page/dialog. Native HTML5
       // DnD carries this on mouse; touch needs the pointer path (iOS never fires
       // DnD from touch). Threshold-armed so a plain tap still isn't a drag.
-      // outfit box: drag to another day, or drag out of the calendar to remove.
-      // Pointer-driven for mouse AND touch (a tap still selects the day — the drag
-      // only starts past the move threshold).
-      const outfitCell = e.target.closest('.cal-cell[data-drag="cell"]');
-      if (outfitCell && !e.target.closest('.cal-paste')) { if (e.cancelable) e.preventDefault(); this._armOutfitDrag(e, outfitCell); return; }
       if (e.pointerType === 'touch') {
+        // touch: iOS never fires native DnD, so drive the outfit drag by pointer.
+        // (Mouse keeps using native HTML5 DnD via onDragStart/onDrop — how the
+        // web version has always worked.)
+        const outfitCell = e.target.closest('.cal-cell[data-drag="cell"]');
+        if (outfitCell && !e.target.closest('.cal-paste')) { if (e.cancelable) e.preventDefault(); this._armOutfitDrag(e, outfitCell); return; }
         const stockEl = e.target.closest('.stock-item[data-drag="stock-sticker"]');
         if (stockEl && !e.target.closest('.stock-item__del')) { this._armStockStickerDrag(e, stockEl); return; }
       }
