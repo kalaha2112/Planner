@@ -76,7 +76,7 @@
   // Bump on each deploy. Shown in the Sync modal so both devices can confirm
   // they're running the same (latest) build — rawgithack/browser caching can
   // otherwise leave one device on an old copy where sticker fixes aren't present.
-  const BUILD_TAG = '2026-07-14 · stickers-7';
+  const BUILD_TAG = '2026-07-14 · stickers-8 (inspect)';
   const SYNC_POLL_MS  = 20000;                        // how often to pull while the tab is visible
   const CLOUD_PUSH_DEBOUNCE_MS = 900;                 // coalesce rapid edits into one upload
 
@@ -1247,6 +1247,7 @@
       // modal-only re-render still has to (re)mount the per-day map node
       this.mountDayMap();
       this.updateTopActions();   // sticker toggle / sync-modal actions change cluster state
+      if (this.syncOpen) this._analyzeStickers();   // fill the sticker-check readout (mobile path)
     }
     // attach the persistent day-map node into the freshly-rendered markup and
     // (re)init Leaflet — the holder lives in the modal (app) or on leaf 3 (web)
@@ -3076,6 +3077,7 @@
       this.paintSaved();
       this.updateTopActions();
       this._backfillStickerFractions();   // upgrade legacy pixel-only placements to fractional
+      if (this.syncOpen) this._analyzeStickers();   // fill the sticker-check readout when the sync panel is open
     }
     // Older placements stored only pixel coords. Once they're on-screen, capture
     // their current position as a fraction of the layer so they carry across to
@@ -4192,7 +4194,49 @@
         <div><b>data size</b> · <span style="color:${big ? 'var(--red)' : 'inherit'}">${sizeKB} KB${big ? ' — likely too big for the free store; sync may be failing' : ''}</span></div>
         <div><b>status</b> · ${esc(this._syncStatus || 'off')}${this._syncMsg ? ' — ' + esc(this._syncMsg) : ''}</div>
         <div style="opacity:.7;margin-top:4px">Both devices must show the SAME endpoint AND the same trip once synced. If they differ, they aren't linked to each other.</div>
+        <div style="margin-top:8px"><b>sticker check</b> <span style="opacity:.6">(read this on the device that shows a box)</span></div>
+        <div id="sticker-check" style="white-space:pre-wrap;font-size:10px;opacity:.9">analyzing…</div>
       </div>`;
+    }
+    // Inspect every stored sticker image ON THIS DEVICE and report exactly what
+    // it is: format, size, pixel dimensions, how much of it is transparent, and
+    // whether it even decodes. This is the ground truth that ends the guessing —
+    // a "box" sticker will show up here as e.g. "100% clear" (transparent) or
+    // "FAILS TO LOAD", a working one as "0% clear — OK".
+    async _analyzeStickers() {
+      const host = (this.modalEl && this.modalEl.querySelector('#sticker-check'))
+                || (this.root && this.root.querySelector('#sticker-check'));
+      if (!host) return;
+      const items = [];
+      (this.data.stickerStock || []).forEach((s, i) => items.push(['mem ' + (i + 1), s.image]));
+      (this.data.placedStickers || []).forEach((p, i) => items.push(['placed ' + (i + 1), p.image]));
+      if (!items.length) { host.textContent = 'no stickers stored on this device'; return; }
+      const lines = [];
+      for (const [label, url] of items) {
+        lines.push(await this._analyzeOneImage(label, url));
+        host.textContent = lines.join('\n');   // update as each resolves
+      }
+    }
+    _analyzeOneImage(label, url) {
+      return new Promise(resolve => {
+        if (typeof url !== 'string' || !url) { resolve(`${label}: NO IMAGE DATA (empty)`); return; }
+        const fmt = ((url.match(/^data:([^;,]+)/) || [])[1]) || 'not-a-data-url';
+        const kb = Math.round(url.length / 1024);
+        const img = new Image();
+        img.onload = () => {
+          let clear = '?';
+          try {
+            const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+            const x = c.getContext('2d'); x.drawImage(img, 0, 0);
+            const d = x.getImageData(0, 0, c.width, c.height).data;
+            let cl = 0, n = d.length / 4; for (let i = 3; i < d.length; i += 4) if (d[i] < 10) cl++;
+            clear = Math.round(cl / n * 100) + '% clear';
+          } catch (e) { clear = 'opaque?'; }
+          resolve(`${label}: ${fmt} ${kb}KB ${img.naturalWidth}×${img.naturalHeight} ${clear} — OK`);
+        };
+        img.onerror = () => resolve(`${label}: ${fmt} ${kb}KB — FAILS TO LOAD`);
+        img.src = url;
+      });
     }
 
     /* ============================================================
