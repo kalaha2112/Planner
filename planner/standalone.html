@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-14T15:46:45.045Z
+  Built: 2026-07-14T15:53:10.394Z
 -->
 
 <html lang="en">
@@ -1297,8 +1297,11 @@ a { color: inherit; }
 .cal-cell.drag-target { outline: 3px solid var(--red); outline-offset: -2px; background: var(--cal-hover); }
 .cal-cell.drag-source { opacity: .4; }
 /* an outfit box drives its own pointer drag on touch — don't let the page scroll steal it */
-.cal-cell[data-drag="cell"] { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-.cal-cell[data-drag="cell"] img { -webkit-user-drag: none; }
+/* touch-action:none lets the touch pointer-drag run; it doesn't affect the web's
+   native mouse drag. (Do NOT add -webkit-user-drag:none on the image or
+   user-select:none on the cell — in WebKit that blocks the native drag from
+   starting when you grab the outfit image.) */
+.cal-cell[data-drag="cell"] { touch-action: none; -webkit-touch-callout: none; }
 /* invisible-until-you-look paste target that appears in a highlighted empty day */
 .cal-paste {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
@@ -3037,7 +3040,7 @@ html { -webkit-tap-highlight-color: transparent; }
   // Bump on each deploy. Shown in the Sync modal so both devices can confirm
   // they're running the same (latest) build — rawgithack/browser caching can
   // otherwise leave one device on an old copy where sticker fixes aren't present.
-  const BUILD_TAG = '2026-07-14 · outfit-paste-6';
+  const BUILD_TAG = '2026-07-14 · outfit-paste-7';
   // djb2 checksum over the serialized state. Embedded in the synced payload so a
   // reader can tell whether the free JSON store round-tripped the data intact —
   // large base64 images can get mangled in transit (a character-level change
