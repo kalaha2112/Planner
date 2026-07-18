@@ -85,13 +85,14 @@
   // live via localStorage.
   const HOSTED_WEB_URL = 'https://kalaha2112.github.io/Planner/';
 
-  // ---- Supabase-backed account sync ----
-  // With an account, every device that signs in auto-syncs the same trips in
-  // realtime — no codes, no sync button. The publishable key is a client key by
-  // design (safe to ship); data is protected per-user by row-level security.
+  // ---- Supabase-backed shared sync ----
+  // No sign-in: every device that opens the app reads/writes one shared row and
+  // auto-syncs it in realtime. Anyone with the link shares these trips (intended
+  // for you + people you trust). The publishable key is a client key by design.
   const SUPABASE_URL = 'https://hqvojhssaciyncztkgzz.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_HonO-3xvVOuYt33iHgOPDQ_aEMxrz7n';
-  const CLOUD_TABLE = 'planner_state';
+  const CLOUD_TABLE = 'shared_state';
+  const SHARED_ID = 'kalaha-planner-shared';   // the single shared row every device syncs
 
   // Startup page headline (editable in place; persisted in meta.introText and synced)
   const DEFAULT_INTRO_TEXT = 'The first website was published in 1990 by computer scientist Tim Berners-Lee and now it seems like an eyesore. Early websites were basic few';
@@ -546,18 +547,16 @@
       }), { threshold: [0, .35] }) : null;
       this._wheelAcc = 0;           // trackpad delta accumulator for page turns
       this._wheelT = 0;
-      // ---- cloud sync (account-based via Supabase) ----
-      this.sync = this.loadSyncRec();   // { id, rev, lastSyncedAt }; id now = signed-in user id
-      this.sync.id = null;              // identity comes from the auth session, not localStorage
+      // ---- cloud sync (shared row via Supabase, no sign-in) ----
+      this.sync = this.loadSyncRec();   // { id, rev, lastSyncedAt }; id = the shared row once connected
+      this.sync.id = null;              // set to SHARED_ID once the cloud client is up
       this._sb = null;                  // lazily-created Supabase client
       this._rt = null;                  // realtime channel subscription
-      this._authEmail = null;           // signed-in account email (for the modal)
-      this._authLinkSent = null;        // email a magic link was just sent to
       this.syncOpen = false;            // sync modal open?
       this._syncBusy = false;           // an in-flight request guards against overlap
       this._syncStatus = 'off';         // off|syncing|synced|offline|error
       this._syncMsg = '';
-      this._syncCodeDraft = '';         // email draft in the sign-in field
+      this._syncCodeDraft = '';
       this._cloudPushTimer = null;
       this._syncPoll = null;
       this._stockStickerDrag = null;
@@ -694,9 +693,8 @@
         });
       } catch (e) { /* very old Safari: no MQL addEventListener — a reload still applies the right mode */ }
       this.startSyncLoop();
-      // Account sync: restore any existing session, react to sign-in/out, and once
-      // signed in load this account's trips and subscribe to realtime updates from
-      // other devices. A magic-link redirect (…?code=…) is exchanged automatically.
+      // Shared sync: connect to the shared row, load it (or seed it from this
+      // device), and subscribe to realtime updates from other devices. No sign-in.
       this.initCloud();
       // one-time cleanup: shrink any full-res images saved before stickers were
       // downscaled on intake. A single oversized sticker bloats the payload past
@@ -1315,75 +1313,37 @@
     netMsg(e) { return (e && e.message) ? e.message : 'Network error.'; }
     validPayload(p) { return !!(p && p.data && p.data.trips && p.data.meta); }
 
-    /* ----- Supabase client + auth ----- */
+    /* ----- Supabase client (no auth: shared row) ----- */
     sb() {
       if (this._sb) return this._sb;
       if (!(window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY)) return null;
       try {
         this._sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-          auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce' }
+          auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
         });
       } catch (e) { this._sb = null; }
       return this._sb;
     }
-    // Boot cloud sync: restore any session, react to sign-in/out, and once signed
-    // in load this account's trips + subscribe to realtime changes from other devices.
+    // Boot cloud sync: connect to the shared row, load it (or seed it from this
+    // device), and subscribe to realtime changes. No sign-in — every device that
+    // opens the app is on the same shared trips automatically.
     async initCloud() {
       const sb = this.sb();
       if (!sb) { this.setSyncStatus('off', ''); return; }
-      sb.auth.onAuthStateChange((_event, session) => this.onAuth(session));
-      try { const { data } = await sb.auth.getSession(); this.onAuth(data && data.session); }
-      catch (e) { this.setSyncStatus('off', ''); }
-    }
-    onAuth(session) {
-      const uid = session && session.user ? session.user.id : null;
-      const was = this.sync.id;
-      this.sync.id = uid;
-      this._authEmail = session && session.user ? session.user.email : null;
-      if (uid && uid !== was) {
-        this._authLinkSent = null;
-        this.setSyncStatus('syncing', 'Loading your trips…');
-        this.pullCloud({ force: true });     // adopt this account's trips (or seed them)
-        this.subscribeRealtime(uid);         // live updates from your other devices
-      } else if (!uid && was) {
-        this.unsubscribeRealtime();
-        this.setSyncStatus('off', '');
-      }
+      this.sync.id = SHARED_ID;
+      this.setSyncStatus('syncing', 'Connecting…');
+      this.pullCloud({ force: true });     // adopt shared trips (or seed them)
+      this.subscribeRealtime();            // live updates from other devices
       this.render(); this.bumpModal();
     }
-    // Send a one-tap magic sign-in link to the email; clicking it on any device
-    // signs that device in and starts auto-sync. No password.
-    async signInWithEmail(email) {
-      const sb = this.sb();
-      const addr = (email || '').trim();
-      if (!sb) { this.setSyncStatus('error', 'Sync unavailable — could not load Supabase.'); this.bumpModal(); return; }
-      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(addr)) { this.setSyncStatus('error', 'Enter a valid email address.'); this.bumpModal(); return; }
-      this.setSyncStatus('syncing', 'Sending link…'); this.bumpModal();
-      try {
-        const { error } = await sb.auth.signInWithOtp({ email: addr, options: { emailRedirectTo: location.origin + location.pathname } });
-        if (error) throw error;
-        this._authLinkSent = addr; this._syncCodeDraft = '';
-        this.setSyncStatus('synced', 'Check your email'); this.bumpModal();
-      } catch (e) {
-        this.setSyncStatus('error', this.netMsg(e) || 'Could not send the link.'); this.bumpModal();
-      }
-    }
-    async signOut() {
-      const sb = this.sb();
-      clearTimeout(this._cloudPushTimer);
-      this.unsubscribeRealtime();
-      try { if (sb) await sb.auth.signOut(); } catch (e) {}
-      this.sync.id = null; this._authEmail = null; this._authLinkSent = null;
-      this.setSyncStatus('off', ''); this.render(); this.bumpModal();
-    }
-    subscribeRealtime(uid) {
+    subscribeRealtime() {
       const sb = this.sb();
       if (!sb) return;
       this.unsubscribeRealtime();
       // A large row can exceed a realtime payload, so treat any change as a signal
       // to re-fetch the authoritative row rather than trusting the pushed copy.
-      this._rt = sb.channel('planner-' + uid)
-        .on('postgres_changes', { event: '*', schema: 'public', table: CLOUD_TABLE, filter: 'user_id=eq.' + uid }, () => this.pullCloud())
+      this._rt = sb.channel('planner-shared')
+        .on('postgres_changes', { event: '*', schema: 'public', table: CLOUD_TABLE, filter: 'id=eq.' + SHARED_ID }, () => this.pullCloud())
         .subscribe();
     }
     unsubscribeRealtime() {
@@ -1391,24 +1351,24 @@
       this._rt = null;
     }
 
-    /* ----- read / write this account's row ----- */
+    /* ----- read / write the shared row ----- */
     async cloudRowSelect() {
-      const sb = this.sb(); if (!sb || !this.sync.id) return null;
-      const { data, error } = await sb.from(CLOUD_TABLE).select('rev,data').eq('user_id', this.sync.id).maybeSingle();
+      const sb = this.sb(); if (!sb) return null;
+      const { data, error } = await sb.from(CLOUD_TABLE).select('rev,data').eq('id', SHARED_ID).maybeSingle();
       if (error) throw error;
       return data ? { rev: Number(data.rev) || 0, data: data.data } : null;
     }
     async cloudRowUpsert() {
-      const sb = this.sb(); if (!sb || !this.sync.id) return;
+      const sb = this.sb(); if (!sb) return;
       const { error } = await sb.from(CLOUD_TABLE).upsert(
-        { user_id: this.sync.id, rev: this.sync.rev || Date.now(), data: this.data, updated_at: new Date().toISOString() },
-        { onConflict: 'user_id' });
+        { id: SHARED_ID, rev: this.sync.rev || Date.now(), data: this.data, updated_at: new Date().toISOString() },
+        { onConflict: 'id' });
       if (error) throw error;
     }
     syncNow() { this.pullCloud({ force: true }); }
 
-    // "Open the web version" now just opens the published app — the other device
-    // signs into the same account and syncs automatically, no code to carry.
+    // "Open the web version" just opens the published app — the other device is
+    // already on the same shared trips automatically, nothing to carry.
     hostedWebUrl() { return HOSTED_WEB_URL; }
     openHostedWeb() { window.open(HOSTED_WEB_URL, '_blank', 'noopener'); }
 
@@ -3887,33 +3847,28 @@
       const statusCls = 's-' + (this._syncStatus || (linked ? 'synced' : 'off'));
       const when = this.sync.lastSyncedAt ? ('Last synced ' + this.relTime(this.sync.lastSyncedAt)) : '';
       const body = linked ? `
-        <p class="sync-lead">Signed in as <b>${esc(this._authEmail || 'your account')}</b>. Every edit saves automatically and syncs to all your signed-in devices in realtime — no button to press.</p>
+        <p class="sync-lead">Your trips sync automatically across every device that opens this app — no sign-in, no codes. Every edit saves and streams to the others in realtime.</p>
         <div class="sync-row">
           <span class="sync-status ${statusCls}">${esc(this.syncStatusLabel())}</span>
           <span class="sync-when">${esc(when)}</span>
         </div>
         <div class="sync-actions">
           <button class="sync-btn primary" data-act="sync-now"${this._syncBusy ? ' disabled' : ''}>Sync now</button>
-          <button class="sync-btn ghost" data-act="sign-out">Sign out</button>
+          <button class="sync-btn open-web-btn" data-act="open-web">Open the web version ↗</button>
         </div>
-        <button class="sync-btn open-web-btn" data-act="open-web">Open the web version ↗</button>
-        <p class="sync-note">To add another device, open the app there and sign in with the same email — your trips appear automatically. Offline edits upload the moment you're back online.</p>
+        <p class="sync-note">To add a device, just open this app's link there — the same trips appear automatically. Offline edits upload the moment you're back online.</p>
+        <p class="sync-note">Anyone with the link shares these trips, so keep it to people you trust.</p>
       ` : `
-        <p class="sync-lead">Sign in once on each device to keep your trips in sync automatically — no codes, no sync button. We email you a one-tap link; there's no password.</p>
-        <label class="sync-field-lbl">Your email</label>
-        <div class="sync-code-row">
-          <input class="sync-code-in" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" data-ch="sync-code-in" value="${escA(this._syncCodeDraft || '')}">
-          <button class="sync-btn primary" data-act="sign-in"${this._syncBusy ? ' disabled' : ''}>Email me a link</button>
-        </div>
+        <p class="sync-lead">Syncing your trips across devices…</p>
         <div class="sync-row"><span class="sync-status ${statusCls}">${esc(this.syncStatusLabel())}</span></div>
-        ${this._authLinkSent ? `<p class="sync-note">Link sent to <b>${esc(this._authLinkSent)}</b> — open it on this device to finish signing in. Check spam if it doesn't arrive.</p>` : `<p class="sync-note">Your trips are private to your account, secured by row-level security — only you can read or change them.</p>`}
+        <p class="sync-note">If this doesn't connect, the shared storage may be unreachable on this network — your edits are still saved on this device and will upload when the connection returns.</p>
       `;
       return `<div class="overlay" data-act="overlay-sync">
         <div class="dialog sync-dialog" data-stop>
           <div class="head"><div class="row">
             <div style="flex:1">
               <div class="eyebrow">Cross-device sync</div>
-              <div class="sync-title">${linked ? 'Synced' : 'Sign in to sync'}</div>
+              <div class="sync-title">${linked ? 'Auto-syncing' : 'Connecting…'}</div>
             </div>
             <button class="modal-x" data-act="close-sync">✕</button>
           </div></div>
@@ -4045,10 +4000,8 @@
         case 'open-sync': this.syncOpen = true; this.bumpModal(); break;
         case 'close-sync': this.syncOpen = false; this.bumpModal(); break;
         case 'overlay-sync': if (e.target === t) { this.syncOpen = false; this.bumpModal(); } break;
-        case 'sign-in': { const inp = this.modalEl.querySelector('.sync-code-in'); this.signInWithEmail(inp ? inp.value : this._syncCodeDraft); break; }
         case 'sync-now': this.syncNow(); break;
         case 'open-web': this.openHostedWeb(); break;
-        case 'sign-out': if (confirm('Sign out on this device? Your trips stay saved here and in your account; this device just stops auto-syncing until you sign in again.')) this.signOut(); break;
         case 'close-iti': this.closeStop(); break;
         case 'overlay-iti': if (e.target === t) this.closeStop(); break;
         case 'close-accom': this.closeAccom(); break;
