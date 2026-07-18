@@ -65,18 +65,20 @@ shell caches are cleaned up on activation).
 
 ## The hosted web version
 
-The single-file `standalone.html` is published via **rawgithack** from the `main` branch of
-this repo (kalaha2112/Planner, previously Project1):
+The full PWA is published via **GitHub Pages** from the `planner/` folder on the `main`
+branch of this repo (deployed by `.github/workflows/deploy-pages.yml`):
 
-<https://raw.githack.com/kalaha2112/Planner/main/planner/standalone.html>
+<https://kalaha2112.github.io/Planner/>
 
 The Sync modal is wired to this URL (`HOSTED_WEB_URL` in `app.js`): tap **Open the web
-version** and it opens the hosted planner with `?sync=<code>` appended, so the hosted page
-auto-connects to this device's endpoint and edits flow both ways. If the device isn't linked
-yet, the one-tap button first creates a sync endpoint, then opens the hosted page already
-linked. Because the URL tracks `main`, every merge to `main` updates the hosted copy — no
-URL bumping needed. (For heavy traffic, rawgithack recommends the permanent
-`rawcdn.githack.com/<user>/<repo>/<commit>/…` form; that one is pinned per commit.)
+version** and it opens the hosted planner with `?sync=<code>` appended, so the opened page
+auto-connects to this device's endpoint and edits flow both ways. Before it opens, this
+device flushes its most recent edit to the sync endpoint (uploads are debounced), so the
+other device never pulls a stale copy that's missing your newest trip. If the device isn't
+linked yet, the one-tap button first creates a sync endpoint, then opens the hosted page
+already linked. Because the deploy tracks `main`, every merge to `main` redeploys the hosted
+copy — no URL bumping needed. (Pages serves from a real HTTPS origin, so the service worker,
+offline cache and "install as app" all work — unlike the old rawgithack single-file host.)
 
 ## Keeping the app and the hosted standalone.html in sync (both ways)
 

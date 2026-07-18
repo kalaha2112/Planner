@@ -76,11 +76,14 @@
   const SYNC_POLL_MS  = 20000;                        // how often to pull while the tab is visible
   const CLOUD_PUSH_DEBOUNCE_MS = 900;                 // coalesce rapid edits into one upload
 
-  // Public web build (the single-file standalone.html served by rawgithack from
-  // the main branch of the Planner repo — always the latest merged build). The
-  // Sync modal links here, carrying "?sync=<code>" so the hosted page
-  // auto-connects to this device's endpoint — two-way sync.
-  const HOSTED_WEB_URL = 'https://raw.githack.com/kalaha2112/Planner/main/planner/standalone.html';
+  // Public web build — the installable PWA served by GitHub Pages from the
+  // planner/ folder on the main branch (redeployed on every merge). The Sync
+  // modal links here, carrying "?sync=<code>" so the opened page auto-connects
+  // to this device's endpoint — two-way sync. Using the Pages origin (rather
+  // than the old rawgithack standalone) means "open on another device" lands on
+  // the exact app you published, and two tabs on the same host even share edits
+  // live via localStorage.
+  const HOSTED_WEB_URL = 'https://kalaha2112.github.io/Planner/';
 
   // Startup page headline (editable in place; persisted in meta.introText and synced)
   const DEFAULT_INTRO_TEXT = 'The first website was published in 1990 by computer scientist Tim Berners-Lee and now it seems like an eyesore. Early websites were basic few';
@@ -1392,13 +1395,20 @@
         : HOSTED_WEB_URL;
     }
     // Open the hosted web build. If this device isn't linked yet, first create a
-    // sync endpoint automatically, then hand the new tab the ?sync= link so both
-    // ends stay in sync. The blank tab is opened up-front (inside the user
-    // gesture) so it isn't caught by the popup blocker after the async create.
+    // sync endpoint automatically; if it IS linked, flush the most recent edit to
+    // the cloud first — uploads are debounced (~900ms), so without this the other
+    // device can pull the pre-edit state and your newest trip goes missing. Only
+    // then hand the new tab the ?sync= link so both ends stay in sync. The blank
+    // tab is opened up-front (inside the user gesture) so it isn't caught by the
+    // popup blocker after the async flush/create.
     async openHostedWeb() {
-      if (this.isLinked()) { window.open(this.hostedWebUrl(), '_blank', 'noopener'); return; }
       const win = window.open('about:blank', '_blank');
-      await this.createSync();
+      if (this.isLinked()) {
+        clearTimeout(this._cloudPushTimer);        // cancel the pending debounced push…
+        try { await this.pushCloud(); } catch (e) {}  // …and flush it now, before the other device loads
+      } else {
+        await this.createSync();                   // seeds the new endpoint with the current trips
+      }
       if (this.isLinked()) { if (win) win.location = this.hostedWebUrl(); else window.open(this.hostedWebUrl(), '_blank', 'noopener'); }
       else if (win) win.close();   // couldn't create an endpoint; status shows the error
     }
@@ -3946,10 +3956,10 @@
           <button class="sync-btn primary" data-act="sync-now"${this._syncBusy ? ' disabled' : ''}>Sync now</button>
           <button class="sync-btn ghost" data-act="sync-unlink">Disconnect this device</button>
         </div>
-        <a class="sync-btn open-web-btn" href="${escA(this.hostedWebUrl())}" target="_blank" rel="noopener">Open the web version ↗</a>
-        <p class="sync-note">Opens the hosted planner already linked to this device — edits flow both ways.</p>
+        <button class="sync-btn open-web-btn" data-act="open-web"${this._syncBusy ? ' disabled' : ''}>Open the web version ↗</button>
+        <p class="sync-note">Opens the hosted planner already linked to this device — your latest edits are uploaded first, then it opens, so both ends match.</p>
         <p class="sync-note">Trips live at this public endpoint. Anyone with the link can read or change them — treat it like a shared password. Offline edits upload automatically when you reconnect.</p>
-        <p class="sync-note">Auto-link another copy: open it with <code>?sync=${escA(this.sync.id)}</code> appended to its address (works for the installed app and the hosted standalone page alike). Copies served from the <b>same host</b> share edits live without any setup.</p>
+        <p class="sync-note">Auto-link another copy: open it with <code>?sync=${escA(this.sync.id)}</code> appended to its address (works for the installed app and the hosted web page alike). Copies served from the <b>same host</b> share edits live without any setup.</p>
       ` : `
         <p class="sync-lead">Create one free storage endpoint (no account, no email), then paste it on both devices. This device sets it up; the other one loads from it.</p>
         <ol class="sync-steps">
