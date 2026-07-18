@@ -569,8 +569,11 @@ a { color: inherit; }
 .item-grip:active { cursor: grabbing; }
 .item-grip svg { display: block; }
 /* pointer-drag feedback when moving an activity onto another day */
-.item.drag-source { opacity: .4; }
+.item.drag-source, .cal-cell.drag-source { opacity: .4; }
 .cal-cell.drag-target { outline: 3px solid var(--red); outline-offset: -2px; background: var(--cal-hover); }
+/* let the touch pointer-drag run on outfits without the page scrolling it away.
+   Touch-only — the web's native mouse drag is unaffected. */
+.cal-cell[data-drag="cell"], .outfit[data-drag="closet"] { touch-action: none; }
 .drag-ghost {
   position: fixed; z-index: 1200; pointer-events: none;
   transform: translate(-50%, -150%);

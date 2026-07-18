@@ -4488,6 +4488,69 @@
         this._plannerDrag = null;
       }
     }
+    /* ---- pointer-based outfit drag for TOUCH only (iOS never fires native DnD
+       from touch; the mouse keeps using native HTML5 DnD, untouched here).
+       Threshold-armed so a tap still selects the day. On release the outfit drops
+       onto the day highlighted during the drag — tracked in _doOutfitTouchDrag,
+       NOT the touch-end coordinates, which iOS reports as stale. A day-outfit
+       dragged off every day is removed (matches the mouse drag-out behaviour). ---- */
+    _armOutfitTouchDrag(e, el, kind) {
+      let info;
+      if (kind === 'day') {
+        if (this.openStopIdx == null) return;
+        const dayIdx = Number(el.dataset.i);
+        const stop = this.currentTrip().stops[this.openStopIdx];
+        const outfits = (stop.itinerary[dayIdx] && stop.itinerary[dayIdx].outfits) || [];
+        if (!outfits.length) return;
+        info = { kind: 'day', id: outfits[0].id, image: outfits[0].image, stopIdx: this.openStopIdx, dayIdx };
+      } else {
+        const o = this.ensureCloset().find(x => x.id === el.dataset.id);
+        if (!o) return;
+        info = { kind: 'closet', id: el.dataset.id, image: o.image };
+      }
+      this._outfitTouch = { info, kind, srcEl: el, ghost: null, targetCell: null, moved: false, startX: e.clientX, startY: e.clientY, pointerId: e.pointerId };
+      this._onOTM = (ev) => this._doOutfitTouchDrag(ev);
+      this._onOTU = (ev) => this._endOutfitTouchDrag(ev);
+      document.addEventListener('pointermove', this._onOTM, { passive: false });
+      document.addEventListener('pointerup', this._onOTU, { once: true });
+      document.addEventListener('pointercancel', this._onOTU, { once: true });
+    }
+    _doOutfitTouchDrag(e) {
+      const d = this._outfitTouch; if (!d) return;
+      if (!d.moved) {
+        if (Math.abs(e.clientX - d.startX) < 5 && Math.abs(e.clientY - d.startY) < 5) return;
+        d.moved = true;
+        const ghost = document.createElement('img');
+        ghost.src = d.info.image || ''; ghost.className = 'sticker-drag-ghost';
+        document.body.appendChild(ghost); d.ghost = ghost;
+        if (d.kind === 'day') d.srcEl.classList.add('drag-source');
+        try { d.srcEl.setPointerCapture(d.pointerId); } catch (_) {}   // claim the gesture so iOS doesn't scroll it away
+      }
+      if (e.cancelable) e.preventDefault();
+      if (d.ghost) { d.ghost.style.left = e.clientX + 'px'; d.ghost.style.top = e.clientY + 'px'; }
+      const under = document.elementFromPoint(e.clientX, e.clientY);
+      const cell = under ? under.closest('.cal-cell[data-drop="cell"]') : null;
+      if (cell !== d.targetCell) {
+        if (d.targetCell) d.targetCell.classList.remove('drag-target');
+        d.targetCell = cell;
+        if (cell) cell.classList.add('drag-target');
+      }
+    }
+    _endOutfitTouchDrag() {
+      const d = this._outfitTouch; if (!d) return;
+      document.removeEventListener('pointermove', this._onOTM);
+      this._outfitTouch = null;
+      if (d.ghost) d.ghost.remove();
+      if (d.srcEl) d.srcEl.classList.remove('drag-source');
+      if (d.targetCell) d.targetCell.classList.remove('drag-target');
+      if (!d.moved) return;   // a tap, not a drag — let the day's click handler run
+      if (d.targetCell) {
+        this._plannerDrag = d.info;                                   // {kind:'day'|'closet', ...}
+        this.plannerDrop(this.openStopIdx, Number(d.targetCell.dataset.i));
+      } else if (d.kind === 'day') {
+        this.toggleOutfitOnDay(d.info.id, d.info.stopIdx, d.info.dayIdx);   // dragged off the calendar → remove
+      }
+    }
     _startMapCardDrag(e, stopIdx) {
       if (this._mobileMap()) return;   // popup position is automatic on mobile (grip hidden too)
       const card = this.mainCardsOverlayEl.querySelector(`.map-stop[data-i="${stopIdx}"]`);
@@ -4553,6 +4616,13 @@
       // DnD carries this on mouse; touch needs the pointer path (iOS never fires
       // DnD from touch). Threshold-armed so a plain tap still isn't a drag.
       if (e.pointerType === 'touch') {
+        // outfits: move a day's outfit to another day, or drag a closet item onto
+        // a day. Native HTML5 DnD (used by the mouse) never fires from touch on
+        // iOS, so drive these by pointer. Threshold-armed → a tap still selects.
+        const outfitCell = e.target.closest('.cal-cell[data-drag="cell"]');
+        if (outfitCell) { this._armOutfitTouchDrag(e, outfitCell, 'day'); return; }
+        const closetItem = e.target.closest('.outfit[data-drag="closet"]');
+        if (closetItem && !e.target.closest('.del')) { this._armOutfitTouchDrag(e, closetItem, 'closet'); return; }
         const stockEl = e.target.closest('.stock-item[data-drag="stock-sticker"]');
         if (stockEl && !e.target.closest('.stock-item__del')) { this._armStockStickerDrag(e, stockEl); return; }
       }
