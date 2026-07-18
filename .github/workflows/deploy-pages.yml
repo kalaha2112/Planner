@@ -1,0 +1,47 @@
+name: Deploy to Pages
+
+# Publishes the planner/ PWA to GitHub Pages. The app uses only relative paths
+# (manifest scope "./", sw.js "./"-relative shell, relative <link>/<script>), so
+# uploading just the planner/ folder serves it cleanly at
+# https://<user>.github.io/<repo>/ — no path rewrites needed.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'planner/**'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch:
+
+# Allow the workflow to publish to Pages via OIDC.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One live deployment at a time; don't cancel an in-flight publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload planner/ as the Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: planner
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
