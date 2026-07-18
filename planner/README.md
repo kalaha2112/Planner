@@ -74,43 +74,45 @@ Because the deploy tracks `main`, every merge to `main` redeploys the hosted cop
 bumping needed. Pages serves from a real HTTPS origin, so the service worker, offline cache
 and "install as app" all work.
 
-## Cross-device sync (account-based, automatic)
+## Cross-device sync (shared, no sign-in)
 
-Sync is backed by **Supabase** (Postgres + Auth + Realtime). There is no sync button and no
-codes: sign in once per device with an email **magic link**, and from then on every edit
-auto-saves and streams to all your signed-in devices in realtime. Data is private to your
-account, enforced by row-level security.
+Sync is backed by **Supabase** (Postgres + Realtime). There is **no sign-in and no codes**:
+every device that opens the app reads and writes **one shared row** and auto-syncs it in
+realtime. Anyone with the link shares these trips — it's meant for you + people you trust,
+not a private per-user account.
 
 - **Config** (`app.js`): `SUPABASE_URL`, `SUPABASE_ANON_KEY` (a publishable client key — safe
-  to ship), and `CLOUD_TABLE = 'planner_state'`. The client is vendored at
-  `vendor/supabase/supabase.js`.
-- **How it flows** — on sign-in the app loads your account's row (or seeds it from this
-  device's trips), then subscribes to `postgres_changes` on your row. A local edit bumps a
-  millisecond `rev` and upserts (debounced ~1s); a realtime change on another device triggers
-  a re-fetch of the authoritative row. Conflicts resolve last-write-wins on `rev`.
+  to ship), `CLOUD_TABLE = 'shared_state'`, and `SHARED_ID` (the single row id). The client is
+  vendored at `vendor/supabase/supabase.js`.
+- **How it flows** — on load the app reads the shared row (or seeds it from this device's
+  trips), then subscribes to `postgres_changes` on that row. A local edit bumps a millisecond
+  `rev` and upserts (debounced ~1s); a realtime change on another device triggers a re-fetch
+  of the authoritative row. Conflicts resolve last-write-wins on `rev`.
 - **Offline** — edits save to `localStorage` first and upload automatically on reconnect; two
   tabs on the same origin also mirror live via `storage` events.
 
 ### Supabase setup (one-time, per project)
 
-1. **Table + security** — in the Supabase SQL editor, run:
+In the Supabase **SQL editor**, run this. No auth configuration is needed — the app talks to
+the shared row with the publishable (anon) key.
 
-   ```sql
-   create table if not exists public.planner_state (
-     user_id uuid primary key references auth.users(id) on delete cascade,
-     data jsonb not null default '{}'::jsonb,
-     rev bigint not null default 0,
-     updated_at timestamptz not null default now()
-   );
-   alter table public.planner_state enable row level security;
-   create policy "own row" on public.planner_state
-     for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-   alter publication supabase_realtime add table public.planner_state;
-   ```
+```sql
+create table if not exists public.shared_state (
+  id text primary key,
+  data jsonb not null default '{}'::jsonb,
+  rev bigint not null default 0,
+  updated_at timestamptz not null default now()
+);
+alter table public.shared_state enable row level security;
+-- shared space: the app's publishable (anon) key may read/write the shared row
+create policy "shared anon access" on public.shared_state
+  for all to anon using (true) with check (true);
+alter publication supabase_realtime add table public.shared_state;
+```
 
-2. **Auth redirect** — Authentication → URL Configuration: set **Site URL** to the Pages URL
-   and add it (plus `…/**`) under **Redirect URLs**, so the magic-link lands back on the app.
-   Email auth is on by default; the built-in mailer is fine for personal use.
+> Because access is open to the `anon` role, keep the app's link to people you trust. To make
+> the data private again, switch back to per-user accounts (auth + a `user_id`-keyed table
+> with `auth.uid() = user_id` policies).
 
 ## Features
 
