@@ -1678,6 +1678,12 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   -webkit-mask-position: center; mask-position: center;
   pointer-events: none;
 }
+/* uploaded full-colour category icon: an image, not an ink mask */
+.pk-icon--photo {
+  background: none; -webkit-mask-image: none; mask-image: none; filter: none;
+  display: grid; place-items: center;
+}
+.pk-icon--photo img { width: 100%; height: 100%; object-fit: contain; object-position: center bottom; display: block; pointer-events: none; }
 .pk-chip {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   display: flex; align-items: baseline; gap: 6px; white-space: nowrap;
