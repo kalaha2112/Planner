@@ -70,37 +70,47 @@ branch of this repo (deployed by `.github/workflows/deploy-pages.yml`):
 
 <https://kalaha2112.github.io/Planner/>
 
-The Sync modal is wired to this URL (`HOSTED_WEB_URL` in `app.js`): tap **Open the web
-version** and it opens the hosted planner with `?sync=<code>` appended, so the opened page
-auto-connects to this device's endpoint and edits flow both ways. Before it opens, this
-device flushes its most recent edit to the sync endpoint (uploads are debounced), so the
-other device never pulls a stale copy that's missing your newest trip. If the device isn't
-linked yet, the one-tap button first creates a sync endpoint, then opens the hosted page
-already linked. Because the deploy tracks `main`, every merge to `main` redeploys the hosted
-copy — no URL bumping needed. (Pages serves from a real HTTPS origin, so the service worker,
-offline cache and "install as app" all work — unlike the old rawgithack single-file host.)
+Because the deploy tracks `main`, every merge to `main` redeploys the hosted copy — no URL
+bumping needed. Pages serves from a real HTTPS origin, so the service worker, offline cache
+and "install as app" all work.
 
-## Keeping the app and the hosted standalone.html in sync (both ways)
+## Cross-device sync (account-based, automatic)
 
-The installed app and a hosted copy of `standalone.html` (e.g. on **rawgithack**) stay in
-sync in two ways, depending on where each is served from:
+Sync is backed by **Supabase** (Postgres + Auth + Realtime). There is no sync button and no
+codes: sign in once per device with an email **magic link**, and from then on every edit
+auto-saves and streams to all your signed-in devices in realtime. Data is private to your
+account, enforced by row-level security.
 
-- **Same host (zero setup, live)** — if the app was installed from the same host that serves
-  `standalone.html` (e.g. both under `raw.githack.com/...`), they share the same
-  `localStorage`. Each copy listens for `storage` events, so an edit saved in one window
-  appears in the other **live** (within ~1s) — no codes, no accounts. (Note rawgithack has two
-  hosts: `raw.githack.com` and `rawcdn.githack.com` are *different* origins and don't share
-  storage — use the cloud sync below across them.)
-- **Different hosts (cloud sync)** — open **Sync** in either copy and connect a textdb
-  endpoint, then link the other copy to the same endpoint. Easiest way: once one side is
-  linked, open the other side with `?sync=<code>` appended to its URL (the Sync dialog shows
-  the exact snippet) — it links itself and loads the trips automatically. From then on every
-  edit uploads (debounced ~1s) and each copy pulls every 20s, on focus, and on reconnect.
-  Conflicts resolve last-write-wins on a per-edit revision stamp.
+- **Config** (`app.js`): `SUPABASE_URL`, `SUPABASE_ANON_KEY` (a publishable client key — safe
+  to ship), and `CLOUD_TABLE = 'planner_state'`. The client is vendored at
+  `vendor/supabase/supabase.js`.
+- **How it flows** — on sign-in the app loads your account's row (or seeds it from this
+  device's trips), then subscribes to `postgres_changes` on your row. A local edit bumps a
+  millisecond `rev` and upserts (debounced ~1s); a realtime change on another device triggers
+  a re-fetch of the authoritative row. Conflicts resolve last-write-wins on `rev`.
+- **Offline** — edits save to `localStorage` first and upload automatically on reconnect; two
+  tabs on the same origin also mirror live via `storage` events.
 
-Offline behaviour: edits made in the installed app while offline are saved locally, then
-uploaded automatically the moment the device is back online — the hosted copy picks them up
-on its next pull, and vice versa.
+### Supabase setup (one-time, per project)
+
+1. **Table + security** — in the Supabase SQL editor, run:
+
+   ```sql
+   create table if not exists public.planner_state (
+     user_id uuid primary key references auth.users(id) on delete cascade,
+     data jsonb not null default '{}'::jsonb,
+     rev bigint not null default 0,
+     updated_at timestamptz not null default now()
+   );
+   alter table public.planner_state enable row level security;
+   create policy "own row" on public.planner_state
+     for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+   alter publication supabase_realtime add table public.planner_state;
+   ```
+
+2. **Auth redirect** — Authentication → URL Configuration: set **Site URL** to the Pages URL
+   and add it (plus `…/**`) under **Redirect URLs**, so the magic-link lands back on the app.
+   Email auth is on by default; the built-in mailer is fine for personal use.
 
 ## Features
 

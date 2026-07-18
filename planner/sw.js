@@ -16,7 +16,7 @@
    ============================================================ */
 'use strict';
 
-const VERSION = 'v2';
+const VERSION = 'v3';
 const SHELL_CACHE = `planner-shell-${VERSION}`;
 const FONT_CACHE = 'planner-fonts';
 const TILE_CACHE = 'planner-tiles';
@@ -37,6 +37,7 @@ const SHELL_ASSETS = [
   './vendor/leaflet/images/layers-2x.png',
   './vendor/topojson/topojson.min.js',
   './vendor/topojson/countries-110m.json',
+  './vendor/supabase/supabase.js',
   './icons/icon.svg',
   './icons/icon-192.png',
   './icons/icon-512.png',
