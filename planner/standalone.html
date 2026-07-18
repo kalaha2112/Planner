@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-18T18:10:54.098Z
+  Built: 2026-07-13T05:07:42.218Z
 -->
 
 <html lang="en">
@@ -1295,20 +1295,6 @@ a { color: inherit; }
 /* pointer-drag feedback when moving an activity onto another day */
 .item.drag-source { opacity: .4; }
 .cal-cell.drag-target { outline: 3px solid var(--red); outline-offset: -2px; background: var(--cal-hover); }
-.cal-cell.drag-source { opacity: .4; }
-/* an outfit box drives its own pointer drag on touch — don't let the page scroll steal it */
-/* touch-action:none lets the touch pointer-drag run; it doesn't affect the web's
-   native mouse drag. (Do NOT add -webkit-user-drag:none on the image or
-   user-select:none on the cell — in WebKit that blocks the native drag from
-   starting when you grab the outfit image.) */
-.cal-cell[data-drag="cell"] { touch-action: none; -webkit-touch-callout: none; }
-/* invisible-until-you-look paste target that appears in a highlighted empty day */
-.cal-paste {
-  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  font-family: var(--sans); font-weight: 300; font-size: 30px; line-height: 1;
-  color: var(--ink-faint); opacity: .35; cursor: pointer; border-radius: var(--r-cell);
-}
-.cal-paste:hover { opacity: .85; color: var(--red); background: var(--cal-hover); }
 .drag-ghost {
   position: fixed; z-index: 1200; pointer-events: none;
   transform: translate(-50%, -150%);
@@ -3037,25 +3023,6 @@ html { -webkit-tap-highlight-color: transparent; }
      `get` returns the stored JSON text; `put` overwrites it. */
   const SYNC_KEY  = 'europe-trip-sync-v1';            // local record of the link {id, rev, lastSyncedAt}
   const APP_TAG   = 'europe-trip-planner';            // payload marker so we only adopt our own data
-  // Bump on each deploy. Shown in the Sync modal so both devices can confirm
-  // they're running the same (latest) build — rawgithack/browser caching can
-  // otherwise leave one device on an old copy where sticker fixes aren't present.
-  const BUILD_TAG = '2026-07-14 · outfit-paste-8';
-  // djb2 checksum over the serialized state. Embedded in the synced payload so a
-  // reader can tell whether the free JSON store round-tripped the data intact —
-  // large base64 images can get mangled in transit (a character-level change
-  // that keeps the JSON valid but breaks the image → "FAILS TO LOAD" box).
-  const syncChecksum = (str) => { let h = 5381; for (let i = 0; i < str.length; i++) h = (((h << 5) + h) ^ str.charCodeAt(i)) >>> 0; return h; };
-  // Free JSON stores corrupt large base64 in transit — classically turning '+'
-  // into a space (and '/' can trip form/URL handling too). Inside every image
-  // data URL, swap standard base64 for URL-safe base64 (+ -> -, / -> _) before
-  // upload, and swap back on download. The JSON structure is untouched (so the
-  // store's own extractors still work), and the payload doesn't grow. All copies
-  // must run this build for images to decode — which they do, sharing one URL.
-  const IMG_B64_RE = /(data:[^"\\]*?;base64,)([A-Za-z0-9+/=]+)/g;
-  const IMG_B64URL_RE = /(data:[^"\\]*?;base64,)([A-Za-z0-9\-_=]+)/g;
-  const toSyncSafe = (str) => str.replace(IMG_B64_RE, (m, pre, b64) => pre + b64.replace(/\+/g, '-').replace(/\//g, '_'));
-  const fromSyncSafe = (str) => str.replace(IMG_B64URL_RE, (m, pre, b64) => pre + b64.replace(/-/g, '+').replace(/_/g, '/'));
   const SYNC_POLL_MS  = 20000;                        // how often to pull while the tab is visible
   const CLOUD_PUSH_DEBOUNCE_MS = 900;                 // coalesce rapid edits into one upload
 
@@ -3494,11 +3461,6 @@ html { -webkit-tap-highlight-color: transparent; }
     constructor(root) {
       this.root = root;
       this.data = clone(DEFAULT_STATE);
-      // touch device? iPhone/iPad use the pointer drag for outfits (iOS never
-      // fires native HTML5 DnD from touch); a plain-mouse desktop uses native
-      // DnD. Deciding per DEVICE avoids the draggable-attr vs pointer-drag
-      // conflict that kept breaking one or the other.
-      this._isTouchDevice = (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0) || (typeof window !== 'undefined' && 'ontouchstart' in window);
       // transient ui state
       this.openStopIdx = null;
       this.activeDay = null;
@@ -3685,80 +3647,6 @@ html { -webkit-tap-highlight-color: transparent; }
       // the store's cap and blocks ALL sync, so this unsticks devices that were
       // already carrying big memories/closet photos.
       setTimeout(() => this.compactStoredImages(), 1500);
-      // one-time sweep: remove memories/outfits that an older build corrupted
-      // into a fully-transparent ("black" on the dark page) image — they can't
-      // be fixed and are hard to delete by hand once invisible.
-      setTimeout(() => this.sweepBlankStickers(), 1800);
-    }
-    // Decode a data URL and return the fraction of fully-transparent pixels.
-    _transparentFraction(url) {
-      return new Promise(resolve => {
-        if (typeof url !== 'string' || url.indexOf('data:image/') !== 0) { resolve(0); return; }
-        const img = new Image();
-        img.onload = () => {
-          try {
-            const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
-            const x = c.getContext('2d'); x.drawImage(img, 0, 0);
-            const px = x.getImageData(0, 0, c.width, c.height).data;
-            let clear = 0; const n = px.length / 4;
-            for (let i = 3; i < px.length; i += 4) if (px[i] < 8) clear++;
-            resolve(n ? clear / n : 0);
-          } catch (e) { resolve(0); }   // tainted/undecodable — don't touch it
-        };
-        img.onerror = () => resolve(0);   // broken image is handled by <img onerror>, not here
-        img.src = url;
-      });
-    }
-    // Remove every memory / outfit / placement whose EFFECTIVE image is
-    // essentially all transparent (>=99%) — the "empty box" corruption. Covers
-    // the memory tray, page placements, the closet, and day-assigned outfits,
-    // resolving each to its embedded image or its source. New imports never emit
-    // a >98.5% transparent image, so this can't hit a good sticker. Re-runnable
-    // (pass force) so blanks that arrive via a later sync pull get cleaned too.
-    async sweepBlankStickers(force) {
-      if (this._sweeping) return;
-      if (!force && this._sweptBlanks) return;
-      this._sweptBlanks = true; this._sweeping = true;
-      try {
-        const BLANK = 0.99;
-        const blank = async (url) => url != null && (await this._transparentFraction(url)) >= BLANK;
-        let changed = false;
-
-        // memory tray
-        const badStock = new Set();
-        for (const s of this.data.stickerStock || []) if (await blank(s.image)) badStock.add(s.id);
-        if (badStock.size) { this.data.stickerStock = this.data.stickerStock.filter(s => !badStock.has(s.id)); changed = true; }
-
-        // page placements — resolve embedded image or stock source
-        const keepPlaced = [];
-        for (const p of this.data.placedStickers || []) {
-          const img = p.image || this.stockImage(p.stockId);
-          if (img == null || await blank(img)) changed = true; else keepPlaced.push(p);
-        }
-        if (keepPlaced.length !== (this.data.placedStickers || []).length) this.data.placedStickers = keepPlaced;
-
-        // closet + day outfits, per trip
-        for (const trip of Object.values(this.data.trips || {})) {
-          const closet = trip.closet || [];
-          const badClo = new Set();
-          for (const o of closet) if (await blank(o.image)) badClo.add(o.id);
-          if (badClo.size) { trip.closet = closet.filter(o => !badClo.has(o.id)); changed = true; }
-          for (const s of trip.stops || []) for (const day of s.itinerary || []) {
-            if (!day || !Array.isArray(day.outfits)) continue;
-            const keep = [];
-            for (const o of day.outfits) {
-              const img = o.image || this.closetImage(o.id, trip.closet);
-              if (img == null || await blank(img)) changed = true; else keep.push(o);
-            }
-            if (keep.length !== day.outfits.length) day.outfits = keep;
-          }
-        }
-
-        if (!changed) return;
-        this.saveLocalNow();
-        if (this.isLinked()) { this.sync.rev = Date.now(); this.persistSyncRec(); this.scheduleCloudPush(); }
-        this.render(); this.bumpModal(); this.touchMap();
-      } finally { this._sweeping = false; }
     }
     // Re-encode oversized stored images (legacy full-res stickers/outfits) through
     // the same downscale+WebP pipeline new images already use. Runs at most once
@@ -3770,29 +3658,22 @@ html { -webkit-tap-highlight-color: transparent; }
       let changed = false;
       const shrink = async (url) => {
         if (typeof url !== 'string' || url.length <= BIG || url.indexOf('data:image/') !== 0) return url;
-        // pure downscale — never re-run the background knockout on already-stored
-        // images (that could change their appearance and, worse, sync the change
-        // to every other device). Alpha is preserved.
-        try { const out = await this.autoCutout(url, { cut: false }); if (out && out.length < url.length) { changed = true; return out; } } catch (e) {}
+        try { const out = await this.autoCutout(url); if (out && out.length < url.length) { changed = true; return out; } } catch (e) {}
         return url;
       };
       const d = this.data;
-      // shrink the source images (closet + memory tray) …
       for (const s of d.stickerStock || []) s.image = await shrink(s.image);
-      for (const trip of Object.values(d.trips || {})) for (const o of trip.closet || []) o.image = await shrink(o.image);
-      // … then make sure every placement carries its own (shrunk) image: prefer
-      // the source copy so it stays in step, otherwise shrink the embedded one.
-      // Placements stay self-contained so any app version can render them.
       for (const ps of d.placedStickers || []) {
         const st = (d.stickerStock || []).find(s => s.id === ps.stockId);
         if (st && st.image != null) { if (ps.image !== st.image) { ps.image = st.image; changed = true; } }
-        else if (ps.image != null) { const out = await shrink(ps.image); if (out !== ps.image) { ps.image = out; changed = true; } }
+        else ps.image = await shrink(ps.image);
       }
       for (const trip of Object.values(d.trips || {})) {
+        for (const o of trip.closet || []) o.image = await shrink(o.image);
         for (const stop of trip.stops || []) for (const day of stop.itinerary || []) for (const outfit of (day && day.outfits) || []) {
           const co = (trip.closet || []).find(c => c.id === outfit.id);
           if (co && co.image != null) { if (outfit.image !== co.image) { outfit.image = co.image; changed = true; } }
-          else if (outfit.image != null) { const out = await shrink(outfit.image); if (out !== outfit.image) { outfit.image = out; changed = true; } }
+          else outfit.image = await shrink(outfit.image);
         }
       }
       if (!changed) return;
@@ -4249,7 +4130,6 @@ html { -webkit-tap-highlight-color: transparent; }
       // modal-only re-render still has to (re)mount the per-day map node
       this.mountDayMap();
       this.updateTopActions();   // sticker toggle / sync-modal actions change cluster state
-      if (this.syncOpen) this._analyzeStickers();   // fill the sticker-check readout (mobile path)
     }
     // attach the persistent day-map node into the freshly-rendered markup and
     // (re)init Leaflet — the holder lives in the modal (app) or on leaf 3 (web)
@@ -4265,31 +4145,11 @@ html { -webkit-tap-highlight-color: transparent; }
       clearTimeout(this._saveTimer);
       this._savePending = true;   // guards adoptLocal from reverting an unflushed edit
       this._saveTimer = setTimeout(() => {
-        if (this._writeLocal()) this.flashSaved();
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data)); this.flashSaved(); } catch (e) {}
         this._savePending = false;
         // a local edit advances our revision and queues a cloud upload (if linked)
         if (this.isLinked()) { this.sync.rev = Date.now(); this.persistSyncRec(); this.scheduleCloudPush(); }
       }, 450);
-    }
-    _isQuotaError(e) {
-      return !!e && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 22 || e.code === 1014);
-    }
-    // Persist state to localStorage. Returns true on success. On a full-storage
-    // error the write is retried once after stripping duplicate image data (so a
-    // dropped sticker/outfit isn't silently lost on refresh); if it still can't
-    // fit, the user is told once rather than losing edits invisibly.
-    _writeLocal() {
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data)); return true; }
-      catch (e) {
-        if (!this._isQuotaError(e)) return false;
-        this.migrate();   // idempotent: re-strip any embedded duplicate images
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data)); return true; }
-        catch (e2) { this._warnStorageFull(); return false; }
-      }
-    }
-    _warnStorageFull() {
-      if (this._storageWarned) return; this._storageWarned = true;
-      try { alert('This device’s storage is full — recent photos may not be saved. Remove a few memories or outfits to free up space.'); } catch (_) {}
     }
     flashSaved() {
       this._savedShow = true; this.paintSaved();
@@ -4371,25 +4231,9 @@ html { -webkit-tap-highlight-color: transparent; }
       });
       if (!Array.isArray(d.stickerStock)) d.stickerStock = [];
       if (!Array.isArray(d.placedStickers)) d.placedStickers = [];
-      d.placedStickers.forEach(ps => { if (!ps.target) ps.target = 'page'; });
-      // Make every placement self-contained: outfits/placedStickers each carry
-      // their OWN embedded image, populated from the closet / stickerStock source
-      // when missing. (An earlier build stripped these to bare id references to
-      // save space — but a device running that build syncs stripped data to a
-      // device running an older build, which can't resolve the reference and
-      // renders an empty sticker: black on the dark page, white on the light one.
-      // Keeping the image embedded means ANY version can read it.) Runs on every
-      // load / sync-pull, so it heals data an intermediate build had stripped.
-      Object.values(d.trips || {}).forEach(trip => {
-        const closet = trip.closet || [];
-        (trip.stops || []).forEach(s => (s.itinerary || []).forEach(day => {
-          if (day && Array.isArray(day.outfits)) day.outfits.forEach(o => {
-            if (o && o.image == null) { const c = closet.find(c => c.id === o.id); if (c && c.image != null) o.image = c.image; }
-          });
-        }));
-      });
       d.placedStickers.forEach(ps => {
-        if (ps.image == null) { const s = d.stickerStock.find(s => s.id === ps.stockId); if (s && s.image != null) ps.image = s.image; }
+        if (!ps.target) ps.target = 'page';
+        if (!ps.image) { const s = d.stickerStock.find(s => s.id === ps.stockId); if (s) ps.image = s.image; }
       });
     }
 
@@ -4410,13 +4254,9 @@ html { -webkit-tap-highlight-color: transparent; }
     }
     persistSyncRec() { try { localStorage.setItem(SYNC_KEY, JSON.stringify(this.sync)); } catch (e) {} }
     isLinked() { return !!(this.sync && this.sync.id); }
-    saveLocalNow() { this._writeLocal(); }
+    saveLocalNow() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data)); } catch (e) {} }
 
-    cloudPayload() {
-      const dataStr = JSON.stringify(this.data);
-      const raw = JSON.stringify({ app: APP_TAG, rev: this.sync.rev || Date.now(), sum: syncChecksum(dataStr), data: this.data });
-      return toSyncSafe(raw);   // URL-safe base64 for images so the store can't mangle '+'
-    }
+    cloudPayload() { return JSON.stringify({ app: APP_TAG, rev: this.sync.rev || Date.now(), data: this.data }); }
     // parse "<tag>-<id>" (tolerating a pasted full URL) into a backend + id
     parseCode(code) {
       let c = (code || '').trim();
@@ -4442,18 +4282,7 @@ html { -webkit-tap-highlight-color: transparent; }
       let txt;
       try { txt = await be.get(id); } catch (e) { throw this.normErr(e); }
       if (!txt) throw _notFound();
-      let payload;
-      // swap URL-safe base64 back to standard so images decode (no-op on legacy
-      // payloads, whose base64 has no '-'/'_')
-      try { payload = JSON.parse(fromSyncSafe(txt)); } catch (e) { throw new Error('Synced data was unreadable.'); }
-      // Integrity note (non-blocking): if a big base64 image was mangled in
-      // transit, the embedded checksum won't match. We do NOT reject the whole
-      // payload for that — one bad image must never block text sync (that stranded
-      // the app offline). Broken images are hidden by <img onerror> and blank ones
-      // are removed by the sweep; the flag just surfaces it in diagnostics.
-      this._lastSyncCorrupt = !!(payload && payload.sum != null && payload.data
-        && syncChecksum(JSON.stringify(payload.data)) !== payload.sum);
-      return payload;
+      try { return JSON.parse(txt); } catch (e) { throw new Error('Synced data was unreadable.'); }
     }
     async cloudPut(code) {
       const { be, id } = this.parseCode(code);
@@ -4620,7 +4449,6 @@ html { -webkit-tap-highlight-color: transparent; }
           this.saveLocalNow();
           this._syncBusy = false; this.setSyncStatus('synced', 'Updated from another device');
           this.render(); this.bumpModal(); this.touchMap();
-          this.sweepBlankStickers(true);   // clean any blank stickers that just arrived
         } else if (remoteRev < localRev) {
           // we hold newer edits (e.g. made offline) — push them up
           this._syncBusy = false; this.setSyncStatus('synced', ''); this.scheduleCloudPush();
@@ -4673,7 +4501,6 @@ html { -webkit-tap-highlight-color: transparent; }
       this.data = next; this.migrate(); this._lastCoordKey = '';
       if (this.isLinked()) this.setSyncStatus('synced', 'Updated from another window');
       this.render(); this.bumpModal(); this.touchMap(); this.paintSyncStatus();
-      this.sweepBlankStickers(true);   // clean any blank stickers that just arrived
     }
 
     /* ----- status UI ----- */
@@ -5799,57 +5626,10 @@ html { -webkit-tap-highlight-color: transparent; }
 
     /* ---------- outfit closet ---------- */
     ensureCloset() { const t = this.currentTrip(); if (!Array.isArray(t.closet)) t.closet = []; return t.closet; }
-    // Image data lives once — in the closet (outfits) and stickerStock (memories).
-    // Everywhere an outfit/memory is placed we store only its id and look the
-    // picture up at render time. Keeps one source of truth, so a placement can
-    // never desync into a blank sticker, and keeps the state (localStorage +
-    // synced payload) small enough to persist and cross devices. Legacy data with
-    // an embedded `image` still resolves via the fallback.
-    closetImage(id, closet) { const c = (closet || (this.currentTrip() && this.currentTrip().closet) || []).find(o => o.id === id); return c ? c.image : ''; }
-    stockImage(stockId) { const s = (this.data.stickerStock || []).find(x => x.id === stockId); return s ? s.image : ''; }
     dayOutfits(stop, dayIdx) { this.ensureItinerary(stop); const d = stop.itinerary[dayIdx] || (stop.itinerary[dayIdx] = { items: [], outfits: [] }); if (!Array.isArray(d.outfits)) d.outfits = []; return d.outfits; }
     toggleOutfitOnDay(id, stopIdx, dayIdx) { const arr = this.dayOutfits(this.currentTrip().stops[stopIdx], dayIdx); const i = arr.findIndex(e => e.id === id); if (i >= 0) arr.splice(i, 1); this.bump(); }
-    // Paste / drop an outfit image straight onto a calendar day box. The image is
-    // embedded on the day (self-contained → syncs and any build can render it),
-    // downscaled small to keep it under the sync store's fragile size for images.
-    async addOutfitToDay(file, stopIdx, dayIdx) {
-      if (!file || !file.type.startsWith('image/')) return;
-      if (stopIdx == null || dayIdx == null) return;
-      const url = await new Promise(r => { const fr = new FileReader(); fr.onload = e => r(e.target.result); fr.readAsDataURL(file); });
-      const dataUrl = await this.autoCutout(url, { maxPx: 384 });
-      const id = 'o' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-      const arr = this.dayOutfits(this.currentTrip().stops[stopIdx], dayIdx);
-      arr.length = 0;                       // one outfit per day box
-      arr.push({ id, image: dataUrl });
-      this.bump();
-    }
-    // Touch / no-keyboard path: read the clipboard and drop the image on the
-    // highlighted day (⌘/Ctrl-V is handled in onPaste for keyboard users).
-    async pasteOutfitToActiveDay() {
-      if (this.openStopIdx == null || this.activeDay == null) return;
-      if (!(navigator.clipboard && navigator.clipboard.read)) { alert('Copy an outfit image first, then paste.'); return; }
-      try {
-        const items = await navigator.clipboard.read();
-        for (const item of items) {
-          const type = item.types.find(t => t.startsWith('image/'));
-          if (!type) continue;
-          const blob = await item.getType(type);
-          await this.addOutfitToDay(new File([blob], 'outfit.png', { type: blob.type || type }), this.openStopIdx, this.activeDay);
-          return;
-        }
-        alert('No image on the clipboard — copy or lift an outfit image first, then tap Paste.');
-      } catch (e) { alert('Couldn’t read the clipboard. Copy/lift an image, then tap the day again and allow clipboard access.'); }
-    }
     removeOutfitFromCloset(id) {
       const t = this.currentTrip();
-      const src = (t.closet || []).find(o => o.id === id);
-      // days reference the closet by id — re-embed the picture into any day that
-      // still uses this outfit so removing it from the closet doesn't blank them
-      if (src && src.image) {
-        (t.stops || []).forEach(s => (s.itinerary || []).forEach(day => {
-          (day && day.outfits || []).forEach(o => { if (o.id === id && o.image == null) o.image = src.image; });
-        }));
-      }
       t.closet = (t.closet || []).filter(o => o.id !== id);
       this.bump();
     }
@@ -5857,14 +5637,13 @@ html { -webkit-tap-highlight-color: transparent; }
       const drag = this._plannerDrag; if (!drag) return;
       if (drag.kind === 'closet') {
         const arr = this.dayOutfits(this.currentTrip().stops[targetStopIdx], targetDayIdx);
-        // embed the image so the day is self-contained for any app version
-        if (!arr.some(e => e.id === drag.id)) arr.push({ id: drag.id, image: this.closetImage(drag.id) });
+        if (!arr.some(e => e.id === drag.id)) arr.push({ id: drag.id, image: drag.image });
       } else if (drag.kind === 'day') {
         if (drag.stopIdx === targetStopIdx && drag.dayIdx === targetDayIdx) { this._plannerDrag = null; return; }
         const fromArr = this.dayOutfits(this.currentTrip().stops[drag.stopIdx], drag.dayIdx);
         const i = fromArr.findIndex(e => e.id === drag.id); if (i >= 0) fromArr.splice(i, 1);
         const toArr = this.dayOutfits(this.currentTrip().stops[targetStopIdx], targetDayIdx);
-        if (!toArr.some(e => e.id === drag.id)) toArr.push({ id: drag.id, image: this.closetImage(drag.id) });
+        if (!toArr.some(e => e.id === drag.id)) toArr.push({ id: drag.id, image: drag.image });
       } else if (drag.kind === 'activity') {
         if (drag.stopIdx === targetStopIdx && drag.dayIdx === targetDayIdx) { this._plannerDrag = null; return; }
         const stop = this.currentTrip().stops[targetStopIdx];
@@ -5885,28 +5664,19 @@ html { -webkit-tap-highlight-color: transparent; }
       const closet = this.ensureCloset();
       const id = 'o' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       closet.push({ id, image: dataUrl });
-      // auto-assign to the open day if any (self-contained — embed the image)
+      // auto-assign to the open day if any
       if (this.openStopIdx != null && this.activeDay != null) {
         const arr = this.dayOutfits(this.currentTrip().stops[this.openStopIdx], this.activeDay);
         if (!arr.some(e => e.id === id)) arr.push({ id, image: dataUrl });
       }
       this.bump();
     }
-    // Import an image faithfully — the Goodnotes model. Goodnotes never guesses
-    // at a background: a sticker is transparent only because its source PNG was
-    // authored that way, and an inserted photo stays a photo. So by DEFAULT we do
-    // NOT knock anything out — we just downscale and re-encode, preserving the
-    // source's own transparency and NEVER creating new transparency. That kills
-    // the "black/white box" entirely: a photo becomes an opaque image, which
-    // cannot show the page through it on any device or theme.
-    //   • source already has alpha (a real sticker PNG) -> keep it, encode PNG.
-    //   • opaque photo -> encode JPEG (small, universal, no alpha to mishandle).
-    // The heuristic knockout survives behind opts.cut === true for a future
-    // opt-in "remove background" button, but is off by default. No WebP — its
-    // cross-browser alpha behaviour is what flattened stickers to black on sync.
-    autoCutout(dataUrl, opts) {
-      const cut = !!(opts && opts.cut === true);   // faithful import by default; knockout is opt-in only
-      const MAX = (opts && opts.maxPx) || 512;      // callers can request a smaller cap (e.g. outfits, for sync)
+    autoCutout(dataUrl) {
+      // Cap every incoming image to STICKER_MAX_PX on its longest side before it
+      // enters state. Phone photos are multi-megapixel; unscaled base64 bloats
+      // the synced payload past the free JSON stores' size caps, so stickers
+      // (and every edit after them) silently fail to sync to other devices.
+      const MAX = 512;
       return new Promise(resolve => {
         const img = new Image();
         img.onload = () => {
@@ -5915,48 +5685,36 @@ html { -webkit-tap-highlight-color: transparent; }
           const H = Math.max(1, Math.round(img.height * scale));
           const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
           const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, W, H);
-          let d; try { d = ctx.getImageData(0, 0, W, H); } catch (e) { resolve(this._encodeOpaque(canvas, dataUrl)); return; }
+          const scaled = () => this._encodeSticker(canvas, dataUrl);
+          let d; try { d = ctx.getImageData(0, 0, W, H); } catch (e) { resolve(scaled()); return; }
           const px = d.data;
-          const n = px.length / 4;
-          let anyAlpha = false, fullyClear = 0;
-          for (let i = 3; i < px.length; i += 4) { const a = px[i]; if (a < 200) anyAlpha = true; if (a < 10) fullyClear++; }
-          // If the canvas came out (almost) fully transparent, the source could
-          // not be drawn (undecodable format) or is itself blank. NEVER store that
-          // — a blank PNG renders as an empty box on every device. Keep the
-          // original data instead, so the real image survives.
-          if (fullyClear / n >= 0.985) { resolve(dataUrl); return; }
-          if (anyAlpha) { resolve(this._encodeAlpha(canvas, dataUrl)); return; }  // genuine source transparency — keep as PNG
-          if (!cut) { resolve(this._encodeOpaque(canvas, dataUrl)); return; }     // pure downscale (compaction)
+          let hasAlpha = false;
+          for (let i = 3; i < px.length; i += 4) { if (px[i] < 200) { hasAlpha = true; break; } }
+          if (hasAlpha) { resolve(scaled()); return; }   // keep existing transparency, just downscaled
           const samp = (x, y) => { const i = (y * W + x) * 4; return [px[i], px[i + 1], px[i + 2]]; };
           const corners = [samp(0, 0), samp(W - 1, 0), samp(0, H - 1), samp(W - 1, H - 1)];
           const bg = corners.reduce((a, c) => [a[0] + c[0], a[1] + c[1], a[2] + c[2]], [0, 0, 0]).map(v => v / 4);
-          // corners must agree on one colour, or this isn't a knock-out-able background
-          const spread = corners.reduce((m, c) => Math.max(m, Math.hypot(c[0] - bg[0], c[1] - bg[1], c[2] - bg[2])), 0);
-          if (spread > 40) { resolve(this._encodeOpaque(canvas, dataUrl)); return; }  // real photo → leave intact
-          let cleared = 0;
           for (let i = 0; i < px.length; i += 4) {
             const dr = px[i] - bg[0], dg = px[i + 1] - bg[1], db = px[i + 2] - bg[2];
             const dist = Math.sqrt(dr * dr + dg * dg + db * db);
-            if (dist < 42) { px[i + 3] = 0; cleared++; } else if (dist < 85) px[i + 3] = Math.round((dist - 42) / 43 * 255);
+            if (dist < 42) px[i + 3] = 0; else if (dist < 85) px[i + 3] = Math.round((dist - 42) / 43 * 255);
           }
-          // knockout ate almost everything → it wasn't a background; keep the photo
-          if (cleared / n > 0.85) { resolve(this._encodeOpaque(canvas, dataUrl)); return; }
-          ctx.putImageData(d, 0, 0); resolve(this._encodeAlpha(canvas, dataUrl));
+          ctx.putImageData(d, 0, 0); resolve(this._encodeSticker(canvas, dataUrl));
         };
         img.onerror = () => resolve(dataUrl);
         img.src = dataUrl;
       });
     }
-    // Transparency present — PNG is the only format that keeps alpha identically
-    // on every browser (a cut-out is mostly transparent, so it still compresses
-    // small). Falls back to the original data URL only if encoding fails.
-    _encodeAlpha(canvas, fallbackUrl) {
-      try { return canvas.toDataURL('image/png'); } catch (e) { return fallbackUrl; }
-    }
-    // Opaque image — JPEG is small, universally decodable, and has no alpha to
-    // flatten to black. Falls back to PNG, then the original.
-    _encodeOpaque(canvas, fallbackUrl) {
-      try { const j = canvas.toDataURL('image/jpeg', 0.85); if (j.indexOf('data:image/jpeg') === 0) return j; } catch (e) {}
+    // Encode a (downscaled) sticker canvas as compactly as the browser allows.
+    // WebP is lossy AND keeps the alpha the cutout produces, so it's ~5-10× the
+    // size of the equivalent PNG — the difference between a sticker that syncs
+    // and one that overflows the store. Falls back to PNG (alpha-safe) where
+    // WebP isn't supported, and to the original data URL only if encoding fails.
+    _encodeSticker(canvas, fallbackUrl) {
+      try {
+        const webp = canvas.toDataURL('image/webp', 0.82);
+        if (webp.indexOf('data:image/webp') === 0) return webp;
+      } catch (e) {}
       try { return canvas.toDataURL('image/png'); } catch (e) { return fallbackUrl; }
     }
 
@@ -5972,23 +5730,14 @@ html { -webkit-tap-highlight-color: transparent; }
       this.bump();
     }
     removeFromStickerStock(id) {
-      // placed memories reference the tray by stockId — re-embed the picture into
-      // any placement of this memory so removing it from the tray keeps them
-      const src = (this.data.stickerStock || []).find(s => s.id === id);
-      if (src && src.image) {
-        (this.data.placedStickers || []).forEach(ps => { if (ps.stockId === id && ps.image == null) ps.image = src.image; });
-      }
       this.data.stickerStock = this.data.stickerStock.filter(s => s.id !== id);
       this.bump();
     }
-    placeSticker(stockId, x, y, target = 'page', fx = null, fy = null) {
+    placeSticker(stockId, x, y, target = 'page') {
       const id = 'ps' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
       const stock = this.data.stickerStock.find(s => s.id === stockId);
       if (!stock) return;
-      // embed the image so the placement is self-contained — any app version
-      // (old or new) can render it without resolving the stockId reference.
-      // fx/fy are the fractional position (0–1) used for cross-layout sync.
-      this.data.placedStickers.push({ id, stockId, image: stock.image, x: Math.round(x), y: Math.round(y), fx, fy, w: 80, target });
+      this.data.placedStickers.push({ id, stockId, image: stock.image, x: Math.round(x), y: Math.round(y), w: 80, target });
       this.bump();
     }
     removePlacedSticker(id) {
@@ -6131,30 +5880,6 @@ html { -webkit-tap-highlight-color: transparent; }
       this._watchPackSheet();   // (re)observe the packing sheet for its open animation
       this.paintSaved();
       this.updateTopActions();
-      this._backfillStickerFractions();   // upgrade legacy pixel-only placements to fractional
-      if (this.syncOpen) this._analyzeStickers();   // fill the sticker-check readout when the sync panel is open
-    }
-    // Older placements stored only pixel coords. Once they're on-screen, capture
-    // their current position as a fraction of the layer so they carry across to
-    // the other layout (web <-> app). Pure upgrade: pixels and the fraction line
-    // up at the current size, so nothing visibly moves.
-    _backfillStickerFractions() {
-      const need = (this.data.placedStickers || []).some(ps => ps.image != null || this.stockImage(ps.stockId));
-      if (!need) return;
-      requestAnimationFrame(() => {
-        let changed = false;
-        (this.data.placedStickers || []).forEach(ps => {
-          if (ps.fx != null && ps.fy != null) return;
-          const el = this.root.querySelector(`.placed-sticker[data-placed-id="${CSS.escape(ps.id)}"]`)
-                  || this.modalEl.querySelector(`.placed-sticker[data-placed-id="${CSS.escape(ps.id)}"]`);
-          const layer = el && el.offsetParent;
-          if (!layer) return;
-          const lw = layer.clientWidth, lh = layer.clientHeight;
-          if (!lw || !lh) return;
-          ps.fx = el.offsetLeft / lw; ps.fy = el.offsetTop / lh; changed = true;
-        });
-        if (changed) this.scheduleSave();
-      });
     }
 
     /* ============================================================
@@ -6277,7 +6002,6 @@ html { -webkit-tap-highlight-color: transparent; }
             </div>
             <aside class="pack-side">${this.renderTodos(meta)}</aside>
           </div>
-          <div class="placed-stickers-layer">${this.renderPlacedStickers('pack')}</div>
         </div>
         <span class="leaf-folio">04 · 04</span>
       </section>`;
@@ -6803,7 +6527,7 @@ html { -webkit-tap-highlight-color: transparent; }
       if (!this.stickerPanelOpen) return '';
       const stock = this.data.stickerStock || [];
       const items = stock.map(s => `<div class="stock-item" draggable="true" data-drag="stock-sticker" data-id="${escA(s.id)}" title="Drag onto the page to place">
-        <img src="${escA(s.image)}" draggable="false" onerror="this.style.display='none'">
+        <img src="${escA(s.image)}" draggable="false">
         <button class="stock-item__del" data-act="stock-delete" data-id="${escA(s.id)}" title="Remove from stock">−</button>
       </div>`).join('');
       return `<div class="sticker-panel">
@@ -6827,16 +6551,10 @@ html { -webkit-tap-highlight-color: transparent; }
 
     renderPlacedStickers(target = 'page') {
       return (this.data.placedStickers || []).filter(ps => (ps.target || 'page') === target).map(ps => {
-        const img = ps.image || this.stockImage(ps.stockId);
+        const img = ps.image;
         if (!img) return '';
-        // position by fraction of the layer (percent) so it lands at the same
-        // relative spot on web and app; fall back to the stored pixels for
-        // placements from before fractional coords existed
-        const pos = (ps.fx != null && ps.fy != null)
-          ? `left:${(ps.fx * 100).toFixed(3)}%;top:${(ps.fy * 100).toFixed(3)}%`
-          : `left:${ps.x}px;top:${ps.y}px`;
-        return `<div class="placed-sticker" data-placed-id="${escA(ps.id)}" style="${pos};width:${ps.w || 80}px">
-          <img src="${escA(img)}" draggable="false" onerror="var s=this.closest('.placed-sticker'); if(s) s.style.display='none'">
+        return `<div class="placed-sticker" data-placed-id="${escA(ps.id)}" style="left:${ps.x}px;top:${ps.y}px;width:${ps.w || 80}px">
+          <img src="${escA(img)}" draggable="false">
           <button class="placed-sticker__delete" data-act="placed-delete" data-id="${escA(ps.id)}" title="Remove">×</button>
           <div class="placed-sticker__resize" title="Drag to resize"></div>
         </div>`;
@@ -6864,16 +6582,10 @@ html { -webkit-tap-highlight-color: transparent; }
           if (idx == null) { cells += `<div class="cal-off">${dd}</div>`; continue; }
           const active = idx === activeDay;
           const outfits = (itinerary[idx] && Array.isArray(itinerary[idx].outfits)) ? itinerary[idx].outfits : [];
-          const first = outfits[0];
-          const img = first ? (first.image || this.closetImage(first.id, closet) || null) : null;
+          const img = outfits[0] ? outfits[0].image : null;
           const hasOotd = !!img;
-          const pastePad = (active && !hasOotd) ? `<span class="cal-paste" data-act="cal-paste" data-i="${idx}" title="Paste an outfit here (⌘/Ctrl-V)">+</span>` : '';
-          // outfit cells: a plain-mouse desktop uses native HTML5 drag
-          // (draggable="true"); touch devices omit draggable and drive the drag
-          // by pointer (the two conflict on iOS, so pick one per device).
-          const dragAttr = hasOotd ? (this._isTouchDevice ? ` data-drag="cell" data-i="${idx}"` : ` draggable="true" data-drag="cell" data-i="${idx}"`) : '';
-          cells += `<button class="cal-cell${active ? ' active' : ''}" data-act="cal-day" data-drop="cell" data-i="${idx}"${dragAttr}>
-            <span>${dd}</span>${img ? `<img src="${escA(img)}" draggable="false" onerror="this.style.display='none'">` : ''}${pastePad}</button>`;
+          cells += `<button class="cal-cell${active ? ' active' : ''}" data-act="cal-day" data-drop="cell" data-i="${idx}"${hasOotd ? ` draggable="true" data-drag="cell" data-i="${idx}"` : ''}>
+            <span>${dd}</span>${img ? `<img src="${escA(img)}" draggable="false">` : ''}</button>`;
         }
         const dow = WEEK.map(l => `<div class="cal-dow">${l}</div>`).join('');
         months += `<div class="cal-month"><div class="label">${esc(label)}</div><div class="cal-grid">${dow}${cells}</div></div>`;
@@ -6898,7 +6610,7 @@ html { -webkit-tap-highlight-color: transparent; }
       const dayDate = (i) => { if (!range) return ''; const dt = new Date(range.start); dt.setDate(dt.getDate() + i); return fmt(dt); };
 
       const stripCells = closet.map(o => `<div class="outfit" draggable="true" data-drag="closet" data-id="${escA(o.id)}" title="Drag onto a date">
-        <img src="${escA(o.image)}" onerror="this.style.display='none'"><button class="del" data-act="outfit-delete" data-id="${escA(o.id)}" title="Remove from closet">−</button></div>`).join('');
+        <img src="${escA(o.image)}"><button class="del" data-act="outfit-delete" data-id="${escA(o.id)}" title="Remove from closet">−</button></div>`).join('');
 
       let dayBlock;
       if (hasDay) {
@@ -7229,81 +6941,9 @@ html { -webkit-tap-highlight-color: transparent; }
             </div>
             <button class="modal-x" data-act="close-sync">✕</button>
           </div></div>
-          <div class="sync-body">${body}
-            ${this._syncDiagnostics()}
-            <p class="sync-note" style="text-align:center;opacity:.6;margin-top:10px">build ${esc(BUILD_TAG)}</p>
-          </div>
+          <div class="sync-body">${body}</div>
         </div>
       </div>`;
-    }
-
-    // Make the black-box sync observable: the endpoint each device is linked to
-    // (BOTH devices must show the SAME one to share data), the payload size (free
-    // JSON stores reject oversized bodies — that silently blocks all sync), what
-    // is in the state, and the last status/error.
-    _syncDiagnostics() {
-      let sizeKB = 0; try { sizeKB = Math.round(this.cloudPayload().length / 1024); } catch (e) {}
-      const memories = (this.data.stickerStock || []).length;
-      const placed = (this.data.placedStickers || []).length;
-      const trips = Object.keys(this.data.trips || {}).length;
-      const activeTrip = (this.data.trips && this.data.trips[this.data.active] && this.data.trips[this.data.active].label) || this.data.active || '—';
-      const big = sizeKB > 900;
-      return `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line-2);font-size:11px;line-height:1.6;opacity:.8;text-align:left;word-break:break-all;font-family:var(--sans)">
-        <div><b>endpoint</b> · ${this.isLinked() ? escA(this.sync.id) : 'not linked'} ${this.isLinked() ? '' : '— this device is NOT sharing data with any other'}</div>
-        <div><b>this device shows</b> · trip "${escA(activeTrip)}" · ${memories} mem · ${placed} placed</div>
-        <div><b>data size</b> · <span style="color:${big ? 'var(--red)' : 'inherit'}">${sizeKB} KB${big ? ' — likely too big for the free store; sync may be failing' : ''}</span></div>
-        <div><b>status</b> · ${esc(this._syncStatus || 'off')}${this._syncMsg ? ' — ' + esc(this._syncMsg) : ''}</div>
-        ${this._lastSyncCorrupt ? `<div style="color:var(--red)"><b>image integrity</b> · a photo was mangled in transit (text still syncs; that image won't cross until we store photos separately)</div>` : ''}
-        <div style="opacity:.7;margin-top:4px">Both devices must show the SAME endpoint AND the same trip once synced. If they differ, they aren't linked to each other.</div>
-        <div style="margin-top:8px"><b>sticker check</b> <span style="opacity:.6">(read this on the device that shows a box)</span></div>
-        <div id="sticker-check" style="white-space:pre-wrap;font-size:10px;opacity:.9">analyzing…</div>
-      </div>`;
-    }
-    // Inspect every stored sticker image ON THIS DEVICE and report exactly what
-    // it is: format, size, pixel dimensions, how much of it is transparent, and
-    // whether it even decodes. This is the ground truth that ends the guessing —
-    // a "box" sticker will show up here as e.g. "100% clear" (transparent) or
-    // "FAILS TO LOAD", a working one as "0% clear — OK".
-    async _analyzeStickers() {
-      const host = (this.modalEl && this.modalEl.querySelector('#sticker-check'))
-                || (this.root && this.root.querySelector('#sticker-check'));
-      if (!host) return;
-      const items = [];
-      (this.data.stickerStock || []).forEach((s, i) => items.push(['mem ' + (i + 1), s.image]));
-      (this.data.placedStickers || []).forEach((p, i) => items.push(['placed ' + (i + 1), p.image]));
-      // also every closet outfit and day-assigned outfit, across all trips
-      Object.entries(this.data.trips || {}).forEach(([k, trip]) => {
-        (trip.closet || []).forEach((o, i) => items.push([`closet(${k}) ${i + 1}`, o.image]));
-        (trip.stops || []).forEach((s, si) => (s.itinerary || []).forEach((day, di) =>
-          (day && day.outfits || []).forEach((o) => items.push([`outfit(${k} s${si + 1}d${di + 1})`, o.image]))));
-      });
-      if (!items.length) { host.textContent = 'NO sticker/outfit images stored on this device at all — so nothing has synced here. Check the endpoint above matches the other device.'; return; }
-      const lines = [];
-      for (const [label, url] of items) {
-        lines.push(await this._analyzeOneImage(label, url));
-        host.textContent = lines.join('\n');   // update as each resolves
-      }
-    }
-    _analyzeOneImage(label, url) {
-      return new Promise(resolve => {
-        if (typeof url !== 'string' || !url) { resolve(`${label}: NO IMAGE DATA (empty)`); return; }
-        const fmt = ((url.match(/^data:([^;,]+)/) || [])[1]) || 'not-a-data-url';
-        const kb = Math.round(url.length / 1024);
-        const img = new Image();
-        img.onload = () => {
-          let clear = '?';
-          try {
-            const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
-            const x = c.getContext('2d'); x.drawImage(img, 0, 0);
-            const d = x.getImageData(0, 0, c.width, c.height).data;
-            let cl = 0, n = d.length / 4; for (let i = 3; i < d.length; i += 4) if (d[i] < 10) cl++;
-            clear = Math.round(cl / n * 100) + '% clear';
-          } catch (e) { clear = 'opaque?'; }
-          resolve(`${label}: ${fmt} ${kb}KB ${img.naturalWidth}×${img.naturalHeight} ${clear} — OK`);
-        };
-        img.onerror = () => resolve(`${label}: ${fmt} ${kb}KB — FAILS TO LOAD`);
-        img.src = url;
-      });
     }
 
     /* ============================================================
@@ -7453,7 +7093,6 @@ html { -webkit-tap-highlight-color: transparent; }
         case 'overlay-transport': if (e.target === t) this.closeTransport(); break;
         case 'transport-mode': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.mode = t.dataset.mode; if (leg.mode === 'flight' && leg.miles == null) leg.miles = 0; this.bump(); break; }
         case 'cal-day': { this.activeDay = (this.activeDay === i ? null : i); this._optimizeNote = null; this._selectedItem = null; this.bumpModal(); break; }
-        case 'cal-paste': { this.activeDay = i; this.pasteOutfitToActiveDay(); break; }
         case 'optimize-day': this.optimizeDay(); break;
         case 'optimize-dismiss': this._optimizeNote = null; this.bumpModal(); break;
         case 'add-item': this.addDayItem(trip.stops[this.openStopIdx], this.activeDay); break;
@@ -7557,10 +7196,9 @@ html { -webkit-tap-highlight-color: transparent; }
         const dayIdx = Number(t.dataset.i); const stop = this.currentTrip().stops[this.openStopIdx];
         const outfits = (stop.itinerary[dayIdx] && stop.itinerary[dayIdx].outfits) || [];
         if (outfits.length) {
-          const ghostImg = this.closetImage(outfits[0].id, this.currentTrip().closet) || outfits[0].image || '';
-          this._plannerDrag = { kind: 'day', id: outfits[0].id, stopIdx: this.openStopIdx, dayIdx };
+          this._plannerDrag = { kind: 'day', id: outfits[0].id, image: outfits[0].image, stopIdx: this.openStopIdx, dayIdx };
           const di = document.createElement('img');
-          di.src = ghostImg;
+          di.src = outfits[0].image;
           Object.assign(di.style, { position: 'fixed', top: '-200px', left: '-200px', width: '52px', height: '62px', objectFit: 'contain', borderRadius: '8px', filter: 'drop-shadow(0 4px 12px rgba(35,20,12,.3))' });
           document.body.appendChild(di);
           e.dataTransfer.setDragImage(di, 26, 31);
@@ -7584,14 +7222,10 @@ html { -webkit-tap-highlight-color: transparent; }
     placeStockAtPoint(stockId, clientX, clientY, hitEl) {
       const drop = this._stickerDropTarget(hitEl);
       if (!drop) return false;
-      let x, y, lw, lh;
-      if (drop.fixed) { x = clientX - 40; y = clientY - 40; lw = window.innerWidth; lh = window.innerHeight; }   // modal layer is fixed inset:0
-      else { const r = drop.layer.getBoundingClientRect(); x = clientX - r.left - 40; y = clientY - r.top - 40; lw = r.width; lh = r.height; }
-      // store the drop point as a FRACTION of the layer too — web and app pages
-      // are different sizes, so a raw pixel offset lands in the wrong place (or
-      // off-screen) on the other device; a fraction renders at the same relative
-      // spot everywhere. x/y are kept for older builds that read pixels.
-      this.placeSticker(stockId, x, y, drop.target, lw ? x / lw : null, lh ? y / lh : null);
+      let x, y;
+      if (drop.fixed) { x = clientX - 40; y = clientY - 40; }   // modal layer is fixed inset:0 — viewport coords map straight in
+      else { const r = drop.layer.getBoundingClientRect(); x = clientX - r.left - 40; y = clientY - r.top - 40; }
+      this.placeSticker(stockId, x, y, drop.target);
       return true;
     }
     // Resolve where a dropped memory lands: the mobile modal dialog, a web-ledger
@@ -7619,8 +7253,6 @@ html { -webkit-tap-highlight-color: transparent; }
         } else if (leaf.classList.contains('leaf-plan')) {
           if (this.accomOpenIdx == null) return null;
           target = 'accom-' + this.accomOpenIdx;
-        } else if (leaf.classList.contains('leaf-pack')) {
-          target = 'pack';
         }
         return { target, layer };
       }
@@ -7640,12 +7272,7 @@ html { -webkit-tap-highlight-color: transparent; }
       e.preventDefault(); const drop = t.dataset.drop;
       if (drop === 'trip') { this.reorderTrips(this._dragKey, t.dataset.key); this._dragKey = null; }
       else if (drop === 'stop') { if (this._dragStopIdx != null) this.reorderStop(this._dragStopIdx, Number(t.dataset.i)); this._dragStopIdx = null; }
-      else if (drop === 'cell') {
-        if (this.openStopIdx == null) return;
-        const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-        if (f && f.type.startsWith('image/')) this.addOutfitToDay(f, this.openStopIdx, Number(t.dataset.i));  // dropped an image file → outfit on that day
-        else this.plannerDrop(this.openStopIdx, Number(t.dataset.i));                                          // moving an existing outfit
-      }
+      else if (drop === 'cell') { if (this.openStopIdx != null) this.plannerDrop(this.openStopIdx, Number(t.dataset.i)); }
       else if (drop === 'closet-zone') { const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if (f && f.type.startsWith('image/')) this.addClosetSticker(f); }
       else if (drop === 'sticker-zone') {
         const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
@@ -7696,13 +7323,10 @@ html { -webkit-tap-highlight-color: transparent; }
         if (img) { e.preventDefault(); this.addClosetSticker(img.getAsFile()); }
         return;
       }
-      const items = (e.clipboardData && e.clipboardData.items) || [];
-      const img = [...items].find(it => it.type.startsWith('image/'));
-      if (!img) return;
-      if (this.stickerPanelOpen) { e.preventDefault(); this.addToStickerStock([img.getAsFile()]); return; }
-      // a highlighted calendar day is the outfit paste target
-      if (this.openStopIdx != null && this.activeDay != null) {
-        e.preventDefault(); this.addOutfitToDay(img.getAsFile(), this.openStopIdx, this.activeDay);
+      if (this.stickerPanelOpen) {
+        const items = (e.clipboardData && e.clipboardData.items) || [];
+        const img = [...items].find(it => it.type.startsWith('image/'));
+        if (img) { e.preventDefault(); this.addToStickerStock([img.getAsFile()]); }
       }
     }
     /* ---- pointer-based stop reordering (touch-friendly) ---- */
@@ -7883,13 +7507,6 @@ html { -webkit-tap-highlight-color: transparent; }
       // memory tray: drag a stock sticker out onto the page/dialog. Native HTML5
       // DnD carries this on mouse; touch needs the pointer path (iOS never fires
       // DnD from touch). Threshold-armed so a plain tap still isn't a drag.
-      // Touch devices (iPhone/iPad) drive the outfit drag by pointer for any
-      // pointer type (finger or trackpad) — the cell has no draggable attr there.
-      // A plain-mouse desktop falls through to native HTML5 DnD instead.
-      if (this._isTouchDevice) {
-        const outfitCell = e.target.closest('.cal-cell[data-drag="cell"]');
-        if (outfitCell && !e.target.closest('.cal-paste')) { if (e.cancelable) e.preventDefault(); this._armOutfitDrag(e, outfitCell); return; }
-      }
       if (e.pointerType === 'touch') {
         const stockEl = e.target.closest('.stock-item[data-drag="stock-sticker"]');
         if (stockEl && !e.target.closest('.stock-item__del')) { this._armStockStickerDrag(e, stockEl); return; }
@@ -7900,13 +7517,11 @@ html { -webkit-tap-highlight-color: transparent; }
       e.preventDefault();
       const id = sticker.dataset.placedId;
       if (e.target.closest('.placed-sticker__resize')) {
-        this._resizingSticker = { id, el: sticker, startX: e.clientX, origW: sticker.offsetWidth || 80 };
+        this._resizingSticker = { id, el: sticker, startX: e.clientX, origW: parseFloat(sticker.style.width) || 80 };
         this._onPM = ev => this._doStickerResize(ev);
         this._onPU = ev => this._endStickerResize(ev);
       } else {
-        // offsetLeft/Top are pixels within the layer regardless of whether the
-        // element was positioned via % (fractional) or px (legacy)
-        this._movingSticker = { id, el: sticker, startX: e.clientX, startY: e.clientY, origLeft: sticker.offsetLeft, origTop: sticker.offsetTop };
+        this._movingSticker = { id, el: sticker, startX: e.clientX, startY: e.clientY, origLeft: parseFloat(sticker.style.left) || 0, origTop: parseFloat(sticker.style.top) || 0 };
         this._onPM = ev => this._doStickerMove(ev);
         this._onPU = ev => this._endStickerMove(ev);
       }
@@ -7926,21 +7541,23 @@ html { -webkit-tap-highlight-color: transparent; }
       this._movingSticker = null;
       const ps = this.data.placedStickers.find(s => s.id === id);
       if (!ps) return;
-      const x = Math.round(el.offsetLeft);
-      const y = Math.round(el.offsetTop);
-      const layer = el.offsetParent;
-      const lw = layer ? layer.clientWidth : 0;
-      const lh = layer ? layer.clientHeight : 0;
-      const fx = lw ? x / lw : null;
-      const fy = lh ? y / lh : null;
-      // dragged well outside the page → remove it (fraction-based so it works on
-      // any layout size)
-      if (fx != null && (fx < -0.35 || fy < -0.35 || fx > 1.2 || fy > 1.2)) {
+      const x = Math.round(parseFloat(el.style.left) || 0);
+      const y = Math.round(parseFloat(el.style.top) || 0);
+      const w = parseFloat(el.style.width) || 80;
+      let outOfBounds;
+      if (ps.target === 'page') {
+        const pageEl = this.root.querySelector('.page');
+        const r = pageEl ? pageEl.getBoundingClientRect() : null;
+        outOfBounds = r && (x + w < 0 || y + 40 < 0 || x > r.width || y > r.height);
+      } else {
+        outOfBounds = x + w < 0 || y + 40 < 0 || x > window.innerWidth || y > window.innerHeight;
+      }
+      if (outOfBounds) {
         this.data.placedStickers = this.data.placedStickers.filter(s => s.id !== id);
         this.bump();
         return;
       }
-      ps.x = x; ps.y = y; ps.fx = fx; ps.fy = fy;
+      ps.x = x; ps.y = y;
       this.scheduleSave();
     }
     _doStickerResize(e) {
@@ -7956,82 +7573,6 @@ html { -webkit-tap-highlight-color: transparent; }
       document.removeEventListener('pointermove', this._onPM);
       this._resizingSticker = null;
       this.scheduleSave();
-    }
-    /* ---- pointer-based outfit drag between calendar days (touch; native HTML5
-       DnD never fires from touch on iOS). Armed on pointerdown; a floating ghost
-       appears once past the drag threshold so a tap still just selects the day.
-       Drop on another day → move; release off the calendar → remove. ---- */
-    _armOutfitDrag(e, cell) {
-      if (this.openStopIdx == null) return;
-      const dayIdx = Number(cell.dataset.i);
-      const stop = this.currentTrip().stops[this.openStopIdx];
-      const outfits = (stop.itinerary[dayIdx] && stop.itinerary[dayIdx].outfits) || [];
-      if (!outfits.length) return;
-      const image = outfits[0].image || this.closetImage(outfits[0].id);
-      this._outfitDrag = { id: outfits[0].id, image, dayIdx, srcCell: cell, ghost: null, targetCell: null, pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, moved: false };
-      // capture the pointer NOW (like the stop/activity drags do) so iOS doesn't
-      // steal the touch for scrolling before we cross the drag threshold
-      try { cell.setPointerCapture(e.pointerId); } catch (_) {}
-      this._onOFM = (ev) => this._doOutfitDrag(ev);
-      this._onOFU = (ev) => this._endOutfitDrag(ev);
-      document.addEventListener('pointermove', this._onOFM, { passive: false });
-      document.addEventListener('pointerup', this._onOFU, { once: true });
-      document.addEventListener('pointercancel', this._onOFU, { once: true });
-    }
-    _doOutfitDrag(e) {
-      const d = this._outfitDrag; if (!d) return;
-      d.lastX = e.clientX; d.lastY = e.clientY;
-      if (!d.moved) {
-        if (Math.abs(e.clientX - d.startX) < 5 && Math.abs(e.clientY - d.startY) < 5) return;
-        d.moved = true;
-        const ghost = document.createElement('img');
-        ghost.src = d.image; ghost.className = 'sticker-drag-ghost';
-        document.body.appendChild(ghost); d.ghost = ghost;
-        d.srcCell.classList.add('drag-source');
-      }
-      if (e.cancelable) e.preventDefault();
-      d.ghost.style.left = e.clientX + 'px'; d.ghost.style.top = e.clientY + 'px';
-      const under = document.elementFromPoint(e.clientX, e.clientY);
-      const cell = under ? under.closest('.cal-cell[data-drop="cell"]') : null;
-      if (cell !== d.targetCell) {
-        if (d.targetCell) d.targetCell.classList.remove('drag-target');
-        d.targetCell = cell;
-        if (cell) cell.classList.add('drag-target');
-      }
-    }
-    _endOutfitDrag(e) {
-      const d = this._outfitDrag; if (!d) return;
-      document.removeEventListener('pointermove', this._onOFM);
-      this._outfitDrag = null;
-      if (d.ghost) d.ghost.remove();
-      if (d.srcCell) d.srcCell.classList.remove('drag-source');
-      const target = d.targetCell;                 // the day highlighted during the drag
-      if (d.targetCell) d.targetCell.classList.remove('drag-target');
-      if (!d.moved) {
-        // a tap, not a drag — we preventDefault'd pointerdown (so iOS wouldn't
-        // scroll), which also suppresses the click, so select the day ourselves
-        this.activeDay = (this.activeDay === d.dayIdx ? null : d.dayIdx);
-        this._optimizeNote = null; this._selectedItem = null; this.bumpModal();
-        return;
-      }
-      // Use the cell that was under the finger on the LAST move (already tracked
-      // and highlighted) — NOT the pointerup coordinates, which iOS reports as
-      // stale/zero on touch-end (that made every drop read as "no target" and
-      // delete the outfit).
-      if (target) {
-        const targetIdx = Number(target.dataset.i);
-        if (targetIdx !== d.dayIdx) {
-          this._plannerDrag = { kind: 'day', id: d.id, stopIdx: this.openStopIdx, dayIdx: d.dayIdx };
-          this.plannerDrop(this.openStopIdx, targetIdx);   // move to the new day
-        }
-        return;                                            // dropped on a day → never remove
-      }
-      // no day was under the finger: remove only if the last move point was
-      // clearly OUTSIDE the calendar (a near-miss into a gap keeps the outfit)
-      const x = d.lastX, y = d.lastY;
-      const cal = (d.srcCell.closest && d.srcCell.closest('.cal')) || document.querySelector('.cal');
-      const inside = cal && x != null && (() => { const r = cal.getBoundingClientRect(); return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; })();
-      if (!inside) this.toggleOutfitOnDay(d.id, this.openStopIdx, d.dayIdx);   // dragged out → cancel
     }
     /* ---- pointer-based memory drag out of the tray (touch; native HTML5 DnD
        handles the mouse). Armed on pointerdown, but a floating ghost only

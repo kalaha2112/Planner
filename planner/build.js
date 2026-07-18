@@ -78,12 +78,6 @@ function build() {
     process.exitCode = 1;
   }
 
-  // standalone.html is committed with CRLF line endings; normalise the output to
-  // uniform CRLF so a rebuild produces a minimal (content-only) diff instead of
-  // flipping every line's ending — that EOL churn is what once masked a real
-  // revert. The LF sources are unaffected.
-  html = html.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
-
   fs.writeFileSync(OUT, html);
   const kb = (Buffer.byteLength(html) / 1024).toFixed(0);
   console.log(`✓ built standalone.html (${kb} KB) at ${new Date().toLocaleTimeString()}`);
