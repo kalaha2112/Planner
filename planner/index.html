@@ -31,6 +31,8 @@
   <script src="vendor/leaflet/leaflet.js"></script>
   <!-- TopoJSON client + world atlas — vendored locally, inlined by build.js -->
   <script src="vendor/topojson/topojson.min.js"></script>
+  <!-- Supabase JS client (vendored locally) — account sign-in + realtime cross-device sync -->
+  <script src="vendor/supabase/supabase.js"></script>
 
   <!-- pre-paint theme boot: must run BEFORE styles apply so a saved dark
        theme never flashes light on load (kept out of the PWA blocks, which
@@ -59,7 +61,7 @@
       <feMorphology operator="dilate" radius="0.3"/>
     </filter>
   </svg>
-  <script src="app.js?v=126"></script>
+  <script src="app.js?v=127"></script>
   <!-- PWA: offline cache + install support (no-op on file:// and non-secure origins) -->
   <script>
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {

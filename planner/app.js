@@ -85,6 +85,14 @@
   // live via localStorage.
   const HOSTED_WEB_URL = 'https://kalaha2112.github.io/Planner/';
 
+  // ---- Supabase-backed account sync ----
+  // With an account, every device that signs in auto-syncs the same trips in
+  // realtime — no codes, no sync button. The publishable key is a client key by
+  // design (safe to ship); data is protected per-user by row-level security.
+  const SUPABASE_URL = 'https://hqvojhssaciyncztkgzz.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_HonO-3xvVOuYt33iHgOPDQ_aEMxrz7n';
+  const CLOUD_TABLE = 'planner_state';
+
   // Startup page headline (editable in place; persisted in meta.introText and synced)
   const DEFAULT_INTRO_TEXT = 'The first website was published in 1990 by computer scientist Tim Berners-Lee and now it seems like an eyesore. Early websites were basic few';
 
@@ -538,13 +546,18 @@
       }), { threshold: [0, .35] }) : null;
       this._wheelAcc = 0;           // trackpad delta accumulator for page turns
       this._wheelT = 0;
-      // ---- cloud sync ----
-      this.sync = this.loadSyncRec();   // { id, rev, lastSyncedAt }
+      // ---- cloud sync (account-based via Supabase) ----
+      this.sync = this.loadSyncRec();   // { id, rev, lastSyncedAt }; id now = signed-in user id
+      this.sync.id = null;              // identity comes from the auth session, not localStorage
+      this._sb = null;                  // lazily-created Supabase client
+      this._rt = null;                  // realtime channel subscription
+      this._authEmail = null;           // signed-in account email (for the modal)
+      this._authLinkSent = null;        // email a magic link was just sent to
       this.syncOpen = false;            // sync modal open?
       this._syncBusy = false;           // an in-flight request guards against overlap
-      this._syncStatus = this.isLinked() ? 'synced' : 'off'; // off|syncing|synced|offline|error
+      this._syncStatus = 'off';         // off|syncing|synced|offline|error
       this._syncMsg = '';
-      this._syncCodeDraft = '';
+      this._syncCodeDraft = '';         // email draft in the sign-in field
       this._cloudPushTimer = null;
       this._syncPoll = null;
       this._stockStickerDrag = null;
@@ -681,17 +694,10 @@
         });
       } catch (e) { /* very old Safari: no MQL addEventListener — a reload still applies the right mode */ }
       this.startSyncLoop();
-      // auto-link from URL: any copy opened as …?sync=<code or endpoint URL>
-      // (or #sync=…) connects itself to that endpoint — this is how the
-      // installed app and the rawgithack-hosted standalone find each other.
-      const sm = (location.search + '&' + location.hash.replace(/^#/, '')).match(/[?&]sync=([^&]+)/);
-      const syncCode = sm ? this.normalizeEndpoint(decodeURIComponent(sm[1])) : '';
-      if (syncCode && syncCode !== 't-' && syncCode !== this.sync.id) {
-        this.syncOpen = true; this.bumpModal();   // show progress/result in the sync modal
-        this.connectEndpoint(syncCode);
-      } else if (this.isLinked()) {
-        this.pullCloud();   // pick up edits made on another device
-      }
+      // Account sync: restore any existing session, react to sign-in/out, and once
+      // signed in load this account's trips and subscribe to realtime updates from
+      // other devices. A magic-link redirect (…?code=…) is exchanged automatically.
+      this.initCloud();
       // one-time cleanup: shrink any full-res images saved before stickers were
       // downscaled on intake. A single oversized sticker bloats the payload past
       // the store's cap and blocks ALL sync, so this unsticks devices that were
@@ -1306,168 +1312,105 @@
     isLinked() { return !!(this.sync && this.sync.id); }
     saveLocalNow() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data)); } catch (e) {} }
 
-    cloudPayload() { return JSON.stringify({ app: APP_TAG, rev: this.sync.rev || Date.now(), data: this.data }); }
-    // parse "<tag>-<id>" (tolerating a pasted full URL) into a backend + id
-    parseCode(code) {
-      let c = (code || '').trim();
-      const url = c.match(/(?:jsonBlob|bin)\/([^/\s?#]+)/i);     // full URL paste
-      if (url) c = url[1];
-      const m = c.match(/^([a-z])-(.+)$/i);
-      if (m && SYNC_BACKENDS[m[1]]) return { be: SYNC_BACKENDS[m[1]], id: m[2] };
-      return { be: SYNC_BACKENDS[SYNC_ORDER[0]], id: c };          // legacy / untagged
-    }
-    // normalize a thrown error: a bare fetch rejection (TypeError) means the
-    // host was unreachable / CORS-blocked; our own errors carry a message.
-    normErr(e) {
-      if (e && (e.code || /HTTP|unreadable|no code|no data|too large/i.test(e.message || ''))) return e;
-      const er = new Error(navigator.onLine === false
-        ? 'You appear to be offline.'
-        : 'Could not reach the sync service (it may be down or blocked on this network).');
-      er.code = 'unreachable'; return er;
-    }
     netMsg(e) { return (e && e.message) ? e.message : 'Network error.'; }
-
-    async cloudGet(code) {
-      const { be, id } = this.parseCode(code);
-      let txt;
-      try { txt = await be.get(id); } catch (e) { throw this.normErr(e); }
-      if (!txt) throw _notFound();
-      try { return JSON.parse(txt); } catch (e) { throw new Error('Synced data was unreadable.'); }
-    }
-    async cloudPut(code) {
-      const { be, id } = this.parseCode(code);
-      try { await be.put(id, this.cloudPayload()); } catch (e) { throw this.normErr(e); }
-    }
     validPayload(p) { return !!(p && p.data && p.data.trips && p.data.meta); }
 
-    /* ----- user actions ----- */
-    async createSync() {
-      if (this._syncBusy) return;
-      this._syncBusy = true; this.setSyncStatus('syncing', 'Creating…');
-      if (!this.sync.rev) this.sync.rev = Date.now();
-      const body = this.cloudPayload();
-      const fails = [];
-      for (const tag of SYNC_ORDER) {
-        try {
-          const id = await SYNC_BACKENDS[tag].create(body);   // create stores our data too
-          this.sync.id = tag + '-' + id; this.sync.lastSyncedAt = Date.now(); this.persistSyncRec();
-          this._syncBusy = false; this.setSyncStatus('synced', 'Code created'); this.bumpModal();
-          return;
-        } catch (e) {
-          const ne = this.normErr(e);
-          fails.push(SYNC_BACKENDS[tag].name + ': ' + (ne.code === 'unreachable' ? 'unreachable' : ne.message));
-        }
-      }
-      this._syncBusy = false;
-      this.setSyncStatus('error', 'Sync failed — ' + fails.join(' · ')); this.bumpModal();
-    }
-    async linkSync(rawId) {
-      const code = (rawId || '').trim();
-      if (!code) { this.setSyncStatus('error', 'Enter a sync code.'); return; }
-      if (this._syncBusy) return;
-      this._syncBusy = true; this.setSyncStatus('syncing', 'Linking…');
+    /* ----- Supabase client + auth ----- */
+    sb() {
+      if (this._sb) return this._sb;
+      if (!(window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY)) return null;
       try {
-        const payload = await this.cloudGet(code);
-        if (!this.validPayload(payload)) throw new Error('That code has no planner data.');
-        this.snapshot();
-        this.data = payload.data; this.migrate(); this._lastCoordKey = '';
-        this.sync.id = code; this.sync.rev = Number(payload.rev) || Date.now(); this.sync.lastSyncedAt = Date.now();
-        this.persistSyncRec(); this.saveLocalNow();
-        this._syncBusy = false; this._syncCodeDraft = '';
-        this.setSyncStatus('synced', 'Linked'); this.render(); this.bumpModal();
+        this._sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce' }
+        });
+      } catch (e) { this._sb = null; }
+      return this._sb;
+    }
+    // Boot cloud sync: restore any session, react to sign-in/out, and once signed
+    // in load this account's trips + subscribe to realtime changes from other devices.
+    async initCloud() {
+      const sb = this.sb();
+      if (!sb) { this.setSyncStatus('off', ''); return; }
+      sb.auth.onAuthStateChange((_event, session) => this.onAuth(session));
+      try { const { data } = await sb.auth.getSession(); this.onAuth(data && data.session); }
+      catch (e) { this.setSyncStatus('off', ''); }
+    }
+    onAuth(session) {
+      const uid = session && session.user ? session.user.id : null;
+      const was = this.sync.id;
+      this.sync.id = uid;
+      this._authEmail = session && session.user ? session.user.email : null;
+      if (uid && uid !== was) {
+        this._authLinkSent = null;
+        this.setSyncStatus('syncing', 'Loading your trips…');
+        this.pullCloud({ force: true });     // adopt this account's trips (or seed them)
+        this.subscribeRealtime(uid);         // live updates from your other devices
+      } else if (!uid && was) {
+        this.unsubscribeRealtime();
+        this.setSyncStatus('off', '');
+      }
+      this.render(); this.bumpModal();
+    }
+    // Send a one-tap magic sign-in link to the email; clicking it on any device
+    // signs that device in and starts auto-sync. No password.
+    async signInWithEmail(email) {
+      const sb = this.sb();
+      const addr = (email || '').trim();
+      if (!sb) { this.setSyncStatus('error', 'Sync unavailable — could not load Supabase.'); this.bumpModal(); return; }
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(addr)) { this.setSyncStatus('error', 'Enter a valid email address.'); this.bumpModal(); return; }
+      this.setSyncStatus('syncing', 'Sending link…'); this.bumpModal();
+      try {
+        const { error } = await sb.auth.signInWithOtp({ email: addr, options: { emailRedirectTo: location.origin + location.pathname } });
+        if (error) throw error;
+        this._authLinkSent = addr; this._syncCodeDraft = '';
+        this.setSyncStatus('synced', 'Check your email'); this.bumpModal();
       } catch (e) {
-        this._syncBusy = false;
-        this.setSyncStatus('error', e.code === 404 ? 'No data found for that code.' : this.netMsg(e));
+        this.setSyncStatus('error', this.netMsg(e) || 'Could not send the link.'); this.bumpModal();
       }
     }
-    unlinkSync() {
+    async signOut() {
+      const sb = this.sb();
       clearTimeout(this._cloudPushTimer);
-      this.sync = { id: null, rev: this.sync.rev || 0, lastSyncedAt: 0 };
-      this.persistSyncRec(); this.setSyncStatus('off', ''); this.bumpModal();
+      this.unsubscribeRealtime();
+      try { if (sb) await sb.auth.signOut(); } catch (e) {}
+      this.sync.id = null; this._authEmail = null; this._authLinkSent = null;
+      this.setSyncStatus('off', ''); this.render(); this.bumpModal();
+    }
+    subscribeRealtime(uid) {
+      const sb = this.sb();
+      if (!sb) return;
+      this.unsubscribeRealtime();
+      // A large row can exceed a realtime payload, so treat any change as a signal
+      // to re-fetch the authoritative row rather than trusting the pushed copy.
+      this._rt = sb.channel('planner-' + uid)
+        .on('postgres_changes', { event: '*', schema: 'public', table: CLOUD_TABLE, filter: 'user_id=eq.' + uid }, () => this.pullCloud())
+        .subscribe();
+    }
+    unsubscribeRealtime() {
+      if (this._rt && this._sb) { try { this._sb.removeChannel(this._rt); } catch (e) {} }
+      this._rt = null;
+    }
+
+    /* ----- read / write this account's row ----- */
+    async cloudRowSelect() {
+      const sb = this.sb(); if (!sb || !this.sync.id) return null;
+      const { data, error } = await sb.from(CLOUD_TABLE).select('rev,data').eq('user_id', this.sync.id).maybeSingle();
+      if (error) throw error;
+      return data ? { rev: Number(data.rev) || 0, data: data.data } : null;
+    }
+    async cloudRowUpsert() {
+      const sb = this.sb(); if (!sb || !this.sync.id) return;
+      const { error } = await sb.from(CLOUD_TABLE).upsert(
+        { user_id: this.sync.id, rev: this.sync.rev || Date.now(), data: this.data, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id' });
+      if (error) throw error;
     }
     syncNow() { this.pullCloud({ force: true }); }
 
-    // URL of the hosted web build, carrying this device's sync code when linked
-    // so the opened page auto-connects to the same trips.
-    hostedWebUrl() {
-      return this.isLinked()
-        ? HOSTED_WEB_URL + '?sync=' + encodeURIComponent(this.sync.id)
-        : HOSTED_WEB_URL;
-    }
-    // Open the hosted web build. If this device isn't linked yet, first create a
-    // sync endpoint automatically; if it IS linked, flush the most recent edit to
-    // the cloud first — uploads are debounced (~900ms), so without this the other
-    // device can pull the pre-edit state and your newest trip goes missing. Only
-    // then hand the new tab the ?sync= link so both ends stay in sync. The blank
-    // tab is opened up-front (inside the user gesture) so it isn't caught by the
-    // popup blocker after the async flush/create.
-    async openHostedWeb() {
-      const win = window.open('about:blank', '_blank');
-      if (this.isLinked()) {
-        clearTimeout(this._cloudPushTimer);        // cancel the pending debounced push…
-        try { await this.pushCloud(); } catch (e) {}  // …and flush it now, before the other device loads
-      } else {
-        await this.createSync();                   // seeds the new endpoint with the current trips
-      }
-      if (this.isLinked()) { if (win) win.location = this.hostedWebUrl(); else window.open(this.hostedWebUrl(), '_blank', 'noopener'); }
-      else if (win) win.close();   // couldn't create an endpoint; status shows the error
-    }
-
-    // reconstruct a human endpoint URL from a "t-<key>" code (for display)
-    endpointUrl(code) {
-      const { be, id } = this.parseCode(code);
-      if (be && be.base && /textdb/.test(be.base)) return be.base + '/' + id;
-      return code;
-    }
-    // normalize whatever the user pasted (full textdb URL, page URL, or raw key)
-    // into our "t-<key>" code form
-    normalizeEndpoint(raw) {
-      let v = (raw || '').trim();
-      if (!v) return '';
-      let m = v.match(/textdb\.dev\/api\/data\/([^/\s?#]+)/i);
-      if (!m) m = v.match(/textdb\.dev\/(?:e\/)?([^/\s?#]+)/i);
-      if (m) return 't-' + m[1];
-      if (/^[a-z]-/i.test(v) && SYNC_BACKENDS[v[0].toLowerCase()]) return v;   // already a tagged code
-      return 't-' + v.replace(/[^\w-]/g, '');                                  // bare key
-    }
-    // Connect a user-created endpoint: load its trips if it already has some
-    // (2nd device), otherwise initialize it with this device's trips (1st device).
-    async connectEndpoint(raw) {
-      const code = this.normalizeEndpoint(raw);
-      if (!code || code === 't-') { this.setSyncStatus('error', 'Paste your textdb endpoint first.'); return; }
-      if (this._syncBusy) return;
-      this._syncBusy = true; this.setSyncStatus('syncing', 'Connecting…');
-      try {
-        let payload = null;
-        try { payload = await this.cloudGet(code); }
-        catch (e) { if (e.code !== 404) throw e; }   // 404/empty = brand-new endpoint
-        if (payload && this.validPayload(payload)) {
-          // endpoint already holds trips — adopt them
-          this.snapshot();
-          this.data = payload.data; this.migrate(); this._lastCoordKey = '';
-          this.sync.id = code; this.sync.rev = Number(payload.rev) || Date.now(); this.sync.lastSyncedAt = Date.now();
-          this.persistSyncRec(); this.saveLocalNow();
-          this._syncBusy = false; this._syncCodeDraft = '';
-          this.setSyncStatus('synced', 'Connected — trips loaded'); this.render(); this.bumpModal();
-        } else {
-          // empty endpoint — seed it with our current trips, then read back to confirm it stuck
-          if (!this.sync.rev) this.sync.rev = Date.now();
-          this.sync.id = code; this.persistSyncRec();
-          await this.cloudPut(code);
-          let check = null; try { check = await this.cloudGet(code); } catch (e) {}
-          if (!check || !this.validPayload(check)) {
-            this.sync.id = null; this.persistSyncRec();
-            throw new Error("Saved, but the endpoint didn't keep the data — double-check you pasted the API URL from textdb.dev (textdb.dev/api/data/…).");
-          }
-          this.sync.lastSyncedAt = Date.now(); this.persistSyncRec();
-          this._syncBusy = false; this._syncCodeDraft = '';
-          this.setSyncStatus('synced', 'Connected — endpoint set up'); this.render(); this.bumpModal();
-        }
-      } catch (e) {
-        this._syncBusy = false;
-        this.setSyncStatus('error', e.code === 404 ? 'Endpoint not found.' : this.netMsg(e)); this.bumpModal();
-      }
-    }
+    // "Open the web version" now just opens the published app — the other device
+    // signs into the same account and syncs automatically, no code to carry.
+    hostedWebUrl() { return HOSTED_WEB_URL; }
+    openHostedWeb() { window.open(HOSTED_WEB_URL, '_blank', 'noopener'); }
 
     /* ----- push / pull ----- */
     scheduleCloudPush() {
@@ -1480,13 +1423,12 @@
       if (this._syncBusy) { this.scheduleCloudPush(); return; }   // retry once current request settles
       this._syncBusy = true; this.setSyncStatus('syncing', 'Saving…');
       try {
-        await this.cloudPut(this.sync.id);
+        await this.cloudRowUpsert();
         this.sync.lastSyncedAt = Date.now(); this.persistSyncRec();
         this._syncBusy = false; this.setSyncStatus('synced', '');
       } catch (e) {
         this._syncBusy = false;
-        if (e.code === 404) this.setSyncStatus('error', 'Sync code no longer exists — re-create or re-link.');
-        else { this.setSyncStatus('offline', this.netMsg(e)); this.scheduleCloudPush(); }
+        this.setSyncStatus('offline', this.netMsg(e)); this.scheduleCloudPush();
       }
     }
     async pullCloud(opts = {}) {
@@ -1496,16 +1438,21 @@
       if (!opts.force && this._syncEditGuard()) return;
       this._syncBusy = true; if (opts.force) this.setSyncStatus('syncing', 'Checking…');
       try {
-        const payload = await this.cloudGet(this.sync.id);
-        const remoteRev = Number(payload && payload.rev) || 0;
+        const row = await this.cloudRowSelect();
+        const remoteRev = row ? row.rev : 0;
         const localRev = this.sync.rev || 0;
-        if (this.validPayload(payload) && remoteRev > localRev) {
+        if (row && this.validPayload({ data: row.data }) && remoteRev > localRev) {
           // remote is newer — adopt it (but never clobber a modal the user is typing in)
-          this.data = payload.data; this.migrate(); this._lastCoordKey = '';
+          this.data = row.data; this.migrate(); this._lastCoordKey = '';
           this.sync.rev = remoteRev; this.sync.lastSyncedAt = Date.now(); this.persistSyncRec();
           this.saveLocalNow();
           this._syncBusy = false; this.setSyncStatus('synced', 'Updated from another device');
           this.render(); this.bumpModal(); this.touchMap();
+        } else if (!row) {
+          // first time on this account — seed the cloud with the trips on this device
+          if (!this.sync.rev) this.sync.rev = Date.now();
+          this.persistSyncRec();
+          this._syncBusy = false; this.setSyncStatus('synced', ''); this.scheduleCloudPush();
         } else if (remoteRev < localRev) {
           // we hold newer edits (e.g. made offline) — push them up
           this._syncBusy = false; this.setSyncStatus('synced', ''); this.scheduleCloudPush();
@@ -1515,8 +1462,7 @@
         }
       } catch (e) {
         this._syncBusy = false;
-        if (e.code === 404) this.setSyncStatus('error', 'Sync code no longer exists.');
-        else this.setSyncStatus('offline', opts.force ? this.netMsg(e) : '');
+        this.setSyncStatus('offline', opts.force ? this.netMsg(e) : '');
       }
     }
     startSyncLoop() {
@@ -3940,49 +3886,34 @@
       const linked = this.isLinked();
       const statusCls = 's-' + (this._syncStatus || (linked ? 'synced' : 'off'));
       const when = this.sync.lastSyncedAt ? ('Last synced ' + this.relTime(this.sync.lastSyncedAt)) : '';
-      const endpoint = linked ? this.endpointUrl(this.sync.id) : '';
       const body = linked ? `
-        <p class="sync-lead">Synced to your textdb endpoint. On your other device, open <b>Sync</b> and paste the <b>same</b> link below to load these trips.</p>
-        <label class="sync-field-lbl">Your endpoint (paste this on the other device)</label>
-        <div class="sync-code-row">
-          <input class="sync-code-out" value="${escA(endpoint)}" readonly data-act="sync-select">
-          <button class="sync-btn" data-act="sync-copy">Copy</button>
-        </div>
+        <p class="sync-lead">Signed in as <b>${esc(this._authEmail || 'your account')}</b>. Every edit saves automatically and syncs to all your signed-in devices in realtime — no button to press.</p>
         <div class="sync-row">
           <span class="sync-status ${statusCls}">${esc(this.syncStatusLabel())}</span>
           <span class="sync-when">${esc(when)}</span>
         </div>
         <div class="sync-actions">
           <button class="sync-btn primary" data-act="sync-now"${this._syncBusy ? ' disabled' : ''}>Sync now</button>
-          <button class="sync-btn ghost" data-act="sync-unlink">Disconnect this device</button>
+          <button class="sync-btn ghost" data-act="sign-out">Sign out</button>
         </div>
-        <button class="sync-btn open-web-btn" data-act="open-web"${this._syncBusy ? ' disabled' : ''}>Open the web version ↗</button>
-        <p class="sync-note">Opens the hosted planner already linked to this device — your latest edits are uploaded first, then it opens, so both ends match.</p>
-        <p class="sync-note">Trips live at this public endpoint. Anyone with the link can read or change them — treat it like a shared password. Offline edits upload automatically when you reconnect.</p>
-        <p class="sync-note">Auto-link another copy: open it with <code>?sync=${escA(this.sync.id)}</code> appended to its address (works for the installed app and the hosted web page alike). Copies served from the <b>same host</b> share edits live without any setup.</p>
+        <button class="sync-btn open-web-btn" data-act="open-web">Open the web version ↗</button>
+        <p class="sync-note">To add another device, open the app there and sign in with the same email — your trips appear automatically. Offline edits upload the moment you're back online.</p>
       ` : `
-        <p class="sync-lead">Create one free storage endpoint (no account, no email), then paste it on both devices. This device sets it up; the other one loads from it.</p>
-        <ol class="sync-steps">
-          <li>Open <a href="https://textdb.dev" target="_blank" rel="noopener" class="sync-link">textdb.dev ↗</a> and copy the <b>API URL</b> it shows (looks like <code>textdb.dev/api/data/…</code>).</li>
-          <li>Paste it below and tap <b>Connect</b>.</li>
-          <li>Do the same with the <b>same link</b> on your other device.</li>
-        </ol>
+        <p class="sync-lead">Sign in once on each device to keep your trips in sync automatically — no codes, no sync button. We email you a one-tap link; there's no password.</p>
+        <label class="sync-field-lbl">Your email</label>
         <div class="sync-code-row">
-          <input class="sync-code-in" placeholder="Paste your textdb endpoint / link" data-ch="sync-code-in" value="${escA(this._syncCodeDraft || '')}">
-          <button class="sync-btn primary" data-act="sync-connect"${this._syncBusy ? ' disabled' : ''}>Connect</button>
+          <input class="sync-code-in" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" data-ch="sync-code-in" value="${escA(this._syncCodeDraft || '')}">
+          <button class="sync-btn primary" data-act="sign-in"${this._syncBusy ? ' disabled' : ''}>Email me a link</button>
         </div>
         <div class="sync-row"><span class="sync-status ${statusCls}">${esc(this.syncStatusLabel())}</span></div>
-        <p class="sync-note">Your trips are stored at this public endpoint so both devices can reach them. Anyone with the link can view or edit it, so keep it private.</p>
-        <div class="sync-or">or</div>
-        <button class="sync-btn open-web-btn" data-act="open-web"${this._syncBusy ? ' disabled' : ''}>Open the web version, synced ↗</button>
-        <p class="sync-note">One tap: creates a sync endpoint automatically and opens the hosted planner already linked to this device — edits then flow both ways.</p>
+        ${this._authLinkSent ? `<p class="sync-note">Link sent to <b>${esc(this._authLinkSent)}</b> — open it on this device to finish signing in. Check spam if it doesn't arrive.</p>` : `<p class="sync-note">Your trips are private to your account, secured by row-level security — only you can read or change them.</p>`}
       `;
       return `<div class="overlay" data-act="overlay-sync">
         <div class="dialog sync-dialog" data-stop>
           <div class="head"><div class="row">
             <div style="flex:1">
               <div class="eyebrow">Cross-device sync</div>
-              <div class="sync-title">${linked ? 'Synced' : 'Set up sync'}</div>
+              <div class="sync-title">${linked ? 'Synced' : 'Sign in to sync'}</div>
             </div>
             <button class="modal-x" data-act="close-sync">✕</button>
           </div></div>
@@ -4114,22 +4045,10 @@
         case 'open-sync': this.syncOpen = true; this.bumpModal(); break;
         case 'close-sync': this.syncOpen = false; this.bumpModal(); break;
         case 'overlay-sync': if (e.target === t) { this.syncOpen = false; this.bumpModal(); } break;
-        case 'sync-create': this.createSync(); break;
-        case 'sync-connect': { const inp = this.modalEl.querySelector('.sync-code-in'); this.connectEndpoint(inp ? inp.value : this._syncCodeDraft); break; }
-        case 'sync-link': { const inp = this.modalEl.querySelector('.sync-code-in'); this.linkSync(inp ? inp.value : this._syncCodeDraft); break; }
+        case 'sign-in': { const inp = this.modalEl.querySelector('.sync-code-in'); this.signInWithEmail(inp ? inp.value : this._syncCodeDraft); break; }
         case 'sync-now': this.syncNow(); break;
         case 'open-web': this.openHostedWeb(); break;
-        case 'sync-unlink': if (confirm('Unlink this device? Your trips stay here but stop syncing with other devices.')) this.unlinkSync(); break;
-        case 'sync-select': if (t.select) t.select(); break;
-        case 'sync-copy': {
-          const inp = this.modalEl.querySelector('.sync-code-out');
-          if (inp) {
-            inp.select();
-            try { navigator.clipboard.writeText(inp.value); } catch (err) { try { document.execCommand('copy'); } catch (e2) {} }
-            this.setSyncStatus('synced', 'Code copied');
-          }
-          break;
-        }
+        case 'sign-out': if (confirm('Sign out on this device? Your trips stay saved here and in your account; this device just stops auto-syncing until you sign in again.')) this.signOut(); break;
         case 'close-iti': this.closeStop(); break;
         case 'overlay-iti': if (e.target === t) this.closeStop(); break;
         case 'close-accom': this.closeAccom(); break;
