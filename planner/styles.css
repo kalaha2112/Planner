@@ -1041,6 +1041,16 @@ a { color: inherit; }
   filter: drop-shadow(0 6px 18px rgba(35,20,12,.35));
   opacity: .92;
 }
+/* trip-tab touch drag-to-reorder feedback */
+.trip-drag-ghost {
+  position: fixed; z-index: 1200; pointer-events: none; transform: translate(-50%, -50%);
+  padding: 6px 12px; border-radius: 999px;
+  background: var(--brown); color: var(--on-brown);
+  font-family: var(--sans); font-size: 12px; font-weight: 600; white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(35,20,12,.3);
+}
+.tab-active.drag-source, .tab-inactive.drag-source { opacity: .4; }
+.tab-active.drag-target, .tab-inactive.drag-target { box-shadow: 0 0 0 2px var(--red); }
 .stock-item img { width: 100%; height: 100%; object-fit: contain; border-radius: var(--r-btn); }
 .stock-item__del {
   position: absolute;
@@ -2236,3 +2246,24 @@ html { -webkit-tap-highlight-color: transparent; }
   transition: opacity .18s ease;
 }
 .touch-arrow.on { opacity: 1; }
+
+/* ============================================================
+   TOUCH DEVICES (no hover) — placed LAST so these win the source-order
+   cascade over the base rules above. Controls that are otherwise
+   hover-revealed/hover-lit must be reachable, and the native date picker
+   needs the real <input> as the tap target.
+   ============================================================ */
+@media (hover: none) {
+  /* the real date input becomes the tap target (opens the native picker
+     directly — showPicker() is unreliable on touch) */
+  .meta-range .date-seg .date-native {
+    position: absolute; inset: 0; left: 0; top: 0; width: 100%; height: 100%;
+    opacity: 0; pointer-events: auto;
+  }
+  /* reveal controls that would otherwise need hover */
+  .placed-sticker__delete { display: flex; }
+  .placed-sticker__resize { display: block; }
+  .stock-item .stock-item__del { display: flex; }
+  /* affordances stay visible without hover */
+  .grip, .item-grip, .trash, .add-stop, .ledger-edge { opacity: 1; }
+}
