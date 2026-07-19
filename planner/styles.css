@@ -1441,8 +1441,19 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     font-family: var(--serif); font-size: 21px; font-weight: 700; letter-spacing: -.01em; color: var(--ink);
   }
   .ss-card input.city::placeholder { color: var(--ink-faint); font-weight: 400; }
-  .ss-x { flex-shrink: 0; border: none; background: transparent; color: var(--ink-faint); cursor: pointer; padding: 4px; }
+  .ss-x { flex-shrink: 0; border: none; background: transparent; color: var(--ink-faint); cursor: pointer; padding: 4px; font-size: 14px; line-height: 1; }
   .ss-x:hover { color: var(--red); }
+  /* nothing hovered: the stop list — a bullet + name + ✕ per stop */
+  .ss-list { list-style: none; margin: 0; padding: 2px 0 0; display: flex; flex-direction: column; }
+  .ss-li { display: flex; align-items: center; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--line); }
+  .ss-li:last-child { border-bottom: none; }
+  .ss-bullet { flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%; background: var(--red); }
+  .ss-li-name {
+    flex: 1; min-width: 0; min-height: 1.25em; text-align: left; border: none; background: transparent; padding: 2px 0; cursor: pointer;
+    font-family: var(--serif); font-size: 16px; font-weight: 600; letter-spacing: -.01em; color: var(--ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color .14s;
+  }
+  .ss-li-name:hover { color: var(--red); }
   .ss-dates { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 2px; margin: 4px 0 0 30px; font-family: var(--sans); font-size: 12.5px; font-weight: 600; color: var(--green-dark); }
   .ss-nights { display: inline-flex; align-items: baseline; gap: 3px; }
   .ss-nights input {
