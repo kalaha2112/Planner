@@ -1290,6 +1290,12 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   width: 22px; height: 22px;
   font-size: 9px; line-height: 22px;
 }
+/* web ledger: static pin number — the tap opens the dock card, so the number
+   itself must not intercept the pointer */
+.map-pin-main .pin-order-num {
+  color: #fff; font-family: var(--sans); font-weight: 700; font-size: 9px; line-height: 1;
+  pointer-events: none; user-select: none;
+}
 
 /* stop pins drop in when the map scrolls into view (JS toggles the container
    class on .main-pins-overlay: pins-wait → pins-drop → settled/no-class).
@@ -1443,11 +1449,18 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .ss-card input.city::placeholder { color: var(--ink-faint); font-weight: 400; }
   .ss-x { flex-shrink: 0; border: none; background: transparent; color: var(--ink-faint); cursor: pointer; padding: 4px; font-size: 14px; line-height: 1; }
   .ss-x:hover { color: var(--red); }
-  /* nothing hovered: the stop list — a bullet + name + ✕ per stop */
+  /* the stop list — a numbered marker (edit to reorder) + name + ✕ per stop */
   .ss-list { list-style: none; margin: 0; padding: 2px 0 0; display: flex; flex-direction: column; }
   .ss-li { display: flex; align-items: center; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--line); }
   .ss-li:last-child { border-bottom: none; }
-  .ss-bullet { flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%; background: var(--red); }
+  .ss-num-input {
+    flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
+    border: none; background: var(--red); color: #fff; padding: 0; cursor: pointer;
+    font-family: var(--sans); font-size: 11px; font-weight: 700; text-align: center; line-height: 22px;
+    appearance: none; -moz-appearance: textfield;
+  }
+  .ss-num-input::-webkit-inner-spin-button, .ss-num-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .ss-num-input:focus { outline: none; box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--red); }
   .ss-li-name {
     flex: 1; min-width: 0; min-height: 1.25em; text-align: left; border: none; background: transparent; padding: 2px 0; cursor: pointer;
     font-family: var(--serif); font-size: 16px; font-weight: 600; letter-spacing: -.01em; color: var(--ink);
