@@ -972,8 +972,8 @@ a { color: inherit; }
   .app-ov .meta-range .date-year { color: var(--green-dark); }
   .app-ov .meta-range .saved { display: none; }
 
-  /* entry cards: a row of tappable cards under the stats box */
-  .app-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  /* entry cards: a row of tappable cards between the map and the stats box */
+  .app-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 4px 14px; }
   .app-card {
     display: flex; flex-direction: column; align-items: center; gap: 6px;
     padding: 15px 8px; border: 1px solid var(--line); border-radius: var(--r-card);

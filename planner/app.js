@@ -3087,13 +3087,13 @@
             </div>
             <button class="map-add-btn" data-act="add-stop" title="Add stop" aria-label="Add stop">+</button>
           </div>
+          <div class="app-cards">
+            <button class="app-card" data-act="app-goto" data-i="1">${svg(I.calendar, { w: 20, h: 20, sw: 1.8 })}<span>Itinerary</span></button>
+            <button class="app-card" data-act="app-goto" data-i="2">${svg(I.bed, { w: 20, h: 20, sw: 1.8 })}<span>Hotel</span></button>
+            <button class="app-card" data-act="app-goto" data-i="3">${svg(I.route, { w: 20, h: 20, sw: 1.8 })}<span>Transport</span></button>
+          </div>
           <aside class="aside">
             ${this.renderSummary(nights, budget.grandTotal, budget.perPerson, milesNeeded, meta.milesBalance || 0, travelers)}
-            <div class="app-cards">
-              <button class="app-card" data-act="app-goto" data-i="1">${svg(I.calendar, { w: 20, h: 20, sw: 1.8 })}<span>Itinerary</span></button>
-              <button class="app-card" data-act="app-goto" data-i="2">${svg(I.bed, { w: 20, h: 20, sw: 1.8 })}<span>Hotel</span></button>
-              <button class="app-card" data-act="app-goto" data-i="3">${svg(I.route, { w: 20, h: 20, sw: 1.8 })}<span>Transport</span></button>
-            </div>
             ${this.renderPackBlock(trip)}
             ${this.renderTodos(meta)}
           </aside>
