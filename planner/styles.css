@@ -931,8 +931,28 @@ a { color: inherit; }
    tab bar pinned to the top to switch between pages.
    ============================================================ */
 @media (max-width: 700px) {
-  /* prose date range (from the web version) between the map and the stats */
-  .app-ov .meta-range { margin: 14px 4px 4px; }
+  /* prose date range (from the web version) between the map and the stats.
+     The generic .meta-range prose styling lives in the ≥701px ledger block, so
+     it must be restated here — critically .date-seg needs position:relative so
+     the touch overlay input (.date-native, absolute/inset:0 in the hover:none
+     block) stays confined to the date text instead of covering the whole page. */
+  .app-ov .meta-range {
+    display: flex; align-items: baseline; flex-wrap: wrap; gap: 0;
+    margin: 2px 4px 12px; padding: 2px 0;
+    font-family: var(--serif); font-size: 20px; font-weight: 600; letter-spacing: -.01em;
+    color: var(--green-dark);
+  }
+  .app-ov .meta-range .date-tail { white-space: nowrap; }
+  .app-ov .meta-range .date-seg { position: relative; display: inline-block; cursor: pointer; color: inherit; white-space: nowrap; }
+  /* parked + invisible by default (the ≥701px base rule doesn't reach here); the
+     hover:none block below promotes it to a full-cover tap target on touch */
+  .app-ov .meta-range .date-native {
+    position: absolute; left: 0; top: 100%; width: 1px; height: 1px;
+    opacity: 0; border: none; padding: 0; margin: 0; pointer-events: none;
+  }
+  .app-ov .meta-range .date-dash { margin: 0 8px; color: var(--green-dark); }
+  .app-ov .meta-range .date-year { color: var(--green-dark); }
+  .app-ov .meta-range .saved { display: none; }
 
   /* entry cards: a row of tappable cards under the stats box */
   .app-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }

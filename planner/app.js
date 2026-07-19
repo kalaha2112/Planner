@@ -3074,6 +3074,7 @@
       const overview = `
       <div class="app-ov">
         <div class="page" style="position:relative">
+          ${this.renderMetaRange(trip)}
           <div class="route map-route">
             <div id="main-map-holder" class="main-map-wrap"></div>
             <div class="map-ep map-origin">
@@ -3086,7 +3087,6 @@
             </div>
             <button class="map-add-btn" data-act="add-stop" title="Add stop" aria-label="Add stop">+</button>
           </div>
-          ${this.renderMetaRange(trip)}
           <aside class="aside">
             ${this.renderSummary(nights, budget.grandTotal, budget.perPerson, milesNeeded, meta.milesBalance || 0, travelers)}
             <div class="app-cards">
