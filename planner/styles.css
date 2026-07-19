@@ -549,6 +549,22 @@ a { color: inherit; }
   z-index: 1;
 }
 .cal-cell img { width: 100%; flex: 1; min-height: 0; object-fit: contain; object-position: center; margin-top: 2px; margin-bottom: 6px; pointer-events: none; }
+/* app (phone): the calendar is 7 narrow columns, so a `contain` outfit thumbnail
+   shrinks to a dot inside a tall cell. Shorten the cell and let the outfit fill
+   it (`cover`), with the day number as a corner chip so it stays legible. */
+@media (max-width: 700px) {
+  .cal-cell { min-height: 64px; padding: 0; }
+  .cal-cell > span {
+    position: absolute; top: 3px; left: 4px; z-index: 2;
+    font-family: var(--sans); font-style: normal; font-weight: 700; font-size: 10px; line-height: 1;
+    color: var(--ink); background: var(--stay-fill); padding: 2px 4px; border-radius: 5px;
+  }
+  .cal-cell.active > span { background: var(--surface); }
+  .cal-cell img {
+    position: absolute; inset: 0; width: 100%; height: 100%; flex: none;
+    object-fit: cover; margin: 0; border-radius: inherit;
+  }
+}
 
 .iti-foot { padding: 0; }
 .day-title { font-family: var(--script); font-style: italic; font-weight: 300; font-size: 18px; color: var(--ink); margin-bottom: 16px; }
