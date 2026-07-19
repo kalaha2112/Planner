@@ -923,6 +923,7 @@
       overlay.addEventListener('dragover', (e) => this.onDragOver(e));
       overlay.addEventListener('drop', (e) => this.onDrop(e));
       overlay.addEventListener('dragend', (e) => this.onDragEnd(e));
+      overlay.addEventListener('pointerdown', (e) => this.onPointerDown(e));   // touch drag-reorder (native DnD never fires from touch)
       // editing a tab name shouldn't start an ancestor drag (mirrors wireDelegation)
       overlay.addEventListener('focusin', (e) => {
         const t = e.target;
@@ -4482,6 +4483,48 @@
         this.toggleOutfitOnDay(d.info.id, d.info.stopIdx, d.info.dayIdx);   // dragged off the calendar → remove
       }
     }
+    /* ----- trip tabs: touch drag-to-reorder (mouse uses native HTML5 DnD) ----- */
+    _armTripTouchDrag(e, el) {
+      const key = el.dataset.key; if (!key) return;
+      this._tripTouch = { key, srcEl: el, ghost: null, targetEl: null, moved: false, startX: e.clientX, startY: e.clientY, pointerId: e.pointerId, label: (el.textContent || 'Trip').trim() };
+      this._onTTM = (ev) => this._doTripTouchDrag(ev);
+      this._onTTU = (ev) => this._endTripTouchDrag(ev);
+      document.addEventListener('pointermove', this._onTTM, { passive: false });
+      document.addEventListener('pointerup', this._onTTU, { once: true });
+      document.addEventListener('pointercancel', this._onTTU, { once: true });
+    }
+    _doTripTouchDrag(e) {
+      const d = this._tripTouch; if (!d) return;
+      if (!d.moved) {
+        if (Math.abs(e.clientX - d.startX) < 5 && Math.abs(e.clientY - d.startY) < 5) return;
+        d.moved = true;
+        const ghost = document.createElement('div');
+        ghost.className = 'trip-drag-ghost'; ghost.textContent = d.label;
+        document.body.appendChild(ghost); d.ghost = ghost;
+        d.srcEl.classList.add('drag-source');
+        try { d.srcEl.setPointerCapture(d.pointerId); } catch (_) {}   // claim the gesture so iOS doesn't scroll it away
+      }
+      if (e.cancelable) e.preventDefault();
+      if (d.ghost) { d.ghost.style.left = e.clientX + 'px'; d.ghost.style.top = e.clientY + 'px'; }
+      const under = document.elementFromPoint(e.clientX, e.clientY);
+      const tab = under ? under.closest('[data-drop="trip"]') : null;
+      const target = (tab && tab.dataset.key && tab.dataset.key !== d.key) ? tab : null;
+      if (target !== d.targetEl) {
+        if (d.targetEl) d.targetEl.classList.remove('drag-target');
+        d.targetEl = target;
+        if (target) target.classList.add('drag-target');
+      }
+    }
+    _endTripTouchDrag() {
+      const d = this._tripTouch; if (!d) return;
+      document.removeEventListener('pointermove', this._onTTM);
+      this._tripTouch = null;
+      if (d.ghost) d.ghost.remove();
+      if (d.srcEl) d.srcEl.classList.remove('drag-source');
+      if (d.targetEl) d.targetEl.classList.remove('drag-target');
+      if (!d.moved) return;   // a tap, not a drag — let the click select the trip
+      if (d.targetEl && d.targetEl.dataset.key) this.reorderTrips(d.key, d.targetEl.dataset.key);
+    }
     _startMapCardDrag(e, stopIdx) {
       if (this._mobileMap()) return;   // popup position is automatic on mobile (grip hidden too)
       const card = this.mainCardsOverlayEl.querySelector(`.map-stop[data-i="${stopIdx}"]`);
@@ -4547,6 +4590,10 @@
       // DnD carries this on mouse; touch needs the pointer path (iOS never fires
       // DnD from touch). Threshold-armed so a plain tap still isn't a drag.
       if (e.pointerType === 'touch') {
+        // trip tabs: reorder by touch-drag (native HTML5 DnD never fires from
+        // touch). Threshold-armed → a plain tap still selects the trip.
+        const tripTab = e.target.closest('[data-drag="trip"]');
+        if (tripTab) { this._armTripTouchDrag(e, tripTab); return; }
         // outfits: move a day's outfit to another day, or drag a closet item onto
         // a day. Native HTML5 DnD (used by the mouse) never fires from touch on
         // iOS, so drive these by pointer. Threshold-armed → a tap still selects.
