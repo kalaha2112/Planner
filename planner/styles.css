@@ -925,6 +925,82 @@ a { color: inherit; }
 }
 
 /* ============================================================
+   APP BOOK (≤700px) — the phone twin of the web ledger: the
+   overview stays in normal document flow; the Itinerary / Hotel /
+   Transport sub-pages rise up over it as fixed overlays, with a
+   tab bar pinned to the top to switch between pages.
+   ============================================================ */
+@media (max-width: 700px) {
+  /* prose date range (from the web version) between the map and the stats */
+  .app-ov .meta-range { margin: 14px 4px 4px; }
+
+  /* entry cards: a row of tappable cards under the stats box */
+  .app-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .app-card {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 15px 8px; border: 1px solid var(--line); border-radius: var(--r-card);
+    background: var(--surface); color: var(--ink);
+    font-family: var(--sans); font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: border-color .15s ease, transform .1s ease;
+  }
+  .app-card svg { color: var(--red); }
+  .app-card:active { transform: scale(.97); }
+  .app-card:hover { border-color: var(--ink-faint); }
+
+  /* the tab bar: pinned to the top, only present once a sub-page is open. The
+     right padding clears the fixed action cluster (undo/memories/theme). */
+  .app-tabs {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 60;
+    display: flex; gap: 5px;
+    padding: calc(env(safe-area-inset-top, 0px) + 8px) 130px 8px max(10px, env(safe-area-inset-left));
+    background: var(--shell); border-bottom: 1px solid var(--line);
+  }
+  .app-root[data-page="0"] .app-tabs { display: none; }
+  .app-tab {
+    flex: 1; min-width: 0;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 7px 2px; border: 1px solid transparent; border-radius: 12px;
+    background: none; color: var(--ink-soft);
+    font-family: var(--sans); font-size: 10px; font-weight: 600; letter-spacing: .01em;
+    cursor: pointer; transition: background .15s ease, color .15s ease;
+  }
+  .app-tab svg { display: block; }
+  .app-tab.on { background: var(--brown); color: var(--on-brown); }
+
+  /* sub-pages: fixed overlays that rise up over the overview */
+  .app-leaf {
+    position: fixed; inset: 0; z-index: 50;
+    background: var(--shell); overflow-y: auto; -webkit-overflow-scrolling: touch;
+    opacity: 0; transform: translateY(100%); pointer-events: none; visibility: hidden;
+    transition: transform .5s cubic-bezier(.22, .61, .36, 1), opacity .38s ease, visibility 0s .5s;
+  }
+  .app-leaf.active {
+    opacity: 1; transform: translateY(0); pointer-events: auto; visibility: visible;
+    transition: transform .5s cubic-bezier(.22, .61, .36, 1), opacity .3s ease, visibility 0s;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .app-leaf { transition: opacity .2s ease, visibility 0s .2s; transform: none; }
+    .app-leaf.active { transition: opacity .2s ease, visibility 0s; }
+  }
+  .app-sub-inner {
+    min-height: 100%;
+    padding: calc(env(safe-area-inset-top, 0px) + 66px) 14px calc(env(safe-area-inset-bottom, 0px) + 28px);
+  }
+
+  /* sub-page header: eyebrow · city title · date sub · stop pills */
+  .app-page-hd { margin-bottom: 14px; }
+  .app-page-title { font-family: var(--serif); font-weight: 700; font-size: 27px; line-height: 1.04; margin: 3px 0 4px; color: var(--ink); }
+  .app-page-sub { font-family: var(--sans); font-size: 12px; color: var(--ink-soft); }
+  .app-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 11px; }
+  .app-pill {
+    padding: 5px 12px; border: 1px solid var(--line); border-radius: 999px;
+    background: var(--surface); color: var(--ink-soft);
+    font-family: var(--sans); font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .app-pill.on { background: var(--brown); color: var(--on-brown); border-color: var(--brown); }
+}
+
+/* ============================================================
    PLACED STICKER LAYER
    ============================================================ */
 .placed-stickers-layer {

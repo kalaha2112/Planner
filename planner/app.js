@@ -551,6 +551,12 @@
       // pure view state.
       this.magIdx = 0;              // 0 route · 1 itinerary · 2 transport&hotels · 3 packing&to-do
       this._magAnimating = false;
+      // ---- app (≤700px): the phone twin of the ledger — an overview page with
+      // entry cards that rise a sub-page up (Itinerary / Hotel / Transportation)
+      // with a tab bar pinned on top. appStopIdx is the shared stop selection.
+      this.appPage = 0;             // 0 overview · 1 itinerary · 2 hotel · 3 transport
+      this.appStopIdx = 0;
+      this._appAnimating = false;
       this.packOpen = null;         // packing slot whose popover is pinned open (view state)
       this._pkAnim = 'closed';      // packing sheet animation state: closed → open
       this._pkIO = ('IntersectionObserver' in window) ? new IntersectionObserver((es) => es.forEach(e => {
@@ -838,19 +844,19 @@
     _anyModalOpen() {
       // web ledger: itinerary/accom/transport live on always-open leaves, not
       // modals — only the bill and the floating panels count as "open" there
-      if (this._webMag()) return this.syncOpen || this.budgetOpen || this.stickerPanelOpen;
-      return this.syncOpen || this.budgetOpen || this.stickerPanelOpen ||
-        this.accomOpenIdx != null || this.transportOpenIdx != null || this.openStopIdx != null;
+      // app itinerary/accom/transport now live on always-rendered leaves too
+      // (not modals), so only the bill and the floating panels count as "open"
+      return this.syncOpen || this.budgetOpen || this.stickerPanelOpen;
     }
     // sync pulls must not clobber content mid-edit. The app blocks while an
     // editing modal is open; the ledger's leaves are always open, so there we
     // block only while the user is actually typing in a field.
     _syncEditGuard() {
-      if (this._webMag()) {
-        const ae = document.activeElement;
-        return !!(ae && (ae.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)));
-      }
-      return (this.openStopIdx != null || this.accomOpenIdx != null || this.budgetOpen);
+      // both layouts now keep their pages always-rendered, so block a clobbering
+      // pull only while the user is actually typing in a field (or the bill's open)
+      const ae = document.activeElement;
+      if (ae && (ae.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))) return true;
+      return this.budgetOpen;
     }
     updateTopActions() {
       const ta = this.topActionsEl; if (!ta) return;
@@ -1182,21 +1188,21 @@
       // web ledger: itinerary/accom/transport/budget render on the leaves inside
       // #app, so a "modal" bump has to redraw the whole page (render() also
       // refreshes the floating panels in modalEl)
-      if (this._webMag()) { this.render(); return; }
+      // web ledger + app sub-pages (appPage>0) both render inside #app, so a
+      // "modal" bump there redraws the whole page (render() also refreshes the
+      // floating panels in modalEl). The fresh markup carries the right leaf
+      // state class, so no unwanted slide animation fires.
+      if (this._webMag() || this.appPage > 0) { this.render(); return; }
+      // app overview: only the budget/sticker/sync modals live in modalEl now —
+      // itinerary/accom/transport are leaves, not modals
       const trip = this.currentTrip();
       const travelers = Math.max(1, Number(trip.travelers) || 1);
-      const d = this.computeDates(trip);
-      const fmt = (x) => this.formatDate(x);
       const nights = trip.stops.reduce((s, st) => s + (Number(st.nights) || 0), 0);
       const budget = this.computeBudget(trip, travelers, nights);
       this.modalEl.innerHTML =
         this.renderStickerPanel() +
-        this.renderItineraryModal(trip, d, fmt) +
-        this.renderAccomModal(trip, d, fmt) +
-        this.renderTransportModal(trip) +
         this.renderBudgetModal(budget, travelers, nights) +
         this.renderSyncModal();
-      // modal-only re-render still has to (re)mount the per-day map node
       this.mountDayMap();
       this.updateTopActions();   // sticker toggle / sync-modal actions change cluster state
     }
@@ -2576,22 +2582,25 @@
       this.openStopIdx = idx; this.activeDay = null; this._optimizeNote = null; this._selectedItem = null;
       // web ledger: the itinerary is page 2 — flip to it with this stop selected
       if (this._webMag()) { this.render(); this.magGoto(1); return; }
-      this.bumpModal();
+      // app: itinerary is sub-page 1 — rise it up with this stop selected
+      this.appStopIdx = idx; this.render(); this.appGoto(1);
     }
-    closeStop() { this.openStopIdx = null; this.bumpModal(); }
+    closeStop() { if (!this._webMag()) { this.appGoto(0); return; } this.openStopIdx = null; this.bumpModal(); }
     openAccom(idx) {
       this.accomOpenIdx = idx;
       // web ledger: hotels share page 3 with transport
       if (this._webMag()) { this.render(); this.magGoto(2); return; }
-      this.bumpModal();
+      // app: hotel is sub-page 2
+      this.appStopIdx = idx; this.render(); this.appGoto(2);
     }
-    closeAccom() { this.accomOpenIdx = null; this.bumpModal(); }
+    closeAccom() { if (!this._webMag()) { this.appGoto(0); return; } this.accomOpenIdx = null; this.bumpModal(); }
     openTransport(idx) {
       // web ledger: transport is inline on page 3 (same stop selector as hotels)
       if (this._webMag()) { this.accomOpenIdx = idx; this.render(); this.magGoto(2); return; }
-      this.transportOpenIdx = idx; this.bumpModal();
+      // app: transport is sub-page 3
+      this.appStopIdx = idx; this.render(); this.appGoto(3);
     }
-    closeTransport() { this.transportOpenIdx = null; this.bumpModal(); }
+    closeTransport() { if (!this._webMag()) { this.appGoto(0); return; } this.transportOpenIdx = null; this.bumpModal(); }
     ensureItinerary(stop) {
       if (!Array.isArray(stop.itinerary)) stop.itinerary = [];
       const days = Math.max(1, Number(stop.nights) || 1);
@@ -2811,44 +2820,30 @@
           if (this.accomOpenIdx == null || this.accomOpenIdx >= n) this.accomOpenIdx = 0;
         } else { this.openStopIdx = null; this.accomOpenIdx = null; }
         this.magIdx = Math.max(0, Math.min(3, this.magIdx || 0));
+      } else {
+        // app (phone) twin: the sub-pages reuse openStopIdx/accomOpenIdx/
+        // transportOpenIdx, all mirrored off the shared appStopIdx so switching
+        // pages keeps the same city selected.
+        const n = trip.stops.length;
+        if (n) {
+          this.appStopIdx = Math.max(0, Math.min(n - 1, this.appStopIdx || 0));
+          this.openStopIdx = this.accomOpenIdx = this.transportOpenIdx = this.appStopIdx;
+        } else {
+          this.appPage = 0;
+          this.openStopIdx = this.accomOpenIdx = this.transportOpenIdx = null;
+        }
+        this.appPage = Math.max(0, Math.min(3, this.appPage || 0));
       }
 
       const html = web
         ? this.renderLedger(trip, meta, travelers, d, fmt, nights, budget, milesNeeded)
-        : `
-        <div class="page" style="position:relative">
-          ${this.renderMeta(trip, travelers)}
-          <div class="body-cols">
-            <div class="route map-route">
-              <div id="main-map-holder" class="main-map-wrap"></div>
-              <div class="map-ep map-origin">
-                <input value="${escA(trip.originLabel)}" data-ch="origin-label" placeholder="Flying from">
-                <span class="map-ep-date">${d ? fmt(d.origin) : ''}</span>
-              </div>
-              <div class="map-ep map-home">
-                <input value="${escA(trip.homeLabel)}" data-ch="home-label" placeholder="Flying home to">
-                <span class="map-ep-date">${d ? fmt(d.home) : ''}</span>
-              </div>
-              <button class="map-add-btn" data-act="add-stop" title="Add stop" aria-label="Add stop">+</button>
-            </div>
-            <aside class="aside">
-              ${this.renderSummary(nights, budget.grandTotal, budget.perPerson, milesNeeded, meta.milesBalance || 0, travelers)}
-              ${this.renderPackBlock(trip)}
-              ${this.renderTodos(meta)}
-            </aside>
-          </div>
-          <div class="placed-stickers-layer">${this.renderPlacedStickers()}</div>
-        </div>
-      `;
+        : this.renderAppBook(trip, meta, travelers, d, fmt, nights, budget, milesNeeded);
       this.root.innerHTML = html;
       this.modalEl.innerHTML = web
         ? this.renderStickerPanel() +                          // leaves carry itinerary/accom/transport
           this.renderBudgetModal(budget, travelers, nights) +  // the bill prints over the panel area
           this.renderSyncModal()
-        : this.renderStickerPanel() +
-          this.renderItineraryModal(trip, d, fmt) +
-          this.renderAccomModal(trip, d, fmt) +
-          this.renderTransportModal(trip) +
+        : this.renderStickerPanel() +                          // app leaves carry itinerary/accom/transport
           this.renderBudgetModal(budget, travelers, nights) +
           this.renderSyncModal();
 
@@ -3047,6 +3042,136 @@
     _afterFlip() {
       if (this.magIdx === 0 && this.mainLeafletMap) { this.mainLeafletMap.invalidateSize(); this.renderMainMap(); }
       if (this.magIdx === 1 && this.dayMap) { this.dayMap.invalidateSize(); this.scheduleDayMap(); }
+    }
+
+    /* ============================================================
+       APP BOOK (≤700px) — the phone twin of the web ledger. The
+       overview page carries the map, the prose date range, the stats
+       and entry cards; tapping a card rises the matching sub-page
+       (Itinerary / Hotel / Transport) up from below, with a tab bar
+       pinned on top to switch. Same state/handlers as the ledger —
+       only the composition (tabs on top, entry cards) differs.
+       ============================================================ */
+    renderAppBook(trip, meta, travelers, d, fmt, nights, budget, milesNeeded) {
+      const page = this.appPage;
+      const nightsLbl = (st) => { const n = Math.max(1, Number(st.nights) || 1); return `${n} night${n === 1 ? '' : 's'}`; };
+      const sIdx = this.appStopIdx;
+      const sel = trip.stops[sIdx] || null;
+      const range = (sel && d) ? d.stops[sIdx] : null;
+      const stopPills = () => trip.stops.map((s, i) =>
+        `<button class="app-pill${i === sIdx ? ' on' : ''}" data-act="app-stop" data-i="${i}">${esc(s.city || 'Stop ' + (i + 1))}</button>`).join('');
+      const subHd = (eyebrow) => `<header class="app-page-hd">
+          <div class="eyebrow">${esc(eyebrow)}</div>
+          <div class="app-page-title">${sel ? esc(sel.city || 'Stop') : 'No stops yet'}</div>
+          <div class="app-page-sub">${range ? esc(fmt(range.start) + ' → ' + fmt(range.end)) + ' · ' : ''}${sel ? nightsLbl(sel) : ''}</div>
+          ${trip.stops.length ? `<div class="app-pills">${stopPills()}</div>` : ''}
+        </header>`;
+      const emptyNote = `<p class="empty-note" style="margin:18px 4px">Add a stop on the overview first.</p>`;
+
+      // ---- overview (page 0) · stays in normal document flow; the map, prose
+      //      date range (between map and stats), stats, entry cards, packing
+      //      and to-dos. The sub-pages below rise up over it as fixed overlays. ----
+      const overview = `
+      <div class="app-ov">
+        <div class="page" style="position:relative">
+          <div class="route map-route">
+            <div id="main-map-holder" class="main-map-wrap"></div>
+            <div class="map-ep map-origin">
+              <input value="${escA(trip.originLabel)}" data-ch="origin-label" placeholder="Flying from">
+              <span class="map-ep-date">${d ? fmt(d.origin) : ''}</span>
+            </div>
+            <div class="map-ep map-home">
+              <input value="${escA(trip.homeLabel)}" data-ch="home-label" placeholder="Flying home to">
+              <span class="map-ep-date">${d ? fmt(d.home) : ''}</span>
+            </div>
+            <button class="map-add-btn" data-act="add-stop" title="Add stop" aria-label="Add stop">+</button>
+          </div>
+          ${this.renderMetaRange(trip)}
+          <aside class="aside">
+            ${this.renderSummary(nights, budget.grandTotal, budget.perPerson, milesNeeded, meta.milesBalance || 0, travelers)}
+            <div class="app-cards">
+              <button class="app-card" data-act="app-goto" data-i="1">${svg(I.calendar, { w: 20, h: 20, sw: 1.8 })}<span>Itinerary</span></button>
+              <button class="app-card" data-act="app-goto" data-i="2">${svg(I.bed, { w: 20, h: 20, sw: 1.8 })}<span>Hotel</span></button>
+              <button class="app-card" data-act="app-goto" data-i="3">${svg(I.route, { w: 20, h: 20, sw: 1.8 })}<span>Transport</span></button>
+            </div>
+            ${this.renderPackBlock(trip)}
+            ${this.renderTodos(meta)}
+          </aside>
+          <div class="placed-stickers-layer">${this.renderPlacedStickers()}</div>
+        </div>
+      </div>`;
+
+      // ---- page 1 · itinerary (calendar + day planner + day map) ----
+      const iNights = sel ? Math.max(1, Number(sel.nights) || 1) : 0;
+      const hasDay = !!sel && this.activeDay != null && this.activeDay >= 0 && this.activeDay < iNights;
+      const itiLeaf = `
+      <section class="app-leaf${page === 1 ? ' active' : ''}" data-leaf="1">
+        <div class="app-sub-inner">
+          ${subHd('Itinerary')}
+          ${sel ? this.renderItineraryBody(trip, d, fmt) : emptyNote}
+          ${hasDay ? `<div class="placed-stickers-layer">${this.renderPlacedStickers('iti-' + sIdx + '-day-' + this.activeDay)}</div>` : ''}
+        </div>
+      </section>`;
+
+      // ---- page 2 · hotel (lodging research for the selected stop) ----
+      const hotelLeaf = `
+      <section class="app-leaf${page === 2 ? ' active' : ''}" data-leaf="2">
+        <div class="app-sub-inner">
+          ${subHd('Sleeping')}
+          ${sel ? this.renderAccomBody(trip, sIdx) : emptyNote}
+          ${sel ? `<div class="placed-stickers-layer">${this.renderPlacedStickers('accom-' + sIdx)}</div>` : ''}
+        </div>
+      </section>`;
+
+      // ---- page 3 · transport (the leg reaching the selected stop) ----
+      const transportLeaf = `
+      <section class="app-leaf${page === 3 ? ' active' : ''}" data-leaf="3">
+        <div class="app-sub-inner">
+          ${subHd('Getting there')}
+          ${sel ? this.renderTransportBody(trip, sIdx) : emptyNote}
+        </div>
+      </section>`;
+
+      const tabDefs = [
+        { label: 'Overview', icon: I.home }, { label: 'Itinerary', icon: I.calendar },
+        { label: 'Hotel', icon: I.bed }, { label: 'Transport', icon: I.route },
+      ];
+      const tabs = tabDefs.map((t, i) =>
+        `<button class="app-tab${i === page ? ' on' : ''}" data-act="app-goto" data-i="${i}" aria-label="${esc(t.label)}" title="${esc(t.label)}">${svg(t.icon, { w: 17, h: 17, sw: 1.8 })}<span>${esc(t.label)}</span></button>`).join('');
+
+      return `<div class="app-root" data-page="${page}">
+        ${overview}
+        <nav class="app-tabs" aria-label="Pages">${tabs}</nav>
+        ${itiLeaf}${hotelLeaf}${transportLeaf}
+      </div>`;
+    }
+
+    // switch app pages — the sub-pages rise/fall via the .active class
+    // transition (class toggling on live DOM; plain re-renders don't animate
+    // because the fresh markup already carries the right state class)
+    appGoto(i) {
+      if (this._webMag()) return;
+      i = Math.max(0, Math.min(3, i));
+      if (i === this.appPage || this._appAnimating) return;
+      this.appPage = i;
+      this._appAnimating = true;
+      clearTimeout(this._appFlipEndT);
+      this._appFlipEndT = setTimeout(() => { this._appAnimating = false; }, 520);
+      this._syncAppLeafClasses();
+      this._afterAppFlip();
+    }
+    _syncAppLeafClasses() {
+      const rootEl = this.root.querySelector('.app-root'); if (!rootEl) return;
+      rootEl.dataset.page = String(this.appPage);
+      rootEl.querySelectorAll('.app-leaf').forEach(el =>
+        el.classList.toggle('active', Number(el.dataset.leaf) === this.appPage));
+      rootEl.querySelectorAll('.app-tab').forEach(el =>
+        el.classList.toggle('on', Number(el.dataset.i) === this.appPage));
+    }
+    _afterAppFlip() {
+      // the overview map lives in normal flow underneath and never unmounts;
+      // only the itinerary's day map (inside the rising leaf) needs a nudge
+      if (this.appPage === 1 && this.dayMap) { this.dayMap.invalidateSize(); this.scheduleDayMap(); }
     }
     // true when an ancestor of t is a real scroll region (overflow-y auto/
     // scroll) that can still move in the gesture's direction — that region
@@ -3989,9 +4114,8 @@
         return;
       }
       if (this.budgetOpen) { this.budgetOpen = false; this.bumpModal(); }
-      else if (this.accomOpenIdx != null) { this.closeAccom(); }
-      else if (this.transportOpenIdx != null) { this.closeTransport(); }
-      else if (this.openStopIdx != null) { this.closeStop(); }
+      else if (this.stickerPanelOpen) { this.stickerPanelOpen = false; this.bumpModal(); }
+      else if (this.appPage > 0) { this.appGoto(0); }   // back to the overview
     }
 
     onClick(e) {
@@ -4050,6 +4174,8 @@
           if (inp) { if (inp.showPicker) { try { inp.showPicker(); } catch (err) { inp.focus(); } } else inp.focus(); }
           break;
         }
+        case 'app-goto': this.appGoto(i); break;
+        case 'app-stop': if (this.appStopIdx !== i) { this.appStopIdx = i; this.activeDay = null; this._optimizeNote = null; this._selectedItem = null; this.render(); } break;
         case 'ledger-goto': this.magGoto(i); break;
         case 'ledger-prev': if (this.magIdx > 0) this.magGoto(this.magIdx - 1); else if (this._introReturn) this._introReturn(); break;
         case 'ledger-next': this.magGoto(this.magIdx + 1); break;
