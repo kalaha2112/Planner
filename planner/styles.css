@@ -1443,7 +1443,14 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .ss-card input.city::placeholder { color: var(--ink-faint); font-weight: 400; }
   .ss-x { flex-shrink: 0; border: none; background: transparent; color: var(--ink-faint); cursor: pointer; padding: 4px; }
   .ss-x:hover { color: var(--red); }
-  .ss-dates { margin: 4px 0 0 30px; font-family: var(--sans); font-size: 12.5px; font-weight: 600; color: var(--green-dark); }
+  .ss-dates { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 2px; margin: 4px 0 0 30px; font-family: var(--sans); font-size: 12.5px; font-weight: 600; color: var(--green-dark); }
+  .ss-nights { display: inline-flex; align-items: baseline; gap: 3px; }
+  .ss-nights input {
+    width: 2.6em; text-align: center; padding: 0 2px 1px;
+    border: none; border-bottom: 1px solid var(--line); background: transparent;
+    font-family: var(--sans); font-size: 12.5px; font-weight: 600; color: var(--green-dark);
+  }
+  .ss-nights input:focus { outline: none; border-bottom-color: var(--red); }
   .ss-leg { display: flex; align-items: center; gap: 7px; margin: 7px 0 0 30px; font-family: var(--sans); font-size: 11.5px; color: var(--ink-soft); }
   .ss-leg .mode-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
   .ss-hotel { display: flex; align-items: center; gap: 6px; margin: 6px 0 0 30px; font-family: var(--sans); font-size: 11.5px; color: var(--ink-soft); }

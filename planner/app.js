@@ -1857,6 +1857,10 @@
     }
 
     _renderMainMapCardHTML(stops, legs, d, fmt) {
+      // Web ledger: the map shows pins only — each stop's details (city,
+      // nights, delete, itinerary/hotels/transport) live in the dock card
+      // (.stop-spot) beside the map, so no cards are drawn over the map here.
+      if (this._webMag()) { this.mainCardsOverlayEl.innerHTML = ''; return; }
       let html = '';
       stops.forEach((stop, idx) => {
         const r = d ? d.stops[idx] : null;
@@ -3357,7 +3361,6 @@
       const stop = idx != null ? trip.stops[idx] : null;
       if (!stop) return `<div class="ss-hint">Hover a pin on the map to preview a stop — or hit <b>+</b> to add one.</div>`;
       const r = d ? d.stops[idx] : null;
-      const nightsN = Math.max(1, Number(stop.nights) || 1);
       const leg = stop.leg || {};
       const modeLbl = (MODE_OPTIONS.find(o => o.value === leg.mode) || {}).label || '';
       const chosen = (stop.accom && stop.accom.options || []).filter(o => o.chosen && o.name && o.name.trim()).map(o => o.name.trim());
@@ -3367,7 +3370,7 @@
           <input class="city" value="${escA(stop.city)}" data-ch="stop-city" data-i="${idx}" placeholder="City name…">
           <button class="ss-x" data-act="stop-delete" data-i="${idx}" title="Remove stop" aria-label="Remove stop">${svg(I.trash, { w: 13, h: 13, sw: 2.2 })}</button>
         </div>
-        <div class="ss-dates">${r ? esc(fmt(r.start) + ' → ' + fmt(r.end)) + ` · ${nightsN} night${nightsN === 1 ? '' : 's'}` : `${nightsN} night${nightsN === 1 ? '' : 's'}`}</div>
+        <div class="ss-dates">${r ? esc(fmt(r.start) + ' → ' + fmt(r.end)) + ' · ' : ''}<span class="ss-nights"><input type="number" min="0" value="${escA(stop.nights)}" data-ch="stop-nights" data-i="${idx}" aria-label="Nights"><span class="ss-nlab">nts</span></span></div>
         ${(modeLbl || leg.duration) ? `<div class="ss-leg"><span class="mode-dot" style="background:${MODE_HEX[leg.mode] || '#7a7260'}"></span>${esc(modeLbl)}${leg.duration ? ' · ' + esc(leg.duration) : ''}</div>` : ''}
         ${chosen.length ? `<div class="ss-hotel">${svg(I.bed, { w: 12, h: 12 })} ${chosen.map(n => esc(n)).join(' · ')}</div>` : ''}
         <div class="ss-btns">
