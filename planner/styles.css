@@ -2229,6 +2229,13 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   top: max(12px, env(safe-area-inset-top));
   left: max(14px, env(safe-area-inset-left));
 }
+/* app (phone) version: hide the sync-status button. Sync is fully automatic
+   (initCloud + realtime + auto push/pull), so hiding the button only removes
+   the status pop-up — it does not affect syncing. !important beats the inline
+   display updateTopActions() sets. */
+@media (max-width: 700px) {
+  .top-actions .sync-toggle-btn { display: none !important; }
+}
 .theme-btn {
   width: 34px; height: 34px;
   display: flex; align-items: center; justify-content: center;
