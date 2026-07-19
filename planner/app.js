@@ -3359,7 +3359,22 @@
     renderStopSpot(trip, d, fmt) {
       const idx = this.stopInfoIdx;
       const stop = idx != null ? trip.stops[idx] : null;
-      if (!stop) return `<div class="ss-hint">Hover a pin on the map to preview a stop — or hit <b>+</b> to add one.</div>`;
+      // nothing hovered → list every stop as a bullet (name + ✕ to delete);
+      // an unnamed stop shows a blank bullet line. Hovering a pin swaps this
+      // for that stop's detail card below.
+      if (!stop) {
+        const stops = trip.stops;
+        if (!stops.length) return `<div class="ss-hint">No stops yet — hit <b>+</b> on the map to add one.</div>`;
+        const rows = stops.map((s, i) => {
+          const named = s.city && s.city.trim();
+          return `<li class="ss-li">
+            <span class="ss-bullet"></span>
+            <button class="ss-li-name${named ? '' : ' empty'}" data-act="stop-select" data-i="${i}" title="${named ? escA(s.city) : 'Unnamed stop'}">${named ? esc(s.city) : ''}</button>
+            <button class="ss-x" data-act="stop-delete" data-i="${i}" title="Remove stop" aria-label="Remove stop">✕</button>
+          </li>`;
+        }).join('');
+        return `<ul class="ss-list">${rows}</ul>`;
+      }
       const r = d ? d.stops[idx] : null;
       const leg = stop.leg || {};
       const modeLbl = (MODE_OPTIONS.find(o => o.value === leg.mode) || {}).label || '';
@@ -3998,6 +4013,7 @@
         case 'stop-iti': this.openStop(i); break;
         case 'stop-accom': this.openAccom(i); break;
         case 'stop-transport': this.openTransport(i); break;
+        case 'stop-select': this.stopInfoIdx = i; this._paintStopSpot(); break;
         case 'stop-delete': this.removeStop(i); break;
         case 'todo-toggle': { const td = this.data.meta.todos[i]; td.done = !td.done; this.bump(); break; }
         case 'todo-remove': this.removeTodo(i); break;
