@@ -660,12 +660,14 @@
         this.stopInfoIdx = idx;
         this._paintStopSpot();
       });
-      // mobile: tapping a pin opens that stop's card as a popup
+      // tapping a pin: web ledger opens that stop's dock card (touch has no
+      // hover); the phone app opens the on-map popup.
       this.mainPinsOverlayEl.addEventListener('click', (e) => {
-        if (!this._mobileMap()) return;
         const pin = e.target.closest('.map-pin-outer');
         if (!pin) return;
         const idx = Number(pin.dataset.pin);
+        if (this._webMag()) { this.stopInfoIdx = idx; this._paintStopSpot(); return; }
+        if (!this._mobileMap()) return;
         if (this._openMapCardIdx === idx) return;   // already open — tap edits the order number
         this._openMapCardIdx = idx;
         this._openMapCardFlipped = false;
@@ -1657,6 +1659,11 @@
       this.mainMapLand    = L.layerGroup().addTo(map);
       this.mainMapLines   = L.layerGroup().addTo(map);
       map.on('move zoom moveend zoomend', () => this._positionMainCards());
+      // web ledger: tapping empty map (not a pin) closes the open stop card,
+      // returning the dock to the stop list
+      map.on('click', () => {
+        if (this._webMag() && this.stopInfoIdx != null) { this.stopInfoIdx = null; this._paintStopSpot(); }
+      });
       // scroll-to-zoom stays OFF (created with scrollWheelZoom:false) — wheel
       // scrolls the page; zoom via double-click, pinch, or +/- keys instead
       this._loadMinimalBasemap();
@@ -1821,9 +1828,15 @@
       }
 
       // Numbered pins rendered in overlay div (outside Leaflet — no overflow clipping)
+      const webMag = this._webMag();
       this.mainPinsOverlayEl.innerHTML = stops.map((stop, idx) => {
         if (!coords[idx]) return '';
-        return `<div class="map-pin-outer" data-pin="${idx}"><div class="map-pin-main" style="background:var(--red)"><input type="number" class="pin-order-input" value="${idx + 1}" min="1" max="${stops.length}" data-ch="stop-order" data-i="${idx}" title="Tap to change order"></div></div>`;
+        // web: static number — tapping the pin opens the dock card (reorder is
+        // done from the dock list). phone: editable number reorders in place.
+        const num = webMag
+          ? `<span class="pin-order-num">${idx + 1}</span>`
+          : `<input type="number" class="pin-order-input" value="${idx + 1}" min="1" max="${stops.length}" data-ch="stop-order" data-i="${idx}" title="Tap to change order">`;
+        return `<div class="map-pin-outer" data-pin="${idx}"><div class="map-pin-main" style="background:var(--red)">${num}</div></div>`;
       }).join('');
       this._syncPinOpenClass();
 
@@ -3359,16 +3372,16 @@
     renderStopSpot(trip, d, fmt) {
       const idx = this.stopInfoIdx;
       const stop = idx != null ? trip.stops[idx] : null;
-      // nothing hovered → list every stop as a bullet (name + ✕ to delete);
-      // an unnamed stop shows a blank bullet line. Hovering a pin swaps this
-      // for that stop's detail card below.
+      // nothing selected → list every stop with a numbered marker (edit the
+      // number to reorder) + name + ✕ to delete; an unnamed stop shows a blank
+      // line. Tapping a pin swaps this for that stop's detail card below.
       if (!stop) {
         const stops = trip.stops;
         if (!stops.length) return `<div class="ss-hint">No stops yet — hit <b>+</b> on the map to add one.</div>`;
         const rows = stops.map((s, i) => {
           const named = s.city && s.city.trim();
           return `<li class="ss-li">
-            <span class="ss-bullet"></span>
+            <input type="number" class="ss-num-input" value="${i + 1}" min="1" max="${stops.length}" data-ch="stop-order" data-i="${i}" title="Change the number to reorder" aria-label="Stop number — change to reorder">
             <button class="ss-li-name${named ? '' : ' empty'}" data-act="stop-select" data-i="${i}" title="${named ? escA(s.city) : 'Unnamed stop'}">${named ? esc(s.city) : ''}</button>
             <button class="ss-x" data-act="stop-delete" data-i="${i}" title="Remove stop" aria-label="Remove stop">✕</button>
           </li>`;
@@ -3985,6 +3998,12 @@
       if (this.packOpen != null && !(e.target.closest && e.target.closest('.pk-slot, .pk-panel'))) {
         this.packOpen = null;
         this._paintPackPanel();
+      }
+      // web ledger: a click away from a pin and the dock card closes the open
+      // stop card, returning the dock to the stop list
+      if (this._webMag() && this.stopInfoIdx != null && !(e.target.closest && e.target.closest('.map-pin-outer, .stop-spot'))) {
+        this.stopInfoIdx = null;
+        this._paintStopSpot();
       }
       // tapping an object opens its checklist — the touch path (phone app) and
       // a click fallback for the web's hover
