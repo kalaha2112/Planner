@@ -1022,11 +1022,11 @@ a { color: inherit; }
   }
   .app-sub-inner {
     min-height: 100%;
-    padding: calc(env(safe-area-inset-top, 0px) + 66px) 14px calc(env(safe-area-inset-bottom, 0px) + 28px);
+    padding: calc(env(safe-area-inset-top, 0px) + 76px) 14px calc(env(safe-area-inset-bottom, 0px) + 28px);
   }
 
-  /* sub-page header: eyebrow · city title · date sub · stop pills */
-  .app-page-hd { margin-bottom: 14px; }
+  /* sub-page header: city title · date sub · stop pills */
+  .app-page-hd { margin-bottom: 16px; }
   .app-page-title { font-family: var(--serif); font-weight: 700; font-size: 27px; line-height: 1.04; margin: 3px 0 4px; color: var(--ink); }
   .app-page-sub { font-family: var(--sans); font-size: 12px; color: var(--ink-soft); }
   .app-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 11px; }

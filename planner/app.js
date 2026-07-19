@@ -3061,7 +3061,6 @@
       const stopPills = () => trip.stops.map((s, i) =>
         `<button class="app-pill${i === sIdx ? ' on' : ''}" data-act="app-stop" data-i="${i}">${esc(s.city || 'Stop ' + (i + 1))}</button>`).join('');
       const subHd = (eyebrow) => `<header class="app-page-hd">
-          <div class="eyebrow">${esc(eyebrow)}</div>
           <div class="app-page-title">${sel ? esc(sel.city || 'Stop') : 'No stops yet'}</div>
           <div class="app-page-sub">${range ? esc(fmt(range.start) + ' → ' + fmt(range.end)) + ' · ' : ''}${sel ? nightsLbl(sel) : ''}</div>
           ${trip.stops.length ? `<div class="app-pills">${stopPills()}</div>` : ''}
