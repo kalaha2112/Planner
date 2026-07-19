@@ -1689,8 +1689,11 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
   -webkit-mask-size: contain; mask-size: contain;
   -webkit-mask-position: center; mask-position: center;
-  pointer-events: none;
+  /* the icon is the click target that opens its category checklist */
+  pointer-events: auto; cursor: pointer; transition: transform .15s ease;
 }
+.pk-icon:hover { transform: translateX(-50%) scale(1.08); }
+.pk-icon:active { transform: translateX(-50%) scale(.94); }
 /* uploaded full-colour category icon: an image, not an ink mask */
 .pk-icon--photo {
   background: none; -webkit-mask-image: none; mask-image: none; filter: none;
