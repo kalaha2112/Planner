@@ -172,3 +172,44 @@ the hand-drawn intro globe.
 4. **M5** and the **L** items — refinement.
 
 Happy to implement any subset on request.
+
+---
+
+## Addendum — implemented fixes + color-code proposal
+
+The following were implemented on this branch (verified by re-rendering in both themes):
+
+- **H2 — basemap** — land moved from `#000000` to warm paper `--map-land:#F3EEE4` with a
+  legible `--map-land-line:#C4BAA6` hairline and a slightly deeper sea. The map now reads as
+  ink-on-paper instead of an inkblot. *(Side effect: this also resolves **H1** — the route
+  line `--map-route` is now ink `#2A2622`, clearly visible on the light land.)*
+- **H3 — pin/label collision** — basemap labels that duplicate a stop city are now hidden
+  (`renderMainMap` / label loop in `app.js`), so only the numbered pin names a stop.
+  Non-stop cities remain as quiet geographic context.
+- **M2 — border ladder** — added a second hairline token `--line-soft` and demoted internal
+  dividers + input underlines to it (stat rows, the leaf column divider, meta/leg field
+  underlines, the dock list rows, the toolbar divider). Container frames and the leaf title
+  rules stay `--line`. Result: strong frames, quiet internals — depth restored.
+- **L1 — intro headline** — `DEFAULT_INTRO_TEXT` replaced with on-brand travel copy.
+
+### Proposed color code — "one hue, one job"
+
+Today three accents each carry 3–4 meanings, so color stops being a signal (red = stops +
+total + flight; gold = miles + itinerary + links + map labels; green = dates + train + saved
++ chosen). The fix is to give each hue a single, learnable job:
+
+| Hue | Reserve it for (one job) | Stop using it for |
+|-----|--------------------------|-------------------|
+| **Ink** (`--ink` / `--line`) | Structure, text, **and money/data** (totals, costs read as neutral facts) | equal-weight borders (now laddered) |
+| **Red** (`--red`) | **The journey** — route line, stop pins, active/selected state, primary CTAs | the running total, generic emphasis |
+| **Gold** (`--gold`) | **Rewards only** — miles, award (Flying Blue) legs, points | itinerary buttons, links, **map labels** *(labels done)* |
+| **Green** (`--green`) | **Time & confirmed** — dates, nights, saved, chosen stay, train | — (already close) |
+
+The transport-leg palette (flight / train / overnight / award / bus) stays as a **labeled
+categorical legend** *inside the route + legs context only* — that's legitimate colour-coding,
+not overload. So a user learns just three signals everywhere else: **red = go/place, gold =
+rewards, green = time/confirmed**, on calm ink-and-paper.
+
+**First step shipped:** map city labels were de-golded to neutral ink (`--map-label`), so gold
+now points only at the reward figure. Remaining moves (route total → ink; itinerary button →
+neutral) are low-risk token/selector swaps — say the word and I'll apply them.
