@@ -1772,7 +1772,9 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
      the 22px flex gap before it keeps it clear of the suitcase */
   .pack-side { flex: 0 1 280px; min-width: 180px; align-self: center; overflow-y: auto; padding: 4px 4px 10px 0; margin-right: 76px; }
   .pack-side .todos { background: none; border: none; border-radius: 0; padding: 0; }
-  .pk-panel { order: -1; flex: 0 1 230px; min-width: 160px; align-self: center; overflow-y: auto; padding: 4px 0 10px; display: flex; flex-direction: column; justify-content: center; }
+  /* mirror the pre-trip to-do: a 76px left margin pulls the category checklist
+     off the left edge; the 22px flex gap after it keeps it clear of the suitcase */
+  .pk-panel { order: -1; flex: 0 1 230px; min-width: 160px; align-self: center; overflow-y: auto; padding: 4px 0 10px; margin-left: 76px; display: flex; flex-direction: column; justify-content: center; }
 
 }
 
