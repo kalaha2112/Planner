@@ -1759,7 +1759,9 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   /* inset the header to match the other pages (leaf-inner padding 24/54/·/42),
      which the packing leaf-inner doesn't carry */
   .leaf-pack .leaf-head { margin: 24px 54px 4px 42px; }
-  .pack-cols { display: flex; gap: 22px; flex: 1 1 auto; min-height: 0; padding: 0 24px 20px; }
+  /* right padding matches the header (54px) so the pre-trip to-do clears the
+     page tabs on the right edge; the 22px flex gap keeps it off the suitcase */
+  .pack-cols { display: flex; gap: 22px; flex: 1 1 auto; min-height: 0; padding: 0 54px 20px 24px; }
   /* the carry-on and its checklist share the main column; the pre-trip to-do
      panel sits on the right, vertically centred (middle-right) with no box.
      On wide screens the packing checklist docks to the LEFT of the sheet
@@ -1775,7 +1777,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 /* narrow ledger (e.g. iPad portrait): the carry-on takes the full main column
    and its checklist drops BELOW it, so the sheet is never squeezed */
 @media (min-width: 701px) and (max-width: 900px) {
-  .pack-cols { gap: 16px; padding: 0 16px 16px; }
+  .pack-cols { gap: 16px; padding: 0 50px 16px 16px; }
   .pk-main { flex-direction: column; gap: 14px; justify-content: center; }
   .pk-wrap { flex: 0 1 auto; }
   .pk-panel { order: 0; flex: 0 1 auto; width: 100%; max-width: 460px; min-width: 0;
