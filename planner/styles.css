@@ -25,8 +25,9 @@
   --green-dark: #46604F;   /* overnight train */
   --green-bg:   #EAF4EF;
 
-  /* ---- hairlines / borders — black outlines/lines/dividers ---- */
-  --line:       #000000;   /* card/box borders, section + row dividers */
+  /* ---- hairlines / borders — a two-tier weight ladder ---- */
+  --line:       #000000;   /* STRONG: container frames + title rules */
+  --line-soft:  #D9D3C6;   /* QUIET: internal row dividers + input underlines */
   --line-2:     #efeae0;   /* subtle FILL only (hover/active/code bg) — not a line */
   --line-3:     #000000;   /* spine / secondary rules */
   --dash:       #000000;   /* dashed outlines */
@@ -44,11 +45,11 @@
   --chip-glass:    rgba(255,255,255,.86);   /* outfit/stock delete chips */
   --card-glass:    rgba(255,255,255,.8);    /* .mc-front / .mc-back faces */
   --ep-glass:      rgba(245,242,236,.92);   /* .map-ep chips */
-  --map-sea:       #e0d8cc;                 /* main-map container (sea) */
-  --map-land:      #000000;                 /* main-map geojson land fill */
-  --map-land-line: #47403a;                 /* main-map country borders */
-  --map-route:     #000000;                 /* main-map route polyline */
-  --map-label:     #c9a868;                 /* .map-city-label */
+  --map-sea:       #DBD3C5;                 /* main-map container (sea) — a touch deeper so land reads above it */
+  --map-land:      #F3EEE4;                 /* main-map geojson land fill — warm paper, not an inkblot (H2) */
+  --map-land-line: #C4BAA6;                 /* main-map country borders — legible warm hairline */
+  --map-route:     #2A2622;                 /* main-map route polyline — ink line, visible on paper land (H1) */
+  --map-label:     #8C8472;                 /* .map-city-label — neutral ink, frees gold for rewards only */
   --mc-dates:      #2c6a37;                 /* .mc-dates-display */
   /* itinerary mini "paper map" SVG */
   --mini-sea:      oklch(95.5% 0.004 70);
@@ -100,6 +101,7 @@
   --green-bg:   #1B2721;
 
   --line:       #FFFFFF;   /* pure-white hairlines mirror the black ones */
+  --line-soft:  #3A362E;   /* QUIET divider: dim warm grey, not white */
   --line-2:     #26241F;   /* subtle fill only — stays a fill */
   --line-3:     #FFFFFF;
   --dash:       #FFFFFF;
@@ -119,7 +121,7 @@
                                  read as a huge light slab inside a dark app */
   --map-land-line: #6A6156;
   --map-route:     #F2EFE7;   /* black route -> warm white */
-  --map-label:     #DDBB77;
+  --map-label:     #A9A08E;   /* neutral ink — frees gold for rewards only */
   --mc-dates:      #8CC49A;
   --mini-sea:      #14120F;
   --mini-land:     #201D19;
@@ -193,7 +195,7 @@ a { color: inherit; }
 .toolbar-divider {
   width: 1px;
   height: 22px;
-  background: var(--line);   /* black divider */
+  background: var(--line-soft);   /* quiet divider */
   margin: 0 2px;
   flex-shrink: 0;
 }
@@ -261,7 +263,7 @@ a { color: inherit; }
 }
 .meta-field input {
   font-family: var(--sans); font-size: 13px; color: var(--ink);
-  border: none; border-bottom: 1px solid var(--line);
+  border: none; border-bottom: 1px solid var(--line-soft);
   background: transparent; padding: 3px 0;
 }
 .meta-field.travelers input { width: 50px; }
@@ -307,7 +309,7 @@ a { color: inherit; }
 }
 .leg .dur {
   font-family: var(--sans); font-size: 12px; color: var(--ink-soft);
-  border: none; border-bottom: 1px solid var(--line); background: transparent;
+  border: none; border-bottom: 1px solid var(--line-soft); background: transparent;
   padding: 4px 2px; flex: 1; min-width: 110px; outline-offset: 2px;
 }
 .leg .cost-wrap { display: inline-flex; align-items: center; gap: 5px; }
@@ -421,7 +423,7 @@ a { color: inherit; }
 .map-note { font-family: var(--sans); font-size: 10px; color: var(--ink-mute); padding: 0 2px; line-height: 1.4; }
 
 .summary { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 12px 18px; }
-.stat { padding: 13px 0; border-bottom: 1px solid var(--line); }
+.stat { padding: 13px 0; border-bottom: 1px solid var(--line-soft); }
 .stat:last-child { border-bottom: none; }
 /* nights stat split into two halves: left = nights, right = travellers */
 .stat.stat-split { display: flex; padding: 0; }
@@ -430,7 +432,7 @@ a { color: inherit; }
 .stat-split .stat-half { flex: 0 0 auto; padding: 13px 24px 13px 0; min-width: 0; }
 /* nights half's trailing whitespace before the divider */
 .stat-split .stat-half:first-child { padding-right: 68px; }
-.stat-split .stat-half + .stat-half { border-left: 1px solid var(--line); padding-left: 18px; }
+.stat-split .stat-half + .stat-half { border-left: 1px solid var(--line-soft); padding-left: 18px; }
 /* travellers half shrinks to its icons so the nights half takes the extra width */
 .stat-split .stat-travelers { flex: 0 0 auto; display: flex; align-items: center; }
 .stat-travelers .travelers-pip { min-height: 38px; padding-bottom: 0; align-items: center; flex-wrap: wrap; }
@@ -1575,7 +1577,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .ss-x:hover { color: var(--red); }
   /* the stop list — a numbered marker (edit to reorder) + name + ✕ per stop */
   .ss-list { list-style: none; margin: 0; padding: 2px 0 0; display: flex; flex-direction: column; }
-  .ss-li { display: flex; align-items: center; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--line); }
+  .ss-li { display: flex; align-items: center; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--line-soft); }
   .ss-li:last-child { border-bottom: none; }
   .ss-num-input {
     flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
@@ -1698,7 +1700,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   /* page 2: transport | hotels ledger columns */
   .leaf-plan-cols { display: flex; flex: 1 1 auto; min-height: 0; }
   .plan-col { flex: 1 1 0; min-width: 0; overflow-y: auto; scrollbar-width: thin; padding: 18px 26px 24px 0; }
-  .plan-col + .plan-col { border-left: 1px solid var(--line); padding-left: 30px; padding-right: 4px; }
+  .plan-col + .plan-col { border-left: 1px solid var(--line-soft); padding-left: 30px; padding-right: 4px; }
   .plan-col-hd {
     font-family: var(--caps); font-size: 13px; letter-spacing: .18em;
     text-transform: uppercase; color: var(--gold); margin-bottom: 14px;

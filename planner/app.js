@@ -95,7 +95,7 @@
   const SHARED_ID = 'kalaha-planner-shared';   // the single shared row every device syncs
 
   // Startup page headline (editable in place; persisted in meta.introText and synced)
-  const DEFAULT_INTRO_TEXT = 'The first website was published in 1990 by computer scientist Tim Berners-Lee and now it seems like an eyesore. Early websites were basic few';
+  const DEFAULT_INTRO_TEXT = 'The best trips begin as a scribble on a map — a handful of cities, a stack of nights, and the quiet thrill of not quite knowing yet.';
 
   const _notFound = () => { const e = new Error('No data found for that code.'); e.code = 404; return e; };
   const _httpErr  = (name, status) => new Error('“' + name + '” error (HTTP ' + status + ').');
@@ -2064,13 +2064,16 @@
         pinEl.style.top = (cy - PIN_R) + 'px';
       });
 
-      // Position city labels — only show those within the current viewport
+      // Position city labels — only show those within the current viewport,
+      // and skip any basemap label that duplicates a stop city (the numbered
+      // pin already names it, so drawing both collides — "1PRAGUE").
       const bounds = map.getBounds();
+      const stopNames = new Set(stops.map(s => (s.city || '').trim().toLowerCase()));
       const labelEls = this.mainCityLabelsEl.children;
-      this._mapCities.forEach(([, lat, lng], i) => {
+      this._mapCities.forEach(([name, lat, lng], i) => {
         const el = labelEls[i];
         if (!el) return;
-        if (!bounds.contains([lat, lng])) { el.style.display = 'none'; return; }
+        if (stopNames.has(name.toLowerCase()) || !bounds.contains([lat, lng])) { el.style.display = 'none'; return; }
         el.style.display = '';
         const pt = map.latLngToContainerPoint([lat, lng]);
         el.style.left = (pt.x + 2) + 'px';
