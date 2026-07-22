@@ -1908,8 +1908,8 @@
       if (!poly || !full || full.length < 3) return;
       this._routeDrawn = true;
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;   // full line already shown
-      const dur = 1900, t0 = performance.now() + 220;   // 220ms delay so pins land first
-      const ease = (t) => 1 - Math.pow(1 - t, 3);
+      const dur = 2900, t0 = performance.now() + 220;   // 220ms delay so pins land first
+      const ease = (t) => t;                            // linear = steady, clearer dash-by-dash reveal
       poly.setLatLngs(full.slice(0, 2));                // start as a short dashed stub
       const step = (now) => {
         const k = Math.max(0, Math.min(1, (now - t0) / dur));
