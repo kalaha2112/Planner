@@ -277,6 +277,7 @@
     stickerStock: [],
     placedStickers: [],
     active: 'centralEurope',
+    tripOrder: ['centralEurope', 'scandinavia'],
     trips: {
       centralEurope: {
         label: 'Central Europe',
@@ -1232,6 +1233,17 @@
     }
 
     currentTrip() { return this.data.trips[this.data.active]; }
+    // Trip keys in display order (from data.tripOrder, self-healed), not raw
+    // Object.keys — object key order is lost across the jsonb sync (see migrate).
+    tripKeys() {
+      const tkeys = Object.keys(this.data.trips || {});
+      let order = Array.isArray(this.data.tripOrder)
+        ? this.data.tripOrder.filter((k, i, a) => tkeys.includes(k) && a.indexOf(k) === i)   // valid + de-duped
+        : [];
+      tkeys.forEach(k => { if (!order.includes(k)) order.push(k); });
+      this.data.tripOrder = order;
+      return order.slice();
+    }
     legByIndex(i) { const t = this.currentTrip(); return i === 0 ? t.outboundLeg : t.stops[i - 1].leg; }
 
     bump() { this.render(); this.scheduleSave(); this.touchMap(); if (this._introGlobeRefresh) this._introGlobeRefresh(); if (this._introTabsRefresh) this._introTabsRefresh(); }
@@ -1288,6 +1300,21 @@
     }
     migrate() {
       const d = this.data;
+      // Trip display order must survive the Supabase sync. Postgres jsonb does
+      // NOT preserve object key order — it re-sorts keys canonically (by length,
+      // then bytewise), which drops a freshly-added trip (its `trip<timestamp>`
+      // key is the longest) to the end regardless of a drag-reorder. So keep an
+      // explicit ordered key array (arrays keep their order through jsonb) and
+      // self-heal it here on every load/cloud-pull: known keys keep their order,
+      // any new/unknown keys are appended.
+      {
+        const tkeys = Object.keys(d.trips || {});
+        let order = Array.isArray(d.tripOrder)
+          ? d.tripOrder.filter((k, i, a) => tkeys.includes(k) && a.indexOf(k) === i)   // valid + de-duped
+          : [];
+        tkeys.forEach(k => { if (!order.includes(k)) order.push(k); });
+        d.tripOrder = order;
+      }
       // Rewards used to be a separate "flying-blue" mode; it's now folded into
       // Flight (a reward-points field alongside cost). Convert any leg still
       // carrying the old mode, keep its miles value, and make sure every
@@ -2708,23 +2735,27 @@
         originLabel: '', outboundLeg: { mode: 'flight', duration: '', cost: 0 },
         stops: [{ city: '', nights: 0, note: '', leg: { mode: 'flight', duration: '', cost: 0 } }], homeLabel: '', closet: []
       };
+      this.tripKeys();   // self-heals data.tripOrder to include the new trip (appended at the end)
       this.data.active = key; this.bump();
     }
     removeTrip(key) {
-      const keys = Object.keys(this.data.trips);
+      const keys = this.tripKeys();
       if (keys.length <= 1) return;
       if (!confirm('Remove this trip and everything in it?')) return;
       this.snapshot();
       delete this.data.trips[key];
-      if (this.data.active === key) this.data.active = Object.keys(this.data.trips)[0];
+      this.data.tripOrder = keys.filter(k => k !== key);
+      if (this.data.active === key) this.data.active = this.data.tripOrder[0];
       this.bump();
     }
     reorderTrips(fromKey, toKey) {
       if (!fromKey || fromKey === toKey) return;
-      const keys = Object.keys(this.data.trips); const fi = keys.indexOf(fromKey), ti = keys.indexOf(toKey);
+      // reorder the explicit order array (jsonb-safe) — don't rebuild the trips
+      // object, whose key order the sync would drop anyway
+      const keys = this.tripKeys(); const fi = keys.indexOf(fromKey), ti = keys.indexOf(toKey);
       if (fi < 0 || ti < 0) return;
       keys.splice(fi, 1); keys.splice(ti, 0, fromKey);
-      const re = {}; keys.forEach(k => re[k] = this.data.trips[k]); this.data.trips = re; this.bump();
+      this.data.tripOrder = keys; this.bump();
     }
     addTodo() { this.data.meta.todos.push({ text: '', done: false }); this.bump(); }
     removeTodo(i) { this.snapshot(); this.data.meta.todos.splice(i, 1); this.bump(); }
@@ -3459,7 +3490,7 @@
     }
 
     renderTabs() {
-      const keys = Object.keys(this.data.trips);
+      const keys = this.tripKeys();
       const pills = keys.map(key => {
         const t = this.data.trips[key]; const lbl = t.label || '';
         const w = Math.max(8, Math.min(22, lbl.length + 1)) + 'ch';
