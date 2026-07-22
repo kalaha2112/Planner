@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-22T19:38:18.808Z
+  Built: 2026-07-22T19:52:02.195Z
 -->
 
 <html lang="en">
@@ -5074,22 +5074,34 @@ html { -webkit-tap-highlight-color: transparent; }
       const w = Math.max(100, Math.min(155, mapW * 0.154));
       return { w, h: w * (74 / 155) };
     }
-    // Gentle per-leg arcs through the stop coords → a curved "travel route" rather
-    // than straight segments. Quadratic bezier per leg, control point offset
-    // perpendicular to the leg (same side each time = one cohesive lean).
-    _curvePath(coords, bow = 0.15, steps = 22) {
-      if (coords.length < 2) return coords.slice();
-      const out = [coords[0]];
-      for (let i = 0; i < coords.length - 1; i++) {
-        const a = coords[i], b = coords[i + 1];
-        const cx = (a[0] + b[0]) / 2 - (b[1] - a[1]) * bow;   // perpendicular offset
-        const cy = (a[1] + b[1]) / 2 + (b[0] - a[0]) * bow;
+    // Smooth curved "travel route" that PASSES THROUGH each stop in order —
+    // a centripetal Catmull-Rom spline. Unlike a per-leg bow, it never arcs over
+    // a neighbouring pin and won't loop/self-cross (centripetal α=0.5 avoids the
+    // cusps/kinks uniform Catmull-Rom can produce on sharp turns).
+    _curvePath(pts, steps = 18) {
+      const n = pts.length;
+      if (n < 3) return pts.slice();                 // 2 stops → straight (still dashed)
+      const clamp = (i) => pts[Math.max(0, Math.min(n - 1, i))];
+      const lerp = (A, B, tA, tB, t) => {
+        const w = (t - tA) / ((tB - tA) || 1e-6);
+        return [A[0] + (B[0] - A[0]) * w, A[1] + (B[1] - A[1]) * w];
+      };
+      const knot = (ti, A, B) => ti + Math.pow(Math.hypot(B[0] - A[0], B[1] - A[1]) || 1e-6, 0.5);
+      const TIGHT = 0.55;   // blend toward the straight leg so the curve hugs the
+                            // route (0 = straight, 1 = full spline) — keeps it from
+                            // swinging wide over neighbouring pins
+      const out = [pts[0]];
+      for (let i = 0; i < n - 1; i++) {
+        const p0 = clamp(i - 1), p1 = clamp(i), p2 = clamp(i + 1), p3 = clamp(i + 2);
+        const t0 = 0, t1 = knot(t0, p0, p1), t2 = knot(t1, p1, p2), t3 = knot(t2, p2, p3);
         for (let s = 1; s <= steps; s++) {
-          const t = s / steps, u = 1 - t;
-          out.push([
-            u * u * a[0] + 2 * u * t * cx + t * t * b[0],
-            u * u * a[1] + 2 * u * t * cy + t * t * b[1],
-          ]);
+          const f = s / steps;
+          const t = t1 + (t2 - t1) * f;
+          const A1 = lerp(p0, p1, t0, t1, t), A2 = lerp(p1, p2, t1, t2, t), A3 = lerp(p2, p3, t2, t3, t);
+          const B1 = lerp(A1, A2, t0, t2, t), B2 = lerp(A2, A3, t1, t3, t);
+          const c = lerp(B1, B2, t1, t2, t);
+          const sx = p1[0] + (p2[0] - p1[0]) * f, sy = p1[1] + (p2[1] - p1[1]) * f;   // straight leg
+          out.push([c[0] * TIGHT + sx * (1 - TIGHT), c[1] * TIGHT + sy * (1 - TIGHT)]);
         }
       }
       return out;
