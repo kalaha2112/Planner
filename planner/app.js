@@ -3819,7 +3819,7 @@
       const pack = trip.packing || {};
       const open = this._pkAnim === 'open';
       // where each chip's dashed leader lands inside the OPEN case art
-      const ends = { tech: [250, 425], toiletries: [360, 425], documents: [445, 425], clothes: [190, 440], shoes: [315, 460], extras: [410, 445] };
+      const ends = { tech: [250, 435], toiletries: [360, 435], documents: [430, 435], clothes: [195, 450], shoes: [315, 470], extras: [408, 452] };
       const leads = PACK_SLOTS.map((s, i) => {
         const x0 = Math.round(s.cx * 640), y0 = Math.round(s.cy * 560 + 26);
         const [x1, y1] = ends[s.k];

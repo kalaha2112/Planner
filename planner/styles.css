@@ -1828,7 +1828,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   transition: opacity .42s ease, transform .48s cubic-bezier(.22, .61, .36, 1);
 }
 .pk-art--closed { left: 33%; top: 22%; width: 34%; height: 70%; }
-.pk-art--open { left: 6%; top: 20%; width: 88%; height: 76%; }
+.pk-art--open { left: 7%; top: 32%; width: 86%; height: 66%; }
 .pk-bp:not(.anim-open) .pk-art--open { opacity: 0; transform: scale(.9); }
 .pk-bp.anim-open .pk-art--closed { opacity: 0; transform: scale(.94) translateY(8px); }
 
