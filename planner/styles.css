@@ -116,11 +116,11 @@
   --chip-glass:    rgba(28,28,26,.86);
   --card-glass:    rgba(22,22,20,.85);
   --ep-glass:      rgba(28,26,23,.92);
-  --map-sea:       #0C0C0A;   /* stop map: near-black water (night blueprint) */
-  --map-land:      #201E17;   /* stop map: dark land, a touch lighter than the water */
-  --map-land-line: #5E5644;   /* stop map: thin sepia borders, visible on dark land */
+  --map-sea:       #0A0A08;   /* stop map: near-black water (night blueprint) */
+  --map-land:      #343023;   /* stop map: warm charcoal land — clearly above the water */
+  --map-land-line: #9A8B63;   /* stop map: bright sepia coastline — crisp land/sea edge */
   --map-route:     #F2EFE7;   /* stop map: warm-white route */
-  --map-label:     #B4A88F;   /* .map-city-label — light sepia, readable on dark land */
+  --map-label:     #C8BB9C;   /* .map-city-label — light sepia, readable on dark land */
   --mc-dates:      #8CC49A;
   --mini-sea:      #14120F;
   --mini-land:     #201D19;
