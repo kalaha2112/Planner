@@ -16,7 +16,7 @@
    ============================================================ */
 'use strict';
 
-const VERSION = 'v40';
+const VERSION = 'v41';
 const SHELL_CACHE = `planner-shell-${VERSION}`;
 const FONT_CACHE = 'planner-fonts';
 const TILE_CACHE = 'planner-tiles';
