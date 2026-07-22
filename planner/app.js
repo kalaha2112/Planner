@@ -1083,8 +1083,11 @@
       const stops = this.currentTrip().stops
         .map(s => this.resolveCoord(s.city))
         .filter(Boolean);
-      // target view: the trip's centroid (fallback: Europe)
-      const tLat = stops.length ? stops.reduce((a, c) => a + c[0], 0) / stops.length : 47;
+      // target view: the trip's centroid (fallback: Europe). Cap the latitude so
+      // high-latitude trips (Europe/Scandinavia) don't tilt the globe so far north
+      // that the pole and its converging meridians dominate the top.
+      const tLatRaw = stops.length ? stops.reduce((a, c) => a + c[0], 0) / stops.length : 47;
+      const tLat = Math.min(tLatRaw, 35);
       const tLng = stops.length ? stops.reduce((a, c) => a + c[1], 0) / stops.length : 12;
       cancelAnimationFrame(this._globeAnim || 0);
       const cur = this._globeView;
