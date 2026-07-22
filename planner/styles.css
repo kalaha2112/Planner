@@ -45,7 +45,7 @@
   --chip-glass:    rgba(255,255,255,.86);   /* outfit/stock delete chips */
   --card-glass:    rgba(255,255,255,.8);    /* .mc-front / .mc-back faces */
   --ep-glass:      rgba(245,242,236,.92);   /* .map-ep chips */
-  --map-sea:       #DBD3C5;                 /* main-map container (sea) — a touch deeper so land reads above it */
+  --map-sea:       #FFFFFF;                 /* main-map container (sea) — white ocean so the paper land stands out */
   --map-land:      #F3EEE4;                 /* main-map geojson land fill — warm paper, not an inkblot (H2) */
   --map-land-line: #C4BAA6;                 /* main-map country borders — legible warm hairline */
   --map-route:     #2A2622;                 /* main-map route polyline — ink line, visible on paper land (H1) */
@@ -121,7 +121,7 @@
                                  read as a huge light slab inside a dark app */
   --map-land-line: #6A6156;
   --map-route:     #F2EFE7;   /* black route -> warm white */
-  --map-label:     #A9A08E;   /* neutral ink — frees gold for rewards only */
+  --map-label:     #DDBB77;   /* dark-mode map labels reverted to gold (pre-H2) */
   --mc-dates:      #8CC49A;
   --mini-sea:      #14120F;
   --mini-land:     #201D19;
