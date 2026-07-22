@@ -3894,7 +3894,7 @@
           <button class="rm" data-act="accom-remove" data-i="${oi}" title="Remove option">${svg(I.trash, { w: 13, h: 13, sw: 2.4 })}</button>
         </div>
         <div class="grid">
-          <div class="fld fld--addr"><label>Address</label><div class="lk"><input value="${escA(o.address)}" data-ch="accom-address" data-i="${oi}" placeholder="Street, city — used on the day map & route optimizer">${/\S/.test(o.address || '') ? `<a class="maps" href="https://maps.google.com/?q=${encodeURIComponent(o.address || '')}" target="_blank" rel="noopener" title="Open in Maps">↗</a>` : ''}</div></div>
+          <div class="fld fld--addr"><label>Address</label><div class="lk"><input value="${escA(o.address)}" data-ch="accom-address" data-i="${oi}" placeholder="Street, city — for the map & optimizer">${/\S/.test(o.address || '') ? `<a class="maps" href="https://maps.google.com/?q=${encodeURIComponent(o.address || '')}" target="_blank" rel="noopener" title="Open in Maps">↗</a>` : ''}</div></div>
           <div class="fld"><label>Booking link</label><div class="lk"><input value="${escA(o.link)}" data-ch="accom-link" data-i="${oi}" placeholder="https://…">${/\S/.test(o.link || '') ? `<a href="${escA(o.link)}" target="_blank" rel="noopener" title="Open">↗</a>` : ''}</div></div>
           <div class="fld"><label>Total price</label><input class="price" value="${escA(o.totalPrice)}" data-ch="accom-price" data-i="${oi}" placeholder="e.g. $420 / 4 nights"></div>
           <div class="fld"><label>Distance</label><input value="${escA(o.distance)}" data-ch="accom-distance" data-i="${oi}" placeholder="e.g. 300m to centre"></div>
