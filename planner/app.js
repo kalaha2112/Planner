@@ -1877,7 +1877,7 @@
       const path = this.mainMapEl && this.mainMapEl.querySelector('path.map-route-line');
       if (!path) return;
       this._routeDrawn = true;
-      this._animateStroke(path, { dur: 1200, delay: 220 });
+      this._animateStroke(path, { dur: 1900, delay: 220, restore: true });
     }
     // mirrors the CSS card widths on .main-cards-overlay .map-stop (styles.css):
     // clamp(100px, 15.4cqw, 155px) on wide screens, fixed 185px popup ≤700px —
@@ -1893,6 +1893,26 @@
       const mapW = this.mainMapEl.offsetWidth || 800;
       const w = Math.max(100, Math.min(155, mapW * 0.154));
       return { w, h: w * (74 / 155) };
+    }
+    // Gentle per-leg arcs through the stop coords → a curved "travel route" rather
+    // than straight segments. Quadratic bezier per leg, control point offset
+    // perpendicular to the leg (same side each time = one cohesive lean).
+    _curvePath(coords, bow = 0.15, steps = 22) {
+      if (coords.length < 2) return coords.slice();
+      const out = [coords[0]];
+      for (let i = 0; i < coords.length - 1; i++) {
+        const a = coords[i], b = coords[i + 1];
+        const cx = (a[0] + b[0]) / 2 - (b[1] - a[1]) * bow;   // perpendicular offset
+        const cy = (a[1] + b[1]) / 2 + (b[0] - a[0]) * bow;
+        for (let s = 1; s <= steps; s++) {
+          const t = s / steps, u = 1 - t;
+          out.push([
+            u * u * a[0] + 2 * u * t * cx + t * t * b[0],
+            u * u * a[1] + 2 * u * t * cy + t * t * b[1],
+          ]);
+        }
+      }
+      return out;
     }
     renderMainMap() {
       if (!this.mainLeafletMap || !window.L) return;
@@ -1912,7 +1932,7 @@
       const polyCoords = [];
       coords.forEach((c) => { if (c) polyCoords.push(c); });
       if (polyCoords.length > 1) {
-        L.polyline(polyCoords, { color: '#000000', weight: 2.2, opacity: 0.65, className: 'map-route-line' }).addTo(this.mainMapLines);
+        L.polyline(this._curvePath(polyCoords), { color: '#000000', weight: 2.2, opacity: 0.65, dashArray: '5 7', className: 'map-route-line' }).addTo(this.mainMapLines);
       }
 
       // Numbered pins rendered in overlay div (outside Leaflet — no overflow clipping)
