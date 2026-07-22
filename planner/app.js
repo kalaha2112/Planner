@@ -1899,12 +1899,25 @@
         }
       });
     }
+    // Draw the route in dash-by-dash: the polyline keeps its "5 7" dash pattern
+    // and we extend its points along the curve over time, so it's dashed from the
+    // first frame and new dashes appear at the leading tip (no solid-then-dash).
     _drawMainRoute() {
       if (this._routeDrawn) return;
-      const path = this.mainMapEl && this.mainMapEl.querySelector('path.map-route-line');
-      if (!path) return;
+      const poly = this._mainRoutePoly, full = this._mainRouteFull;
+      if (!poly || !full || full.length < 3) return;
       this._routeDrawn = true;
-      this._animateStroke(path, { dur: 1900, delay: 220, restore: true });
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;   // full line already shown
+      const dur = 1900, t0 = performance.now() + 220;   // 220ms delay so pins land first
+      const ease = (t) => 1 - Math.pow(1 - t, 3);
+      poly.setLatLngs(full.slice(0, 2));                // start as a short dashed stub
+      const step = (now) => {
+        const k = Math.max(0, Math.min(1, (now - t0) / dur));
+        poly.setLatLngs(full.slice(0, Math.max(2, Math.round(ease(k) * full.length))));
+        if (k < 1) requestAnimationFrame(step);
+        else poly.setLatLngs(full);
+      };
+      requestAnimationFrame(step);
     }
     // mirrors the CSS card widths on .main-cards-overlay .map-stop (styles.css):
     // clamp(100px, 15.4cqw, 155px) on wide screens, fixed 185px popup ≤700px —
@@ -1971,7 +1984,9 @@
       const polyCoords = [];
       coords.forEach((c) => { if (c) polyCoords.push(c); });
       if (polyCoords.length > 1) {
-        L.polyline(this._curvePath(polyCoords), { color: '#000000', weight: 2.2, opacity: 0.65, dashArray: '5 7', className: 'map-route-line' }).addTo(this.mainMapLines);
+        this._mainRouteFull = this._curvePath(polyCoords);
+        this._mainRoutePoly = L.polyline(this._mainRouteFull, { color: '#000000', weight: 2.2, opacity: 0.65, dashArray: '5 7', className: 'map-route-line' });
+        this._mainRoutePoly.addTo(this.mainMapLines);
       }
 
       // Numbered pins rendered in overlay div (outside Leaflet — no overflow clipping)
