@@ -1689,10 +1689,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .leaf-days .leaf-inner {
     display: flex; flex-direction: column;
     padding: 24px 54px 30px 42px;   /* right room clears the edge tabs */
-    background:
-      linear-gradient(90deg, transparent 30px, var(--ledger-margin) 30px, var(--ledger-margin) 31px, transparent 31px),
-      repeating-linear-gradient(180deg, transparent 0 32px, var(--ledger-rule) 32px 33px),
-      var(--surface);   /* keep the lighter "paper" tone now the book base is --shell */
+    background: var(--surface);     /* plain paper — notebook ruling + margin line removed */
   }
   .leaf-head {
     display: flex; align-items: flex-end; justify-content: space-between; gap: 18px;
