@@ -21,7 +21,7 @@ const path = require('path');
 
 const DIR = __dirname;
 const OUT = path.join(DIR, 'standalone.html');
-const SOURCES = ['index.html', 'styles.css', 'app.js', 'vendor/leaflet/leaflet.css', 'vendor/leaflet/leaflet.js', 'vendor/topojson/topojson.min.js', 'vendor/topojson/countries-110m.json'];
+const SOURCES = ['index.html', 'styles.css', 'app.js', 'vendor/leaflet/leaflet.css', 'vendor/leaflet/leaflet.js', 'vendor/topojson/topojson.min.js', 'vendor/topojson/countries-110m.json', 'vendor/topojson/countries-50m.json'];
 
 const read = (rel) => fs.readFileSync(path.join(DIR, rel), 'utf8');
 
@@ -31,6 +31,7 @@ function build() {
   const leafletJs = read('vendor/leaflet/leaflet.js');
   const topojsonJs = read('vendor/topojson/topojson.min.js');
   const worldAtlas = read('vendor/topojson/countries-110m.json');
+  const worldAtlas50 = read('vendor/topojson/countries-50m.json');   // detailed basemap for the stop map
   const styles = read('styles.css');
   const app = read('app.js');
 
@@ -50,7 +51,7 @@ function build() {
   // 3) TopoJSON client + world atlas — both inlined, zero network dependency
   html = html.replace(
     /<script src="vendor\/topojson\/topojson\.min\.js"><\/script>/,
-    () => `<script>\n/* vendor/topojson/topojson.min.js */\n${topojsonJs}\n</script>\n<script>window.WORLD_ATLAS_DATA=${worldAtlas};</script>`
+    () => `<script>\n/* vendor/topojson/topojson.min.js */\n${topojsonJs}\n</script>\n<script>window.WORLD_ATLAS_DATA=${worldAtlas};window.WORLD_ATLAS_50=${worldAtlas50};</script>`
   );
   // 4) styles.css <link> (with optional ?v=) → inline <style>
   html = html.replace(

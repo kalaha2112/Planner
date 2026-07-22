@@ -1791,16 +1791,31 @@
       }
       return this._atlasPromise;
     }
+    // Detailed (50m) atlas for the stop map's blueprint coastlines. Kept separate
+    // from the globe's 110m atlas — the globe re-projects every idle frame, so it
+    // stays low-res for speed. Falls back to 110m if the 50m file can't load.
+    _ensureHiAtlas() {
+      if (window.WORLD_ATLAS_50) return Promise.resolve(window.WORLD_ATLAS_50);
+      if (!this._hiAtlasPromise) {
+        this._hiAtlasPromise = fetch('vendor/topojson/countries-50m.json')
+          .then(r => r.json())
+          .then(w => { window.WORLD_ATLAS_50 = w; return w; })
+          .catch(() => { this._hiAtlasPromise = null; return this._ensureAtlas(); });
+      }
+      return this._hiAtlasPromise;
+    }
     _loadMinimalBasemap() {
       const topo = window.topojson;
       if (!topo || !this.mainMapLand) return;
-      this._ensureAtlas().then((world) => {
+      this._ensureHiAtlas().then((world) => {
         if (!world || this._basemapBuilt) return;
         this._basemapBuilt = true;
-        const countries = this._smoothCountries(topo.feature(world, world.objects.countries));
+        // RAW geometry (no Chaikin smoothing) + the detailed 50m atlas → crisp,
+        // accurate coastlines. Thin stroke; .map-land CSS themes fill/stroke/width.
+        const countries = topo.feature(world, world.objects.countries);
         window.L.geoJSON(
           countries,
-          { style: { fillColor: '#000000', fillOpacity: 1, color: '#47403a', weight: 3, opacity: 1, lineJoin: 'round', lineCap: 'round', className: 'map-land' } }   // .map-land CSS themes fill/stroke
+          { style: { fillColor: '#000000', fillOpacity: 1, color: '#000000', weight: 0.6, opacity: 1, lineJoin: 'round', lineCap: 'round', className: 'map-land' } }
         ).addTo(this.mainMapLand);
         this._addMinimalCityLabels();
         this._positionMainCards();
