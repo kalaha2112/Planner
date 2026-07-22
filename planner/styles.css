@@ -1904,6 +1904,30 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   animation: pkCardIn .18s ease both;
 }
 @keyframes pkCardIn { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
+
+/* ---- staggered entrance: blocks of a freshly-opened page/leaf rise in, one
+   after another (JS sets --enter-i per block; fires only on real navigation) ---- */
+@keyframes enterRise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+.leaf-entering .leaf-head,
+.leaf-entering .summary .stat,
+.leaf-entering .opt,
+.leaf-entering .item,
+.leaf-entering .todo,
+.leaf-entering .app-card,
+.leaf-entering .meta-range,
+.leaf-entering .map,
+.leaf-entering .todos,
+.leaf-entering .add-option,
+.leaf-entering .add-todo {
+  animation: enterRise .5s cubic-bezier(.34, 1.36, .5, 1) both;
+  animation-delay: calc(var(--enter-i, 0) * 55ms);
+}
+@media (prefers-reduced-motion: reduce) {
+  .leaf-entering .leaf-head, .leaf-entering .summary .stat, .leaf-entering .opt,
+  .leaf-entering .item, .leaf-entering .todo, .leaf-entering .app-card,
+  .leaf-entering .meta-range, .leaf-entering .map, .leaf-entering .todos,
+  .leaf-entering .add-option, .leaf-entering .add-todo { animation: none; }
+}
 .pk-hint {
   border: 1.5px dashed var(--line); border-radius: 12px;
   padding: 22px 18px; text-align: center;

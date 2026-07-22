@@ -906,6 +906,15 @@
       this._buildIntroGlobe(svg);                       // graticule + stops now…
       this._ensureAtlas().then(() => this._buildIntroGlobe(svg));   // …continents when the atlas lands
       this._introGlobeRefresh = () => this._buildIntroGlobe(svg);   // stops added while intro open
+      // pointer parallax: nudge the globe a few degrees toward the cursor
+      this._globePar = this._globePar || { lat: 0, lng: 0, tlat: 0, tlng: 0 };
+      globeWrap.addEventListener('pointermove', (e) => {
+        const r = globeWrap.getBoundingClientRect();
+        this._globePar.tlng = ((e.clientX - r.left) / r.width - 0.5) * 22;    // ±11°
+        this._globePar.tlat = -((e.clientY - r.top) / r.height - 0.5) * 16;   // ±8°
+        this._startGlobeIdle();
+      });
+      globeWrap.addEventListener('pointerleave', () => { this._globePar.tlat = 0; this._globePar.tlng = 0; });
 
       // ---- trip-tab row, now living at the bottom of the intro (the "+" first,
       // then the tabs; the row scrolls left/right and never wraps). It stays wired
@@ -964,6 +973,11 @@
         appRoot.style.willChange = '';                             // (so scroll + position:fixed work normally)
         document.documentElement.classList.remove('intro-lock');   // page scrolls natively again
         this._introParked = true; this.updateTopActions();         // hide the intro-only sync button
+        this._stopGlobeIdle();                                     // globe is off-screen now — stop idle spin
+        this._statPrev = {};                                       // count the stats up when first revealed
+        this._animateStats();
+        const active = this.root.querySelector('.ledger-leaf.active') || this.root.querySelector('.app-ov');
+        this._playEnter(active && (active.querySelector('.leaf-inner') || active));
       };
       const unpark = () => {
         if (!parked) return;
@@ -972,6 +986,7 @@
         appRoot.style.willChange = 'transform';
         document.documentElement.classList.add('intro-lock');
         this._introParked = false; this.updateTopActions();        // sync button returns with the intro
+        this._startGlobeIdle();                                    // globe visible again — resume idle spin
       };
       const apply = () => {
         raf = 0;
@@ -1083,6 +1098,8 @@
       const stops = this.currentTrip().stops
         .map(s => this.resolveCoord(s.city))
         .filter(Boolean);
+      this._globeSvg = svg; this._globeStops = stops;               // shared with the idle-spin loop
+      this._globePar = this._globePar || { lat: 0, lng: 0, tlat: 0, tlng: 0 };
       // target view: the trip's centroid (fallback: Europe). Cap the latitude so
       // high-latitude trips (Europe/Scandinavia) don't tilt the globe so far north
       // that the pole and its converging meridians dominate the top.
@@ -1101,22 +1118,53 @@
       // is invisible work that steals the main thread from the map's flyTo on
       // a trip switch — just snap the view so it's correct when the cover returns.
       if (!cur || reduced || dist < 12 || this._introParked) {
+        // a tiny refresh while the idle spin is running must not snap the globe
+        // back to the target lng — let idle keep advancing; just refresh stops.
+        if (this._idleRAF && cur && dist < 12 && !this._introParked && !reduced) return;
         this._globeView = { lat: tLat, lng: tLng };
+        this._globeSpinning = false;
         this._drawGlobe(svg, tLat, tLng, stops);
+        this._startGlobeIdle();
         return;
       }
       const from = { lat: cur.lat, lng: cur.lng };
       const t0 = performance.now();
       const D = Math.min(1600, 700 + dist * 6);   // farther hops spin a little longer
       const ease = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      this._globeSpinning = true;
       const step = (now) => {
         const k = Math.min(1, (now - t0) / D);
         const e = ease(k);
         this._globeView = { lat: from.lat + dLat * e, lng: from.lng + dLng * e };
         this._drawGlobe(svg, this._globeView.lat, this._globeView.lng, stops);
-        if (k < 1) this._globeAnim = requestAnimationFrame(step);
+        if (k < 1) { this._globeAnim = requestAnimationFrame(step); }
+        else { this._globeSpinning = false; this._startGlobeIdle(); }
       };
       this._globeAnim = requestAnimationFrame(step);
+    }
+    // Idle: a slow continuous drift + pointer parallax so the hero globe feels
+    // alive. Runs only while the intro is on-screen, no targeted spin is mid-
+    // flight, and motion is allowed. Draws the base view + eased parallax offset.
+    _startGlobeIdle() {
+      if (this._idleRAF || this._introParked) return;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      if (!this._globeIdleBound) this._globeIdleBound = (t) => this._globeIdleTick(t);
+      this._idleLast = 0;
+      this._idleRAF = requestAnimationFrame(this._globeIdleBound);
+    }
+    _stopGlobeIdle() { if (this._idleRAF) { cancelAnimationFrame(this._idleRAF); this._idleRAF = 0; } }
+    _globeIdleTick(now) {
+      this._idleRAF = requestAnimationFrame(this._globeIdleBound);
+      if (!this._globeSvg || !this._globeView) return;
+      const dt = this._idleLast ? Math.min(50, now - this._idleLast) : 16;
+      this._idleLast = now;
+      const p = this._globePar;
+      p.lat += (p.tlat - p.lat) * 0.08;                 // ease parallax toward the pointer target
+      p.lng += (p.tlng - p.lng) * 0.08;
+      if (this._globeSpinning || this._introParked) return;   // spin draws its own frames; parked = off-screen
+      this._globeView.lng += 4.5 * dt / 1000;           // ~4.5°/sec drift (a bit more playful)
+      const lat = Math.min(35, this._globeView.lat + p.lat);
+      this._drawGlobe(this._globeSvg, lat, this._globeView.lng + p.lng, this._globeStops);
     }
     _drawGlobe(svg, lat0deg, lng0deg, stops) {
       const W = 400, R = 186, CX = 200, CY = 200;
@@ -1794,12 +1842,42 @@
       el.classList.add('pins-drop');
       const n = el.querySelectorAll('.map-pin-outer').length;
       this._pinDropT = setTimeout(() => el.classList.remove('pins-drop'), 900 + Math.min(n, 7) * 110);
+      this._drawMainRoute();   // draw the ink route in as the pins land
     }
     _resetPins() {
       this._pinsDropped = false;
+      this._routeDrawn = false;
       clearTimeout(this._pinDropT);
       this.mainPinsOverlayEl.classList.remove('pins-drop');
       this.mainPinsOverlayEl.classList.add('pins-wait');
+    }
+    // Animate an SVG path drawing itself via stroke-dashoffset. restore:true
+    // clears the inline dash afterwards so a natively-dashed line (day route)
+    // returns to its CSS dashes once drawn.
+    _animateStroke(path, opts = {}) {
+      if (!path || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      let len; try { len = path.getTotalLength(); } catch (e) { return; }
+      if (!len) return;
+      const dur = opts.dur || 1100, delay = opts.delay || 0;
+      path.style.transition = 'none';
+      path.style.strokeDasharray = len + 'px';
+      path.style.strokeDashoffset = len + 'px';
+      path.getBoundingClientRect();   // force reflow so the offset starts at full length
+      requestAnimationFrame(() => {
+        path.style.transition = `stroke-dashoffset ${dur}ms cubic-bezier(.33,0,.15,1) ${delay}ms`;
+        path.style.strokeDashoffset = '0px';
+        if (opts.restore) {
+          const done = () => { path.style.transition = ''; path.style.strokeDasharray = ''; path.style.strokeDashoffset = ''; path.removeEventListener('transitionend', done); };
+          path.addEventListener('transitionend', done);
+        }
+      });
+    }
+    _drawMainRoute() {
+      if (this._routeDrawn) return;
+      const path = this.mainMapEl && this.mainMapEl.querySelector('path.map-route-line');
+      if (!path) return;
+      this._routeDrawn = true;
+      this._animateStroke(path, { dur: 1200, delay: 220 });
     }
     // mirrors the CSS card widths on .main-cards-overlay .map-stop (styles.css):
     // clamp(100px, 15.4cqw, 155px) on wide screens, fixed 185px popup ≤700px —
@@ -2410,7 +2488,16 @@
       }
 
       const routePts = hotelPt ? [hotelPt].concat(pts) : pts;
-      if (routePts.length > 1) this.dayLines.addLayer(L.polyline(routePts, { color: '#ffffff', weight: 1.8, opacity: .6, dashArray: '6 8', className: 'day-route-line' }));   // .day-route-line CSS: dark dashes on the light map, white on the night map
+      if (routePts.length > 1) {
+        this.dayLines.addLayer(L.polyline(routePts, { color: '#ffffff', weight: 1.8, opacity: .6, dashArray: '6 8', className: 'day-route-line' }));   // .day-route-line CSS: dark dashes on the light map, white on the night map
+        // draw the route in once per opened day (then it settles to its CSS dashes)
+        const dkey = this.openStopIdx + ':' + this.activeDay;
+        if (this._dayRouteKey !== dkey) {
+          this._dayRouteKey = dkey;
+          const dpath = this.dayMapEl.querySelector('path.day-route-line');
+          this._animateStroke(dpath, { dur: 1000, delay: 120, restore: true });
+        }
+      }
       if (routePts.length === 1) this.dayMap.setView(routePts[0], 14);
       else if (routePts.length > 1) this.dayMap.fitBounds(routePts, { padding: [30, 30], maxZoom: 15 });
       else if (cityCoord) this.dayMap.setView(cityCoord, 11);
@@ -2901,6 +2988,52 @@
       this._watchPackSheet();   // (re)observe the packing sheet for its open animation
       this.paintSaved();
       this.updateTopActions();
+      this._animateStats();     // count-up the summary figures when they change
+    }
+
+    // Tween the summary figures (nights / total / miles) from their previous
+    // value to the new one whenever they change — reuses the rAF easing style.
+    _animateStats() {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      if (!this._statPrev) this._statPrev = {};
+      const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+      const fmt = (v, kind) => kind === 'money' ? money(v)
+        : kind === 'comma' ? Math.round(v).toLocaleString()
+        : String(Math.round(v));
+      this.root.querySelectorAll('.summary .fig[data-fig-key]').forEach(el => {
+        const key = el.dataset.figKey;
+        const target = Number(el.dataset.count) || 0;
+        const prev = this._statPrev[key];
+        this._statPrev[key] = target;
+        const from = prev === undefined ? 0 : prev;
+        if (from === target) return;                 // no change → leave as-is
+        const t0 = performance.now(), D = 1000;
+        el.textContent = fmt(from, el.dataset.fmt);
+        const stepA = (now) => {
+          const k = Math.min(1, (now - t0) / D);
+          el.textContent = fmt(from + (target - from) * easeOut(k), el.dataset.fmt);
+          if (k < 1) requestAnimationFrame(stepA);
+          else el.textContent = fmt(target, el.dataset.fmt);
+        };
+        requestAnimationFrame(stepA);
+      });
+    }
+
+    // Staggered entrance for a freshly-opened page/leaf. Sets an incrementing
+    // --enter-i on each block so CSS can cascade the rise (works regardless of
+    // DOM shape). Fires only from real navigation, not on every bump.
+    _playEnter(container) {
+      if (!container || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const targets = container.querySelectorAll(
+        '.leaf-head, .summary .stat, .opt, .item, .todo, .app-card, .meta-range, .map, .todos, .add-option, .add-todo');
+      if (!targets.length) return;
+      targets.forEach((el, i) => el.style.setProperty('--enter-i', i));
+      container.classList.add('leaf-entering');
+      clearTimeout(this._enterT);
+      this._enterT = setTimeout(() => {
+        container.classList.remove('leaf-entering');
+        targets.forEach(el => el.style.removeProperty('--enter-i'));
+      }, 1300);
     }
 
     /* ============================================================
@@ -3058,6 +3191,8 @@
       this._flipEndT = setTimeout(() => { this._magAnimating = false; }, 640);   // covers the .62s leaf slide
       this._syncLeafClasses();
       this._afterFlip();
+      const active = this.root.querySelector('.ledger-leaf.active');
+      this._playEnter(active && (active.querySelector('.leaf-inner') || active));
     }
     _syncLeafClasses() {
       const book = this.root.querySelector('.ledger-book'); if (!book) return;
@@ -3191,6 +3326,10 @@
       this._appFlipEndT = setTimeout(() => { this._appAnimating = false; }, 520);
       this._syncAppLeafClasses();
       this._afterAppFlip();
+      const active = i === 0
+        ? this.root.querySelector('.app-ov')
+        : this.root.querySelector('.app-leaf.active .app-sub-inner');
+      this._playEnter(active);
     }
     _syncAppLeafClasses() {
       const rootEl = this.root.querySelector('.app-root'); if (!rootEl) return;
@@ -3498,12 +3637,12 @@
       const covered = miles > 0 && balance >= miles;
       return `<div class="summary">
         <div class="stat stat-split">
-          <div class="stat-half"><div class="fig">${nights}</div><div class="cap">night${nights === 1 ? '' : 's'}</div></div>
+          <div class="stat-half"><div class="fig" data-fig-key="nights" data-count="${nights}" data-fmt="int">${nights}</div><div class="cap">night${nights === 1 ? '' : 's'}</div></div>
           <div class="stat-half stat-travelers">${this.travelersPip(travelers)}</div>
         </div>
         ${SHOW_COSTS ? `<div class="stat cash clickable" data-act="open-budget" title="See budget breakdown">
-          <div class="fig">${esc(money(grand))}</div><div class="cap">total · ${esc(money(perPerson))} / person</div></div>
-        <div class="stat miles${covered ? ' covered' : ''}"><div class="fig">${miles.toLocaleString()}</div><div class="cap">reward points needed</div></div>` : ''}
+          <div class="fig" data-fig-key="cash" data-count="${grand}" data-fmt="money">${esc(money(grand))}</div><div class="cap">total · ${esc(money(perPerson))} / person</div></div>
+        <div class="stat miles${covered ? ' covered' : ''}"><div class="fig" data-fig-key="miles" data-count="${miles}" data-fmt="comma">${miles.toLocaleString()}</div><div class="cap">reward points needed</div></div>` : ''}
       </div>`;
     }
 
