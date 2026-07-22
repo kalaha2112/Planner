@@ -2390,9 +2390,26 @@
         });
         this.dayMarkers.addLayer(marker);
       });
-      if (pts.length > 1) this.dayLines.addLayer(L.polyline(pts, { color: '#ffffff', weight: 1.8, opacity: .6, dashArray: '6 8', className: 'day-route-line' }));   // .day-route-line CSS: dark dashes on the light map, white on the night map
-      if (pts.length === 1) this.dayMap.setView(pts[0], 14);
-      else if (pts.length > 1) this.dayMap.fitBounds(pts, { padding: [30, 30], maxZoom: 15 });
+      // chosen hotel → a distinct "home base" pin and the route's start point,
+      // geocoded from its address (same key the optimizer uses via hotelHQ)
+      let hotelPt = null;
+      const hq = this.hotelHQ(stop);
+      if (hq) {
+        const hr = resolve(hq.q, hq.cityHint);
+        if (hr.pending) pending++;
+        else if (hr.coord) {
+          hotelPt = [hr.coord.lat, hr.coord.lng];
+          this.dayMarkers.addLayer(L.marker(hotelPt, {
+            title: hq.name, zIndexOffset: -50,
+            icon: L.divIcon({ className: 'day-pin day-pin-hotel', html: '<span>' + svg(I.bed, { w: 13, h: 13, sw: 2, stroke: '#1a1a1a' }) + '</span>', iconSize: [30, 30], iconAnchor: [9, 30] })
+          }));
+        }
+      }
+
+      const routePts = hotelPt ? [hotelPt].concat(pts) : pts;
+      if (routePts.length > 1) this.dayLines.addLayer(L.polyline(routePts, { color: '#ffffff', weight: 1.8, opacity: .6, dashArray: '6 8', className: 'day-route-line' }));   // .day-route-line CSS: dark dashes on the light map, white on the night map
+      if (routePts.length === 1) this.dayMap.setView(routePts[0], 14);
+      else if (routePts.length > 1) this.dayMap.fitBounds(routePts, { padding: [30, 30], maxZoom: 15 });
       else if (cityCoord) this.dayMap.setView(cityCoord, 11);
       const cap = this.modalEl.querySelector('.daymap-cap');
       if (cap) {
@@ -2423,6 +2440,17 @@
       return h * 60 + min;
     }
     pathLen(order) { let d = 0; for (let i = 0; i < order.length - 1; i++) d += this.haversine(order[i], order[i + 1]); return d; }
+    // The chosen hotel's geocode query — shared by the day map (pin) and the
+    // optimizer (route origin) so both hit the same _geoCache key. Prefers the
+    // explicit address; falls back to the hotel name. Returns null if neither.
+    hotelHQ(stop) {
+      const chosen = ((stop && stop.accom && stop.accom.options) || []).find(o => o.chosen);
+      if (!chosen) return null;
+      const q = (chosen.address || '').trim() || (chosen.name || '').trim();
+      if (!q) return null;
+      const cityHint = q.includes(',') ? '' : (stop.city || '');   // full addresses already carry the city
+      return { q, cityHint, name: (chosen.name || '').trim() || q };
+    }
     optimizeDay() {
       const stop = this.currentTrip().stops[this.openStopIdx];
       if (!stop || this.activeDay == null) return;
@@ -2443,15 +2471,14 @@
       });
       if (placed.length < 2) { this._optimizeNote = { kind: 'warn', text: 'Add an address to at least two activities so they can be placed on the map, then optimize.' }; this.bumpModal(); return; }
 
-      // Resolve the hotel as the fixed route origin
-      const chosen = (stop.accom && stop.accom.options || []).find(o => o.chosen);
+      // Resolve the chosen hotel (by address, falling back to name) as the fixed route origin
+      const hq = this.hotelHQ(stop);
       let origin = null;
-      if (chosen && chosen.name && chosen.name.trim()) {
-        const hq = chosen.name.trim();
-        const hKey = normKey(hq) + '|' + normKey(stop.city || '');
+      if (hq) {
+        const hKey = normKey(hq.q) + '|' + normKey(hq.cityHint);
         if (!this._geoCache.has(hKey)) {
           // hotel not geocoded yet — trigger it and ask user to retry
-          this.geocode(hq, stop.city).then(() => this.scheduleDayMap());
+          this.geocode(hq.q, hq.cityHint).then(() => this.scheduleDayMap());
           this._optimizeNote = { kind: 'warn', text: 'Locating your hotel — try Optimize again in a moment.' };
           this.bumpModal(); return;
         }
@@ -2508,7 +2535,7 @@
       const savedPct = before > 0 ? Math.round((1 - bestLen / before) * 100) : 0;
       this.snapshot();
       day.items = newItems;
-      const originLabel = (chosen && chosen.name && chosen.name.trim() && origin) ? chosen.name.trim() : (origin ? stop.city : null);
+      const originLabel = (hq && origin) ? hq.name : (origin ? stop.city : null);
       const originNote = originLabel ? ` from ${originLabel}` : '';
       this._optimizeNote = same
         ? { kind: 'ok', text: `Already the most efficient order${originNote} — no changes needed.` }
@@ -2613,7 +2640,7 @@
     }
     addDayItem(stop, dayIdx) { this.ensureItinerary(stop); stop.itinerary[dayIdx].items.push({ time: '', text: '' }); this.bump(); }
     removeDayItem(stop, dayIdx, itemIdx) { stop.itinerary[dayIdx].items.splice(itemIdx, 1); this.bump(); }
-    addAccomOption(stopIdx) { const s = this.currentTrip().stops[stopIdx]; if (!s.accom) s.accom = { options: [] }; s.accom.options.push({ id: Date.now(), name: '', link: '', totalPrice: '', features: '', distance: '', chosen: false }); this.bump(); }
+    addAccomOption(stopIdx) { const s = this.currentTrip().stops[stopIdx]; if (!s.accom) s.accom = { options: [] }; s.accom.options.push({ id: Date.now(), name: '', link: '', address: '', totalPrice: '', features: '', distance: '', chosen: false }); this.bump(); }
     removeAccomOption(stopIdx, optIdx) { this.snapshot(); this.currentTrip().stops[stopIdx].accom.options.splice(optIdx, 1); this.bump(); }
     chooseAccomOption(stopIdx, optIdx) {
       const opts = this.currentTrip().stops[stopIdx].accom.options;
@@ -3867,6 +3894,7 @@
           <button class="rm" data-act="accom-remove" data-i="${oi}" title="Remove option">${svg(I.trash, { w: 13, h: 13, sw: 2.4 })}</button>
         </div>
         <div class="grid">
+          <div class="fld fld--addr"><label>Address</label><div class="lk"><input value="${escA(o.address)}" data-ch="accom-address" data-i="${oi}" placeholder="Street, city — used on the day map & route optimizer">${/\S/.test(o.address || '') ? `<a class="maps" href="https://maps.google.com/?q=${encodeURIComponent(o.address || '')}" target="_blank" rel="noopener" title="Open in Maps">↗</a>` : ''}</div></div>
           <div class="fld"><label>Booking link</label><div class="lk"><input value="${escA(o.link)}" data-ch="accom-link" data-i="${oi}" placeholder="https://…">${/\S/.test(o.link || '') ? `<a href="${escA(o.link)}" target="_blank" rel="noopener" title="Open">↗</a>` : ''}</div></div>
           <div class="fld"><label>Total price</label><input class="price" value="${escA(o.totalPrice)}" data-ch="accom-price" data-i="${oi}" placeholder="e.g. $420 / 4 nights"></div>
           <div class="fld"><label>Distance</label><input value="${escA(o.distance)}" data-ch="accom-distance" data-i="${oi}" placeholder="e.g. 300m to centre"></div>
@@ -4259,6 +4287,7 @@
         // accommodation modal
         case 'accom-name': trip.stops[this.accomOpenIdx].accom.options[i].name = v; this.bump(); break;
         case 'accom-link': trip.stops[this.accomOpenIdx].accom.options[i].link = v.trim(); this.bump(); break;
+        case 'accom-address': trip.stops[this.accomOpenIdx].accom.options[i].address = v; this.bump(); this.scheduleDayMap(); break;
         case 'accom-price': trip.stops[this.accomOpenIdx].accom.options[i].totalPrice = v; this.bump(); break;
         case 'accom-distance': trip.stops[this.accomOpenIdx].accom.options[i].distance = v; this.bump(); break;
         case 'accom-features': trip.stops[this.accomOpenIdx].accom.options[i].features = v; this.bump(); break;
