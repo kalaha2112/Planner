@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-23T15:57:39.318Z
+  Built: 2026-07-23T16:09:55.557Z
 -->
 
 <html lang="en">
@@ -3749,8 +3749,9 @@ html { -webkit-tap-highlight-color: transparent; }
       this.packOpen = null;         // packing slot whose popover is pinned open (view state)
       this._pkAnim = 'closed';      // packing sheet animation state: closed → open
       this._pkIO = ('IntersectionObserver' in window) ? new IntersectionObserver((es) => es.forEach(e => {
-        if (this._webMag()) return;   // web ledger: scroll direction drives open/close (see initLedgerNav)
-        if (e.isIntersecting && e.intersectionRatio >= .35) this._playPackAnim(325);
+        if (this._webMag()) return;   // web ledger: the leaf sliding in/out drives it (see magGoto)
+        // scrolled into view → open immediately; scrolled out of view → close
+        if (e.isIntersecting && e.intersectionRatio >= .35) this._playPackAnim(240);
         else if (!e.isIntersecting) this._setPackAnim('closed');
       }), { threshold: [0, .35] }) : null;
       this._wheelAcc = 0;           // trackpad delta accumulator for page turns
@@ -6467,8 +6468,13 @@ html { -webkit-tap-highlight-color: transparent; }
       if (!this._webMag()) return;
       i = Math.max(0, Math.min(3, i));
       if (i === this.magIdx || this._magAnimating) return;
+      const wasPack = this.magIdx === 3;
       this.magIdx = i;
-      if (i === 3) { this._setPackAnim('closed'); this._pkGestureT = performance.now(); }   // lands closed; the arrival scroll's momentum won't auto-open it
+      // the suitcase reacts to the packing leaf scrolling into / out of view:
+      // arriving opens it after a short beat, leaving closes it (and cancels a
+      // still-pending open if you scroll straight back out)
+      if (i === 3) this._playPackAnim(240);
+      else if (wasPack) this._setPackAnim('closed');
       this._magAnimating = true;   // brief lock so a wheel gesture turns one page, not three
       clearTimeout(this._flipEndT);
       this._flipEndT = setTimeout(() => { this._magAnimating = false; }, 640);   // covers the .62s leaf slide
@@ -6649,32 +6655,12 @@ html { -webkit-tap-highlight-color: transparent; }
       // back to the cover), a floating panel, the maps (zoom/pan), or a
       // scrollable region that can still move in that direction
       document.addEventListener('wheel', (e) => {
-        if (!this._webMag() || !this._introParked) return;
+        if (!this._webMag() || !this._introParked || this._magAnimating) return;
         if (e.defaultPrevented) return;
         const t = e.target;
         if (t && t.closest && t.closest('.overlay, .sticker-panel, .top-actions, .main-map-wrap, .leaflet-container, .daymap')) return;
         const dy = e.deltaY + e.deltaX;
         if (this._scrollClaims(t, dy)) return;
-        // packing leaf (last): the scroll drives the suitcase directly — down
-        // opens it, up closes it, and only once closed does a further up-scroll
-        // leave the page. One action per gesture: a short cooldown swallows the
-        // trackpad momentum tail so a single swipe can't both toggle AND flip
-        // the page (that double-fire was the janky part). Not gated by the
-        // page-flip lock, so it stays responsive right after landing here.
-        if (this.magIdx === 3 && this.root.querySelector('.pk-bp')) {
-          if (Math.abs(dy) < 4) return;                       // ignore scroll noise
-          const nowP = performance.now();
-          if (nowP - (this._pkGestureT || 0) < 500) return;   // same gesture still settling
-          if (dy > 0) {                                       // scroll down → open
-            if (this._pkAnim !== 'open') { this._pkGestureT = nowP; this._setPackAnim('open'); }
-            return;                                           // last leaf: nothing below to page to
-          }
-          if (this._pkAnim === 'open') { this._pkGestureT = nowP; this._setPackAnim('closed'); return; }  // up → close
-          this._pkGestureT = nowP;                            // already closed → leave the page
-          if (!this._magAnimating) this.magGoto(this.magIdx - 1);
-          return;
-        }
-        if (this._magAnimating) return;
         const now = performance.now();
         if (now - this._wheelT > 480) this._wheelAcc = 0;   // a fresh gesture
         this._wheelT = now;
@@ -6704,11 +6690,6 @@ html { -webkit-tap-highlight-color: transparent; }
         if (Math.abs(dy) < 70 || Math.abs(dy) < Math.abs(dx) * 1.2) return;   // too short / mostly horizontal
         if (this._scrollClaims(swipeEl, dy)) return;       // a region that scrolls that way keeps the gesture
         const dir = dy > 0 ? 1 : -1;                        // finger up = "down"/next
-        // packing leaf: swipe up opens the suitcase, swipe down closes it
-        if (this.magIdx === 3 && this.root.querySelector('.pk-bp')) {
-          if (dir > 0) { if (this._pkAnim !== 'open') this._setPackAnim('open'); return; }
-          if (this._pkAnim === 'open') { this._setPackAnim('closed'); return; }
-        }
         if (dir < 0 && this.magIdx === 0) return;          // intro driver owns the pull back to the cover
         this.magGoto(this.magIdx + dir);
       }, { passive: true });
@@ -6725,17 +6706,9 @@ html { -webkit-tap-highlight-color: transparent; }
           this.packOpen = null; this._paintPackPanel(); return;
         }
         if (ae && (ae.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))) return;
-        const onPack = this.magIdx === 3 && this.root.querySelector('.pk-bp');
-        if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown') {
-          e.preventDefault();
-          // ↓ on the packing leaf opens the suitcase before anything else
-          if (onPack && (e.key === 'ArrowDown' || e.key === 'PageDown') && this._pkAnim !== 'open') { this._setPackAnim('open'); return; }
-          this.magGoto(this.magIdx + 1);
-        }
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown') { e.preventDefault(); this.magGoto(this.magIdx + 1); }
         else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
           e.preventDefault();
-          // ↑ closes the open suitcase first; only then does it leave the page
-          if (onPack && (e.key === 'ArrowUp' || e.key === 'PageUp') && this._pkAnim === 'open') { this._setPackAnim('closed'); return; }
           if (this.magIdx > 0) this.magGoto(this.magIdx - 1);
           else if (this._introReturn) this._introReturn();
         }
