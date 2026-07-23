@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-23T18:03:33.091Z
+  Built: 2026-07-23T18:08:38.435Z
 -->
 
 <html lang="en">
@@ -2675,7 +2675,15 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    All disabled under prefers-reduced-motion at the foot of this block.
    ============================================================ */
 /* transport: dashed journey line (draws on) + a vehicle gliding across */
-.t-journey { position: relative; height: 26px; margin: 4px 2px 14px; }
+.t-journey { position: relative; height: 26px; margin: 0; }
+/* mobile stacks pills over the line; web puts the line on the pills' row,
+   filling the space to their right (so it's shorter and never overlaps them) */
+.t-modebar { display: flex; flex-direction: column; gap: 10px; }
+@media (min-width: 701px) {
+  .t-modebar { flex-direction: row; align-items: center; gap: 20px; }
+  .t-modebar .t-pills { flex: 0 0 auto; }
+  .t-modebar .t-journey { flex: 1 1 auto; min-width: 60px; }
+}
 .t-journey-line {
   position: absolute; left: 4%; right: 4%; top: 50%; height: 0;
   border-top: 1.5px dashed var(--mode-col, var(--ink-mute)); opacity: .5;
@@ -7507,10 +7515,12 @@ html { -webkit-tap-highlight-color: transparent; }
       const costVal = escA(fmtCost(leg.cost ?? 0));
       const rewardVal = escA(fmtCost(leg.miles ?? 0));
       return `<div class="transport-body">
-            <div class="t-pills">${pills}</div>
-            <div class="t-journey" style="--mode-col:${modeColor}" aria-hidden="true">
-              <span class="t-journey-line"></span>
-              <span class="t-journey-veh"><img src="${journeyImg}" data-mode="${escA(leg.mode)}" alt="" draggable="false"></span>
+            <div class="t-modebar">
+              <div class="t-pills">${pills}</div>
+              <div class="t-journey" style="--mode-col:${modeColor}" aria-hidden="true">
+                <span class="t-journey-line"></span>
+                <span class="t-journey-veh"><img src="${journeyImg}" data-mode="${escA(leg.mode)}" alt="" draggable="false"></span>
+              </div>
             </div>
             <div class="t-row-3">
               <div class="t-fld">

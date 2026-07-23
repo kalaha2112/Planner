@@ -1948,7 +1948,15 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    All disabled under prefers-reduced-motion at the foot of this block.
    ============================================================ */
 /* transport: dashed journey line (draws on) + a vehicle gliding across */
-.t-journey { position: relative; height: 26px; margin: 4px 2px 14px; }
+.t-journey { position: relative; height: 26px; margin: 0; }
+/* mobile stacks pills over the line; web puts the line on the pills' row,
+   filling the space to their right (so it's shorter and never overlaps them) */
+.t-modebar { display: flex; flex-direction: column; gap: 10px; }
+@media (min-width: 701px) {
+  .t-modebar { flex-direction: row; align-items: center; gap: 20px; }
+  .t-modebar .t-pills { flex: 0 0 auto; }
+  .t-modebar .t-journey { flex: 1 1 auto; min-width: 60px; }
+}
 .t-journey-line {
   position: absolute; left: 4%; right: 4%; top: 50%; height: 0;
   border-top: 1.5px dashed var(--mode-col, var(--ink-mute)); opacity: .5;

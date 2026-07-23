@@ -4245,10 +4245,12 @@
       const costVal = escA(fmtCost(leg.cost ?? 0));
       const rewardVal = escA(fmtCost(leg.miles ?? 0));
       return `<div class="transport-body">
-            <div class="t-pills">${pills}</div>
-            <div class="t-journey" style="--mode-col:${modeColor}" aria-hidden="true">
-              <span class="t-journey-line"></span>
-              <span class="t-journey-veh"><img src="${journeyImg}" data-mode="${escA(leg.mode)}" alt="" draggable="false"></span>
+            <div class="t-modebar">
+              <div class="t-pills">${pills}</div>
+              <div class="t-journey" style="--mode-col:${modeColor}" aria-hidden="true">
+                <span class="t-journey-line"></span>
+                <span class="t-journey-veh"><img src="${journeyImg}" data-mode="${escA(leg.mode)}" alt="" draggable="false"></span>
+              </div>
             </div>
             <div class="t-row-3">
               <div class="t-fld">
