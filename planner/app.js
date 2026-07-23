@@ -3280,7 +3280,7 @@
       i = Math.max(0, Math.min(3, i));
       if (i === this.magIdx || this._magAnimating) return;
       this.magIdx = i;
-      if (i === 3) this._setPackAnim('closed');   // packing leaf lands closed; a scroll down opens the case
+      if (i === 3) { this._setPackAnim('closed'); this._pkGestureT = performance.now(); }   // lands closed; the arrival scroll's momentum won't auto-open it
       this._magAnimating = true;   // brief lock so a wheel gesture turns one page, not three
       clearTimeout(this._flipEndT);
       this._flipEndT = setTimeout(() => { this._magAnimating = false; }, 640);   // covers the .62s leaf slide
@@ -3461,12 +3461,32 @@
       // back to the cover), a floating panel, the maps (zoom/pan), or a
       // scrollable region that can still move in that direction
       document.addEventListener('wheel', (e) => {
-        if (!this._webMag() || !this._introParked || this._magAnimating) return;
+        if (!this._webMag() || !this._introParked) return;
         if (e.defaultPrevented) return;
         const t = e.target;
         if (t && t.closest && t.closest('.overlay, .sticker-panel, .top-actions, .main-map-wrap, .leaflet-container, .daymap')) return;
         const dy = e.deltaY + e.deltaX;
         if (this._scrollClaims(t, dy)) return;
+        // packing leaf (last): the scroll drives the suitcase directly — down
+        // opens it, up closes it, and only once closed does a further up-scroll
+        // leave the page. One action per gesture: a short cooldown swallows the
+        // trackpad momentum tail so a single swipe can't both toggle AND flip
+        // the page (that double-fire was the janky part). Not gated by the
+        // page-flip lock, so it stays responsive right after landing here.
+        if (this.magIdx === 3 && this.root.querySelector('.pk-bp')) {
+          if (Math.abs(dy) < 4) return;                       // ignore scroll noise
+          const nowP = performance.now();
+          if (nowP - (this._pkGestureT || 0) < 500) return;   // same gesture still settling
+          if (dy > 0) {                                       // scroll down → open
+            if (this._pkAnim !== 'open') { this._pkGestureT = nowP; this._setPackAnim('open'); }
+            return;                                           // last leaf: nothing below to page to
+          }
+          if (this._pkAnim === 'open') { this._pkGestureT = nowP; this._setPackAnim('closed'); return; }  // up → close
+          this._pkGestureT = nowP;                            // already closed → leave the page
+          if (!this._magAnimating) this.magGoto(this.magIdx - 1);
+          return;
+        }
+        if (this._magAnimating) return;
         const now = performance.now();
         if (now - this._wheelT > 480) this._wheelAcc = 0;   // a fresh gesture
         this._wheelT = now;
@@ -3474,12 +3494,6 @@
         if (Math.abs(this._wheelAcc) < 110) return;
         const dir = this._wheelAcc > 0 ? 1 : -1;
         this._wheelAcc = 0;
-        // packing leaf (last): a scroll down opens the suitcase, a scroll up
-        // closes it — only once closed does an up-scroll leave the page
-        if (this.magIdx === 3 && this.root.querySelector('.pk-bp')) {
-          if (dir > 0) { if (this._pkAnim !== 'open') this._setPackAnim('open'); return; }
-          if (this._pkAnim === 'open') { this._setPackAnim('closed'); return; }
-        }
         if (dir < 0 && this.magIdx === 0) return;   // the intro driver owns "up from page 1"
         this.magGoto(this.magIdx + dir);
       }, { passive: true });
