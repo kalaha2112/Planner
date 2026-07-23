@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-22T23:55:13.494Z
+  Built: 2026-07-23T00:17:02.136Z
 -->
 
 <html lang="en">
@@ -2555,7 +2555,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   transition: opacity .42s ease, transform .48s cubic-bezier(.22, .61, .36, 1);
 }
 .pk-art--closed { left: 33%; top: 22%; width: 34%; height: 70%; }
-.pk-art--open { left: 4%; top: 32%; width: 92%; height: 66%;
+.pk-art--open { left: 4%; top: 36%; width: 92%; height: 62%;
   /* the source art is ~square; the box has spare width, so stretch the mask
      horizontally to widen the case (an open case is wider than it is deep) */
   -webkit-mask-size: 82% 100%; mask-size: 82% 100%; }
@@ -7002,7 +7002,7 @@ html { -webkit-tap-highlight-color: transparent; }
       const pack = trip.packing || {};
       const open = this._pkAnim === 'open';
       // where each chip's dashed leader lands inside the OPEN case art
-      const ends = { tech: [245, 440], toiletries: [368, 440], documents: [452, 440], clothes: [178, 455], shoes: [315, 468], extras: [422, 452] };
+      const ends = { tech: [245, 452], toiletries: [368, 452], documents: [452, 452], clothes: [178, 466], shoes: [315, 480], extras: [422, 464] };
       const leads = PACK_SLOTS.map((s, i) => {
         const x0 = Math.round(s.cx * 640), y0 = Math.round(s.cy * 560 + 26);
         const [x1, y1] = ends[s.k];
