@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-23T16:09:55.557Z
+  Built: 2026-07-23T16:46:23.277Z
 -->
 
 <html lang="en">
@@ -2652,7 +2652,12 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .leaf-entering .map,
 .leaf-entering .todos,
 .leaf-entering .add-option,
-.leaf-entering .add-todo {
+.leaf-entering .add-todo,
+.leaf-entering .day-head,
+.leaf-entering .cal,
+.leaf-entering .plan-col-hd,
+.leaf-entering .t-row-3,
+.leaf-entering .t-row-2 {
   animation: enterRise .5s cubic-bezier(.34, 1.36, .5, 1) both;
   animation-delay: calc(var(--enter-i, 0) * 55ms);
 }
@@ -2660,7 +2665,70 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .leaf-entering .leaf-head, .leaf-entering .summary .stat, .leaf-entering .opt,
   .leaf-entering .item, .leaf-entering .todo, .leaf-entering .app-card,
   .leaf-entering .meta-range, .leaf-entering .map, .leaf-entering .todos,
-  .leaf-entering .add-option, .leaf-entering .add-todo { animation: none; }
+  .leaf-entering .add-option, .leaf-entering .add-todo,
+  .leaf-entering .day-head, .leaf-entering .cal, .leaf-entering .plan-col-hd,
+  .leaf-entering .t-row-3, .leaf-entering .t-row-2 { animation: none; }
+}
+
+/* ============================================================
+   Leaf motion — itinerary + transport/hotels micro-animations.
+   All disabled under prefers-reduced-motion at the foot of this block.
+   ============================================================ */
+/* transport: dashed journey line (draws on) + a mode glyph gliding across */
+.t-journey { position: relative; height: 20px; margin: 2px 2px 12px; }
+.t-journey-line {
+  position: absolute; left: 4%; right: 4%; top: 50%; height: 0;
+  border-top: 1.5px dashed var(--mode-col, var(--ink-mute)); opacity: .5;
+  transform: scaleX(1); transform-origin: left center;
+}
+.t-journey::before, .t-journey::after {
+  content: ''; position: absolute; top: 50%; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--mode-col, var(--ink-mute)); transform: translateY(-50%);
+}
+.t-journey::before { left: 4%; margin-left: -2px; }
+.t-journey::after  { right: 4%; margin-right: -2px; }
+.t-journey-veh {
+  position: absolute; top: 50%; left: 4%; margin-top: -0.5em; line-height: 1; font-size: 13px;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.15)); animation: journeyGlide 3.6s ease-in-out infinite;
+}
+@keyframes journeyGlide {
+  0%   { left: 4%;  opacity: 0; }
+  12%  { opacity: 1; }
+  86%  { opacity: 1; }
+  100% { left: 91%; opacity: 0; }
+}
+.leaf-entering .t-journey-line { animation: journeyDraw .55s cubic-bezier(.33, 0, .15, 1) both; animation-delay: 140ms; }
+@keyframes journeyDraw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* transport: the just-picked mode pill sweeps its fill in left→right */
+.t-pill.just-switched { animation: pillSweep .32s cubic-bezier(.33, 0, .15, 1) both; }
+@keyframes pillSweep { from { clip-path: inset(0 100% 0 0 round 20px); } to { clip-path: inset(0 0 0 0 round 20px); } }
+
+/* hotels: passport-style CHOSEN stamp */
+.opt .badge.stamp-in { animation: stampIn .5s cubic-bezier(.5, 1.6, .5, 1) both; transform-origin: center; }
+@keyframes stampIn {
+  0%   { opacity: 0; transform: scale(1.5) rotate(-8deg); }
+  55%  { opacity: 1; transform: scale(.92) rotate(2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+
+/* itinerary: the day's weather glyph is subtly alive */
+.day-wx .ic { display: inline-block; transform-origin: center; animation: wxBreathe 4.6s ease-in-out infinite; }
+@keyframes wxBreathe { 0%, 100% { transform: rotate(-4deg) scale(1); } 50% { transform: rotate(4deg) scale(1.08); } }
+
+/* itinerary: row ↔ pin hover link (row highlight + pin bounce) */
+.item.hl { background: rgba(145, 4, 12, .06); border-radius: 6px; outline: 1.5px solid rgba(145, 4, 12, .20); }
+.day-pin.pulse { z-index: 600; }
+.day-pin.pulse span { outline: 2.5px solid var(--red); outline-offset: 1px; animation: pinPulse .9s ease-in-out infinite; }
+@keyframes pinPulse { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-3px) scale(1.14); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .t-journey-veh { animation: none; left: 4%; opacity: .85; }
+  .leaf-entering .t-journey-line { animation: none; }
+  .t-pill.just-switched { animation: none; }
+  .opt .badge.stamp-in { animation: none; }
+  .day-wx .ic { animation: none; }
+  .day-pin.pulse span { animation: none; }   /* keep the outline highlight, drop the bounce */
 }
 .pk-hint {
   border: 1.5px dashed var(--line); border-radius: 12px;
@@ -3508,6 +3576,7 @@ html { -webkit-tap-highlight-color: transparent; }
     { value: 'bus', label: 'Bus' }
   ];
   const MODE_HEX = { 'flight': '#91040C', 'train': '#5E8475', 'bus': '#4A7098', 'overnight-train': '#46604F', 'flying-blue': '#C8901F' };
+  const MODE_GLYPH = { 'flight': '✈', 'train': '🚆', 'bus': '🚌', 'overnight-train': '🌙', 'flying-blue': '✈' };
 
   // Packing-sheet art: the user's line-art carry-on in two states (closed
   // roller / open clamshell), converted to alpha masks so the app tints the
@@ -5678,6 +5747,7 @@ html { -webkit-tap-highlight-color: transparent; }
       const stop = trip.stops[this.openStopIdx];
       if (!stop || this.activeDay == null) return;
       this.dayLines.clearLayers(); this.dayMarkers.clearLayers();
+      this._dayPinMarkers = [];   // index → marker, for the row ↔ pin hover link
       const day = (stop.itinerary || [])[this.activeDay] || { items: [] };
       const items = day.items || [];
       const cityCoord = this.resolveCoord(stop.city);
@@ -5748,6 +5818,10 @@ html { -webkit-tap-highlight-color: transparent; }
           this.bumpModal();
           if (!wasSelected) this.scrollToItem(ii);
         });
+        // pin → row highlight on hover (row → pin lives in the root mouseover)
+        marker.on('mouseover', () => this._linkRow(ii, true));
+        marker.on('mouseout', () => this._linkRow(ii, false));
+        this._dayPinMarkers[ii] = marker;
         this.dayMarkers.addLayer(marker);
       });
       // chosen hotel → a distinct "home base" pin and the route's start point,
@@ -5903,6 +5977,7 @@ html { -webkit-tap-highlight-color: transparent; }
       const same = newItems.every((it, i) => it === items[i]);
       const savedPct = before > 0 ? Math.round((1 - bestLen / before) * 100) : 0;
       this.snapshot();
+      const flipBefore = same ? null : this._captureDayRows();   // record row slots so we can animate the reshuffle
       day.items = newItems;
       const originLabel = (hq && origin) ? hq.name : (origin ? stop.city : null);
       const originNote = originLabel ? ` from ${originLabel}` : '';
@@ -5910,6 +5985,44 @@ html { -webkit-tap-highlight-color: transparent; }
         ? { kind: 'ok', text: `Already the most efficient order${originNote} — no changes needed.` }
         : { kind: 'ok', text: `Reordered ${placed.length} stops${originNote} — route ${savedPct > 0 ? savedPct + '% shorter' : 'tightened'} (${before.toFixed(1)} → ${bestLen.toFixed(1)} km). Times kept in order. Undo with ⌘/Ctrl-Z.` };
       this.bump();
+      this._playDayFlip(flipBefore);   // FLIP: glide each row from its old slot to its new one
+    }
+    // stable per-activity key (survives reorder) so a FLIP can match rows
+    _rowKey(obj) {
+      this._rowKeys = this._rowKeys || new WeakMap();
+      let k = this._rowKeys.get(obj);
+      if (!k) { this._rowKeySeq = (this._rowKeySeq || 0) + 1; k = 'r' + this._rowKeySeq; this._rowKeys.set(obj, k); }
+      return k;
+    }
+    _captureDayRows() {
+      const m = new Map();
+      this.root.querySelectorAll('.day-main .item').forEach(el => m.set(el.dataset.id, el.getBoundingClientRect().top));
+      return m;
+    }
+    // row ↔ pin hover link
+    _linkPin(ii, on) {
+      const mk = this._dayPinMarkers && this._dayPinMarkers[ii];
+      const el = mk && mk.getElement && mk.getElement();
+      if (el) el.classList.toggle('pulse', on);
+    }
+    _linkRow(ii, on) {
+      const row = this.root.querySelector('.day-main .item[data-idx="' + ii + '"]');
+      if (row) row.classList.toggle('hl', on);
+    }
+    _playDayFlip(before) {
+      if (!before || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      this.root.querySelectorAll('.day-main .item').forEach(el => {
+        const b = before.get(el.dataset.id); if (b == null) return;
+        const dy = b - el.getBoundingClientRect().top;
+        if (!dy) return;
+        el.style.transition = 'none';
+        el.style.transform = `translateY(${dy}px)`;
+        requestAnimationFrame(() => {
+          el.style.transition = 'transform .44s cubic-bezier(.22,.61,.36,1)';
+          el.style.transform = '';
+          el.addEventListener('transitionend', () => { el.style.transition = ''; el.style.transform = ''; }, { once: true });
+        });
+      });
     }
 
     /* ---------- mutators: stops / trips / todos ---------- */
@@ -6020,6 +6133,7 @@ html { -webkit-tap-highlight-color: transparent; }
       const opt = opts[optIdx];
       if (opt.chosen) { opt.chosen = false; this.bump(); return; }   // toggle off
       opt.chosen = true;                                              // choose it
+      this._justChoseAccom = optIdx;                                  // trigger the CHOSEN stamp
       // allow at most 2 chosen at once: if this makes a 3rd, drop the
       // earliest other chosen option so the newest two stay selected
       let others = opts.filter((x, i) => x.chosen && i !== optIdx).length;
@@ -6308,9 +6422,9 @@ html { -webkit-tap-highlight-color: transparent; }
     _playEnter(container) {
       if (!container || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
       const targets = container.querySelectorAll(
-        '.leaf-head, .summary .stat, .opt, .item, .todo, .app-card, .meta-range, .map, .todos, .add-option, .add-todo');
+        '.leaf-head, .summary .stat, .opt, .item, .todo, .app-card, .meta-range, .map, .todos, .add-option, .add-todo, .day-head, .cal, .plan-col-hd, .t-row-3, .t-row-2');
       if (!targets.length) return;
-      targets.forEach((el, i) => el.style.setProperty('--enter-i', i));
+      targets.forEach((el, i) => el.style.setProperty('--enter-i', Math.min(i, 18)));   // clamp so the last blocks still land before the 1300ms cleanup
       container.classList.add('leaf-entering');
       clearTimeout(this._enterT);
       this._enterT = setTimeout(() => {
@@ -7213,7 +7327,7 @@ html { -webkit-tap-highlight-color: transparent; }
           const geoCity = geoQuery.includes(',') ? '' : (stop.city || '');
           const placed = !!(geoQuery && (this._geoCache.get(normKey(geoQuery) + '|' + normKey(geoCity)) || this._geoCache.get(normKey(geoQuery) + '|')));
           const hasAddr = /\S/.test(geoQuery);
-          return `<div class="item${ii === selIdx ? ' selected' : ''}${ii === flashIdx ? ' flash' : ''}" data-idx="${ii}">
+          return `<div class="item${ii === selIdx ? ' selected' : ''}${ii === flashIdx ? ' flash' : ''}" data-idx="${ii}" data-id="${this._rowKey(it)}">
           <span class="item-num${placed ? ' placed' : (hasAddr ? '' : ' empty')}" title="${placed ? 'Mapped' : hasAddr ? 'Locating…' : 'Type a place name to map this'}">${ii + 1}</span>
           <span class="item-grip" data-drag="activity" data-i="${ii}" title="Drag onto another day">
             <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor" aria-hidden="true">
@@ -7317,11 +7431,12 @@ html { -webkit-tap-highlight-color: transparent; }
       const stop = trip.stops[idx];
       if (!stop.accom) stop.accom = { options: [] };
       const accomList = stop.accom.options;
+      const stampIdx = this._justChoseAccom; this._justChoseAccom = null;   // one-shot: stamp the badge only when just chosen
       const opts = accomList.map((o, oi) => `<div class="opt${o.chosen ? ' chosen' : ''}">
         <div class="top">
           <button class="choose" data-act="accom-choose" data-i="${oi}" title="${o.chosen ? 'Unchose this option' : 'Choose this option'}">${o.chosen ? svg(I.check, { w: 11, h: 11, sw: 3.5, stroke: '#fff' }) : ''}</button>
           <input class="name" value="${escA(o.name)}" data-ch="accom-name" data-i="${oi}" placeholder="Place name…">
-          ${o.chosen ? `<span class="badge">Chosen</span>` : ''}
+          ${o.chosen ? `<span class="badge${oi === stampIdx ? ' stamp-in' : ''}">Chosen</span>` : ''}
           <button class="rm" data-act="accom-remove" data-i="${oi}" title="Remove option">${svg(I.trash, { w: 13, h: 13, sw: 2.4 })}</button>
         </div>
         <div class="grid">
@@ -7373,14 +7488,21 @@ html { -webkit-tap-highlight-color: transparent; }
       const isFlight = leg.mode === 'flight';
       const modeColor = MODE_HEX[leg.mode] || '#7a7260';
       const fmtCost = n => { const v = Number(n) || 0; return v >= 1000 ? v.toLocaleString('en-US') : (v || ''); };
-      const pills = MODE_OPTIONS.map(o =>
-        `<button class="t-pill${leg.mode === o.value ? ' active' : ''}" data-act="transport-mode" data-leg="${legIdx}" data-mode="${escA(o.value)}" style="${leg.mode === o.value ? `background:${modeColor};border-color:${modeColor}` : ''}">${esc(o.label)}</button>`
-      ).join('');
+      const swept = this._justSwitchedMode === legIdx; this._justSwitchedMode = null;   // one-shot: sweep the fill only on an actual mode change
+      const pills = MODE_OPTIONS.map(o => {
+        const on = leg.mode === o.value;
+        return `<button class="t-pill${on ? ' active' : ''}${on && swept ? ' just-switched' : ''}" data-act="transport-mode" data-leg="${legIdx}" data-mode="${escA(o.value)}" style="${on ? `background:${modeColor};border-color:${modeColor}` : ''}">${esc(o.label)}</button>`;
+      }).join('');
+      const journeyGlyph = MODE_GLYPH[leg.mode] || '✈';
       const idLabel = isFlight ? 'Flight No.' : leg.mode === 'train' ? 'Train No.' : 'Line';
       const costVal = escA(fmtCost(leg.cost ?? 0));
       const rewardVal = escA(fmtCost(leg.miles ?? 0));
       return `<div class="transport-body">
             <div class="t-pills">${pills}</div>
+            <div class="t-journey" style="--mode-col:${modeColor}" aria-hidden="true">
+              <span class="t-journey-line"></span>
+              <span class="t-journey-veh">${journeyGlyph}</span>
+            </div>
             <div class="t-row-3">
               <div class="t-fld">
                 <label>Depart</label>
@@ -7531,12 +7653,23 @@ html { -webkit-tap-highlight-color: transparent; }
       r.addEventListener('pointerdown', (e) => this.onPointerDown(e));
       // packing sheet: hovering an object fills the docked checklist panel
       r.addEventListener('mouseover', (e) => {
+        // itinerary: hovering an activity row pulses its pin on the day map
+        const row = e.target.closest && e.target.closest('.day-main .item');
+        const ri = row ? Number(row.dataset.idx) : null;
+        if (ri !== this._hoverRow) {
+          if (this._hoverRow != null) this._linkPin(this._hoverRow, false);
+          this._hoverRow = ri;
+          if (ri != null) this._linkPin(ri, true);
+        }
         const s = e.target.closest && e.target.closest('.pk-slot');
         if (!s || !this._webMag()) return;
         const k = s.dataset.slot;
         if (k === this.packOpen) return;
         this.packOpen = k;
         this._paintPackPanel();
+      });
+      r.addEventListener('mouseleave', () => {
+        if (this._hoverRow != null) { this._linkPin(this._hoverRow, false); this._hoverRow = null; }
       });
       const m = this.modalEl;
       m.addEventListener('click', (e) => this.onClick(e));
@@ -7655,8 +7788,8 @@ html { -webkit-tap-highlight-color: transparent; }
         case 'overlay-accom': if (e.target === t) this.closeAccom(); break;
         case 'close-transport': this.closeTransport(); break;
         case 'overlay-transport': if (e.target === t) this.closeTransport(); break;
-        case 'transport-mode': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.mode = t.dataset.mode; if (leg.mode === 'flight' && leg.miles == null) leg.miles = 0; this.bump(); break; }
-        case 'cal-day': { this.activeDay = (this.activeDay === i ? null : i); this._optimizeNote = null; this._selectedItem = null; this.bumpModal(); break; }
+        case 'transport-mode': { const leg = this.legByIndex(Number(t.dataset.leg)); if (leg.mode !== t.dataset.mode) this._justSwitchedMode = Number(t.dataset.leg); leg.mode = t.dataset.mode; if (leg.mode === 'flight' && leg.miles == null) leg.miles = 0; this.bump(); break; }
+        case 'cal-day': { this.activeDay = (this.activeDay === i ? null : i); this._optimizeNote = null; this._selectedItem = null; this.bumpModal(); if (this.activeDay != null) this._playEnter(this.root.querySelector('.iti-right')); break; }
         case 'optimize-day': this.optimizeDay(); break;
         case 'optimize-dismiss': this._optimizeNote = null; this.bumpModal(); break;
         case 'add-item': this.addDayItem(trip.stops[this.openStopIdx], this.activeDay); break;

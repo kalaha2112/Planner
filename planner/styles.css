@@ -1925,7 +1925,12 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .leaf-entering .map,
 .leaf-entering .todos,
 .leaf-entering .add-option,
-.leaf-entering .add-todo {
+.leaf-entering .add-todo,
+.leaf-entering .day-head,
+.leaf-entering .cal,
+.leaf-entering .plan-col-hd,
+.leaf-entering .t-row-3,
+.leaf-entering .t-row-2 {
   animation: enterRise .5s cubic-bezier(.34, 1.36, .5, 1) both;
   animation-delay: calc(var(--enter-i, 0) * 55ms);
 }
@@ -1933,7 +1938,70 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .leaf-entering .leaf-head, .leaf-entering .summary .stat, .leaf-entering .opt,
   .leaf-entering .item, .leaf-entering .todo, .leaf-entering .app-card,
   .leaf-entering .meta-range, .leaf-entering .map, .leaf-entering .todos,
-  .leaf-entering .add-option, .leaf-entering .add-todo { animation: none; }
+  .leaf-entering .add-option, .leaf-entering .add-todo,
+  .leaf-entering .day-head, .leaf-entering .cal, .leaf-entering .plan-col-hd,
+  .leaf-entering .t-row-3, .leaf-entering .t-row-2 { animation: none; }
+}
+
+/* ============================================================
+   Leaf motion — itinerary + transport/hotels micro-animations.
+   All disabled under prefers-reduced-motion at the foot of this block.
+   ============================================================ */
+/* transport: dashed journey line (draws on) + a mode glyph gliding across */
+.t-journey { position: relative; height: 20px; margin: 2px 2px 12px; }
+.t-journey-line {
+  position: absolute; left: 4%; right: 4%; top: 50%; height: 0;
+  border-top: 1.5px dashed var(--mode-col, var(--ink-mute)); opacity: .5;
+  transform: scaleX(1); transform-origin: left center;
+}
+.t-journey::before, .t-journey::after {
+  content: ''; position: absolute; top: 50%; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--mode-col, var(--ink-mute)); transform: translateY(-50%);
+}
+.t-journey::before { left: 4%; margin-left: -2px; }
+.t-journey::after  { right: 4%; margin-right: -2px; }
+.t-journey-veh {
+  position: absolute; top: 50%; left: 4%; margin-top: -0.5em; line-height: 1; font-size: 13px;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.15)); animation: journeyGlide 3.6s ease-in-out infinite;
+}
+@keyframes journeyGlide {
+  0%   { left: 4%;  opacity: 0; }
+  12%  { opacity: 1; }
+  86%  { opacity: 1; }
+  100% { left: 91%; opacity: 0; }
+}
+.leaf-entering .t-journey-line { animation: journeyDraw .55s cubic-bezier(.33, 0, .15, 1) both; animation-delay: 140ms; }
+@keyframes journeyDraw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* transport: the just-picked mode pill sweeps its fill in left→right */
+.t-pill.just-switched { animation: pillSweep .32s cubic-bezier(.33, 0, .15, 1) both; }
+@keyframes pillSweep { from { clip-path: inset(0 100% 0 0 round 20px); } to { clip-path: inset(0 0 0 0 round 20px); } }
+
+/* hotels: passport-style CHOSEN stamp */
+.opt .badge.stamp-in { animation: stampIn .5s cubic-bezier(.5, 1.6, .5, 1) both; transform-origin: center; }
+@keyframes stampIn {
+  0%   { opacity: 0; transform: scale(1.5) rotate(-8deg); }
+  55%  { opacity: 1; transform: scale(.92) rotate(2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+
+/* itinerary: the day's weather glyph is subtly alive */
+.day-wx .ic { display: inline-block; transform-origin: center; animation: wxBreathe 4.6s ease-in-out infinite; }
+@keyframes wxBreathe { 0%, 100% { transform: rotate(-4deg) scale(1); } 50% { transform: rotate(4deg) scale(1.08); } }
+
+/* itinerary: row ↔ pin hover link (row highlight + pin bounce) */
+.item.hl { background: rgba(145, 4, 12, .06); border-radius: 6px; outline: 1.5px solid rgba(145, 4, 12, .20); }
+.day-pin.pulse { z-index: 600; }
+.day-pin.pulse span { outline: 2.5px solid var(--red); outline-offset: 1px; animation: pinPulse .9s ease-in-out infinite; }
+@keyframes pinPulse { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-3px) scale(1.14); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .t-journey-veh { animation: none; left: 4%; opacity: .85; }
+  .leaf-entering .t-journey-line { animation: none; }
+  .t-pill.just-switched { animation: none; }
+  .opt .badge.stamp-in { animation: none; }
+  .day-wx .ic { animation: none; }
+  .day-pin.pulse span { animation: none; }   /* keep the outline highlight, drop the bounce */
 }
 .pk-hint {
   border: 1.5px dashed var(--line); border-radius: 12px;

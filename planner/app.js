@@ -320,6 +320,7 @@
     { value: 'bus', label: 'Bus' }
   ];
   const MODE_HEX = { 'flight': '#91040C', 'train': '#5E8475', 'bus': '#4A7098', 'overnight-train': '#46604F', 'flying-blue': '#C8901F' };
+  const MODE_GLYPH = { 'flight': '✈', 'train': '🚆', 'bus': '🚌', 'overnight-train': '🌙', 'flying-blue': '✈' };
 
   // Packing-sheet art: the user's line-art carry-on in two states (closed
   // roller / open clamshell), converted to alpha masks so the app tints the
@@ -2490,6 +2491,7 @@
       const stop = trip.stops[this.openStopIdx];
       if (!stop || this.activeDay == null) return;
       this.dayLines.clearLayers(); this.dayMarkers.clearLayers();
+      this._dayPinMarkers = [];   // index → marker, for the row ↔ pin hover link
       const day = (stop.itinerary || [])[this.activeDay] || { items: [] };
       const items = day.items || [];
       const cityCoord = this.resolveCoord(stop.city);
@@ -2560,6 +2562,10 @@
           this.bumpModal();
           if (!wasSelected) this.scrollToItem(ii);
         });
+        // pin → row highlight on hover (row → pin lives in the root mouseover)
+        marker.on('mouseover', () => this._linkRow(ii, true));
+        marker.on('mouseout', () => this._linkRow(ii, false));
+        this._dayPinMarkers[ii] = marker;
         this.dayMarkers.addLayer(marker);
       });
       // chosen hotel → a distinct "home base" pin and the route's start point,
@@ -2715,6 +2721,7 @@
       const same = newItems.every((it, i) => it === items[i]);
       const savedPct = before > 0 ? Math.round((1 - bestLen / before) * 100) : 0;
       this.snapshot();
+      const flipBefore = same ? null : this._captureDayRows();   // record row slots so we can animate the reshuffle
       day.items = newItems;
       const originLabel = (hq && origin) ? hq.name : (origin ? stop.city : null);
       const originNote = originLabel ? ` from ${originLabel}` : '';
@@ -2722,6 +2729,44 @@
         ? { kind: 'ok', text: `Already the most efficient order${originNote} — no changes needed.` }
         : { kind: 'ok', text: `Reordered ${placed.length} stops${originNote} — route ${savedPct > 0 ? savedPct + '% shorter' : 'tightened'} (${before.toFixed(1)} → ${bestLen.toFixed(1)} km). Times kept in order. Undo with ⌘/Ctrl-Z.` };
       this.bump();
+      this._playDayFlip(flipBefore);   // FLIP: glide each row from its old slot to its new one
+    }
+    // stable per-activity key (survives reorder) so a FLIP can match rows
+    _rowKey(obj) {
+      this._rowKeys = this._rowKeys || new WeakMap();
+      let k = this._rowKeys.get(obj);
+      if (!k) { this._rowKeySeq = (this._rowKeySeq || 0) + 1; k = 'r' + this._rowKeySeq; this._rowKeys.set(obj, k); }
+      return k;
+    }
+    _captureDayRows() {
+      const m = new Map();
+      this.root.querySelectorAll('.day-main .item').forEach(el => m.set(el.dataset.id, el.getBoundingClientRect().top));
+      return m;
+    }
+    // row ↔ pin hover link
+    _linkPin(ii, on) {
+      const mk = this._dayPinMarkers && this._dayPinMarkers[ii];
+      const el = mk && mk.getElement && mk.getElement();
+      if (el) el.classList.toggle('pulse', on);
+    }
+    _linkRow(ii, on) {
+      const row = this.root.querySelector('.day-main .item[data-idx="' + ii + '"]');
+      if (row) row.classList.toggle('hl', on);
+    }
+    _playDayFlip(before) {
+      if (!before || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      this.root.querySelectorAll('.day-main .item').forEach(el => {
+        const b = before.get(el.dataset.id); if (b == null) return;
+        const dy = b - el.getBoundingClientRect().top;
+        if (!dy) return;
+        el.style.transition = 'none';
+        el.style.transform = `translateY(${dy}px)`;
+        requestAnimationFrame(() => {
+          el.style.transition = 'transform .44s cubic-bezier(.22,.61,.36,1)';
+          el.style.transform = '';
+          el.addEventListener('transitionend', () => { el.style.transition = ''; el.style.transform = ''; }, { once: true });
+        });
+      });
     }
 
     /* ---------- mutators: stops / trips / todos ---------- */
@@ -2832,6 +2877,7 @@
       const opt = opts[optIdx];
       if (opt.chosen) { opt.chosen = false; this.bump(); return; }   // toggle off
       opt.chosen = true;                                              // choose it
+      this._justChoseAccom = optIdx;                                  // trigger the CHOSEN stamp
       // allow at most 2 chosen at once: if this makes a 3rd, drop the
       // earliest other chosen option so the newest two stay selected
       let others = opts.filter((x, i) => x.chosen && i !== optIdx).length;
@@ -3120,9 +3166,9 @@
     _playEnter(container) {
       if (!container || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
       const targets = container.querySelectorAll(
-        '.leaf-head, .summary .stat, .opt, .item, .todo, .app-card, .meta-range, .map, .todos, .add-option, .add-todo');
+        '.leaf-head, .summary .stat, .opt, .item, .todo, .app-card, .meta-range, .map, .todos, .add-option, .add-todo, .day-head, .cal, .plan-col-hd, .t-row-3, .t-row-2');
       if (!targets.length) return;
-      targets.forEach((el, i) => el.style.setProperty('--enter-i', i));
+      targets.forEach((el, i) => el.style.setProperty('--enter-i', Math.min(i, 18)));   // clamp so the last blocks still land before the 1300ms cleanup
       container.classList.add('leaf-entering');
       clearTimeout(this._enterT);
       this._enterT = setTimeout(() => {
@@ -4025,7 +4071,7 @@
           const geoCity = geoQuery.includes(',') ? '' : (stop.city || '');
           const placed = !!(geoQuery && (this._geoCache.get(normKey(geoQuery) + '|' + normKey(geoCity)) || this._geoCache.get(normKey(geoQuery) + '|')));
           const hasAddr = /\S/.test(geoQuery);
-          return `<div class="item${ii === selIdx ? ' selected' : ''}${ii === flashIdx ? ' flash' : ''}" data-idx="${ii}">
+          return `<div class="item${ii === selIdx ? ' selected' : ''}${ii === flashIdx ? ' flash' : ''}" data-idx="${ii}" data-id="${this._rowKey(it)}">
           <span class="item-num${placed ? ' placed' : (hasAddr ? '' : ' empty')}" title="${placed ? 'Mapped' : hasAddr ? 'Locating…' : 'Type a place name to map this'}">${ii + 1}</span>
           <span class="item-grip" data-drag="activity" data-i="${ii}" title="Drag onto another day">
             <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor" aria-hidden="true">
@@ -4129,11 +4175,12 @@
       const stop = trip.stops[idx];
       if (!stop.accom) stop.accom = { options: [] };
       const accomList = stop.accom.options;
+      const stampIdx = this._justChoseAccom; this._justChoseAccom = null;   // one-shot: stamp the badge only when just chosen
       const opts = accomList.map((o, oi) => `<div class="opt${o.chosen ? ' chosen' : ''}">
         <div class="top">
           <button class="choose" data-act="accom-choose" data-i="${oi}" title="${o.chosen ? 'Unchose this option' : 'Choose this option'}">${o.chosen ? svg(I.check, { w: 11, h: 11, sw: 3.5, stroke: '#fff' }) : ''}</button>
           <input class="name" value="${escA(o.name)}" data-ch="accom-name" data-i="${oi}" placeholder="Place name…">
-          ${o.chosen ? `<span class="badge">Chosen</span>` : ''}
+          ${o.chosen ? `<span class="badge${oi === stampIdx ? ' stamp-in' : ''}">Chosen</span>` : ''}
           <button class="rm" data-act="accom-remove" data-i="${oi}" title="Remove option">${svg(I.trash, { w: 13, h: 13, sw: 2.4 })}</button>
         </div>
         <div class="grid">
@@ -4185,14 +4232,21 @@
       const isFlight = leg.mode === 'flight';
       const modeColor = MODE_HEX[leg.mode] || '#7a7260';
       const fmtCost = n => { const v = Number(n) || 0; return v >= 1000 ? v.toLocaleString('en-US') : (v || ''); };
-      const pills = MODE_OPTIONS.map(o =>
-        `<button class="t-pill${leg.mode === o.value ? ' active' : ''}" data-act="transport-mode" data-leg="${legIdx}" data-mode="${escA(o.value)}" style="${leg.mode === o.value ? `background:${modeColor};border-color:${modeColor}` : ''}">${esc(o.label)}</button>`
-      ).join('');
+      const swept = this._justSwitchedMode === legIdx; this._justSwitchedMode = null;   // one-shot: sweep the fill only on an actual mode change
+      const pills = MODE_OPTIONS.map(o => {
+        const on = leg.mode === o.value;
+        return `<button class="t-pill${on ? ' active' : ''}${on && swept ? ' just-switched' : ''}" data-act="transport-mode" data-leg="${legIdx}" data-mode="${escA(o.value)}" style="${on ? `background:${modeColor};border-color:${modeColor}` : ''}">${esc(o.label)}</button>`;
+      }).join('');
+      const journeyGlyph = MODE_GLYPH[leg.mode] || '✈';
       const idLabel = isFlight ? 'Flight No.' : leg.mode === 'train' ? 'Train No.' : 'Line';
       const costVal = escA(fmtCost(leg.cost ?? 0));
       const rewardVal = escA(fmtCost(leg.miles ?? 0));
       return `<div class="transport-body">
             <div class="t-pills">${pills}</div>
+            <div class="t-journey" style="--mode-col:${modeColor}" aria-hidden="true">
+              <span class="t-journey-line"></span>
+              <span class="t-journey-veh">${journeyGlyph}</span>
+            </div>
             <div class="t-row-3">
               <div class="t-fld">
                 <label>Depart</label>
@@ -4343,12 +4397,23 @@
       r.addEventListener('pointerdown', (e) => this.onPointerDown(e));
       // packing sheet: hovering an object fills the docked checklist panel
       r.addEventListener('mouseover', (e) => {
+        // itinerary: hovering an activity row pulses its pin on the day map
+        const row = e.target.closest && e.target.closest('.day-main .item');
+        const ri = row ? Number(row.dataset.idx) : null;
+        if (ri !== this._hoverRow) {
+          if (this._hoverRow != null) this._linkPin(this._hoverRow, false);
+          this._hoverRow = ri;
+          if (ri != null) this._linkPin(ri, true);
+        }
         const s = e.target.closest && e.target.closest('.pk-slot');
         if (!s || !this._webMag()) return;
         const k = s.dataset.slot;
         if (k === this.packOpen) return;
         this.packOpen = k;
         this._paintPackPanel();
+      });
+      r.addEventListener('mouseleave', () => {
+        if (this._hoverRow != null) { this._linkPin(this._hoverRow, false); this._hoverRow = null; }
       });
       const m = this.modalEl;
       m.addEventListener('click', (e) => this.onClick(e));
@@ -4467,8 +4532,8 @@
         case 'overlay-accom': if (e.target === t) this.closeAccom(); break;
         case 'close-transport': this.closeTransport(); break;
         case 'overlay-transport': if (e.target === t) this.closeTransport(); break;
-        case 'transport-mode': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.mode = t.dataset.mode; if (leg.mode === 'flight' && leg.miles == null) leg.miles = 0; this.bump(); break; }
-        case 'cal-day': { this.activeDay = (this.activeDay === i ? null : i); this._optimizeNote = null; this._selectedItem = null; this.bumpModal(); break; }
+        case 'transport-mode': { const leg = this.legByIndex(Number(t.dataset.leg)); if (leg.mode !== t.dataset.mode) this._justSwitchedMode = Number(t.dataset.leg); leg.mode = t.dataset.mode; if (leg.mode === 'flight' && leg.miles == null) leg.miles = 0; this.bump(); break; }
+        case 'cal-day': { this.activeDay = (this.activeDay === i ? null : i); this._optimizeNote = null; this._selectedItem = null; this.bumpModal(); if (this.activeDay != null) this._playEnter(this.root.querySelector('.iti-right')); break; }
         case 'optimize-day': this.optimizeDay(); break;
         case 'optimize-dismiss': this._optimizeNote = null; this.bumpModal(); break;
         case 'add-item': this.addDayItem(trip.stops[this.openStopIdx], this.activeDay); break;
