@@ -1947,8 +1947,8 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    Leaf motion — itinerary + transport/hotels micro-animations.
    All disabled under prefers-reduced-motion at the foot of this block.
    ============================================================ */
-/* transport: dashed journey line (draws on) + a mode glyph gliding across */
-.t-journey { position: relative; height: 20px; margin: 2px 2px 12px; }
+/* transport: dashed journey line (draws on) + a vehicle gliding across */
+.t-journey { position: relative; height: 26px; margin: 4px 2px 14px; }
 .t-journey-line {
   position: absolute; left: 4%; right: 4%; top: 50%; height: 0;
   border-top: 1.5px dashed var(--mode-col, var(--ink-mute)); opacity: .5;
@@ -1961,14 +1961,17 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .t-journey::before { left: 4%; margin-left: -2px; }
 .t-journey::after  { right: 4%; margin-right: -2px; }
 .t-journey-veh {
-  position: absolute; top: 50%; left: 4%; margin-top: -0.5em; line-height: 1; font-size: 13px;
-  filter: drop-shadow(0 1px 1px rgba(0,0,0,.15)); animation: journeyGlide 3.6s ease-in-out infinite;
+  position: absolute; top: 50%; left: 2%; height: 20px; width: auto;
+  filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.2)); pointer-events: none;
+  animation: journeyGlide 7s ease-in-out infinite;
 }
+/* left+translateX(-100%) pins the vehicle's TRAILING edge to the end so wide
+   vehicles (the train) glide fully across without running off the line */
 @keyframes journeyGlide {
-  0%   { left: 4%;  opacity: 0; }
+  0%   { left: 2%;  transform: translate(0, -50%);     opacity: 0; }
   12%  { opacity: 1; }
-  86%  { opacity: 1; }
-  100% { left: 91%; opacity: 0; }
+  88%  { opacity: 1; }
+  100% { left: 98%; transform: translate(-100%, -50%); opacity: 0; }
 }
 .leaf-entering .t-journey-line { animation: journeyDraw .55s cubic-bezier(.33, 0, .15, 1) both; animation-delay: 140ms; }
 @keyframes journeyDraw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
@@ -1996,7 +1999,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 @keyframes pinPulse { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-3px) scale(1.14); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .t-journey-veh { animation: none; left: 4%; opacity: .85; }
+  .t-journey-veh { animation: none; left: 2%; transform: translateY(-50%); opacity: .9; }
   .leaf-entering .t-journey-line { animation: none; }
   .t-pill.just-switched { animation: none; }
   .opt .badge.stamp-in { animation: none; }
