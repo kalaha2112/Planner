@@ -1962,7 +1962,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .t-journey::after  { right: 4%; margin-right: -2px; }
 .t-journey-veh {
   position: absolute; top: 50%; left: 2%; height: 20px; pointer-events: none;
-  animation: journeyGlide 7s ease-in-out infinite;
+  animation: journeyGlide 9.5s ease-in-out infinite;
 }
 /* inner img carries the static per-vehicle transform (independent of the glide) */
 .t-journey-veh img { display: block; height: 100%; width: auto; filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.2)); }
