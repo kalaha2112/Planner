@@ -4248,7 +4248,7 @@
             <div class="t-pills">${pills}</div>
             <div class="t-journey" style="--mode-col:${modeColor}" aria-hidden="true">
               <span class="t-journey-line"></span>
-              <img class="t-journey-veh" src="${journeyImg}" alt="" draggable="false">
+              <span class="t-journey-veh"><img src="${journeyImg}" data-mode="${escA(leg.mode)}" alt="" draggable="false"></span>
             </div>
             <div class="t-row-3">
               <div class="t-fld">

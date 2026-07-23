@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-23T17:58:29.384Z
+  Built: 2026-07-23T18:02:45.729Z
 -->
 
 <html lang="en">
@@ -2688,10 +2688,13 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .t-journey::before { left: 4%; margin-left: -2px; }
 .t-journey::after  { right: 4%; margin-right: -2px; }
 .t-journey-veh {
-  position: absolute; top: 50%; left: 2%; height: 20px; width: auto;
-  filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.2)); pointer-events: none;
+  position: absolute; top: 50%; left: 2%; height: 20px; pointer-events: none;
   animation: journeyGlide 7s ease-in-out infinite;
 }
+/* inner img carries the static per-vehicle transform (independent of the glide) */
+.t-journey-veh img { display: block; height: 100%; width: auto; filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.2)); }
+.t-journey-veh img[data-mode="flight"], .t-journey-veh img[data-mode="flying-blue"] { transform: translateY(-4px); }  /* lift the plane onto the line */
+.t-journey-veh img[data-mode="train"], .t-journey-veh img[data-mode="overnight-train"] { transform: scaleX(-1); }      /* face the direction of travel */
 /* left+translateX(-100%) pins the vehicle's TRAILING edge to the end so wide
    vehicles (the train) glide fully across without running off the line */
 @keyframes journeyGlide {
@@ -7507,7 +7510,7 @@ html { -webkit-tap-highlight-color: transparent; }
             <div class="t-pills">${pills}</div>
             <div class="t-journey" style="--mode-col:${modeColor}" aria-hidden="true">
               <span class="t-journey-line"></span>
-              <img class="t-journey-veh" src="${journeyImg}" alt="" draggable="false">
+              <span class="t-journey-veh"><img src="${journeyImg}" data-mode="${escA(leg.mode)}" alt="" draggable="false"></span>
             </div>
             <div class="t-row-3">
               <div class="t-fld">
