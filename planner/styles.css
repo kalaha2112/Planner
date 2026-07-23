@@ -436,9 +436,12 @@ a { color: inherit; }
 .stat-split .stat-travelers { flex: 0 0 auto; display: flex; align-items: center; }
 .stat-travelers .travelers-pip { min-height: 38px; padding-bottom: 0; align-items: center; flex-wrap: wrap; }
 .stat.clickable { cursor: pointer; }
-.stat .fig { font-family: var(--caps); font-size: 42px; letter-spacing: .02em; color: var(--ink); line-height: .9; }
-.stat.cash .fig  { color: var(--red); }
-.stat.miles .fig { color: var(--gold); }
+/* size hierarchy: the trip total is the headline, nights the mid-tier, and the
+   reward-points figure is deliberately smaller (secondary info) */
+.stat .fig { font-family: var(--caps); font-size: 40px; letter-spacing: .02em; color: var(--ink); line-height: .9; }
+.stat.cash .fig  { color: var(--red); font-size: 54px; }
+.stat.miles .fig { color: var(--gold); font-size: 26px; }
+.stat.miles .cap { color: var(--ink-soft); }
 .stat.miles.covered .fig { color: var(--green); }
 .stat.miles.covered .cap::after { content: ' ✓'; color: var(--green); }
 .stat .cap { font-family: var(--sans); font-size: 11px; font-weight: 500; letter-spacing: .06em; color: var(--ink-mid); margin-top: 6px; text-transform: uppercase; }
