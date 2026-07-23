@@ -1827,7 +1827,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   -webkit-mask-position: center; mask-position: center;
   transition: opacity .42s ease, transform .48s cubic-bezier(.22, .61, .36, 1);
 }
-.pk-art--closed { left: 33%; top: 22%; width: 34%; height: 70%; }
+.pk-art--closed { left: 28%; top: 12%; width: 44%; height: 84%; }
 .pk-art--open { left: 4%; top: 36%; width: 92%; height: 62%;
   /* the source art is ~square; the box has spare width, so stretch the mask
      horizontally to widen the case (an open case is wider than it is deep) */
