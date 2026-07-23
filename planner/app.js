@@ -561,6 +561,7 @@
       this.packOpen = null;         // packing slot whose popover is pinned open (view state)
       this._pkAnim = 'closed';      // packing sheet animation state: closed → open
       this._pkIO = ('IntersectionObserver' in window) ? new IntersectionObserver((es) => es.forEach(e => {
+        if (this._webMag()) return;   // web ledger: scroll direction drives open/close (see initLedgerNav)
         if (e.isIntersecting && e.intersectionRatio >= .35) this._playPackAnim(325);
         else if (!e.isIntersecting) this._setPackAnim('closed');
       }), { threshold: [0, .35] }) : null;
@@ -3279,6 +3280,7 @@
       i = Math.max(0, Math.min(3, i));
       if (i === this.magIdx || this._magAnimating) return;
       this.magIdx = i;
+      if (i === 3) this._setPackAnim('closed');   // packing leaf lands closed; a scroll down opens the case
       this._magAnimating = true;   // brief lock so a wheel gesture turns one page, not three
       clearTimeout(this._flipEndT);
       this._flipEndT = setTimeout(() => { this._magAnimating = false; }, 640);   // covers the .62s leaf slide
@@ -3472,6 +3474,12 @@
         if (Math.abs(this._wheelAcc) < 110) return;
         const dir = this._wheelAcc > 0 ? 1 : -1;
         this._wheelAcc = 0;
+        // packing leaf (last): a scroll down opens the suitcase, a scroll up
+        // closes it — only once closed does an up-scroll leave the page
+        if (this.magIdx === 3 && this.root.querySelector('.pk-bp')) {
+          if (dir > 0) { if (this._pkAnim !== 'open') this._setPackAnim('open'); return; }
+          if (this._pkAnim === 'open') { this._setPackAnim('closed'); return; }
+        }
         if (dir < 0 && this.magIdx === 0) return;   // the intro driver owns "up from page 1"
         this.magGoto(this.magIdx + dir);
       }, { passive: true });
@@ -3493,7 +3501,12 @@
         swipeY = null;
         if (Math.abs(dy) < 70 || Math.abs(dy) < Math.abs(dx) * 1.2) return;   // too short / mostly horizontal
         if (this._scrollClaims(swipeEl, dy)) return;       // a region that scrolls that way keeps the gesture
-        const dir = dy > 0 ? 1 : -1;
+        const dir = dy > 0 ? 1 : -1;                        // finger up = "down"/next
+        // packing leaf: swipe up opens the suitcase, swipe down closes it
+        if (this.magIdx === 3 && this.root.querySelector('.pk-bp')) {
+          if (dir > 0) { if (this._pkAnim !== 'open') this._setPackAnim('open'); return; }
+          if (this._pkAnim === 'open') { this._setPackAnim('closed'); return; }
+        }
         if (dir < 0 && this.magIdx === 0) return;          // intro driver owns the pull back to the cover
         this.magGoto(this.magIdx + dir);
       }, { passive: true });
@@ -3510,9 +3523,17 @@
           this.packOpen = null; this._paintPackPanel(); return;
         }
         if (ae && (ae.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))) return;
-        if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown') { e.preventDefault(); this.magGoto(this.magIdx + 1); }
+        const onPack = this.magIdx === 3 && this.root.querySelector('.pk-bp');
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown') {
+          e.preventDefault();
+          // ↓ on the packing leaf opens the suitcase before anything else
+          if (onPack && (e.key === 'ArrowDown' || e.key === 'PageDown') && this._pkAnim !== 'open') { this._setPackAnim('open'); return; }
+          this.magGoto(this.magIdx + 1);
+        }
         else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
           e.preventDefault();
+          // ↑ closes the open suitcase first; only then does it leave the page
+          if (onPack && (e.key === 'ArrowUp' || e.key === 'PageUp') && this._pkAnim === 'open') { this._setPackAnim('closed'); return; }
           if (this.magIdx > 0) this.magGoto(this.magIdx - 1);
           else if (this._introReturn) this._introReturn();
         }
