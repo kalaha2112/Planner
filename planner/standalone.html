@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-23T00:31:24.485Z
+  Built: 2026-07-23T00:40:19.666Z
 -->
 
 <html lang="en">
@@ -2554,13 +2554,18 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   -webkit-mask-position: center; mask-position: center;
   transition: opacity .42s ease, transform .48s cubic-bezier(.22, .61, .36, 1);
 }
-.pk-art--closed { left: 28%; top: 12%; width: 44%; height: 84%; }
+/* the closed art sits UNDER the open art (DOM order). Fade it in fast so it's
+   already solid as the open art fades out over it — no faint mid-crossfade gap
+   when closing. */
+.pk-art--closed { left: 28%; top: 12%; width: 44%; height: 84%; transition: opacity .16s ease; }
 .pk-art--open { left: 4%; top: 36%; width: 92%; height: 62%;
   /* the source art is ~square; the box has spare width, so stretch the mask
      horizontally to widen the case (an open case is wider than it is deep) */
   -webkit-mask-size: 82% 100%; mask-size: 82% 100%; }
 .pk-bp:not(.anim-open) .pk-art--open { opacity: 0; transform: scale(.9); }
-.pk-bp.anim-open .pk-art--closed { opacity: 0; transform: scale(.94) translateY(8px); }
+/* opening: let the closed art linger as it fades so the incoming open art
+   covers it first — gapless in both directions */
+.pk-bp.anim-open .pk-art--closed { opacity: 0; transition: opacity .42s ease; }
 
 /* dashed leaders grow up out of the case (origin at the case end) */
 .pk-leads { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
