@@ -1976,6 +1976,10 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .t-journey-veh img { display: block; height: 100%; width: auto; filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.2)); }
 .t-journey-veh img[data-mode="flight"], .t-journey-veh img[data-mode="flying-blue"] { transform: translateY(-4px); }  /* lift the plane onto the line */
 .t-journey-veh img[data-mode="train"], .t-journey-veh img[data-mode="overnight-train"] { transform: scaleX(-1); }      /* face the direction of travel */
+/* plane: dark (black/red) art on the light paper, white art on the dark theme */
+.t-journey-veh .veh-dark { display: none; }
+[data-theme="dark"] .t-journey-veh .veh-light { display: none; }
+[data-theme="dark"] .t-journey-veh .veh-dark { display: block; }
 /* left+translateX(-100%) pins the vehicle's TRAILING edge to the end so wide
    vehicles (the train) glide fully across without running off the line */
 @keyframes journeyGlide {
