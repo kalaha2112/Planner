@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-25T22:25:35.478Z
+  Built: 2026-07-25T22:43:56.005Z
 -->
 
 <html lang="en">
@@ -1148,7 +1148,7 @@ a { color: inherit; }
 .map .leaflet-container { background: var(--map-bg); font-family: var(--sans); }
 .map-note { font-family: var(--sans); font-size: 10px; color: var(--ink-mute); padding: 0 2px; line-height: 1.4; }
 
-.summary { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 12px 18px; }
+.summary { background: var(--surface); border-radius: var(--r-card); padding: 12px 18px; }
 .stat { padding: 13px 0; border-bottom: 1px solid var(--line-soft); }
 .stat:last-child { border-bottom: none; }
 /* nights stat split into two halves: left = nights, right = travellers */
@@ -1173,7 +1173,7 @@ a { color: inherit; }
 .stat.miles.covered .cap::after { content: ' ✓'; color: var(--green); }
 .stat .cap { font-family: var(--sans); font-size: 11px; font-weight: 500; letter-spacing: .06em; color: var(--ink-mid); margin-top: 6px; text-transform: uppercase; }
 
-.todos { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 17px 18px; }
+.todos { background: var(--surface); border-radius: var(--r-card); padding: 17px 18px; }
 .todos .hd { display: flex; align-items: baseline; gap: 8px; margin-bottom: 13px; }
 .todos .hd .t { font-family: var(--sans); font-size: 14px; font-weight: 700; color: var(--ink); }
 .todos .hd .p { font-family: var(--sans); font-size: 10px; color: var(--ink-mute); margin-left: auto; font-variant-numeric: tabular-nums; }
@@ -1603,8 +1603,7 @@ a { color: inherit; }
 .accom-city { font-family: var(--serif); font-size: 24px; font-weight: 700; letter-spacing: -.02em; color: var(--ink); line-height: 1; }
 .accom-sub { font-family: var(--script); font-style: italic; font-size: 13px; color: var(--green); margin-top: 5px; }
 .accom-body { padding: 18px 26px 26px; display: flex; flex-direction: column; gap: 14px; }
-.opt { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 17px 18px; display: flex; flex-direction: column; gap: 12px; position: relative; }
-.opt.chosen { border-color: var(--green); }
+.opt { background: var(--surface); border-radius: var(--r-card); padding: 17px 18px; display: flex; flex-direction: column; gap: 12px; position: relative; }
 .opt .top { display: flex; align-items: flex-start; gap: 10px; }
 .opt .choose { flex-shrink: 0; margin-top: 3px; width: 20px; height: 20px; border-radius: var(--r-check); border: 2px solid var(--dash); background: var(--surface); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
 .opt.chosen .choose { border-color: var(--green); background: var(--green); }
@@ -1723,14 +1722,13 @@ a { color: inherit; }
   .app-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 4px 14px; }
   .app-card {
     display: flex; flex-direction: column; align-items: center; gap: 6px;
-    padding: 15px 8px; border: 1px solid var(--line); border-radius: var(--r-card);
+    padding: 15px 8px; border: none; border-radius: var(--r-card);
     background: var(--surface); color: var(--ink);
     font-family: var(--sans); font-size: 12px; font-weight: 600;
-    cursor: pointer; transition: border-color .15s ease, transform .1s ease;
+    cursor: pointer; transition: transform .1s ease;
   }
   .app-card svg { color: var(--red); }
   .app-card:active { transform: scale(.97); }
-  .app-card:hover { border-color: var(--ink-faint); }
 
   /* the tab bar: pinned to the top, only present once a sub-page is open. The
      right padding clears the fixed action cluster (undo/memories/theme). */
@@ -2355,7 +2353,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   }
   .ss-hint b { color: var(--ink); font-weight: 600; }
   .ss-card {
-    background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card);
+    background: var(--surface); border-radius: var(--r-card);
     padding: 15px 17px 13px;
     animation: pkCardIn .18s ease both;
   }
