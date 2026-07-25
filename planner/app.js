@@ -982,8 +982,13 @@
         this._stopGlobeIdle();                                     // globe is off-screen now — stop idle spin
         this._statPrev = {};                                       // count the stats up when first revealed
         this._animateStats();
-        const active = this.root.querySelector('.ledger-leaf.active') || this.root.querySelector('.app-ov');
-        this._playEnter(active && (active.querySelector('.leaf-inner') || active));
+        if (this._webMag()) {
+          const active = this.root.querySelector('.ledger-leaf.active');
+          this._playEnter(active && (active.querySelector('.leaf-inner') || active));
+        } else {
+          // app version: content reveals as it scrolls into view
+          this._revealOnScroll(this.root.querySelector('.app-ov'), { stagger: true });
+        }
       };
       const unpark = () => {
         if (!parked) return;
@@ -3132,6 +3137,15 @@
       this.paintSaved();
       this.updateTopActions();
       this._animateStats();     // count-up the summary figures when they change
+      // keep the app version's scroll-reveal armed across re-renders — only
+      // blocks still below the fold are re-parked, so on-screen content never
+      // re-animates on an edit (navigation entrances own the visible cascade)
+      if (this._introParked && !this._webMag()) {
+        const scope = this.appPage === 0
+          ? this.root.querySelector('.app-ov')
+          : this.root.querySelector('.app-leaf.active');
+        this._revealOnScroll(scope, { stagger: false });
+      }
     }
 
     // Tween the summary figures (nights / total / miles) from their previous
@@ -3177,6 +3191,71 @@
         container.classList.remove('leaf-entering');
         targets.forEach(el => el.style.removeProperty('--enter-i'));
       }, 1300);
+    }
+
+    // Scroll reveal (app / phone version): content blocks lift into place as
+    // they scroll into the viewport — the same enterRise motion, but driven by
+    // an IntersectionObserver instead of a blind index-stagger, so below-fold
+    // blocks wait and rise *as they come into view* rather than animating
+    // off-screen. On a navigation entrance ({ stagger:true }) every target is
+    // observed, so the group already on screen cascades in together while the
+    // rest stay parked; a re-arm pass ({ stagger:false }, from render) only
+    // hides what's still below the fold, so visible content never re-animates
+    // on an edit. No-op on the web ledger (it has its own leaf motion), under
+    // prefers-reduced-motion, and where IntersectionObserver is unavailable
+    // (content simply stays visible in those cases).
+    _revealOnScroll(scope, opts = {}) {
+      if (!scope || this._webMag()) return;
+      if (!('IntersectionObserver' in window)) return;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const targets = Array.from(scope.querySelectorAll(
+        '.meta-range, .app-card, .app-page-hd, .summary .stat, .todos, .opt, .item, .day-head, .cal, .plan-col-hd, .add-option, .add-todo, .t-row-2, .t-row-3'));
+      if (!targets.length) return;
+      // tear down a prior pass before arming a fresh one
+      if (this._revObs) this._revObs.disconnect();
+      if (this._revScrollOff) { this._revScrollOff(); this._revScrollOff = null; }
+      const reveal = (el, i = 0) => {
+        if (el._revealed) return;
+        el._revealed = true;
+        el.style.setProperty('--rev-i', Math.min(i, 6));
+        el.classList.add('rev-in');
+        io.unobserve(el);
+      };
+      const io = this._revObs = new IntersectionObserver((entries) => {
+        // reveal newly-visible blocks top-down so a batch cascades cleanly
+        entries.filter(e => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+          .forEach((e, i) => reveal(e.target, i));
+      }, { rootMargin: '0px 0px -40px 0px', threshold: 0.05 });
+      const vh = window.innerHeight;
+      const parked = [];
+      targets.forEach((el) => {
+        el._revealed = false;
+        // stagger pass hides everything (the on-screen ones fire immediately);
+        // re-arm pass only parks blocks still below the fold
+        if (opts.stagger || el.getBoundingClientRect().top >= vh) {
+          el.classList.add('reveal');
+          io.observe(el);
+          parked.push(el);
+        }
+      });
+      // Safety net: an IntersectionObserver only fires on threshold crossings, so
+      // a block scrolled past in one instant jump (scroll restore / programmatic
+      // scroll) could never fire and would stay hidden. This passive listener
+      // reveals any parked block that's been scrolled fully above the fold, then
+      // removes itself once nothing is left parked. Normal in-view reveals still
+      // go through the observer (nicer timing); this only catches the skip case.
+      const onScroll = () => {
+        let remaining = 0;
+        parked.forEach(el => {
+          if (el._revealed) return;
+          if (el.getBoundingClientRect().bottom <= 0) reveal(el);
+          else remaining++;
+        });
+        if (!remaining && this._revScrollOff) this._revScrollOff();
+      };
+      window.addEventListener('scroll', onScroll, { passive: true, capture: true });
+      this._revScrollOff = () => { window.removeEventListener('scroll', onScroll, true); this._revScrollOff = null; };
     }
 
     /* ============================================================
@@ -3478,7 +3557,7 @@
       const active = i === 0
         ? this.root.querySelector('.app-ov')
         : this.root.querySelector('.app-leaf.active .app-sub-inner');
-      this._playEnter(active);
+      this._revealOnScroll(active, { stagger: true });
     }
     _syncAppLeafClasses() {
       const rootEl = this.root.querySelector('.app-root'); if (!rootEl) return;

@@ -1056,6 +1056,21 @@ a { color: inherit; }
     font-family: var(--sans); font-size: 12px; font-weight: 600; cursor: pointer;
   }
   .app-pill.on { background: var(--brown); color: var(--on-brown); border-color: var(--brown); }
+
+  /* ---- scroll reveal (app version): content blocks lift into place as they
+     enter the viewport. JS adds .reveal (hidden start) to each target, then
+     .rev-in once it crosses into view; --rev-i staggers a batch so an on-screen
+     group cascades in together. Reuses the enterRise curve for a cohesive feel.
+     Below-fold blocks stay parked until scrolled to — the "come into view"
+     motion. Disabled under prefers-reduced-motion (JS also skips it there). ---- */
+  .reveal { opacity: 0; transform: translateY(18px); }
+  .reveal.rev-in {
+    animation: enterRise .55s cubic-bezier(.34, 1.36, .5, 1) both;
+    animation-delay: calc(var(--rev-i, 0) * 60ms);
+  }
+}
+@media (max-width: 700px) and (prefers-reduced-motion: reduce) {
+  .reveal, .reveal.rev-in { opacity: 1; transform: none; animation: none; }
 }
 
 /* ============================================================
