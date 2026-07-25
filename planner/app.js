@@ -565,10 +565,15 @@
       this._pkAnim = 'closed';      // packing sheet animation state: closed → open
       this._pkIO = ('IntersectionObserver' in window) ? new IntersectionObserver((es) => es.forEach(e => {
         if (this._webMag()) return;   // web ledger: the leaf sliding in/out drives it (see magGoto)
-        // scrolled into view → open immediately; scrolled out of view → close
-        if (e.isIntersecting && e.intersectionRatio >= .35) this._playPackAnim(240);
-        else if (!e.isIntersecting) this._setPackAnim('closed');
-      }), { threshold: [0, .35] }) : null;
+        // opens the moment ~15% has scrolled into view; closes once it scrolls
+        // back out past the halfway point, so the animation replays on the next pass
+        const r = e.intersectionRatio;
+        if (this._pkAnim !== 'open') {
+          if (e.isIntersecting && r >= .15) this._setPackAnim('open');
+        } else if (r < .50) {
+          this._setPackAnim('closed');
+        }
+      }), { threshold: [0, .15, .50] }) : null;
       this._wheelAcc = 0;           // trackpad delta accumulator for page turns
       this._wheelT = 0;
       // ---- cloud sync (shared row via Supabase, no sign-in) ----
@@ -3979,8 +3984,8 @@
     }
     // ---- open/close animation state machine (view state, survives renders).
     // An IntersectionObserver watches whichever .pk-bp is in the current
-    // layout: ≥35% visible → the case opens; fully out of view → it closes
-    // again so the animation replays on the next visit.
+    // layout: it opens once ~15% has scrolled into view and closes again once
+    // under half is left, so the animation replays on the next visit.
     _setPackAnim(state) {
       clearTimeout(this._pkAnimT);
       this._pkAnim = state;
