@@ -1521,12 +1521,6 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     position: relative;
     width: 100%; height: 100%;
     background: var(--shell);
-    /* cap the whole book on large monitors so the map doesn't balloon and
-       overshadow the dock + pins — keeps the 13" balance. The stage keeps its
-       full-bleed shell background; the book (leaves + tabs) centers as one unit
-       so map, dock and tabs stay aligned together. */
-    max-width: 1600px;
-    margin-inline: auto;
   }
 
   /* ---- leaves — vertical slide, same motion as the intro→trip scroll:
@@ -1561,6 +1555,18 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     display: grid;
     grid-template-columns: minmax(0, 1fr) 360px;
     grid-template-rows: 100%;
+  }
+  /* large monitors (17"+): the map's minmax(0,1fr) let it balloon and
+     overshadow the dock + pins. Cap the map so it stays a generous-but-not-
+     dominant size and keep the dock at its dense ~400px width; the leftover
+     width falls between them as a modest gap (space-between) so the layout
+     still spans edge to edge — no outer blank margins, dock never goes airy.
+     Gated at ≥1600px so the ≤1440 balance is untouched. */
+  @media (min-width: 1600px) {
+    .leaf-route .leaf-inner {
+      grid-template-columns: minmax(0, 1440px) minmax(360px, 420px);
+      justify-content: space-between;
+    }
   }
   /* the map is a framed block inset from the page edges — left/top/bottom
      keep 24px of page margin; the right edge (facing the dock) is tighter
@@ -2402,15 +2408,6 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   right: max(14px, env(safe-area-inset-right));
   z-index: 1600;
   display: flex; align-items: center; gap: 6px;
-}
-/* on large monitors the book (leaves + tabs) is capped at 1600px and centered,
-   so pull the fixed action icons inward by the shell margin to stay aligned
-   with the book's right edge. Below 1600px the margin is negative → max() keeps
-   the plain 14px inset. */
-@media (min-width: 701px) {
-  .top-actions {
-    right: max(14px, calc((100% - 1600px) / 2 + 14px));
-  }
 }
 /* the (intro-only) sync button lives at the TOP-LEFT instead of in the cluster;
    pulling it out of the flex flow leaves undo/memory/theme grouped top-right */
