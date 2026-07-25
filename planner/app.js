@@ -2224,7 +2224,7 @@
       });
 
       // Position stop pins — clamp to map bounds so .map-route overflow:hidden never clips them
-      const PIN_R = mobile ? 13 : 11; // half the pin (26px touch pins ≤700px, 22px otherwise)
+      const PIN_R = mobile ? 13 : 15; // half the pin (26px touch pins ≤700px; web bumped to 30px)
       const pinEls = this.mainPinsOverlayEl.querySelectorAll('.map-pin-outer');
       stops.forEach((stop, idx) => {
         const pinEl = pinEls[idx];

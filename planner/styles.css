@@ -1451,6 +1451,11 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   color: #fff; font-family: var(--sans); font-weight: 700; font-size: 9px; line-height: 1;
   pointer-events: none; user-select: none;
 }
+/* web only: bigger stop pins (both themes) — matches the web PIN_R (15) in app.js */
+@media (min-width: 701px) {
+  .map-pin-main { width: 30px; height: 30px; }
+  .map-pin-main .pin-order-num { font-size: 12px; }
+}
 
 /* stop pins drop in when the map scrolls into view (JS toggles the container
    class on .main-pins-overlay: pins-wait → pins-drop → settled/no-class).

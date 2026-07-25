@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-25T19:24:25.561Z
+  Built: 2026-07-25T19:31:26.548Z
 -->
 
 <html lang="en">
@@ -2177,6 +2177,11 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .map-pin-main .pin-order-num {
   color: #fff; font-family: var(--sans); font-weight: 700; font-size: 9px; line-height: 1;
   pointer-events: none; user-select: none;
+}
+/* web only: bigger stop pins (both themes) — matches the web PIN_R (15) in app.js */
+@media (min-width: 701px) {
+  .map-pin-main { width: 30px; height: 30px; }
+  .map-pin-main .pin-order-num { font-size: 12px; }
 }
 
 /* stop pins drop in when the map scrolls into view (JS toggles the container
@@ -5512,7 +5517,7 @@ html { -webkit-tap-highlight-color: transparent; }
       });
 
       // Position stop pins — clamp to map bounds so .map-route overflow:hidden never clips them
-      const PIN_R = mobile ? 13 : 11; // half the pin (26px touch pins ≤700px, 22px otherwise)
+      const PIN_R = mobile ? 13 : 15; // half the pin (26px touch pins ≤700px; web bumped to 30px)
       const pinEls = this.mainPinsOverlayEl.querySelectorAll('.map-pin-outer');
       stops.forEach((stop, idx) => {
         const pinEl = pinEls[idx];
