@@ -48,7 +48,7 @@
   --map-sea:       #FAFAFA;                 /* stop map: ocean = web background, so it blends */
   --map-land:      #1A1A1A;                 /* stop map: black land */
   --map-land-line: #FFFFFF;                 /* stop map: white country borders */
-  --map-route:     #FFFFFF;                 /* stop map: white route dash */
+  --map-route:     #C8901F;                 /* stop map: gold route dash — stands out from the white borders */
   --map-label:     #E8E4DC;                 /* .map-city-label — light, readable on the black land */
   --mc-dates:      #2c6a37;                 /* .mc-dates-display */
   /* itinerary mini "paper map" SVG */
