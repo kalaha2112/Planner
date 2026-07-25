@@ -16,7 +16,7 @@
    ============================================================ */
 'use strict';
 
-const VERSION = 'v72';
+const VERSION = 'v73';
 const SHELL_CACHE = `planner-shell-${VERSION}`;
 const FONT_CACHE = 'planner-fonts';
 const TILE_CACHE = 'planner-tiles';
@@ -68,11 +68,16 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-/* network-first: fresh when online, cached build offline */
+/* network-first: fresh when online, cached build offline.
+   cache:'no-cache' forces the browser to revalidate the shell with the server
+   instead of serving it straight from its own HTTP cache — GitHub Pages sends
+   Cache-Control:max-age=600 on the HTML, so without this an online reload could
+   keep booting a stale index.html (old ?v= refs) for up to 10 minutes. A 304
+   keeps unchanged files cheap; a real change comes down fresh. */
 async function networkFirst(req) {
   const cache = await caches.open(SHELL_CACHE);
   try {
-    const res = await fetch(req);
+    const res = await fetch(req, { cache: 'no-cache' });
     if (res && res.ok) cache.put(req, res.clone());
     return res;
   } catch (err) {

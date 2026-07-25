@@ -65,8 +65,26 @@
   <!-- PWA: offline cache + install support (no-op on file:// and non-secure origins) -->
   <script>
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+      // Reload once when a NEW service worker takes control, so a fresh deploy
+      // shows up without a manual refresh. Guarded so it never fires on the
+      // first install (no prior controller) and never loops.
+      const hadController = !!navigator.serviceWorker.controller;
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing || !hadController) return;
+        refreshing = true;
+        window.location.reload();
+      });
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch((err) => console.warn('SW registration failed:', err));
+        // updateViaCache:'none' → sw.js is always fetched from the network, so a
+        // bumped VERSION is detected on the next load (not up to 24h later).
+        navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((reg) => {
+          reg.update();   // check for a newer worker right away
+          // installed PWAs seldom reload on their own — re-check whenever the app is refocused
+          document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') reg.update();
+          });
+        }).catch((err) => console.warn('SW registration failed:', err));
       });
     }
   </script>
