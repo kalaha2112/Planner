@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-25T18:36:38.972Z
+  Built: 2026-07-25T18:41:39.211Z
 -->
 
 <html lang="en">
@@ -772,7 +772,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   --chip-glass:    rgba(255,255,255,.86);   /* outfit/stock delete chips */
   --card-glass:    rgba(255,255,255,.8);    /* .mc-front / .mc-back faces */
   --ep-glass:      rgba(245,242,236,.92);   /* .map-ep chips */
-  --map-sea:       #FFFFFF;                 /* stop map: white ocean */
+  --map-sea:       #FAFAFA;                 /* stop map: ocean = web background, so it blends */
   --map-land:      #1A1A1A;                 /* stop map: black land */
   --map-land-line: #FFFFFF;                 /* stop map: white country borders */
   --map-route:     #FFFFFF;                 /* stop map: white route dash */
@@ -2075,8 +2075,10 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   border: 1px solid var(--line);
 }
 .main-map-leaflet.leaflet-container { background: var(--map-sea); font-family: var(--sans); }
-/* light mode: drop the outline box (dark mode keeps it to separate map from page) */
-:root:not([data-theme="dark"]) .main-map-leaflet { border-color: transparent; }
+/* light mode: drop the outline box (dark mode keeps it to separate map from page).
+   The framed box is the border on .ledger-map (wide screens); clear it there. */
+:root:not([data-theme="dark"]) .main-map-leaflet,
+:root:not([data-theme="dark"]) .leaf-route .ledger-map { border-color: transparent; }
 
 /* Theme-aware Leaflet vectors: Leaflet writes colors as SVG presentation
    attributes at layer creation; these CLASS rules override them, so the
