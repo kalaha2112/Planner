@@ -45,11 +45,11 @@
   --chip-glass:    rgba(255,255,255,.86);   /* outfit/stock delete chips */
   --card-glass:    rgba(255,255,255,.8);    /* .mc-front / .mc-back faces */
   --ep-glass:      rgba(245,242,236,.92);   /* .map-ep chips */
-  --map-sea:       #15140F;                 /* stop map: near-black "water" (blueprint) */
-  --map-land:      #ECE7DC;                 /* stop map: light land */
-  --map-land-line: #7C7059;                 /* stop map: thin sepia coastline / borders */
-  --map-route:     #2A2622;                 /* stop map: ink route (over the light land) */
-  --map-label:     #4A4234;                 /* .map-city-label — dark sepia, readable on land */
+  --map-sea:       #FFFFFF;                 /* stop map: white ocean */
+  --map-land:      #1A1A1A;                 /* stop map: black land */
+  --map-land-line: #FFFFFF;                 /* stop map: white country borders */
+  --map-route:     #FFFFFF;                 /* stop map: white route dash */
+  --map-label:     #E8E4DC;                 /* .map-city-label — light, readable on the black land */
   --mc-dates:      #2c6a37;                 /* .mc-dates-display */
   /* itinerary mini "paper map" SVG */
   --mini-sea:      oklch(95.5% 0.004 70);
@@ -1348,6 +1348,8 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   border: 1px solid var(--line);
 }
 .main-map-leaflet.leaflet-container { background: var(--map-sea); font-family: var(--sans); }
+/* light mode: drop the outline box (dark mode keeps it to separate map from page) */
+:root:not([data-theme="dark"]) .main-map-leaflet { border-color: transparent; }
 
 /* Theme-aware Leaflet vectors: Leaflet writes colors as SVG presentation
    attributes at layer creation; these CLASS rules override them, so the
