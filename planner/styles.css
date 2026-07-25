@@ -1058,19 +1058,22 @@ a { color: inherit; }
   .app-pill.on { background: var(--brown); color: var(--on-brown); border-color: var(--brown); }
 
   /* ---- scroll reveal (app version): content blocks lift into place as they
-     enter the viewport. JS adds .reveal (hidden start) to each target, then
-     .rev-in once it crosses into view; --rev-i staggers a batch so an on-screen
-     group cascades in together. Reuses the enterRise curve for a cohesive feel.
-     Below-fold blocks stay parked until scrolled to — the "come into view"
-     motion. Disabled under prefers-reduced-motion (JS also skips it there). ---- */
+     enter the viewport — both when scrolling DOWN to them and when scrolling
+     back UP. JS keeps each target as .reveal (hidden start); .rev-in plays the
+     rise whenever it crosses into view and is cleared once it's fully off-screen
+     so the motion replays next time it returns. .rev-shown is a no-animation
+     "already visible" state used after edit re-renders so on-screen content
+     doesn't re-animate. --rev-i staggers a batch so a group cascades in together.
+     Reuses the enterRise curve. Disabled under prefers-reduced-motion. ---- */
   .reveal { opacity: 0; transform: translateY(18px); }
   .reveal.rev-in {
     animation: enterRise .55s cubic-bezier(.34, 1.36, .5, 1) both;
     animation-delay: calc(var(--rev-i, 0) * 60ms);
   }
+  .reveal.rev-shown { opacity: 1; transform: none; }
 }
 @media (max-width: 700px) and (prefers-reduced-motion: reduce) {
-  .reveal, .reveal.rev-in { opacity: 1; transform: none; animation: none; }
+  .reveal, .reveal.rev-in, .reveal.rev-shown { opacity: 1; transform: none; animation: none; }
 }
 
 /* ============================================================

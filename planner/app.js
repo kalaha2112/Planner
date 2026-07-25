@@ -3194,16 +3194,17 @@
     }
 
     // Scroll reveal (app / phone version): content blocks lift into place as
-    // they scroll into the viewport — the same enterRise motion, but driven by
-    // an IntersectionObserver instead of a blind index-stagger, so below-fold
-    // blocks wait and rise *as they come into view* rather than animating
-    // off-screen. On a navigation entrance ({ stagger:true }) every target is
-    // observed, so the group already on screen cascades in together while the
-    // rest stay parked; a re-arm pass ({ stagger:false }, from render) only
-    // hides what's still below the fold, so visible content never re-animates
-    // on an edit. No-op on the web ledger (it has its own leaf motion), under
-    // prefers-reduced-motion, and where IntersectionObserver is unavailable
-    // (content simply stays visible in those cases).
+    // they cross into the viewport — the same enterRise motion, driven by an
+    // IntersectionObserver. The motion plays whenever a block comes into view,
+    // whether you scroll DOWN to it or back UP to it: a block animates in once
+    // it's meaningfully on screen, and is reset to its hidden start once it's
+    // fully off-screen, so it plays again the next time it returns. We never
+    // unobserve, so entry from either direction always re-triggers it.
+    // { stagger:true } (navigation entrance) cascades the on-screen group in;
+    // { stagger:false } (an edit re-render) shows already-visible blocks
+    // instantly via .rev-shown so they don't re-animate on every edit. No-op on
+    // the web ledger, under prefers-reduced-motion, and where IntersectionObserver
+    // is unavailable (content simply stays visible in those cases).
     _revealOnScroll(scope, opts = {}) {
       if (!scope || this._webMag()) return;
       if (!('IntersectionObserver' in window)) return;
@@ -3211,51 +3212,39 @@
       const targets = Array.from(scope.querySelectorAll(
         '.meta-range, .app-card, .app-page-hd, .summary .stat, .todos, .opt, .item, .day-head, .cal, .plan-col-hd, .add-option, .add-todo, .t-row-2, .t-row-3'));
       if (!targets.length) return;
-      // tear down a prior pass before arming a fresh one
       if (this._revObs) this._revObs.disconnect();
-      if (this._revScrollOff) { this._revScrollOff(); this._revScrollOff = null; }
-      const reveal = (el, i = 0) => {
-        if (el._revealed) return;
-        el._revealed = true;
-        el.style.setProperty('--rev-i', Math.min(i, 6));
-        el.classList.add('rev-in');
-        io.unobserve(el);
-      };
       const io = this._revObs = new IntersectionObserver((entries) => {
-        // reveal newly-visible blocks top-down so a batch cascades cleanly
-        entries.filter(e => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
-          .forEach((e, i) => reveal(e.target, i));
-      }, { rootMargin: '0px 0px -40px 0px', threshold: 0.05 });
-      const vh = window.innerHeight;
-      const parked = [];
-      targets.forEach((el) => {
-        el._revealed = false;
-        // stagger pass hides everything (the on-screen ones fire immediately);
-        // re-arm pass only parks blocks still below the fold
-        if (opts.stagger || el.getBoundingClientRect().top >= vh) {
-          el.classList.add('reveal');
-          io.observe(el);
-          parked.push(el);
-        }
-      });
-      // Safety net: an IntersectionObserver only fires on threshold crossings, so
-      // a block scrolled past in one instant jump (scroll restore / programmatic
-      // scroll) could never fire and would stay hidden. This passive listener
-      // reveals any parked block that's been scrolled fully above the fold, then
-      // removes itself once nothing is left parked. Normal in-view reveals still
-      // go through the observer (nicer timing); this only catches the skip case.
-      const onScroll = () => {
-        let remaining = 0;
-        parked.forEach(el => {
-          if (el._revealed) return;
-          if (el.getBoundingClientRect().bottom <= 0) reveal(el);
-          else remaining++;
+        const rising = [];
+        entries.forEach(e => {
+          const el = e.target;
+          // meaningfully in view (or a tall block already past the top edge) → animate;
+          // fully off-screen → clear so it replays on the next entry; the band
+          // in between is left untouched (hysteresis) so nothing flickers.
+          if (e.intersectionRatio >= 0.12 || (e.isIntersecting && e.boundingClientRect.top <= 0)) {
+            if (!el.classList.contains('rev-in') && !el.classList.contains('rev-shown'))
+              rising.push({ el, top: e.boundingClientRect.top });
+          } else if (!e.isIntersecting) {
+            el.classList.remove('rev-in', 'rev-shown');
+          }
         });
-        if (!remaining && this._revScrollOff) this._revScrollOff();
-      };
-      window.addEventListener('scroll', onScroll, { passive: true, capture: true });
-      this._revScrollOff = () => { window.removeEventListener('scroll', onScroll, true); this._revScrollOff = null; };
+        // reveal a batch top-down so an on-screen group cascades cleanly
+        rising.sort((a, b) => a.top - b.top).forEach((r, i) => {
+          r.el.style.setProperty('--rev-i', Math.min(i, 6));
+          r.el.classList.add('rev-in');
+        });
+      }, { threshold: [0, 0.12] });
+      const vh = window.innerHeight;
+      targets.forEach(el => {
+        el.classList.remove('rev-in', 'rev-shown');
+        el.classList.add('reveal');
+        // re-arm pass (edit re-render, not a navigation entrance): show blocks
+        // already on screen instantly — only genuine scroll-ins should animate
+        if (!opts.stagger) {
+          const r = el.getBoundingClientRect();
+          if (r.top < vh && r.bottom > 0) el.classList.add('rev-shown');
+        }
+        io.observe(el);
+      });
     }
 
     /* ============================================================
