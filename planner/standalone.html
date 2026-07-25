@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-25T19:06:53.208Z
+  Built: 2026-07-25T19:11:57.411Z
 -->
 
 <html lang="en">
@@ -844,7 +844,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   --card-glass:    rgba(22,22,20,.85);
   --ep-glass:      rgba(28,26,23,.92);
   --map-sea:       #121210;   /* stop map: ocean = dark page bg, so it blends (no box) */
-  --map-land:      #CDC5B3;   /* stop map: muted beige land (subtler than paper white) */
+  --map-land:      #ECE7DC;   /* stop map: beige land (app version; web mutes it — see media query) */
   --map-land-line: #7C7059;   /* stop map: sepia borders, readable on the beige land */
   --map-route:     #8A5A2C;   /* stop map: brown route — reads on the beige land and dark ocean */
   --map-label:     #4A4234;   /* .map-city-label — dark, readable on the beige land */
@@ -2080,6 +2080,8 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    :root prefix keeps this above the wide-screen .ledger-map border rule. */
 :root .main-map-leaflet,
 :root .leaf-route .ledger-map { border-color: transparent; }
+/* web only: mute the dark-mode beige land (the app keeps the brighter #ECE7DC) */
+@media (min-width: 701px) { [data-theme="dark"] { --map-land: #CDC5B3; } }
 
 /* Theme-aware Leaflet vectors: Leaflet writes colors as SVG presentation
    attributes at layer creation; these CLASS rules override them, so the
