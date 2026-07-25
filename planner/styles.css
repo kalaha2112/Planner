@@ -1557,15 +1557,22 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     grid-template-rows: 100%;
   }
   /* large monitors (17"+): the map's minmax(0,1fr) let it balloon and
-     overshadow the dock + pins. Cap the map so it stays a generous-but-not-
-     dominant size and keep the dock at its dense ~400px width; the leftover
-     width falls between them as a modest gap (space-between) so the layout
-     still spans edge to edge — no outer blank margins, dock never goes airy.
-     Gated at ≥1600px so the ≤1440 balance is untouched. */
+     overshadow the dock + pins. Cap the map at a generous size and give the
+     leftover width to a flexible track that CENTERS the (slightly widened)
+     dock — so the map↔dock gap equals the dock↔tab-strip gap instead of all
+     the slack piling up on one side. The tab strip is reserved with a matching
+     right padding so the two gaps read equal. Gated at ≥1600px so the ≤1440
+     balance is untouched. */
   @media (min-width: 1600px) {
     .leaf-route .leaf-inner {
-      grid-template-columns: minmax(0, 1440px) minmax(360px, 420px);
-      justify-content: space-between;
+      grid-template-columns: minmax(0, 1440px) 1fr;
+      padding-right: 52px;              /* reserve the tab strip (40px + 12px) */
+    }
+    .leaf-route .ledger-map { margin-right: 0; }   /* dock spacing is handled by centering */
+    .leaf-route .ledger-col {
+      width: 500px;                     /* grow the dock a touch, keep it dense */
+      justify-self: center;            /* map↔dock gap == dock↔tab-strip gap */
+      margin-right: 0;
     }
   }
   /* the map is a framed block inset from the page edges — left/top/bottom
