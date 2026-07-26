@@ -3085,12 +3085,15 @@
 
       const web = this._webMag();
       if (web) {
-        // ledger leaves are always open: their stop selections must stay valid
+        // ledger sections are always open; one shared city selection drives the
+        // itinerary AND the transport & hotels sections (the pickers are linked)
         const n = trip.stops.length;
         if (n) {
-          if (this.openStopIdx == null || this.openStopIdx >= n) { this.openStopIdx = 0; this.activeDay = null; }
-          if (this.accomOpenIdx == null || this.accomOpenIdx >= n) this.accomOpenIdx = 0;
-        } else { this.openStopIdx = null; this.accomOpenIdx = null; }
+          let sel = (this.openStopIdx != null && this.openStopIdx < n) ? this.openStopIdx
+                  : (this.accomOpenIdx != null && this.accomOpenIdx < n) ? this.accomOpenIdx : 0;
+          if (sel !== this.openStopIdx) this.activeDay = null;
+          this.openStopIdx = this.accomOpenIdx = sel;
+        } else { this.openStopIdx = this.accomOpenIdx = null; }
         this.magIdx = Math.max(0, Math.min(3, this.magIdx || 0));
       } else {
         // app (phone) twin: the sub-pages reuse openStopIdx/accomOpenIdx/
@@ -4553,8 +4556,15 @@
         case 'ledger-goto': this.magGoto(i); break;
         case 'ledger-prev': if (this.magIdx > 0) this.magGoto(this.magIdx - 1); else if (this._introReturn) this._introReturn(); break;
         case 'ledger-next': this.magGoto(this.magIdx + 1); break;
-        case 'ledger-stop-plan': if (this.accomOpenIdx !== i) { this.accomOpenIdx = i; this.render(); } break;
-        case 'ledger-stop-days': if (this.openStopIdx !== i) { this.openStopIdx = i; this.activeDay = null; this._optimizeNote = null; this._selectedItem = null; this.render(); } break;
+        // both pickers drive one shared city selection (itinerary ↔ transport & hotels)
+        case 'ledger-stop-plan':
+        case 'ledger-stop-days':
+          if (this.openStopIdx !== i) {
+            this.openStopIdx = this.accomOpenIdx = i;
+            this.activeDay = null; this._optimizeNote = null; this._selectedItem = null;
+            this.render();
+          }
+          break;
         case 'close-budget': this.budgetOpen = false; this.bumpModal(); break;
         case 'overlay-budget': if (e.target === t) { this.budgetOpen = false; this.bumpModal(); } break;
         case 'open-sync': this.syncOpen = true; this.bumpModal(); break;

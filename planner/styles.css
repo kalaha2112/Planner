@@ -1741,6 +1741,15 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     border-bottom: 2px solid var(--line);
     padding-bottom: 14px; margin-bottom: 4px; flex: none;
   }
+  /* the itinerary / transport-&-hotels header (city title + linked city picker)
+     pins to the top of the viewport while you scroll that section, so the picker
+     stays reachable. Sits above the scrolling content but below the fixed tabs. */
+  .leaf-days .leaf-head,
+  .leaf-plan .leaf-head {
+    position: sticky; top: 0; z-index: 5;
+    background: var(--surface);
+    padding-top: 10px;
+  }
   .leaf-head .eyebrow { margin-bottom: 6px; }
   .leaf-title { font-family: var(--serif); font-size: 34px; font-weight: 700; letter-spacing: -.015em; line-height: 1; color: var(--ink); }
   .leaf-sub { font-family: var(--script); font-style: italic; font-size: 14px; color: var(--green); margin-top: 6px; min-height: 17px; }

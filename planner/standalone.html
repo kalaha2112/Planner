@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-26T05:25:05.136Z
+  Built: 2026-07-26T18:20:57.660Z
 -->
 
 <html lang="en">
@@ -2467,6 +2467,15 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     display: flex; align-items: flex-end; justify-content: space-between; gap: 18px;
     border-bottom: 2px solid var(--line);
     padding-bottom: 14px; margin-bottom: 4px; flex: none;
+  }
+  /* the itinerary / transport-&-hotels header (city title + linked city picker)
+     pins to the top of the viewport while you scroll that section, so the picker
+     stays reachable. Sits above the scrolling content but below the fixed tabs. */
+  .leaf-days .leaf-head,
+  .leaf-plan .leaf-head {
+    position: sticky; top: 0; z-index: 5;
+    background: var(--surface);
+    padding-top: 10px;
   }
   .leaf-head .eyebrow { margin-bottom: 6px; }
   .leaf-title { font-family: var(--serif); font-size: 34px; font-weight: 700; letter-spacing: -.015em; line-height: 1; color: var(--ink); }
@@ -6415,12 +6424,15 @@ html { -webkit-tap-highlight-color: transparent; }
 
       const web = this._webMag();
       if (web) {
-        // ledger leaves are always open: their stop selections must stay valid
+        // ledger sections are always open; one shared city selection drives the
+        // itinerary AND the transport & hotels sections (the pickers are linked)
         const n = trip.stops.length;
         if (n) {
-          if (this.openStopIdx == null || this.openStopIdx >= n) { this.openStopIdx = 0; this.activeDay = null; }
-          if (this.accomOpenIdx == null || this.accomOpenIdx >= n) this.accomOpenIdx = 0;
-        } else { this.openStopIdx = null; this.accomOpenIdx = null; }
+          let sel = (this.openStopIdx != null && this.openStopIdx < n) ? this.openStopIdx
+                  : (this.accomOpenIdx != null && this.accomOpenIdx < n) ? this.accomOpenIdx : 0;
+          if (sel !== this.openStopIdx) this.activeDay = null;
+          this.openStopIdx = this.accomOpenIdx = sel;
+        } else { this.openStopIdx = this.accomOpenIdx = null; }
         this.magIdx = Math.max(0, Math.min(3, this.magIdx || 0));
       } else {
         // app (phone) twin: the sub-pages reuse openStopIdx/accomOpenIdx/
@@ -7883,8 +7895,15 @@ html { -webkit-tap-highlight-color: transparent; }
         case 'ledger-goto': this.magGoto(i); break;
         case 'ledger-prev': if (this.magIdx > 0) this.magGoto(this.magIdx - 1); else if (this._introReturn) this._introReturn(); break;
         case 'ledger-next': this.magGoto(this.magIdx + 1); break;
-        case 'ledger-stop-plan': if (this.accomOpenIdx !== i) { this.accomOpenIdx = i; this.render(); } break;
-        case 'ledger-stop-days': if (this.openStopIdx !== i) { this.openStopIdx = i; this.activeDay = null; this._optimizeNote = null; this._selectedItem = null; this.render(); } break;
+        // both pickers drive one shared city selection (itinerary ↔ transport & hotels)
+        case 'ledger-stop-plan':
+        case 'ledger-stop-days':
+          if (this.openStopIdx !== i) {
+            this.openStopIdx = this.accomOpenIdx = i;
+            this.activeDay = null; this._optimizeNote = null; this._selectedItem = null;
+            this.render();
+          }
+          break;
         case 'close-budget': this.budgetOpen = false; this.bumpModal(); break;
         case 'overlay-budget': if (e.target === t) { this.budgetOpen = false; this.bumpModal(); } break;
         case 'open-sync': this.syncOpen = true; this.bumpModal(); break;
