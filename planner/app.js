@@ -3970,7 +3970,7 @@
           ? `<div class="pk-icon pk-icon--photo" style="${szStyle}"><img src="${photoIcon}" alt="" draggable="false"></div>`
           : (maskIcon ? `<div class="pk-icon" style="${szStyle};-webkit-mask-image:url(${maskIcon});mask-image:url(${maskIcon})"></div>` : '');
         const labelHtml = icon ? '' : `<span class="pk-lab">${esc(s.label)}</span>`;
-        return `<div class="pk-slot${icon ? ' has-icon' : ''}${this.packOpen === s.k ? ' open' : ''}" data-slot="${s.k}" title="${escA(s.label)}" style="left:${s.cx * 100}%;top:${s.cy * 100}%;transition-delay:${220 + i * 90}ms">
+        return `<div class="pk-slot${icon ? ' has-icon' : ''}${this.packOpen === s.k ? ' open' : ''}" data-slot="${s.k}" title="${escA(s.label)}" style="left:${s.cx * 100}%;top:${s.cy * 100}%;--pk-delay:${220 + i * 90}ms">
           ${iconHtml}
           <div class="pk-chip">${labelHtml}<span class="pk-cnt${list.length && done === list.length ? ' full' : ''}">${list.length ? done + '/' + list.length : '+ add'}</span></div>
         </div>`;

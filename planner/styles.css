@@ -1912,7 +1912,10 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   transition: opacity .5s ease, transform .55s cubic-bezier(.22, .61, .36, 1);
   pointer-events: none;
 }
-.pk-bp.anim-open .pk-slot { opacity: 1; transform: translate(-50%, -50%); pointer-events: auto; }
+/* the staggered delay applies ONLY on the way out (opening), so the chips fly
+   out one after another; on close the base .pk-slot delay is 0, so they all
+   tuck back into the case together — no laggy trailing items */
+.pk-bp.anim-open .pk-slot { opacity: 1; transform: translate(-50%, -50%); pointer-events: auto; transition-delay: var(--pk-delay, 0ms); }
 .pk-slot:hover, .pk-slot:focus-within, .pk-slot.open { z-index: 30; }
 .pk-slot::before {
   content: ''; position: absolute; inset: 0; border-radius: 999px;
