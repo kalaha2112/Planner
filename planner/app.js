@@ -564,7 +564,7 @@
       this.packOpen = null;         // packing slot whose popover is pinned open (view state)
       this._pkAnim = 'closed';      // packing sheet animation state: closed → open
       this._pkIO = ('IntersectionObserver' in window) ? new IntersectionObserver((es) => es.forEach(e => {
-        if (this._webMag()) return;   // web ledger: the leaf sliding in/out drives it (see magGoto)
+        // drives the suitcase on both the phone app and the web scroll page:
         // opens the moment ~15% has scrolled into view; closes once it scrolls
         // back out past the halfway point, so the animation replays on the next pass
         const r = e.intersectionRatio;
@@ -1020,9 +1020,8 @@
       // "at the very top of the app" — window unscrolled and no ancestor of the
       // event target scrolled down (aside lists, modals keep their own scroll)
       const atAppTop = (t) => {
-        // web ledger: only page 1 hands the gesture back to the cover —
-        // deeper pages flip back through the notebook first
-        if (this._webMag() && this.magIdx !== 0) return false;
+        // the trip page (app overview or web scroll page) hands the gesture back
+        // to the cover only when it's scrolled to its very top
         if (t && t.closest && t.closest('.overlay, .sticker-panel')) return false;
         let el = t instanceof Element ? t : null;
         while (el && el !== document.body) { if (el.scrollTop > 1) return false; el = el.parentElement; }
@@ -3138,7 +3137,8 @@
       }
       // re-attach the per-day itinerary map (it lives inside the modal root)
       this.mountDayMap();
-      this._watchPackSheet();   // (re)observe the packing sheet for its open animation
+      this._watchPackSheet();     // (re)observe the packing sheet for its open animation
+      this._watchLedgerSections();   // (re)observe the web scroll sections for active-tab / maps / entrance
       this.paintSaved();
       this.updateTopActions();
       this._animateStats();     // count-up the summary figures when they change
@@ -3263,7 +3263,9 @@
        ============================================================ */
     renderLedger(trip, meta, travelers, d, fmt, nights, budget, milesNeeded) {
       const page = this.magIdx;
-      const state = (i) => i === page ? ' active' : (i < page ? ' past' : ' incoming');
+      // sections are now stacked in one scroll page; .active is just the marker
+      // for the current section (tab highlight + folio), set by the scroll observer
+      const state = (i) => i === page ? ' active' : '';
       const stopPills = (act, sel) => trip.stops.map((s, i) =>
         `<button class="leaf-pill${i === sel ? ' on' : ''}" data-act="${act}" data-i="${i}">${esc(s.city || 'Stop ' + (i + 1))}</button>`).join('');
       const nightsLbl = (st) => { const n = Math.max(1, Number(st.nights) || 1); return `${n} night${n === 1 ? '' : 's'}`; };
@@ -3395,43 +3397,54 @@
       </div>`;
     }
 
-    // switch to page i — the leaves crossfade via the .active class transition
-    // (class toggling on live DOM; ordinary re-renders don't animate)
+    // scroll to section i — the leaves are now full-height sections in one
+    // continuous page. magIdx / tab highlight / map sizing / entrance are all
+    // updated by the scroll observer (_syncActiveSection) as the section arrives.
     magGoto(i) {
       if (!this._webMag()) return;
       i = Math.max(0, Math.min(3, i));
-      if (i === this.magIdx || this._magAnimating) return;
-      const wasPack = this.magIdx === 3;
-      this.magIdx = i;
-      // the suitcase reacts to the packing leaf scrolling into / out of view:
-      // arriving opens it after a short beat, leaving closes it (and cancels a
-      // still-pending open if you scroll straight back out)
-      if (i === 3) this._playPackAnim(240);
-      else if (wasPack) this._setPackAnim('closed');
-      this._magAnimating = true;   // brief lock so a wheel gesture turns one page, not three
-      clearTimeout(this._flipEndT);
-      this._flipEndT = setTimeout(() => { this._magAnimating = false; }, 640);   // covers the .62s leaf slide
-      this._syncLeafClasses();
-      this._afterFlip();
-      const active = this.root.querySelector('.ledger-leaf.active');
-      this._playEnter(active && (active.querySelector('.leaf-inner') || active));
+      const sec = this.root.querySelector('.ledger-leaf[data-leaf="' + i + '"]');
+      if (!sec) return;
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      sec.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
     }
     _syncLeafClasses() {
       const book = this.root.querySelector('.ledger-book'); if (!book) return;
       book.dataset.page = String(this.magIdx);
-      book.querySelectorAll('.ledger-leaf').forEach(el => {
-        const i = Number(el.dataset.leaf);
-        el.classList.toggle('active', i === this.magIdx);
-        el.classList.toggle('past', i < this.magIdx);
-        el.classList.toggle('incoming', i > this.magIdx);
-      });
+      book.querySelectorAll('.ledger-leaf').forEach(el =>
+        el.classList.toggle('active', Number(el.dataset.leaf) === this.magIdx));
       book.querySelectorAll('.ledger-tab').forEach(el => el.classList.toggle('on', Number(el.dataset.i) === this.magIdx));
     }
-    // hidden leaves keep their layout (visibility, not display), but Leaflet
-    // still wants a nudge when its leaf comes back
-    _afterFlip() {
-      if (this.magIdx === 0 && this.mainLeafletMap) { this.mainLeafletMap.invalidateSize(); this.renderMainMap(); }
-      if (this.magIdx === 1 && this.dayMap) { this.dayMap.invalidateSize(); this.scheduleDayMap(); }
+    // Web scroll page: one IntersectionObserver tracks which full-height section
+    // is in view; on change it updates magIdx + the active tab, gives that
+    // section's Leaflet map a nudge, and plays its entrance (once parked). The
+    // scroll counterpart of the old page-turn. Re-observed after every render
+    // (like the pack sheet); no-op on the phone app.
+    _watchLedgerSections() {
+      if (!this._webMag() || !('IntersectionObserver' in window)) return;
+      if (!this._secIO) this._secIO = new IntersectionObserver(
+        () => this._syncActiveSection(), { threshold: [0, .25, .5, .75, 1] });
+      this._secIO.disconnect();
+      this.root.querySelectorAll('.ledger-leaf').forEach(el => this._secIO.observe(el));
+    }
+    _syncActiveSection() {
+      const secs = [...this.root.querySelectorAll('.ledger-leaf')];
+      if (!secs.length) return;
+      const vh = window.innerHeight;
+      let cur = this.magIdx, best = -Infinity;
+      secs.forEach(el => {                          // the section filling most of the viewport wins
+        const r = el.getBoundingClientRect();
+        const vis = Math.min(r.bottom, vh) - Math.max(r.top, 0);
+        if (vis > best) { best = vis; cur = Number(el.dataset.leaf); }
+      });
+      if (cur === this.magIdx) return;
+      this.magIdx = cur;
+      this._syncLeafClasses();
+      // Leaflet wants a nudge once its section is the one in view
+      if (cur === 0 && this.mainLeafletMap) { this.mainLeafletMap.invalidateSize(); this.renderMainMap(); }
+      if (cur === 1 && this.dayMap) { this.dayMap.invalidateSize(); this.scheduleDayMap(); }
+      // play the section's entrance once you're actually on the page (parked)
+      if (this._introParked) this._playEnter(secs[cur].querySelector('.leaf-inner') || secs[cur]);
     }
 
     /* ============================================================
@@ -3566,70 +3579,13 @@
       // only the itinerary's day map (inside the rising leaf) needs a nudge
       if (this.appPage === 1 && this.dayMap) { this.dayMap.invalidateSize(); this.scheduleDayMap(); }
     }
-    // true when an ancestor of t is a real scroll region (overflow-y auto/
-    // scroll) that can still move in the gesture's direction — that region
-    // keeps the gesture instead of a page turn. Must ignore overflow:hidden/
-    // clip wrappers: the off-screen leaves sit translated ±100%, which
-    // inflates the stage's scrollHeight without making it scrollable.
-    _scrollClaims(t, dy) {
-      let el = t instanceof Element ? t : null;
-      while (el && el !== document.body) {
-        if (el.scrollHeight > el.clientHeight + 1 && /(auto|scroll|overlay)/.test(getComputedStyle(el).overflowY)) {
-          const canDown = el.scrollTop + el.clientHeight < el.scrollHeight - 1;
-          const canUp = el.scrollTop > 1;
-          if ((dy > 0 && canDown) || (dy < 0 && canUp)) return true;
-        }
-        el = el.parentElement;
-      }
-      return false;
-    }
     initLedgerNav() {
-      // wheel: turn a page when the gesture isn't claimed by the intro (pull
-      // back to the cover), a floating panel, the maps (zoom/pan), or a
-      // scrollable region that can still move in that direction
-      document.addEventListener('wheel', (e) => {
-        if (!this._webMag() || !this._introParked || this._magAnimating) return;
-        if (e.defaultPrevented) return;
-        const t = e.target;
-        if (t && t.closest && t.closest('.overlay, .sticker-panel, .top-actions, .main-map-wrap, .leaflet-container, .daymap')) return;
-        const dy = e.deltaY + e.deltaX;
-        if (this._scrollClaims(t, dy)) return;
-        const now = performance.now();
-        if (now - this._wheelT > 480) this._wheelAcc = 0;   // a fresh gesture
-        this._wheelT = now;
-        this._wheelAcc += dy;
-        if (Math.abs(this._wheelAcc) < 110) return;
-        const dir = this._wheelAcc > 0 ? 1 : -1;
-        this._wheelAcc = 0;
-        if (dir < 0 && this.magIdx === 0) return;   // the intro driver owns "up from page 1"
-        this.magGoto(this.magIdx + dir);
-      }, { passive: true });
-      // touch: a vertical swipe turns the page too (tablets) — same claim
-      // rules as the wheel. The page-0 pull-back-to-cover swipe stays with
-      // the intro driver, so only next-page and deeper-page-up act here.
-      let swipeY = null, swipeX = null, swipeEl = null;
-      document.addEventListener('touchstart', (e) => {
-        swipeY = null;
-        if (!this._webMag() || !this._introParked || this._magAnimating) return;
-        const t = e.target;
-        if (t && t.closest && t.closest('.overlay, .sticker-panel, .top-actions, .main-map-wrap, .leaflet-container, .daymap')) return;
-        swipeY = e.touches[0].clientY; swipeX = e.touches[0].clientX; swipeEl = t instanceof Element ? t : null;
-      }, { passive: true });
-      document.addEventListener('touchend', (e) => {
-        if (swipeY == null || this._magAnimating) { swipeY = null; return; }
-        const dy = swipeY - e.changedTouches[0].clientY;   // >0 = finger up = next page
-        const dx = swipeX - e.changedTouches[0].clientX;
-        swipeY = null;
-        if (Math.abs(dy) < 70 || Math.abs(dy) < Math.abs(dx) * 1.2) return;   // too short / mostly horizontal
-        if (this._scrollClaims(swipeEl, dy)) return;       // a region that scrolls that way keeps the gesture
-        const dir = dy > 0 ? 1 : -1;                        // finger up = "down"/next
-        if (dir < 0 && this.magIdx === 0) return;          // intro driver owns the pull back to the cover
-        this.magGoto(this.magIdx + dir);
-      }, { passive: true });
-      // pages now slide vertically (same motion as the intro→trip scroll), so
-      // ↓/↑ turn them too; ←/→ kept for muscle memory. ↑ (or ←) on page 1
-      // closes the notebook back to the cover — the intro driver claims that
-      // key first when it applies (defaultPrevented), so don't double-handle.
+      // The web ledger is one continuous scroll page now — native scrolling moves
+      // between the full-height sections, so there are no wheel/touch page-turn
+      // handlers. Keyboard: Escape clears the packing panel; ↑/PageUp at the very
+      // top of the page pulls the cover back (the intro driver claims that key
+      // first when it applies, so guard on defaultPrevented). ↓/PageDown and the
+      // rest scroll natively.
       document.addEventListener('keydown', (e) => {
         if (!this._webMag() || !this._introParked || this._anyModalOpen()) return;
         if (e.defaultPrevented) return;
@@ -3639,11 +3595,9 @@
           this.packOpen = null; this._paintPackPanel(); return;
         }
         if (ae && (ae.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))) return;
-        if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown') { e.preventDefault(); this.magGoto(this.magIdx + 1); }
-        else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
+        if ((e.key === 'ArrowUp' || e.key === 'PageUp') && (window.scrollY || document.documentElement.scrollTop || 0) <= 1 && this._introReturn) {
           e.preventDefault();
-          if (this.magIdx > 0) this.magGoto(this.magIdx - 1);
-          else if (this._introReturn) this._introReturn();
+          this._introReturn();
         }
       });
     }

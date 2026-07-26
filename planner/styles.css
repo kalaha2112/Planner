@@ -1511,7 +1511,8 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    Below 701px the app page renders instead — none of this applies.
    ============================================================ */
 @media (min-width: 701px) {
-  html, body { overflow: hidden; }
+  /* the ledger is now one continuous scroll page (full-height sections), so the
+     window must scroll — the intro-lock class still freezes it during the cover */
   :root {
     --ledger-rule:   rgba(26, 26, 26, .05);    /* faint account-book ruling */
     --ledger-margin: rgba(145, 4, 12, .16);    /* the red margin line */
@@ -1524,41 +1525,29 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   /* full-bleed pages — no framed book, no desk margin */
   .ledger-stage {
     position: relative;
-    height: 100vh; height: 100dvh;
-    /* clip, not hidden: the waiting leaves sit translated a full viewport
-       below, and a hidden-overflow stage could still be scrolled to them
-       programmatically (focus jumps) — clip can never scroll */
-    overflow: hidden; overflow: clip;
+    /* the four leaves are now full-height sections in one continuous scroll
+       page, so the stage grows with them instead of clipping to one viewport */
+    min-height: 100vh; min-height: 100dvh;
     /* base matches the intro + body shell so the intro->planner scroll seam
        is invisible in dark mode (cards inside use --surface to sit above it) */
     background: var(--shell);
   }
   .ledger-book {
     position: relative;
-    width: 100%; height: 100%;
+    width: 100%; height: auto;
     background: var(--shell);
   }
 
-  /* ---- leaves — vertical slide, same motion as the intro→trip scroll:
-     the outgoing page slides UP out of view while the incoming one rises
-     from BELOW to replace it. past = parked above, incoming = below fold. ---- */
+  /* ---- leaves — full-height sections stacked in one continuous scroll page.
+     Each fills the screen (min-height:100dvh, so it re-fits on every resize) and
+     the window scrolls between them. .active is a lightweight marker the scroll
+     observer sets for the tab highlight + folio — it no longer moves the leaf. ---- */
   .ledger-leaf {
-    position: absolute; inset: 0;
-    overflow: hidden;
-    background: var(--shell);           /* opaque so leaves never show through mid-slide */
-    visibility: hidden; pointer-events: none;
-    z-index: 1;
-    transform: translate3d(0, 100%, 0);
-    transition: transform .62s cubic-bezier(0.22, 0.61, 0.36, 1), visibility 0s .62s;
+    position: relative;
+    min-height: 100vh; min-height: 100dvh;
+    background: var(--shell);
   }
-  .ledger-leaf.past { transform: translate3d(0, -100%, 0); }
-  .ledger-leaf.active {
-    transform: translate3d(0, 0, 0);
-    visibility: visible; pointer-events: auto; z-index: 2;
-    transition: transform .62s cubic-bezier(0.22, 0.61, 0.36, 1), visibility 0s;
-  }
-  @media (prefers-reduced-motion: reduce) { .ledger-leaf { transition: none; } }
-  .leaf-inner { position: relative; width: 100%; height: 100%; }
+  .leaf-inner { position: relative; width: 100%; min-height: 100vh; min-height: 100dvh; }
   .leaf-folio {
     position: absolute; bottom: 10px; right: 20px;
     font-family: var(--mono); font-size: 10px; letter-spacing: .28em;
@@ -1570,7 +1559,10 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .leaf-route .leaf-inner {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 360px;
-    grid-template-rows: 100%;
+    grid-template-rows: minmax(0, 1fr);
+    /* a definite screen height so the map plate fills its section and re-fits
+       when the window resizes */
+    height: 100vh; height: 100dvh;
   }
   /* large monitors (17"+): the map's minmax(0,1fr) let it balloon and
      overshadow the dock + pins. Cap the map at a generous size and give the
@@ -1763,9 +1755,10 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .leaf-pill:hover { background: var(--hover-soft); }
   .leaf-pill.on { background: var(--brown); color: var(--on-brown); }
 
-  /* page 2: transport | hotels ledger columns */
-  .leaf-plan-cols { display: flex; flex: 1 1 auto; min-height: 0; }
-  .plan-col { flex: 1 1 0; min-width: 0; overflow-y: auto; scrollbar-width: thin; padding: 18px 26px 24px 0; }
+  /* page 2: transport | hotels ledger columns — grow to content so the whole
+     page scrolls (not the columns); the section is as tall as the taller column */
+  .leaf-plan-cols { display: flex; }
+  .plan-col { flex: 1 1 0; min-width: 0; padding: 18px 26px 24px 0; }
   .plan-col + .plan-col { border-left: 1px solid var(--line-soft); padding-left: 30px; padding-right: 4px; }
   .plan-col-hd {
     font-family: var(--caps); font-size: 13px; letter-spacing: .18em;
@@ -1774,14 +1767,20 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .plan-col .transport-body { padding: 0; }   /* modal padding stays in the dialog */
   .plan-col .accom-body { padding: 0; }
 
-  /* page 3: the itinerary working area fills the leaf */
-  .leaf-days .iti-body { flex: 1 1 auto; min-height: 0; margin-top: 8px; }
-  .leaf-days .iti-left { padding-left: 0; }
+  /* page 3: the itinerary working area grows to its content so the page scrolls
+     (not the inner columns); calendar (left) and day planner + map (right) stay
+     side by side and the section is as tall as the taller column */
+  .leaf-days .iti-body { flex: none; overflow: visible; margin-top: 8px; }
+  .leaf-days .iti-left { padding-left: 0; overflow-y: visible; }
+  .leaf-days .iti-right { overflow-y: visible; }
   .leaf-days .cal { margin-top: 10px; }
 
-  /* ---- page tabs, flush to the viewport's lower-right edge ---- */
+  /* ---- section tabs, pinned to the viewport's lower-right edge (fixed, so they
+     ride along as you scroll the page). During the intro the tabs sit inside the
+     transformed #app, so `fixed` is scoped to it and they stay off-screen with
+     the trip page until it's parked into native flow. ---- */
   .ledger-tabs {
-    position: absolute; bottom: 30px; right: 0; width: 40px;
+    position: fixed; bottom: 30px; right: 0; width: 40px;
     display: flex; flex-direction: column; gap: 10px;
     z-index: 7;
   }
@@ -1807,9 +1806,9 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   }
   .ledger-tab--icon svg { display: block; }
 
-  /* ---- fore-edge / spine page-turn zones ---- */
+  /* ---- fore-edge / spine zones — scroll to the adjacent section ---- */
   .ledger-edge {
-    position: absolute; top: 50%; transform: translateY(-50%);
+    position: fixed; top: 50%; transform: translateY(-50%);
     width: 32px; height: 84px;
     display: flex; align-items: center; justify-content: center;
     font-family: var(--sans); font-size: 26px; font-weight: 300; line-height: 1;
