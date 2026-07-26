@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-26T18:29:02.399Z
+  Built: 2026-07-26T18:41:12.406Z
 -->
 
 <html lang="en">
@@ -2460,7 +2460,8 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .leaf-plan .leaf-inner,
   .leaf-days .leaf-inner {
     display: flex; flex-direction: column;
-    padding: 24px 54px 30px 42px;   /* right room clears the edge tabs */
+    /* small top pad — the header now lives above, in .leaf-group */
+    padding: 16px 54px 30px 42px;   /* right room clears the edge tabs */
     background: var(--surface);     /* plain paper — notebook ruling + margin line removed */
   }
   .leaf-head {
@@ -2468,14 +2469,17 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     border-bottom: 2px solid var(--line);
     padding-bottom: 14px; margin-bottom: 4px; flex: none;
   }
-  /* the itinerary header (city title + the shared city picker that also controls
-     the transport & hotels section) pins to the top of the viewport while you
-     scroll that section. Sits above the scrolling content, below the fixed tabs. */
-  .leaf-days .leaf-head {
-    position: sticky; top: 0; z-index: 5;
+  /* the shared, pinned header — city title + the linked city picker — spans BOTH
+     the itinerary and the transport & hotels leaves (they live in one .leaf-group),
+     so it stays pinned while you scroll through either. Sits above the leaf
+     content, below the fixed tabs; scroll targets in the group clear its height. */
+  .leaf-group { position: relative; }
+  .leaf-head-shared {
+    position: sticky; top: 0; z-index: 7;   /* above the leaf folios so they don't peek under it */
     background: var(--surface);
-    padding-top: 10px;
+    padding: 22px 54px 14px 42px;
   }
+  .leaf-days, .leaf-plan { scroll-margin-top: var(--shared-head-h, 96px); }
   .leaf-head .eyebrow { margin-bottom: 6px; }
   .leaf-title { font-family: var(--serif); font-size: 34px; font-weight: 700; letter-spacing: -.015em; line-height: 1; color: var(--ink); }
   .leaf-sub { font-family: var(--script); font-style: italic; font-size: 14px; color: var(--green); margin-top: 6px; min-height: 17px; }
@@ -6643,17 +6647,20 @@ html { -webkit-tap-highlight-color: transparent; }
       const iRange = (iStop && d) ? d.stops[iIdx] : null;
       const iNights = iStop ? Math.max(1, Number(iStop.nights) || 1) : 0;
       const hasDay = !!iStop && this.activeDay != null && this.activeDay >= 0 && this.activeDay < iNights;
+      // ---- the shared, pinned header (city title + the linked city picker) sits
+      //      above BOTH the itinerary and the transport & hotels leaves — the two
+      //      live in one .leaf-group — so it stays put while you scroll either ----
+      const sharedHead = `
+      <header class="leaf-head leaf-head-shared">
+        <div class="leaf-head-main">
+          <div class="leaf-title">${iStop ? esc(iStop.city || 'Stop') : 'No stops yet'}</div>
+          <div class="leaf-sub">${iRange ? esc(fmt(iRange.start) + ' → ' + fmt(iRange.end)) + ' · ' : ''}${iStop ? nightsLbl(iStop) : ''}</div>
+        </div>
+        <div class="leaf-pills">${stopPills('ledger-stop-days', iIdx)}</div>
+      </header>`;
       const daysLeaf = `
       <section class="ledger-leaf leaf-days${state(1)}" data-leaf="1">
         <div class="leaf-inner">
-          <header class="leaf-head">
-            <div class="leaf-head-main">
-              <div class="eyebrow">Itinerary</div>
-              <div class="leaf-title">${iStop ? esc(iStop.city || 'Stop') : 'No stops yet'}</div>
-              <div class="leaf-sub">${iRange ? esc(fmt(iRange.start) + ' → ' + fmt(iRange.end)) + ' · ' : ''}${iStop ? nightsLbl(iStop) : ''}</div>
-            </div>
-            <div class="leaf-pills">${stopPills('ledger-stop-days', iIdx)}</div>
-          </header>
           ${iStop ? this.renderItineraryBody(trip, d, fmt) : `
           <p class="empty-note" style="margin:18px 4px">Add a stop on the route page first.</p>`}
           ${hasDay ? `<div class="placed-stickers-layer">${this.renderPlacedStickers('iti-' + iIdx + '-day-' + this.activeDay)}</div>` : ''}
@@ -6722,7 +6729,9 @@ html { -webkit-tap-highlight-color: transparent; }
       return `
       <div class="ledger-stage">
         <div class="ledger-book${this.budgetOpen ? ' bill-open' : ''}" data-page="${page}">
-          ${routeLeaf}${daysLeaf}${planLeaf}${packLeaf}
+          ${routeLeaf}
+          <div class="leaf-group">${sharedHead}${daysLeaf}${planLeaf}</div>
+          ${packLeaf}
           <button class="ledger-edge prev" data-act="ledger-prev" title="Previous page" aria-label="Previous page">‹</button>
           <button class="ledger-edge next" data-act="ledger-next" title="Next page" aria-label="Next page">›</button>
           <nav class="ledger-tabs" aria-label="Pages">${tabs}</nav>
@@ -6755,6 +6764,10 @@ html { -webkit-tap-highlight-color: transparent; }
     // (like the pack sheet); no-op on the phone app.
     _watchLedgerSections() {
       if (!this._webMag() || !('IntersectionObserver' in window)) return;
+      // the shared header floats above the itinerary + transport leaves; publish
+      // its height so those leaves' scroll targets land clear of it (scroll-margin)
+      const sh = this.root.querySelector('.leaf-head-shared');
+      if (sh) document.documentElement.style.setProperty('--shared-head-h', sh.offsetHeight + 'px');
       if (!this._secIO) this._secIO = new IntersectionObserver(
         () => this._syncActiveSection(), { threshold: [0, .25, .5, .75, 1] });
       this._secIO.disconnect();

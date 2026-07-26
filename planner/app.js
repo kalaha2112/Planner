@@ -3305,17 +3305,20 @@
       const iRange = (iStop && d) ? d.stops[iIdx] : null;
       const iNights = iStop ? Math.max(1, Number(iStop.nights) || 1) : 0;
       const hasDay = !!iStop && this.activeDay != null && this.activeDay >= 0 && this.activeDay < iNights;
+      // ---- the shared, pinned header (city title + the linked city picker) sits
+      //      above BOTH the itinerary and the transport & hotels leaves — the two
+      //      live in one .leaf-group — so it stays put while you scroll either ----
+      const sharedHead = `
+      <header class="leaf-head leaf-head-shared">
+        <div class="leaf-head-main">
+          <div class="leaf-title">${iStop ? esc(iStop.city || 'Stop') : 'No stops yet'}</div>
+          <div class="leaf-sub">${iRange ? esc(fmt(iRange.start) + ' → ' + fmt(iRange.end)) + ' · ' : ''}${iStop ? nightsLbl(iStop) : ''}</div>
+        </div>
+        <div class="leaf-pills">${stopPills('ledger-stop-days', iIdx)}</div>
+      </header>`;
       const daysLeaf = `
       <section class="ledger-leaf leaf-days${state(1)}" data-leaf="1">
         <div class="leaf-inner">
-          <header class="leaf-head">
-            <div class="leaf-head-main">
-              <div class="eyebrow">Itinerary</div>
-              <div class="leaf-title">${iStop ? esc(iStop.city || 'Stop') : 'No stops yet'}</div>
-              <div class="leaf-sub">${iRange ? esc(fmt(iRange.start) + ' → ' + fmt(iRange.end)) + ' · ' : ''}${iStop ? nightsLbl(iStop) : ''}</div>
-            </div>
-            <div class="leaf-pills">${stopPills('ledger-stop-days', iIdx)}</div>
-          </header>
           ${iStop ? this.renderItineraryBody(trip, d, fmt) : `
           <p class="empty-note" style="margin:18px 4px">Add a stop on the route page first.</p>`}
           ${hasDay ? `<div class="placed-stickers-layer">${this.renderPlacedStickers('iti-' + iIdx + '-day-' + this.activeDay)}</div>` : ''}
@@ -3384,7 +3387,9 @@
       return `
       <div class="ledger-stage">
         <div class="ledger-book${this.budgetOpen ? ' bill-open' : ''}" data-page="${page}">
-          ${routeLeaf}${daysLeaf}${planLeaf}${packLeaf}
+          ${routeLeaf}
+          <div class="leaf-group">${sharedHead}${daysLeaf}${planLeaf}</div>
+          ${packLeaf}
           <button class="ledger-edge prev" data-act="ledger-prev" title="Previous page" aria-label="Previous page">‹</button>
           <button class="ledger-edge next" data-act="ledger-next" title="Next page" aria-label="Next page">›</button>
           <nav class="ledger-tabs" aria-label="Pages">${tabs}</nav>
@@ -3417,6 +3422,10 @@
     // (like the pack sheet); no-op on the phone app.
     _watchLedgerSections() {
       if (!this._webMag() || !('IntersectionObserver' in window)) return;
+      // the shared header floats above the itinerary + transport leaves; publish
+      // its height so those leaves' scroll targets land clear of it (scroll-margin)
+      const sh = this.root.querySelector('.leaf-head-shared');
+      if (sh) document.documentElement.style.setProperty('--shared-head-h', sh.offsetHeight + 'px');
       if (!this._secIO) this._secIO = new IntersectionObserver(
         () => this._syncActiveSection(), { threshold: [0, .25, .5, .75, 1] });
       this._secIO.disconnect();
