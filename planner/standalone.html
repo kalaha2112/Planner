@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-26T18:20:57.660Z
+  Built: 2026-07-26T18:29:02.399Z
 -->
 
 <html lang="en">
@@ -2468,11 +2468,10 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     border-bottom: 2px solid var(--line);
     padding-bottom: 14px; margin-bottom: 4px; flex: none;
   }
-  /* the itinerary / transport-&-hotels header (city title + linked city picker)
-     pins to the top of the viewport while you scroll that section, so the picker
-     stays reachable. Sits above the scrolling content but below the fixed tabs. */
-  .leaf-days .leaf-head,
-  .leaf-plan .leaf-head {
+  /* the itinerary header (city title + the shared city picker that also controls
+     the transport & hotels section) pins to the top of the viewport while you
+     scroll that section. Sits above the scrolling content, below the fixed tabs. */
+  .leaf-days .leaf-head {
     position: sticky; top: 0; z-index: 5;
     background: var(--surface);
     padding-top: 10px;
@@ -6662,21 +6661,13 @@ html { -webkit-tap-highlight-color: transparent; }
         <span class="leaf-folio">02 · 04</span>
       </section>`;
 
-      // ---- page 3 · transport & hotels share the leaf, one stop at a time ----
+      // ---- page 3 · transport & hotels — the city is controlled by the
+      //      itinerary header's shared picker, so this section has no header ----
       const pIdx = this.accomOpenIdx;
       const pStop = pIdx != null ? trip.stops[pIdx] : null;
-      const pRange = (pStop && d) ? d.stops[pIdx] : null;
       const planLeaf = `
       <section class="ledger-leaf leaf-plan${state(2)}" data-leaf="2">
         <div class="leaf-inner">
-          <header class="leaf-head">
-            <div class="leaf-head-main">
-              <div class="eyebrow">Transport &amp; Hotels</div>
-              <div class="leaf-title">${pStop ? esc(pStop.city || 'Stop') : 'No stops yet'}</div>
-              <div class="leaf-sub">${pRange ? esc(fmt(pRange.start) + ' → ' + fmt(pRange.end)) + ' · ' : ''}${pStop ? nightsLbl(pStop) : ''}</div>
-            </div>
-            <div class="leaf-pills">${stopPills('ledger-stop-plan', pIdx)}</div>
-          </header>
           ${pStop ? `
           <div class="leaf-plan-cols">
             <div class="plan-col plan-transport">

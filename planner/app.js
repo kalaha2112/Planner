@@ -3323,21 +3323,13 @@
         <span class="leaf-folio">02 · 04</span>
       </section>`;
 
-      // ---- page 3 · transport & hotels share the leaf, one stop at a time ----
+      // ---- page 3 · transport & hotels — the city is controlled by the
+      //      itinerary header's shared picker, so this section has no header ----
       const pIdx = this.accomOpenIdx;
       const pStop = pIdx != null ? trip.stops[pIdx] : null;
-      const pRange = (pStop && d) ? d.stops[pIdx] : null;
       const planLeaf = `
       <section class="ledger-leaf leaf-plan${state(2)}" data-leaf="2">
         <div class="leaf-inner">
-          <header class="leaf-head">
-            <div class="leaf-head-main">
-              <div class="eyebrow">Transport &amp; Hotels</div>
-              <div class="leaf-title">${pStop ? esc(pStop.city || 'Stop') : 'No stops yet'}</div>
-              <div class="leaf-sub">${pRange ? esc(fmt(pRange.start) + ' → ' + fmt(pRange.end)) + ' · ' : ''}${pStop ? nightsLbl(pStop) : ''}</div>
-            </div>
-            <div class="leaf-pills">${stopPills('ledger-stop-plan', pIdx)}</div>
-          </header>
           ${pStop ? `
           <div class="leaf-plan-cols">
             <div class="plan-col plan-transport">
