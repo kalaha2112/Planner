@@ -1511,13 +1511,11 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    Below 701px the app page renders instead — none of this applies.
    ============================================================ */
 @media (min-width: 701px) {
-  /* the ledger is now one continuous scroll page (full-height sections), so the
-     window must scroll — the intro-lock class still freezes it during the cover.
-     Proximity snapping: free scroll, but the page settles onto a snap target
-     (the itinerary / transport & hotels leaves) when you stop near one.
-     scroll-padding-top offsets the snap (and any scrollIntoView) below the pinned
-     shared header; Route/Packing cancel it so they land flush (see below). */
-  html { scroll-snap-type: y proximity; scroll-padding-top: var(--shared-head-h, 96px); }
+  /* the ledger is a vertical scroll page (Route · the itinerary+transport stage ·
+     Packing); the intro-lock class freezes it during the cover. Route and Packing
+     scroll freely. The middle stage (.leaf-group) pins to the viewport and turns
+     wheel-scrolling into a horizontal slide between its two panels — driven in JS
+     (_ledgerWheel), so no CSS scroll-snap is needed here. */
   :root {
     --ledger-rule:   rgba(26, 26, 26, .05);    /* faint account-book ruling */
     --ledger-margin: rgba(145, 4, 12, .16);    /* the red margin line */
@@ -1734,11 +1732,12 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
      it's open (the panel surface itself stays, as the paper's backing) */
   .ledger-book.bill-open .ledger-col > * { visibility: hidden; }
 
-  /* ---- pages 2 & 3 share the ruled-leaf chrome ---- */
+  /* ---- pages 2 & 3 (itinerary · transport & hotels) share the ruled-leaf
+     chrome and sit side by side inside one pinned horizontal stage ---- */
   .leaf-plan .leaf-inner,
   .leaf-days .leaf-inner {
     display: flex; flex-direction: column;
-    /* small top pad — the header now lives above, in .leaf-group */
+    /* small top pad — the header lives above, in .leaf-group */
     padding: 16px 54px 30px 42px;   /* right room clears the edge tabs */
     background: var(--surface);     /* plain paper — notebook ruling + margin line removed */
   }
@@ -1747,27 +1746,40 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     border-bottom: 2px solid var(--line);
     padding-bottom: 14px; margin-bottom: 4px; flex: none;
   }
-  /* the shared, pinned header — city title + the linked city picker — spans BOTH
-     the itinerary and the transport & hotels leaves (they live in one .leaf-group),
-     so it stays pinned while you scroll through either. Sits above the leaf
-     content, below the fixed tabs; scroll targets in the group clear its height. */
-  .leaf-group { position: relative; }
+  /* The horizontal stage: one screen tall, in the vertical flow between Route and
+     Packing. The shared header (city title + linked picker) pins at its top; below
+     it a flex track carries the two panels side by side and slides one panel-width
+     per turn. A tall panel (transport & hotels) scrolls its own overflow. */
+  .leaf-group {
+    position: relative;
+    height: 100vh; height: 100dvh;   /* re-fits the screen on every resize */
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    background: var(--surface);
+  }
   .leaf-head-shared {
-    position: sticky; top: 0; z-index: 7;   /* above the leaf folios so they don't peek under it */
+    position: relative; z-index: 7; flex: none;   /* top of the stage, above both panels */
     background: var(--surface);
     padding: 22px 54px 14px 42px;
   }
-  /* the itinerary + transport & hotels leaves are scroll-snap targets, so a
-     wheel scroll into either settles onto the section — aligned below the pinned
-     shared header by the html scroll-padding-top. scroll-snap-stop:always makes a
-     fast flick land ON the transport section rather than skim past it. Route and
-     Packing carry no snap-align, so they stay free-scroll; a negative scroll-margin
-     cancels the padding for them so a tab jump lands them flush at the top. */
-  .leaf-days, .leaf-plan {
-    scroll-snap-align: start;
-    scroll-snap-stop: always;
+  .hstrip { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+  .htrack {
+    display: flex; width: 200%; height: 100%;
+    transform: translateX(0);
+    transition: transform .5s cubic-bezier(.4, 0, .2, 1);
+    will-change: transform;
   }
-  .leaf-route, .leaf-pack { scroll-margin-top: calc(-1 * var(--shared-head-h, 96px)); }
+  /* each panel is one screen wide; it scrolls its own vertical overflow so a tall
+     section reads fully without breaking the slide */
+  .leaf-group .ledger-leaf {
+    flex: 0 0 50%; width: 50%;
+    min-height: 0; height: 100%;
+    overflow-y: auto; overflow-x: hidden;
+    scrollbar-width: thin;
+    background: var(--surface);
+  }
+  .leaf-group .leaf-inner { min-height: 100%; }   /* fill the panel when content is short */
+  @media (prefers-reduced-motion: reduce) { .htrack { transition: none; } }
   .leaf-head .eyebrow { margin-bottom: 6px; }
   .leaf-title { font-family: var(--serif); font-size: 34px; font-weight: 700; letter-spacing: -.015em; line-height: 1; color: var(--ink); }
   .leaf-sub { font-family: var(--script); font-style: italic; font-size: 14px; color: var(--green); margin-top: 6px; min-height: 17px; }

@@ -555,6 +555,8 @@
       // pure view state.
       this.magIdx = 0;              // 0 route · 1 itinerary · 2 transport&hotels · 3 packing&to-do
       this._magAnimating = false;
+      this.hPage = 0;               // itinerary(0) | transport&hotels(1) — the two panels of the pinned horizontal stage
+      this._hLock = false;          // true during a stage pin / horizontal slide, so wheel gestures don't stack
       // ---- app (≤700px): the phone twin of the ledger — an overview page with
       // entry cards that rise a sub-page up (Itinerary / Hotel / Transportation)
       // with a tab bar pinned on top. appStopIdx is the shared stop selection.
@@ -3388,7 +3390,7 @@
       <div class="ledger-stage">
         <div class="ledger-book${this.budgetOpen ? ' bill-open' : ''}" data-page="${page}">
           ${routeLeaf}
-          <div class="leaf-group">${sharedHead}${daysLeaf}${planLeaf}</div>
+          <div class="leaf-group">${sharedHead}<div class="hstrip"><div class="htrack" style="transform:translateX(-${(this.hPage || 0) * 50}%)">${daysLeaf}${planLeaf}</div></div></div>
           ${packLeaf}
           <button class="ledger-edge prev" data-act="ledger-prev" title="Previous page" aria-label="Previous page">‹</button>
           <button class="ledger-edge next" data-act="ledger-next" title="Next page" aria-label="Next page">›</button>
@@ -3397,16 +3399,107 @@
       </div>`;
     }
 
-    // scroll to section i — the leaves are now full-height sections in one
-    // continuous page. magIdx / tab highlight / map sizing / entrance are all
-    // updated by the scroll observer (_syncActiveSection) as the section arrives.
+    // Navigate to section i. Route (0) and Packing (3) are full-height vertical
+    // sections — scroll the window to them. Itinerary (1) and Transport & Hotels
+    // (2) are the two panels of the pinned horizontal stage (.leaf-group): pin the
+    // stage to fill the viewport, then slide the track to that panel.
     magGoto(i) {
       if (!this._webMag()) return;
       i = Math.max(0, Math.min(3, i));
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (i === 1 || i === 2) {
+        this._pinGroup();
+        this._setHPage(i === 1 ? 0 : 1);
+        return;
+      }
       const sec = this.root.querySelector('.ledger-leaf[data-leaf="' + i + '"]');
       if (!sec) return;
-      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      this.magIdx = i; this._syncLeafClasses();
       sec.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+    }
+    // scroll the horizontal stage to fill the viewport (its top at 0), so the
+    // wheel handler can take over and slide between the two panels
+    _pinGroup() {
+      const group = this.root.querySelector('.leaf-group'); if (!group) return;
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const top = Math.round((window.scrollY || 0) + group.getBoundingClientRect().top);
+      if (Math.abs((window.scrollY || 0) - top) < 2) return;   // already pinned
+      this._hLock = true;
+      window.scrollTo({ top, behavior: reduced ? 'auto' : 'smooth' });
+      setTimeout(() => { this._hLock = false; }, reduced ? 0 : 480);
+    }
+    // slide the horizontal track to panel n (0 itinerary · 1 transport) and land
+    // it at the top; updates the active tab, nudges the day map, plays the entrance
+    _setHPage(n) {
+      n = Math.max(0, Math.min(1, n));
+      const days = this.root.querySelector('.leaf-days');
+      const plan = this.root.querySelector('.leaf-plan');
+      const track = this.root.querySelector('.htrack');
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const changed = n !== this.hPage;
+      this.hPage = n;
+      if (track) track.style.transform = 'translateX(-' + (n * 50) + '%)';
+      const incoming = n === 0 ? days : plan;
+      if (incoming) incoming.scrollTop = 0;         // arrive at the top of the section
+      this.magIdx = n === 0 ? 1 : 2;
+      this._syncLeafClasses();
+      if (n === 0 && this.dayMap) { this.dayMap.invalidateSize(); this.scheduleDayMap(); }
+      if (changed && this._introParked && incoming) this._playEnter(incoming.querySelector('.leaf-inner') || incoming);
+      if (changed && !reduced) { this._hLock = true; setTimeout(() => { this._hLock = false; }, 480); }
+    }
+    // hand scrolling back to the vertical page at a panel's outer edge — up to
+    // Route, down to Packing
+    _leaveGroup(dir) {
+      const sec = this.root.querySelector(dir > 0 ? '.leaf-pack' : '.leaf-route');
+      if (!sec) return;
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      this._hLock = true;
+      this.magIdx = dir > 0 ? 3 : 0; this._syncLeafClasses();
+      sec.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+      setTimeout(() => { this._hLock = false; }, reduced ? 0 : 480);
+    }
+    // Wheel driver for the web layout. Route/Packing scroll the window freely.
+    // When the horizontal stage covers the viewport it pins and captures the
+    // wheel: the active panel scrolls its own overflow first, and only at that
+    // panel's vertical edge does a further wheel slide to the next section
+    // (itinerary ⇄ transport) or release back to the page (route / packing).
+    _ledgerWheel(e) {
+      if (!this._webMag() || !this._introParked || this._anyModalOpen()) return;
+      const group = this.root.querySelector('.leaf-group'); if (!group) return;
+      const days = this.root.querySelector('.leaf-days');
+      const plan = this.root.querySelector('.leaf-plan');
+      if (!days || !plan) return;
+      const dir = e.deltaY > 0 ? 1 : (e.deltaY < 0 ? -1 : 0);
+      if (!dir) return;
+      const vh = window.innerHeight;
+      const gr = group.getBoundingClientRect();
+      const filled = gr.top <= 2 && gr.bottom >= vh - 2;
+
+      if (!filled) {
+        // approaching the stage from route/packing: once it covers half the
+        // screen, snap it to fill and engage; otherwise free vertical scroll
+        const cover = Math.min(gr.bottom, vh) - Math.max(gr.top, 0);
+        if (cover >= vh * 0.5 && !this._hLock) { e.preventDefault(); this._pinGroup(); }
+        return;
+      }
+
+      if (this._hLock) { e.preventDefault(); return; }   // mid pin / slide
+      const panel = this.hPage === 0 ? days : plan;
+      // normalize wheel delta to pixels (mouse wheels can report line/page units)
+      const dy = e.deltaMode === 1 ? e.deltaY * 16 : (e.deltaMode === 2 ? e.deltaY * panel.clientHeight : e.deltaY);
+      const atTop = panel.scrollTop <= 0;
+      const atBottom = panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 1;
+      if (dir > 0) {
+        if (!atBottom) { e.preventDefault(); panel.scrollTop += dy; return; }
+        e.preventDefault();
+        if (this.hPage === 0) this._setHPage(1);   // itinerary bottom → slide right to transport
+        else this._leaveGroup(1);                  // transport bottom → down to packing
+      } else {
+        if (!atTop) { e.preventDefault(); panel.scrollTop += dy; return; }
+        e.preventDefault();
+        if (this.hPage === 1) this._setHPage(0);   // transport top → slide left to itinerary
+        else this._leaveGroup(-1);                 // itinerary top → up to route
+      }
     }
     _syncLeafClasses() {
       const book = this.root.querySelector('.ledger-book'); if (!book) return;
@@ -3415,40 +3508,42 @@
         el.classList.toggle('active', Number(el.dataset.leaf) === this.magIdx));
       book.querySelectorAll('.ledger-tab').forEach(el => el.classList.toggle('on', Number(el.dataset.i) === this.magIdx));
     }
-    // Web scroll page: one IntersectionObserver tracks which full-height section
-    // is in view; on change it updates magIdx + the active tab, gives that
-    // section's Leaflet map a nudge, and plays its entrance (once parked). The
-    // scroll counterpart of the old page-turn. Re-observed after every render
-    // (like the pack sheet); no-op on the phone app.
+    // Web layout: one IntersectionObserver tracks which section fills the viewport
+    // — Route, the horizontal stage, or Packing. The stage resolves to itinerary
+    // or transport by the current horizontal page. On change it updates magIdx +
+    // the active tab, nudges that section's Leaflet map, and plays its entrance
+    // (once parked). Re-observed after every render; no-op on the phone app.
     _watchLedgerSections() {
       if (!this._webMag() || !('IntersectionObserver' in window)) return;
-      // the shared header floats above the itinerary + transport leaves; publish
-      // its height so those leaves' scroll targets land clear of it (scroll-margin)
       const sh = this.root.querySelector('.leaf-head-shared');
       if (sh) document.documentElement.style.setProperty('--shared-head-h', sh.offsetHeight + 'px');
       if (!this._secIO) this._secIO = new IntersectionObserver(
         () => this._syncActiveSection(), { threshold: [0, .25, .5, .75, 1] });
       this._secIO.disconnect();
-      this.root.querySelectorAll('.ledger-leaf').forEach(el => this._secIO.observe(el));
+      ['.leaf-route', '.leaf-group', '.leaf-pack'].forEach(sel => {
+        const el = this.root.querySelector(sel); if (el) this._secIO.observe(el);
+      });
     }
     _syncActiveSection() {
-      const secs = [...this.root.querySelectorAll('.ledger-leaf')];
-      if (!secs.length) return;
+      const route = this.root.querySelector('.leaf-route');
+      const group = this.root.querySelector('.leaf-group');
+      const pack = this.root.querySelector('.leaf-pack');
+      if (!route || !group || !pack) return;
       const vh = window.innerHeight;
-      let cur = this.magIdx, best = -Infinity;
-      secs.forEach(el => {                          // the section filling most of the viewport wins
-        const r = el.getBoundingClientRect();
-        const vis = Math.min(r.bottom, vh) - Math.max(r.top, 0);
-        if (vis > best) { best = vis; cur = Number(el.dataset.leaf); }
-      });
+      const vis = el => { const r = el.getBoundingClientRect(); return Math.min(r.bottom, vh) - Math.max(r.top, 0); };
+      const rv = vis(route), gv = vis(group), pv = vis(pack);
+      let cur;
+      if (gv >= rv && gv >= pv) cur = this.hPage === 0 ? 1 : 2;   // the stage → itinerary / transport
+      else if (rv >= pv) cur = 0; else cur = 3;
       if (cur === this.magIdx) return;
       this.magIdx = cur;
       this._syncLeafClasses();
-      // Leaflet wants a nudge once its section is the one in view
       if (cur === 0 && this.mainLeafletMap) { this.mainLeafletMap.invalidateSize(); this.renderMainMap(); }
       if (cur === 1 && this.dayMap) { this.dayMap.invalidateSize(); this.scheduleDayMap(); }
-      // play the section's entrance once you're actually on the page (parked)
-      if (this._introParked) this._playEnter(secs[cur].querySelector('.leaf-inner') || secs[cur]);
+      if (this._introParked) {
+        const el = cur === 0 ? route : cur === 3 ? pack : (cur === 1 ? this.root.querySelector('.leaf-days') : this.root.querySelector('.leaf-plan'));
+        if (el) this._playEnter(el.querySelector('.leaf-inner') || el);
+      }
     }
 
     /* ============================================================
@@ -3584,12 +3679,15 @@
       if (this.appPage === 1 && this.dayMap) { this.dayMap.invalidateSize(); this.scheduleDayMap(); }
     }
     initLedgerNav() {
-      // The web ledger is one continuous scroll page now — native scrolling moves
-      // between the full-height sections, so there are no wheel/touch page-turn
-      // handlers. Keyboard: Escape clears the packing panel; ↑/PageUp at the very
-      // top of the page pulls the cover back (the intro driver claims that key
-      // first when it applies, so guard on defaultPrevented). ↓/PageDown and the
-      // rest scroll natively.
+      // Route and Packing scroll the window freely; the itinerary + transport &
+      // hotels stage in between pins to the viewport and turns wheel-scrolling
+      // into a horizontal slide between its two panels (see _ledgerWheel).
+      // Attached non-passive so the handler can preventDefault while the stage is
+      // engaged. Listeners are wired once (init) — they no-op off the web layout.
+      window.addEventListener('wheel', (e) => this._ledgerWheel(e), { passive: false });
+      // Keyboard: Escape clears the packing panel; ↑/↓ · PageUp/PageDown step
+      // between sections (via magGoto, which also drives the horizontal slide);
+      // ↑/PageUp at the very top pulls the cover back.
       document.addEventListener('keydown', (e) => {
         if (!this._webMag() || !this._introParked || this._anyModalOpen()) return;
         if (e.defaultPrevented) return;
@@ -3602,7 +3700,10 @@
         if ((e.key === 'ArrowUp' || e.key === 'PageUp') && (window.scrollY || document.documentElement.scrollTop || 0) <= 1 && this._introReturn) {
           e.preventDefault();
           this._introReturn();
+          return;
         }
+        if (e.key === 'ArrowDown' || e.key === 'PageDown') { e.preventDefault(); this.magGoto(this.magIdx + 1); return; }
+        if (e.key === 'ArrowUp' || e.key === 'PageUp') { e.preventDefault(); this.magGoto(this.magIdx - 1); return; }
       });
     }
 
