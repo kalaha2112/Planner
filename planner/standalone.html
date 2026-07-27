@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-26T18:41:12.406Z
+  Built: 2026-07-27T19:41:14.126Z
 -->
 
 <html lang="en">
@@ -2239,7 +2239,12 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    ============================================================ */
 @media (min-width: 701px) {
   /* the ledger is now one continuous scroll page (full-height sections), so the
-     window must scroll — the intro-lock class still freezes it during the cover */
+     window must scroll — the intro-lock class still freezes it during the cover.
+     Proximity snapping: free scroll, but the page settles onto a snap target
+     (the itinerary / transport & hotels leaves) when you stop near one.
+     scroll-padding-top offsets the snap (and any scrollIntoView) below the pinned
+     shared header; Route/Packing cancel it so they land flush (see below). */
+  html { scroll-snap-type: y proximity; scroll-padding-top: var(--shared-head-h, 96px); }
   :root {
     --ledger-rule:   rgba(26, 26, 26, .05);    /* faint account-book ruling */
     --ledger-margin: rgba(145, 4, 12, .16);    /* the red margin line */
@@ -2479,7 +2484,17 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     background: var(--surface);
     padding: 22px 54px 14px 42px;
   }
-  .leaf-days, .leaf-plan { scroll-margin-top: var(--shared-head-h, 96px); }
+  /* the itinerary + transport & hotels leaves are scroll-snap targets, so a
+     wheel scroll into either settles onto the section — aligned below the pinned
+     shared header by the html scroll-padding-top. scroll-snap-stop:always makes a
+     fast flick land ON the transport section rather than skim past it. Route and
+     Packing carry no snap-align, so they stay free-scroll; a negative scroll-margin
+     cancels the padding for them so a tab jump lands them flush at the top. */
+  .leaf-days, .leaf-plan {
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+  .leaf-route, .leaf-pack { scroll-margin-top: calc(-1 * var(--shared-head-h, 96px)); }
   .leaf-head .eyebrow { margin-bottom: 6px; }
   .leaf-title { font-family: var(--serif); font-size: 34px; font-weight: 700; letter-spacing: -.015em; line-height: 1; color: var(--ink); }
   .leaf-sub { font-family: var(--script); font-style: italic; font-size: 14px; color: var(--green); margin-top: 6px; min-height: 17px; }
