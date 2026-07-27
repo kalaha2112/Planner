@@ -556,7 +556,9 @@
       this.magIdx = 0;              // 0 route · 1 itinerary · 2 transport&hotels · 3 packing&to-do
       this._magAnimating = false;
       this.hPage = 0;               // itinerary(0) | transport&hotels(1) — the two panels of the pinned horizontal stage
-      this._hLock = false;          // true during a stage pin / horizontal slide, so wheel gestures don't stack
+      this._hLock = false;          // true during a stage pin / page release, so wheel gestures don't stack
+      this._hx = null;              // live horizontal drag offset in px (null = settled, DOM holds a % transform)
+      this._hStartPage = null;      // the panel a drag began from (for the commit-past-threshold decision)
       // ---- app (≤700px): the phone twin of the ledger — an overview page with
       // entry cards that rise a sub-page up (Itinerary / Hotel / Transportation)
       // with a tab bar pinned on top. appStopIdx is the shared stop selection.
@@ -3428,8 +3430,10 @@
       window.scrollTo({ top, behavior: reduced ? 'auto' : 'smooth' });
       setTimeout(() => { this._hLock = false; }, reduced ? 0 : 480);
     }
-    // slide the horizontal track to panel n (0 itinerary · 1 transport) and land
-    // it at the top; updates the active tab, nudges the day map, plays the entrance
+    // Settle the horizontal track onto panel n (0 itinerary · 1 transport) with a
+    // smooth glide and land it at the top; updates the active tab, nudges the day
+    // map, plays the entrance. Settled position uses a % transform so it re-fits on
+    // resize; live dragging (_ledgerWheel) uses px and _hx.
     _setHPage(n) {
       n = Math.max(0, Math.min(1, n));
       const days = this.root.querySelector('.leaf-days');
@@ -3438,14 +3442,33 @@
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       const changed = n !== this.hPage;
       this.hPage = n;
-      if (track) track.style.transform = 'translateX(-' + (n * 50) + '%)';
+      this._hx = null;   // settled → the DOM holds a % transform; re-init _hx on next drag
+      if (track) {
+        track.style.transition = reduced ? 'none' : 'transform .38s cubic-bezier(.4, 0, .2, 1)';
+        track.style.transform = 'translateX(-' + (n * 50) + '%)';
+      }
       const incoming = n === 0 ? days : plan;
       if (incoming) incoming.scrollTop = 0;         // arrive at the top of the section
       this.magIdx = n === 0 ? 1 : 2;
       this._syncLeafClasses();
       if (n === 0 && this.dayMap) { this.dayMap.invalidateSize(); this.scheduleDayMap(); }
       if (changed && this._introParked && incoming) this._playEnter(incoming.querySelector('.leaf-inner') || incoming);
-      if (changed && !reduced) { this._hLock = true; setTimeout(() => { this._hLock = false; }, 480); }
+    }
+    // when the drag stops, commit to the next panel if it was pulled past a small
+    // threshold in the drag direction, otherwise spring back — then glide home
+    _snapDrag(panelW) {
+      if (this._hx == null || !panelW) return;
+      const from = this._hStartPage != null ? this._hStartPage : this.hPage;
+      const commit = panelW * 0.15;                // pulled ~a seventh of the way carries you across (one mouse notch), a tiny nudge springs back
+      const n = from === 0 ? (this._hx >= commit ? 1 : 0)
+                           : (this._hx <= panelW - commit ? 0 : 1);
+      this._hStartPage = null;
+      this._setHPage(n);
+    }
+    // live tab/folio feedback as the track is dragged past the half-way line
+    _syncDragLive(panelW) {
+      const mag = this._hx >= panelW / 2 ? 2 : 1;
+      if (mag !== this.magIdx) { this.magIdx = mag; this._syncLeafClasses(); }
     }
     // hand scrolling back to the vertical page at a panel's outer edge — up to
     // Route, down to Packing
@@ -3458,17 +3481,20 @@
       sec.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
       setTimeout(() => { this._hLock = false; }, reduced ? 0 : 480);
     }
-    // Wheel driver for the web layout. Route/Packing scroll the window freely.
-    // When the horizontal stage covers the viewport it pins and captures the
-    // wheel: the active panel scrolls its own overflow first, and only at that
-    // panel's vertical edge does a further wheel slide to the next section
-    // (itinerary ⇄ transport) or release back to the page (route / packing).
+    // Wheel driver for the web layout. Route/Packing scroll the window freely. Once
+    // the horizontal stage covers the viewport it pins and captures the wheel, then
+    // maps scroll delta 1:1 onto the track's horizontal position — the two panels
+    // drag continuously left/right and settle onto the nearest one when you stop. A
+    // panel scrolls its own vertical overflow first at its edge; beyond the outer
+    // edges (itinerary-top / transport-bottom) scrolling releases to the page.
     _ledgerWheel(e) {
       if (!this._webMag() || !this._introParked || this._anyModalOpen()) return;
       const group = this.root.querySelector('.leaf-group'); if (!group) return;
       const days = this.root.querySelector('.leaf-days');
       const plan = this.root.querySelector('.leaf-plan');
-      if (!days || !plan) return;
+      const track = this.root.querySelector('.htrack');
+      const hstrip = this.root.querySelector('.hstrip');
+      if (!days || !plan || !track || !hstrip) return;
       const dir = e.deltaY > 0 ? 1 : (e.deltaY < 0 ? -1 : 0);
       if (!dir) return;
       const vh = window.innerHeight;
@@ -3483,23 +3509,45 @@
         return;
       }
 
-      if (this._hLock) { e.preventDefault(); return; }   // mid pin / slide
-      const panel = this.hPage === 0 ? days : plan;
+      if (this._hLock) { e.preventDefault(); return; }   // mid pin / release
+      const panelW = hstrip.clientWidth || 1;
       // normalize wheel delta to pixels (mouse wheels can report line/page units)
-      const dy = e.deltaMode === 1 ? e.deltaY * 16 : (e.deltaMode === 2 ? e.deltaY * panel.clientHeight : e.deltaY);
-      const atTop = panel.scrollTop <= 0;
-      const atBottom = panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 1;
-      if (dir > 0) {
-        if (!atBottom) { e.preventDefault(); panel.scrollTop += dy; return; }
-        e.preventDefault();
-        if (this.hPage === 0) this._setHPage(1);   // itinerary bottom → slide right to transport
-        else this._leaveGroup(1);                  // transport bottom → down to packing
-      } else {
-        if (!atTop) { e.preventDefault(); panel.scrollTop += dy; return; }
-        e.preventDefault();
-        if (this.hPage === 1) this._setHPage(0);   // transport top → slide left to itinerary
-        else this._leaveGroup(-1);                 // itinerary top → up to route
+      const dy = e.deltaMode === 1 ? e.deltaY * 16 : (e.deltaMode === 2 ? e.deltaY * vh : e.deltaY);
+      if (this._hx == null) this._hx = this.hPage * panelW;   // sync px offset from the settled page
+
+      const atItin = this._hx <= 0.5;
+      const atTransp = this._hx >= panelW - 0.5;
+      const daysMax = days.scrollHeight - days.clientHeight;
+      const planMax = plan.scrollHeight - plan.clientHeight;
+      // at a settled panel, spend the panel's own vertical overflow first, and past
+      // the outer edges hand the scroll back to the vertical page
+      if (atItin) {
+        if (dir < 0) {
+          if (days.scrollTop > 0.5) { e.preventDefault(); days.scrollTop += dy; return; }
+          e.preventDefault(); this._leaveGroup(-1); return;         // itinerary top → up to Route
+        }
+        if (days.scrollTop < daysMax - 0.5) { e.preventDefault(); days.scrollTop += dy; return; }
+        // itinerary at bottom → begin dragging right
+      } else if (atTransp) {
+        if (dir > 0) {
+          if (plan.scrollTop < planMax - 0.5) { e.preventDefault(); plan.scrollTop += dy; return; }
+          e.preventDefault(); this._leaveGroup(1); return;          // transport bottom → down to Packing
+        }
+        if (plan.scrollTop > 0.5) { e.preventDefault(); plan.scrollTop += dy; return; }
+        // transport at top → begin dragging left
       }
+
+      // continuous horizontal drag: follow the wheel 1:1 (with a little gain so a
+      // mouse notch makes real progress), settle onto the nearest panel on stop
+      e.preventDefault();
+      if (this._hStartPage == null) this._hStartPage = this.hPage;
+      const GAIN = 2.4;
+      this._hx = Math.max(0, Math.min(panelW, this._hx + dy * GAIN));
+      track.style.transition = 'none';
+      track.style.transform = 'translateX(' + (-this._hx) + 'px)';
+      this._syncDragLive(panelW);
+      clearTimeout(this._hSnapT);
+      this._hSnapT = setTimeout(() => this._snapDrag(panelW), 140);
     }
     _syncLeafClasses() {
       const book = this.root.querySelector('.ledger-book'); if (!book) return;
@@ -3515,6 +3563,7 @@
     // (once parked). Re-observed after every render; no-op on the phone app.
     _watchLedgerSections() {
       if (!this._webMag() || !('IntersectionObserver' in window)) return;
+      this._hx = null;   // the track was re-rendered with a % transform; re-sync the drag offset on next wheel
       const sh = this.root.querySelector('.leaf-head-shared');
       if (sh) document.documentElement.style.setProperty('--shared-head-h', sh.offsetHeight + 'px');
       if (!this._secIO) this._secIO = new IntersectionObserver(
