@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-28T18:31:18.271Z
+  Built: 2026-07-28T20:31:06.456Z
 -->
 
 <html lang="en">
@@ -7683,6 +7683,41 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       this.magIdx = -1;          // force _onLedgerScroll to re-apply tab/map for the current section
       this._onLedgerScroll();
     }
+    // Snap the two VERTICAL transitions so they land decisively, while the middle
+    // horizontal slide (Itinerary↔Transport) stays free. The stage's scroll range:
+    //   0 … itin(gTop) … [ horizontal slide ] … transport(gTop+range) … packing …
+    // If the scroll rests inside Route↔Itinerary or Transport↔Packing, glide onto
+    // the section in the direction you were scrolling — so a flick down from Home
+    // lands on Itinerary, and past Transport lands on Packing.
+    _snapVertical() {
+      if (!this._webMag() || !this._introParked || (this._anyModalOpen && this._anyModalOpen())) return;
+      const group = this.root.querySelector('.leaf-group'); if (!group) return;
+      const vh = window.innerHeight;
+      const gTop = Math.round((window.scrollY || 0) + group.getBoundingClientRect().top);
+      const range = group.offsetHeight - vh;
+      const itin = gTop, transport = gTop + range, packing = gTop + group.offsetHeight;
+      const y = window.scrollY || 0;
+      const dir = this._scrollDir || 0;
+      let target = null;
+      if (y > 2 && y < itin - 2) target = dir < 0 ? 0 : itin;                       // Route ↔ Itinerary
+      else if (y > transport + 2 && y < packing - 2) target = dir < 0 ? transport : packing;   // Transport ↔ Packing
+      if (target != null) this._snapScroll(target);
+    }
+    // short ease-out glide to `target`; aborts immediately if the user scrolls
+    _snapScroll(target) {
+      const start = window.scrollY || 0, dist = target - start;
+      if (Math.abs(dist) < 2) return;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { window.scrollTo(0, target); return; }
+      const dur = 240, t0 = performance.now(), ease = (t) => 1 - Math.pow(1 - t, 3);
+      this._snapAnimating = true; this._snapAbort = false;
+      const step = (now) => {
+        if (this._snapAbort) { this._snapAnimating = false; return; }
+        const t = Math.min(1, (now - t0) / dur);
+        window.scrollTo(0, Math.round(start + dist * ease(t)));
+        if (t < 1) requestAnimationFrame(step); else this._snapAnimating = false;
+      };
+      requestAnimationFrame(step);
+    }
 
     /* ============================================================
        APP BOOK (≤700px) — the phone twin of the web ledger. The
@@ -7822,9 +7857,20 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       // pinned range (see _onLedgerScroll). A rAF-coalesced scroll listener keeps
       // the slide in lock-step with the scroll. Wired once (init) — no-op off web.
       window.addEventListener('scroll', () => {
-        if (this._scrollRaf) return;
-        this._scrollRaf = requestAnimationFrame(() => { this._scrollRaf = null; this._onLedgerScroll(); });
+        if (!this._scrollRaf) this._scrollRaf = requestAnimationFrame(() => { this._scrollRaf = null; this._onLedgerScroll(); });
+        const y = window.scrollY || 0;
+        if (this._lastScrollY != null && y !== this._lastScrollY) this._scrollDir = y > this._lastScrollY ? 1 : -1;
+        this._lastScrollY = y;
+        // when scrolling comes to rest inside a vertical transition (Route↔Itinerary
+        // or Transport↔Packing), finish the move onto that section — "snappy". The
+        // horizontal slide in between is left alone. Skipped while our own snap runs.
+        if (!this._snapAnimating) { clearTimeout(this._snapT); this._snapT = setTimeout(() => this._snapVertical(), 120); }
       }, { passive: true });
+      // a real wheel/touch during our snap animation cancels it, so a snap never
+      // fights the user (the failure mode of every previous scroll-assist here)
+      const cancelSnap = () => { if (this._snapAnimating) this._snapAbort = true; };
+      window.addEventListener('wheel', cancelSnap, { passive: true });
+      window.addEventListener('touchstart', cancelSnap, { passive: true });
       // Keyboard: Escape clears the packing panel; ↑/↓ · PageUp/PageDown step
       // between sections (via magGoto, which also drives the horizontal slide);
       // ↑/PageUp at the very top pulls the cover back.
