@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-28T20:31:06.456Z
+  Built: 2026-07-28T20:32:39.016Z
 -->
 
 <html lang="en">
@@ -3428,7 +3428,12 @@ html { -webkit-tap-highlight-color: transparent; }
 .imp-apply:hover:not(:disabled) { background: color-mix(in oklch, var(--red) 88%, #000); }
 .imp-apply:disabled { opacity: .45; cursor: not-allowed; }
 
-/* day-header entry point, sitting beside "Optimize route" */
+/* day-header entry point, paired with "Optimize route".
+   Both buttons carry margin-left:auto, and flexbox splits the free space
+   between the two auto margins — which drifts them apart. Only the first
+   of the pair pushes; the second pulls back against the .day-head gap so
+   the two sit tight together as one cluster at the right. */
+.day-head .import-btn + .optimize-btn { margin-left: -6px; }   /* 12px row gap − 6px */
 .import-btn {
   margin-left: auto; flex-shrink: 0;
   display: inline-flex; align-items: center; gap: 6px;
