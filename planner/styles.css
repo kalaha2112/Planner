@@ -1746,12 +1746,20 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     border-bottom: 2px solid var(--line);
     padding-bottom: 14px; margin-bottom: 4px; flex: none;
   }
-  /* The horizontal stage: one screen tall, in the vertical flow between Route and
-     Packing. The shared header (city title + linked picker) pins at its top; below
-     it a flex track carries the two panels side by side and slides one panel-width
-     per turn. A tall panel (transport & hotels) scrolls its own overflow. */
+  /* The horizontal stage: itinerary + transport & hotels side by side under one
+     shared, pinned city picker. The group is TWO screens tall; its inner .leaf-sticky
+     pins to the viewport for that whole range, and native vertical scroll through the
+     extra screen slides the two panels left↔right (JS maps scroll position to the
+     track's translateX in _onLedgerScroll). Because the slide is driven by the real
+     scroll position — not a wheel hijack — it is as smooth as the page scroll itself,
+     and Route above / Packing below stay ordinary free-scroll sections. */
   .leaf-group {
     position: relative;
+    height: 200vh; height: 200dvh;   /* 1 screen to read + 1 screen of horizontal slide travel */
+    background: var(--surface);
+  }
+  .leaf-sticky {
+    position: sticky; top: 0;
     height: 100vh; height: 100dvh;   /* re-fits the screen on every resize */
     overflow: hidden;
     display: flex; flex-direction: column;
@@ -1766,11 +1774,12 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .htrack {
     display: flex; width: 200%; height: 100%;
     transform: translateX(0);
-    transition: transform .5s cubic-bezier(.4, 0, .2, 1);
+    /* no CSS transition — the transform tracks the live scroll position each frame;
+       a transition would make the slide lag behind the scroll */
     will-change: transform;
   }
   /* each panel is one screen wide; it scrolls its own vertical overflow so a tall
-     section reads fully without breaking the slide */
+     section still reads fully */
   .leaf-group .ledger-leaf {
     flex: 0 0 50%; width: 50%;
     min-height: 0; height: 100%;
@@ -1779,7 +1788,6 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     background: var(--surface);
   }
   .leaf-group .leaf-inner { min-height: 100%; }   /* fill the panel when content is short */
-  @media (prefers-reduced-motion: reduce) { .htrack { transition: none; } }
   .leaf-head .eyebrow { margin-bottom: 6px; }
   .leaf-title { font-family: var(--serif); font-size: 34px; font-weight: 700; letter-spacing: -.015em; line-height: 1; color: var(--ink); }
   .leaf-sub { font-family: var(--script); font-style: italic; font-size: 14px; color: var(--green); margin-top: 6px; min-height: 17px; }

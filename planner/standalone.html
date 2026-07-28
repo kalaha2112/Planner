@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-27T21:47:59.314Z
+  Built: 2026-07-27T22:13:50.055Z
 -->
 
 <html lang="en">
@@ -2473,12 +2473,20 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     border-bottom: 2px solid var(--line);
     padding-bottom: 14px; margin-bottom: 4px; flex: none;
   }
-  /* The horizontal stage: one screen tall, in the vertical flow between Route and
-     Packing. The shared header (city title + linked picker) pins at its top; below
-     it a flex track carries the two panels side by side and slides one panel-width
-     per turn. A tall panel (transport & hotels) scrolls its own overflow. */
+  /* The horizontal stage: itinerary + transport & hotels side by side under one
+     shared, pinned city picker. The group is TWO screens tall; its inner .leaf-sticky
+     pins to the viewport for that whole range, and native vertical scroll through the
+     extra screen slides the two panels left↔right (JS maps scroll position to the
+     track's translateX in _onLedgerScroll). Because the slide is driven by the real
+     scroll position — not a wheel hijack — it is as smooth as the page scroll itself,
+     and Route above / Packing below stay ordinary free-scroll sections. */
   .leaf-group {
     position: relative;
+    height: 200vh; height: 200dvh;   /* 1 screen to read + 1 screen of horizontal slide travel */
+    background: var(--surface);
+  }
+  .leaf-sticky {
+    position: sticky; top: 0;
     height: 100vh; height: 100dvh;   /* re-fits the screen on every resize */
     overflow: hidden;
     display: flex; flex-direction: column;
@@ -2493,11 +2501,12 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .htrack {
     display: flex; width: 200%; height: 100%;
     transform: translateX(0);
-    transition: transform .5s cubic-bezier(.4, 0, .2, 1);
+    /* no CSS transition — the transform tracks the live scroll position each frame;
+       a transition would make the slide lag behind the scroll */
     will-change: transform;
   }
   /* each panel is one screen wide; it scrolls its own vertical overflow so a tall
-     section reads fully without breaking the slide */
+     section still reads fully */
   .leaf-group .ledger-leaf {
     flex: 0 0 50%; width: 50%;
     min-height: 0; height: 100%;
@@ -2506,7 +2515,6 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     background: var(--surface);
   }
   .leaf-group .leaf-inner { min-height: 100%; }   /* fill the panel when content is short */
-  @media (prefers-reduced-motion: reduce) { .htrack { transition: none; } }
   .leaf-head .eyebrow { margin-bottom: 6px; }
   .leaf-title { font-family: var(--serif); font-size: 34px; font-weight: 700; letter-spacing: -.015em; line-height: 1; color: var(--ink); }
   .leaf-sub { font-family: var(--script); font-style: italic; font-size: 14px; color: var(--green); margin-top: 6px; min-height: 17px; }
@@ -3924,10 +3932,7 @@ html { -webkit-tap-highlight-color: transparent; }
       // pure view state.
       this.magIdx = 0;              // 0 route · 1 itinerary · 2 transport&hotels · 3 packing&to-do
       this._magAnimating = false;
-      this.hPage = 0;               // itinerary(0) | transport&hotels(1) — the two panels of the pinned horizontal stage
-      this._hLock = false;          // true during a stage pin / page release, so wheel gestures don't stack
-      this._hx = null;              // live horizontal drag offset in px (null = settled, DOM holds a % transform)
-      this._hStartPage = null;      // the panel a drag began from (for the commit-past-threshold decision)
+      this.hPage = 0;               // itinerary(0) | transport&hotels(1) — the panel the horizontal slide is currently on
       // ---- app (≤700px): the phone twin of the ledger — an overview page with
       // entry cards that rise a sub-page up (Itinerary / Hotel / Transportation)
       // with a tab bar pinned on top. appStopIdx is the shared stop selection.
@@ -6761,7 +6766,7 @@ html { -webkit-tap-highlight-color: transparent; }
       <div class="ledger-stage">
         <div class="ledger-book${this.budgetOpen ? ' bill-open' : ''}" data-page="${page}">
           ${routeLeaf}
-          <div class="leaf-group">${sharedHead}<div class="hstrip"><div class="htrack" style="transform:translateX(-${(this.hPage || 0) * 50}%)">${daysLeaf}${planLeaf}</div></div></div>
+          <div class="leaf-group"><div class="leaf-sticky">${sharedHead}<div class="hstrip"><div class="htrack">${daysLeaf}${planLeaf}</div></div></div></div>
           ${packLeaf}
           <button class="ledger-edge prev" data-act="ledger-prev" title="Previous page" aria-label="Previous page">‹</button>
           <button class="ledger-edge next" data-act="ledger-next" title="Next page" aria-label="Next page">›</button>
@@ -6770,153 +6775,62 @@ html { -webkit-tap-highlight-color: transparent; }
       </div>`;
     }
 
-    // Navigate to section i. Route (0) and Packing (3) are full-height vertical
-    // sections — scroll the window to them. Itinerary (1) and Transport & Hotels
-    // (2) are the two panels of the pinned horizontal stage (.leaf-group): pin the
-    // stage to fill the viewport, then slide the track to that panel.
+    // Navigate to section i by scrolling the window there. Route (0) and Packing (3)
+    // are ordinary full-height sections. Itinerary (1) and Transport & Hotels (2) are
+    // the two panels of the horizontal stage: the stage is two screens tall and its
+    // sticky child pins across that range, so scrolling to the stage's top shows the
+    // itinerary and scrolling one screen further slides across to transport. The
+    // scroll listener (_onLedgerScroll) maps the live scroll position to the slide.
     magGoto(i) {
       if (!this._webMag()) return;
       i = Math.max(0, Math.min(3, i));
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const y = window.scrollY || 0;
+      let top;
       if (i === 1 || i === 2) {
-        this._pinGroup();
-        this._setHPage(i === 1 ? 0 : 1);
-        return;
+        const group = this.root.querySelector('.leaf-group'); if (!group) return;
+        const gTop = y + group.getBoundingClientRect().top;
+        const range = group.offsetHeight - window.innerHeight;   // the extra screen = the slide travel
+        top = gTop + (i === 2 ? range : 0);
+      } else {
+        const sec = this.root.querySelector('.ledger-leaf[data-leaf="' + i + '"]');
+        if (!sec) return;
+        top = y + sec.getBoundingClientRect().top;
       }
-      const sec = this.root.querySelector('.ledger-leaf[data-leaf="' + i + '"]');
-      if (!sec) return;
-      this.magIdx = i; this._syncLeafClasses();
-      sec.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+      window.scrollTo({ top: Math.round(top), behavior: reduced ? 'auto' : 'smooth' });
     }
-    // scroll the horizontal stage to fill the viewport (its top at 0), so the
-    // wheel handler can take over and slide between the two panels
-    _pinGroup() {
-      const group = this.root.querySelector('.leaf-group'); if (!group) return;
-      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      const top = Math.round((window.scrollY || 0) + group.getBoundingClientRect().top);
-      if (Math.abs((window.scrollY || 0) - top) < 2) return;   // already pinned
-      this._hLock = true;
-      window.scrollTo({ top, behavior: reduced ? 'auto' : 'smooth' });
-      setTimeout(() => { this._hLock = false; }, reduced ? 0 : 480);
-    }
-    // Settle the horizontal track onto panel n (0 itinerary · 1 transport) with a
-    // smooth glide and land it at the top; updates the active tab, nudges the day
-    // map, plays the entrance. Settled position uses a % transform so it re-fits on
-    // resize; live dragging (_ledgerWheel) uses px and _hx.
-    _setHPage(n) {
-      n = Math.max(0, Math.min(1, n));
-      const days = this.root.querySelector('.leaf-days');
-      const plan = this.root.querySelector('.leaf-plan');
+    // Scroll-driven: maps the live scroll position to the horizontal slide and the
+    // active section. Called (rAF-coalesced) on every scroll — the slide is as smooth
+    // as the page scroll because it IS the page scroll. No wheel hijack, no pinning
+    // fight, so it can't overshoot to Packing before reaching Transport.
+    _onLedgerScroll() {
+      if (!this._webMag()) return;
+      const group = this.root.querySelector('.leaf-group');
       const track = this.root.querySelector('.htrack');
-      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      const changed = n !== this.hPage;
-      this.hPage = n;
-      this._hx = null;   // settled → the DOM holds a % transform; re-init _hx on next drag
-      if (track) {
-        track.style.transition = reduced ? 'none' : 'transform .38s cubic-bezier(.4, 0, .2, 1)';
-        track.style.transform = 'translateX(-' + (n * 50) + '%)';
-      }
-      const incoming = n === 0 ? days : plan;
-      if (incoming) incoming.scrollTop = 0;         // arrive at the top of the section
-      this.magIdx = n === 0 ? 1 : 2;
-      this._syncLeafClasses();
-      if (n === 0 && this.dayMap) { this.dayMap.invalidateSize(); this.scheduleDayMap(); }
-      if (changed && this._introParked && incoming) this._playEnter(incoming.querySelector('.leaf-inner') || incoming);
-    }
-    // when the drag stops, commit to the next panel if it was pulled past a small
-    // threshold in the drag direction, otherwise spring back — then glide home
-    _snapDrag(panelW) {
-      if (this._hx == null || !panelW) return;
-      const from = this._hStartPage != null ? this._hStartPage : this.hPage;
-      const commit = panelW * 0.15;                // pulled ~a seventh of the way carries you across (one mouse notch), a tiny nudge springs back
-      const n = from === 0 ? (this._hx >= commit ? 1 : 0)
-                           : (this._hx <= panelW - commit ? 0 : 1);
-      this._hStartPage = null;
-      this._setHPage(n);
-    }
-    // live tab/folio feedback as the track is dragged past the half-way line
-    _syncDragLive(panelW) {
-      const mag = this._hx >= panelW / 2 ? 2 : 1;
-      if (mag !== this.magIdx) { this.magIdx = mag; this._syncLeafClasses(); }
-    }
-    // hand scrolling back to the vertical page at a panel's outer edge — up to
-    // Route, down to Packing
-    _leaveGroup(dir) {
-      const sec = this.root.querySelector(dir > 0 ? '.leaf-pack' : '.leaf-route');
-      if (!sec) return;
-      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      this._hLock = true;
-      this.magIdx = dir > 0 ? 3 : 0; this._syncLeafClasses();
-      sec.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
-      setTimeout(() => { this._hLock = false; }, reduced ? 0 : 480);
-    }
-    // Wheel driver for the web layout. Route/Packing scroll the window freely. Once
-    // the horizontal stage covers the viewport it pins and captures the wheel, then
-    // maps scroll delta 1:1 onto the track's horizontal position — the two panels
-    // drag continuously left/right and settle onto the nearest one when you stop. A
-    // panel scrolls its own vertical overflow first at its edge; beyond the outer
-    // edges (itinerary-top / transport-bottom) scrolling releases to the page.
-    _ledgerWheel(e) {
-      if (!this._webMag() || !this._introParked || this._anyModalOpen()) return;
-      const group = this.root.querySelector('.leaf-group'); if (!group) return;
-      const days = this.root.querySelector('.leaf-days');
-      const plan = this.root.querySelector('.leaf-plan');
-      const track = this.root.querySelector('.htrack');
-      const hstrip = this.root.querySelector('.hstrip');
-      if (!days || !plan || !track || !hstrip) return;
-      const dir = e.deltaY > 0 ? 1 : (e.deltaY < 0 ? -1 : 0);
-      if (!dir) return;
+      if (!group || !track) return;
       const vh = window.innerHeight;
-      const gr = group.getBoundingClientRect();
-      const filled = gr.top <= 2 && gr.bottom >= vh - 2;
-
-      if (!filled) {
-        // approaching the stage from route/packing: once it covers half the
-        // screen, snap it to fill and engage; otherwise free vertical scroll
-        const cover = Math.min(gr.bottom, vh) - Math.max(gr.top, 0);
-        if (cover >= vh * 0.5 && !this._hLock) { e.preventDefault(); this._pinGroup(); }
-        return;
-      }
-
-      if (this._hLock) { e.preventDefault(); return; }   // mid pin / release
-      const panelW = hstrip.clientWidth || 1;
-      // normalize wheel delta to pixels (mouse wheels can report line/page units)
-      const dy = e.deltaMode === 1 ? e.deltaY * 16 : (e.deltaMode === 2 ? e.deltaY * vh : e.deltaY);
-      if (this._hx == null) this._hx = this.hPage * panelW;   // sync px offset from the settled page
-
-      const atItin = this._hx <= 0.5;
-      const atTransp = this._hx >= panelW - 0.5;
-      const daysMax = days.scrollHeight - days.clientHeight;
-      const planMax = plan.scrollHeight - plan.clientHeight;
-      // at a settled panel, spend the panel's own vertical overflow first, and past
-      // the outer edges hand the scroll back to the vertical page
-      if (atItin) {
-        if (dir < 0) {
-          if (days.scrollTop > 0.5) { e.preventDefault(); days.scrollTop += dy; return; }
-          e.preventDefault(); this._leaveGroup(-1); return;         // itinerary top → up to Route
+      const r = group.getBoundingClientRect();
+      const range = group.offsetHeight - vh;                     // one screen of slide travel
+      let progress = range > 0 ? (-r.top) / range : 0;           // 0 itinerary … 1 transport
+      progress = Math.max(0, Math.min(1, progress));
+      track.style.transform = 'translateX(' + (-progress * 50) + '%)';   // 50% of a 200%-wide track = one panel
+      this.hPage = progress >= 0.5 ? 1 : 0;
+      // active section: Route while the stage is still low, Packing once it's high,
+      // otherwise the stage half the slide is on
+      let cur;
+      if (r.top >= vh * 0.5) cur = 0;
+      else if (r.bottom <= vh * 0.5) cur = 3;
+      else cur = progress >= 0.5 ? 2 : 1;
+      if (cur !== this.magIdx) {
+        this.magIdx = cur;
+        this._syncLeafClasses();
+        if (cur === 0 && this.mainLeafletMap) { this.mainLeafletMap.invalidateSize(); this.renderMainMap(); }
+        if (cur === 1 && this.dayMap) { this.dayMap.invalidateSize(); this.scheduleDayMap(); }
+        if (this._introParked && (cur === 0 || cur === 3)) {
+          const el = this.root.querySelector(cur === 0 ? '.leaf-route' : '.leaf-pack');
+          if (el) this._playEnter(el.querySelector('.leaf-inner') || el);
         }
-        if (days.scrollTop < daysMax - 0.5) { e.preventDefault(); days.scrollTop += dy; return; }
-        // itinerary at bottom → begin dragging right
-      } else if (atTransp) {
-        if (dir > 0) {
-          if (plan.scrollTop < planMax - 0.5) { e.preventDefault(); plan.scrollTop += dy; return; }
-          e.preventDefault(); this._leaveGroup(1); return;          // transport bottom → down to Packing
-        }
-        if (plan.scrollTop > 0.5) { e.preventDefault(); plan.scrollTop += dy; return; }
-        // transport at top → begin dragging left
       }
-
-      // continuous horizontal drag: follow the wheel 1:1 (with a little gain so a
-      // mouse notch makes real progress), settle onto the nearest panel on stop
-      e.preventDefault();
-      if (this._hStartPage == null) this._hStartPage = this.hPage;
-      const GAIN = 2.4;
-      this._hx = Math.max(0, Math.min(panelW, this._hx + dy * GAIN));
-      track.style.transition = 'none';
-      track.style.transform = 'translateX(' + (-this._hx) + 'px)';
-      this._syncDragLive(panelW);
-      clearTimeout(this._hSnapT);
-      this._hSnapT = setTimeout(() => this._snapDrag(panelW), 140);
     }
     _syncLeafClasses() {
       const book = this.root.querySelector('.ledger-book'); if (!book) return;
@@ -6925,43 +6839,14 @@ html { -webkit-tap-highlight-color: transparent; }
         el.classList.toggle('active', Number(el.dataset.leaf) === this.magIdx));
       book.querySelectorAll('.ledger-tab').forEach(el => el.classList.toggle('on', Number(el.dataset.i) === this.magIdx));
     }
-    // Web layout: one IntersectionObserver tracks which section fills the viewport
-    // — Route, the horizontal stage, or Packing. The stage resolves to itinerary
-    // or transport by the current horizontal page. On change it updates magIdx +
-    // the active tab, nudges that section's Leaflet map, and plays its entrance
-    // (once parked). Re-observed after every render; no-op on the phone app.
+    // Web layout: publish the shared header height and paint the initial slide/active
+    // state from the current scroll position. Re-run after every render; no-op on app.
     _watchLedgerSections() {
-      if (!this._webMag() || !('IntersectionObserver' in window)) return;
-      this._hx = null;   // the track was re-rendered with a % transform; re-sync the drag offset on next wheel
+      if (!this._webMag()) return;
       const sh = this.root.querySelector('.leaf-head-shared');
       if (sh) document.documentElement.style.setProperty('--shared-head-h', sh.offsetHeight + 'px');
-      if (!this._secIO) this._secIO = new IntersectionObserver(
-        () => this._syncActiveSection(), { threshold: [0, .25, .5, .75, 1] });
-      this._secIO.disconnect();
-      ['.leaf-route', '.leaf-group', '.leaf-pack'].forEach(sel => {
-        const el = this.root.querySelector(sel); if (el) this._secIO.observe(el);
-      });
-    }
-    _syncActiveSection() {
-      const route = this.root.querySelector('.leaf-route');
-      const group = this.root.querySelector('.leaf-group');
-      const pack = this.root.querySelector('.leaf-pack');
-      if (!route || !group || !pack) return;
-      const vh = window.innerHeight;
-      const vis = el => { const r = el.getBoundingClientRect(); return Math.min(r.bottom, vh) - Math.max(r.top, 0); };
-      const rv = vis(route), gv = vis(group), pv = vis(pack);
-      let cur;
-      if (gv >= rv && gv >= pv) cur = this.hPage === 0 ? 1 : 2;   // the stage → itinerary / transport
-      else if (rv >= pv) cur = 0; else cur = 3;
-      if (cur === this.magIdx) return;
-      this.magIdx = cur;
-      this._syncLeafClasses();
-      if (cur === 0 && this.mainLeafletMap) { this.mainLeafletMap.invalidateSize(); this.renderMainMap(); }
-      if (cur === 1 && this.dayMap) { this.dayMap.invalidateSize(); this.scheduleDayMap(); }
-      if (this._introParked) {
-        const el = cur === 0 ? route : cur === 3 ? pack : (cur === 1 ? this.root.querySelector('.leaf-days') : this.root.querySelector('.leaf-plan'));
-        if (el) this._playEnter(el.querySelector('.leaf-inner') || el);
-      }
+      this.magIdx = -1;          // force _onLedgerScroll to re-apply tab/map for the current section
+      this._onLedgerScroll();
     }
 
     /* ============================================================
@@ -7097,12 +6982,14 @@ html { -webkit-tap-highlight-color: transparent; }
       if (this.appPage === 1 && this.dayMap) { this.dayMap.invalidateSize(); this.scheduleDayMap(); }
     }
     initLedgerNav() {
-      // Route and Packing scroll the window freely; the itinerary + transport &
-      // hotels stage in between pins to the viewport and turns wheel-scrolling
-      // into a horizontal slide between its two panels (see _ledgerWheel).
-      // Attached non-passive so the handler can preventDefault while the stage is
-      // engaged. Listeners are wired once (init) — they no-op off the web layout.
-      window.addEventListener('wheel', (e) => this._ledgerWheel(e), { passive: false });
+      // The whole web layout is one native vertical scroll; the itinerary +
+      // transport & hotels stage slides horizontally as you scroll through its
+      // pinned range (see _onLedgerScroll). A rAF-coalesced scroll listener keeps
+      // the slide in lock-step with the scroll. Wired once (init) — no-op off web.
+      window.addEventListener('scroll', () => {
+        if (this._scrollRaf) return;
+        this._scrollRaf = requestAnimationFrame(() => { this._scrollRaf = null; this._onLedgerScroll(); });
+      }, { passive: true });
       // Keyboard: Escape clears the packing panel; ↑/↓ · PageUp/PageDown step
       // between sections (via magGoto, which also drives the horizontal slide);
       // ↑/PageUp at the very top pulls the cover back.
