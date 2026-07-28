@@ -41,7 +41,9 @@ node build.js --watch    # keep standalone.html in sync while you edit the sourc
 directly (a `file://` address). It's a **generated** file — edit the sources (`app.js`, `styles.css`,
 …), not `standalone.html`; run `node build.js` (or leave `--watch` running) and your edits flow into
 it. Map tiles + address geocoding still need internet, same as the served version.
-(The PWA wiring below is stripped from this build — `file://` pages can't register a service worker.)
+(The PWA wiring below is stripped from this build — `file://` pages can't register a service worker.
+That also means no share-target registration: in the single file, import shared posts by pasting
+or dropping them.)
 
 ## Install as an app (PWA)
 
@@ -51,6 +53,9 @@ standalone display, and safe-area handling for notched phones.
 - **Install** — serve over `https://` (or `localhost`) and use the browser's *Install app* /
   *Add to Home Screen* action. It launches full-screen in its own window, with the paper-shell
   theme color and the route-pin icon (`icons/`).
+- **Share target** — once installed on Android, Planner shows up in the system share sheet, so a
+  RedNote / TikTok / Instagram post can be sent straight to it (see
+  [Importing shared posts](#importing-shared-posts)).
 - **Offline** — `sw.js` precaches the app shell (HTML/CSS/JS, vendored Leaflet + TopoJSON,
   icons) with a **network-first** strategy: online you always run the latest build; offline the
   last-seen build boots and your trips load from `localStorage` as usual. Map tiles you've
@@ -124,6 +129,9 @@ alter publication supabase_realtime add table public.shared_state;
 - **Itinerary modal** — month calendar of the stay; per-day timed activity items (time, text,
   address → Google Maps, note, cost); an **outfit "closet"** (add by click / paste / drop, with a
   canvas background-knockout) whose stickers drag onto calendar days.
+- **Import from a shared post** — send a RedNote / TikTok / Instagram post to the app (or paste
+  it) and it pulls out the places, times, addresses and prices, then drops the ones you tick onto
+  a chosen day. See [Importing shared posts](#importing-shared-posts).
 - **Optimize route** — a one-click optimizer reorders the selected day's activities to remove
   backtracking, using each activity's geocoded address (nearest-neighbour + 2-opt over the pins).
   It keeps the schedule chronological (reassigns existing times in order), reports how much shorter
@@ -136,11 +144,60 @@ alter publication supabase_realtime add table public.shared_state;
 - **Persistence** — autosaves to `localStorage` (`europe-trip-state-v1`); **Export / Import** as
   JSON; **Reset** restores the default route.
 
+## Importing shared posts
+
+Travel research arrives as a RedNote note, a TikTok video or an Instagram reel. The planner takes
+that share and turns it into itinerary rows — **entirely in the browser**. Nothing is fetched from
+those platforms (they block cross-origin reads of their pages, and there's no API key here): the
+app reads only the text the share sheet or your clipboard hands over. That's enough, because the
+posts people save for travel are almost always structured lists.
+
+**Three ways in**
+
+1. **Share sheet → Planner** (installed PWA on Android). `manifest.webmanifest` declares a
+   `share_target`, so Planner appears in the system share sheet. The share arrives as
+   `?title=&text=&url=` on the app's start URL; `initShareTarget()` consumes it, scrubs the query
+   out of the address bar, and opens the review sheet already filled in.
+   *iOS/iPadOS doesn't implement Web Share Target* — there, use **Copy link** / **Copy** in the
+   post's menu and paste (route 2).
+2. **Paste** — the inbox button in the top-right cluster (or **Import post** on a day header)
+   opens the sheet; paste into the box, or hit **Paste from clipboard**. A paste extracts
+   immediately.
+3. **Drop** — drag a link or selected text onto the box.
+
+**What it extracts** (`social-import.js`, a pure module with no app dependencies)
+
+| From the post | Becomes |
+|---|---|
+| `📍1. Blue Bottle Coffee`, `• Tram 28`, `☕️ Fuglen` | an activity |
+| `地址：…` / `Address: …`, or `Name, 12 Some St, City` | the activity's address (→ map pin, Google Maps link) |
+| `9:00`, `12:30`, `上午9点`, `7pm` at the start of a line | the activity's time |
+| `营业时间：8:00-19:00`, `推荐理由：…`, a trailing ` — go early` | the activity's note |
+| `$15` | the activity's cost |
+| `Day 2`, `第三天`, `2日目` | which day each activity lands on |
+| `#kyoto`, city names in the text | the stay it's aimed at, when it matches one of your stops |
+
+Lines are scored on those signals and only clear the bar with real evidence, so captions and
+comments don't turn into fake stops. Everything found is shown **for review** — editable, with a
+tick per row, a city + day target, and a "keep the post's N days" option — and nothing touches the
+itinerary until you press **Add**. A re-import won't duplicate a place already on that day, and
+⌘/Ctrl-Z undoes the whole batch.
+
+Two deliberate limits:
+
+- **Only `$` amounts become a cost.** The Activities budget line is plain dollars, so `¥1200` or
+  `€18` is kept as a note rather than silently distorting the total.
+- **Images aren't read** — no OCR. A share that's only a link yields one row (the post itself) so
+  you can keep it as a to-check reminder; paste the caption for a full read.
+
+Imported rows carry a small **RedNote / TikTok / Instagram** chip linking back to the post.
+
 ## Files
 
 | File | Purpose |
 |------|---------|
 | `index.html` | Document shell — fonts, local Leaflet, PWA wiring, mounts `#app`. |
+| `social-import.js` | Shared-post extractor — text in, candidate activities out. Pure, offline, no deps. |
 | `vendor/leaflet/` | Bundled Leaflet 1.9.4 (js/css/images) — no CDN dependency. |
 | `styles.css` | Wanderbook-reskinned design tokens + all component styles. |
 | `app.js` | State, computations, rendering, and interactions (vanilla, no framework). |

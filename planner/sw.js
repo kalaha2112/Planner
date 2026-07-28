@@ -16,7 +16,7 @@
    ============================================================ */
 'use strict';
 
-const VERSION = 'v86';
+const VERSION = 'v87';
 const SHELL_CACHE = `planner-shell-${VERSION}`;
 const FONT_CACHE = 'planner-fonts';
 const TILE_CACHE = 'planner-tiles';
@@ -27,6 +27,7 @@ const SHELL_ASSETS = [
   './index.html',
   './styles.css',
   './app.js',
+  './social-import.js',
   './manifest.webmanifest',
   './vendor/leaflet/leaflet.css',
   './vendor/leaflet/leaflet.js',

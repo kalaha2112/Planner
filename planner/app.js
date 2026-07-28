@@ -500,6 +500,10 @@
 
   const WEEK = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
+  // where an imported activity came from — stamped on the item by the social
+  // importer and shown as a small chip on the row
+  const SRC_LABEL = { rednote: 'RedNote', tiktok: 'TikTok', instagram: 'Instagram' };
+
   /* ---- icons (Lucide-style) ---- */
   const I = {
     undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
@@ -517,7 +521,9 @@
     clipboard: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>',
     sticker: '<rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
     route: '<rect x="3" y="4" width="18" height="14" rx="3"/><path d="M3 10h18"/><rect x="7" y="6" width="4" height="3" rx="1"/><rect x="13" y="6" width="4" height="3" rx="1"/><path d="M7 18l-2 3"/><path d="M17 18l2 3"/>',
-    home: '<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 9.5V20a1 1 0 0 0 1 1H10v-6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v6h3.5a1 1 0 0 0 1-1V9.5"/>'
+    home: '<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 9.5V20a1 1 0 0 0 1 1H10v-6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v6h3.5a1 1 0 0 0 1-1V9.5"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 1.9"/>',
+    inbox: '<path d="M4 13h4l1.6 3h4.8l1.6-3h4"/><path d="M5.4 5.6 3.2 12.3A2 2 0 0 0 3 13v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4a2 2 0 0 0-.2-.7l-2.2-6.7A2 2 0 0 0 16.7 4H7.3a2 2 0 0 0-1.9 1.6z"/>'
   };
   const svg = (paths, opt = {}) => {
     const { w = 16, h = 16, sw = 2, fill = 'none', stroke = 'currentColor' } = opt;
@@ -549,6 +555,14 @@
       this._lastCoordKey = '';
       this._history = [];
       this.stickerPanelOpen = false;
+      // ---- social import (shared RedNote / TikTok / Instagram post → itinerary) ----
+      this.importOpen = false;
+      this.importRaw = '';         // the shared text, as pasted / handed over by the share sheet
+      this.importResult = null;    // SocialImport.parse() output, or null before extraction
+      this.importStopIdx = null;   // which city the picked activities land in
+      this.importDay = 0;          // which day of that stay
+      this.importUseDays = true;   // honour "Day 1 / Day 2" headers found in the post
+      this.importMsg = '';         // one-line status under the paste box
       // ---- web ledger (≥701px): a vertical stack of full-width leaves —
       // scrolling down slides the next page up from below, the same motion
       // as the intro→trip scroll. Which leaf is open + the slide lock are
@@ -711,6 +725,7 @@
       this.initIntro();
       this.initLedgerNav();
       this.initTouchPointer();
+      this.initShareTarget();   // ?title=&text=&url= from the PWA share sheet
       // crossing the mobile-map breakpoint (resizing an iPad window, rotating)
       // swaps the whole layout live: ≤700px the app page, ≥701px the web ledger.
       // Leaving the ledger, its always-open leaf selections must not linger as
@@ -830,6 +845,7 @@
       ta.innerHTML = `
         <button class="tool-btn" data-act="undo" title="Undo (⌘Z)" aria-label="Undo" disabled>${svg(I.undo)}</button>
         <button class="tool-btn sync-toggle-btn" data-act="open-sync" title="Sync across devices" aria-label="Sync across devices"><span class="sync-dot s-off"></span>${svg(I.sync)}</button>
+        <button class="tool-btn import-toggle-btn" data-act="open-import" title="Import a shared post" aria-label="Import a shared post">${svg(I.inbox)}</button>
         <button class="tool-btn sticker-toggle-btn" data-act="toggle-stickers" title="Memories" aria-label="Memories">${svg(I.sticker)}</button>
         <button class="theme-btn" data-act="toggle-theme" aria-label="Toggle dark mode" title="Toggle dark mode">
           <svg class="ic-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
@@ -858,7 +874,7 @@
       // modals — only the bill and the floating panels count as "open" there
       // app itinerary/accom/transport now live on always-rendered leaves too
       // (not modals), so only the bill and the floating panels count as "open"
-      return this.syncOpen || this.budgetOpen || this.stickerPanelOpen;
+      return this.syncOpen || this.budgetOpen || this.stickerPanelOpen || this.importOpen;
     }
     // sync pulls must not clobber content mid-edit. The app blocks while an
     // editing modal is open; the ledger's leaves are always open, so there we
@@ -885,6 +901,13 @@
       if (dot) dot.className = 'sync-dot s-' + (this.isLinked() ? this._syncStatus : 'off');
       const memBtn = ta.querySelector('.sticker-toggle-btn');
       if (memBtn) memBtn.classList.toggle('active', this.stickerPanelOpen);
+      const impBtn = ta.querySelector('.import-toggle-btn');
+      if (impBtn) {
+        impBtn.classList.toggle('active', this.importOpen);
+        // unlike sync, importing is useful on every page — it only steps aside
+        // for another open dialog
+        impBtn.style.display = (this._anyModalOpen() && !this.importOpen) ? 'none' : '';
+      }
       const themeBtn = ta.querySelector('[data-act="toggle-theme"]');
       if (themeBtn) themeBtn.setAttribute('aria-pressed', String(document.documentElement.getAttribute('data-theme') === 'dark'));
     }
@@ -1280,7 +1303,8 @@
       this.modalEl.innerHTML =
         this.renderStickerPanel() +
         this.renderBudgetModal(budget, travelers, nights) +
-        this.renderSyncModal();
+        this.renderSyncModal() +
+        this.renderImportModal();
       this.mountDayMap();
       this.updateTopActions();   // sticker toggle / sync-modal actions change cluster state
     }
@@ -2899,6 +2923,205 @@
       this.bump();
     }
 
+    /* ============================================================
+       SOCIAL IMPORT — a shared post becomes itinerary rows
+       ------------------------------------------------------------
+       Travel research now arrives as a RedNote note, a TikTok video
+       or an Instagram reel. Those apps block cross-origin reads of
+       their pages, so nothing here fetches anything: the app takes
+       the text the SHARE SHEET hands over (or a paste), runs it
+       through social-import.js, and shows the places it found for
+       review before they land on a day.
+
+       Three ways in, all funnelling through receiveShare():
+         · the PWA share target  — manifest `share_target`, arriving
+           as ?title=&text=&url= on boot (initShareTarget)
+         · paste / clipboard     — the import dialog's box
+         · drop                  — text or a link dropped on the box
+       ============================================================ */
+    // Vocabulary the extractor matches a post's city against: this trip's
+    // stops first (so "Kyoto" resolves to YOUR Kyoto), then the atlas.
+    importCityList() {
+      const names = [];
+      const seen = new Set();
+      const add = (c) => { const k = normKey(c); if (k && !seen.has(k)) { seen.add(k); names.push(c); } };
+      Object.values(this.data.trips || {}).forEach(t => (t.stops || []).forEach(s => { if (s.city) add(s.city.trim()); }));
+      Object.keys(CITY_MAP).forEach(add);
+      return names;
+    }
+    importStopDays() {
+      const stop = this.importStopIdx != null ? this.currentTrip().stops[this.importStopIdx] : null;
+      return stop ? Math.max(1, Number(stop.nights) || 1) : 1;
+    }
+    openImport(opts = {}) {
+      const trip = this.currentTrip();
+      if (opts.raw != null) { this.importRaw = opts.raw; this.importResult = null; this.importMsg = ''; }
+      const n = trip.stops.length;
+      if (n) {
+        // default target: whatever city/day is already in focus
+        const s = opts.stopIdx != null ? opts.stopIdx
+          : this.openStopIdx != null ? this.openStopIdx
+          : (this.appStopIdx || 0);
+        this.importStopIdx = Math.max(0, Math.min(n - 1, s));
+        const d = opts.day != null ? opts.day : (this.activeDay != null ? this.activeDay : 0);
+        this.importDay = Math.max(0, Math.min(this.importStopDays() - 1, d));
+      } else { this.importStopIdx = null; this.importDay = 0; }
+      this.importOpen = true;
+      if (opts.extract && (this.importRaw || '').trim()) this.runImportExtract();
+      else this.bumpModal();
+    }
+    closeImport() { this.importOpen = false; this.importMsg = ''; this.bumpModal(); }
+    // A share payload from any of the three routes in.
+    receiveShare(payload = {}) {
+      const title = (payload.title || '').trim();
+      const text = (payload.text || '').trim();
+      const url = (payload.url || '').trim();
+      const parts = [];
+      if (title && !text.includes(title)) parts.push(title);
+      if (text) parts.push(text);
+      if (url && !text.includes(url)) parts.push(url);
+      const raw = parts.join('\n').trim();
+      if (!raw) return false;
+      this.openImport({ raw, extract: true });
+      return true;
+    }
+    // PWA share target: Android's share sheet opens the app at
+    // ?title=…&text=…&url=… (see manifest.webmanifest). Consume the payload,
+    // then scrub it from the address bar so a refresh doesn't re-import it.
+    initShareTarget() {
+      let params;
+      try { params = new URLSearchParams(location.search); } catch (e) { return; }
+      const payload = { title: params.get('title') || '', text: params.get('text') || '', url: params.get('url') || '' };
+      const bare = params.get('import');   // the "Import a shared post" app shortcut
+      if (!payload.title && !payload.text && !payload.url && !bare) return;
+      try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
+      if (!this.receiveShare(payload) && bare) this.openImport({ raw: '' });
+    }
+    runImportExtract() {
+      const raw = (this.importRaw || '').trim();
+      this.importMsg = '';
+      if (!raw) {
+        this.importResult = null;
+        this.importMsg = 'Nothing to read yet — paste the shared post, or just its link.';
+        this.bumpModal(); return;
+      }
+      const SI = window.SocialImport;
+      if (!SI) {
+        this.importResult = null;
+        this.importMsg = 'The importer didn’t load. Reload the app and try again.';
+        this.bumpModal(); return;
+      }
+      const res = SI.parse(raw, { cities: this.importCityList() });
+      this.importResult = res;
+      // aim at the city the post is about, when it's one of this trip's stops
+      const stops = this.currentTrip().stops;
+      if (res.city) {
+        const i = stops.findIndex(s => normKey(s.city) === normKey(res.city));
+        if (i >= 0) {
+          this.importStopIdx = i;
+          this.importDay = Math.max(0, Math.min(this.importStopDays() - 1, this.importDay));
+        }
+      }
+      this.importUseDays = res.dayCount > 1;
+      if (res.activities.length === 1 && res.activities[0].signals.indexOf('link') >= 0) {
+        this.importMsg = 'No places stood out — only the link came through. Paste the post’s caption or note text for a full read.';
+      }
+      this.bumpModal();
+    }
+    importFind(id) {
+      const list = (this.importResult && this.importResult.activities) || [];
+      return list.find(a => a.id === id) || null;
+    }
+    importToggle(id) { const a = this.importFind(id); if (a) { a.use = !a.use; this.bumpModal(); } }
+    importToggleAll() {
+      const list = (this.importResult && this.importResult.activities) || [];
+      const on = !list.every(a => a.use);
+      list.forEach(a => { a.use = on; });
+      this.bumpModal();
+    }
+    importSetField(id, key, v) {
+      const a = this.importFind(id); if (!a) return;
+      a[key] = v;
+      if (key === 'text' && !v.trim()) a.use = false;
+      this.bumpModal();
+    }
+    async importPasteFromClipboard() {
+      if (!(navigator.clipboard && navigator.clipboard.readText)) {
+        this.importMsg = 'This browser won’t hand over the clipboard — paste into the box with ⌘V / long-press → Paste.';
+        this.bumpModal(); return;
+      }
+      try {
+        const txt = await navigator.clipboard.readText();
+        if (!txt || !txt.trim()) {
+          this.importMsg = 'Clipboard is empty — copy the post (or its link) first.';
+          this.bumpModal(); return;
+        }
+        this.importRaw = txt;
+        this.runImportExtract();
+      } catch (err) {
+        this.importMsg = 'Couldn’t read the clipboard — paste into the box instead.';
+        this.bumpModal();
+      }
+    }
+    // Commit the ticked rows onto the chosen stay. Times ride along in the
+    // item's `time` field, so the day optimizer keeps them in order.
+    importApply() {
+      const res = this.importResult;
+      const trip = this.currentTrip();
+      if (!res) return;
+      if (this.importStopIdx == null || !trip.stops[this.importStopIdx]) {
+        this.importMsg = 'Add a city to the route first — there’s nowhere to put these yet.';
+        this.bumpModal(); return;
+      }
+      const picked = res.activities.filter(a => a.use && (a.text || '').trim());
+      if (!picked.length) {
+        this.importMsg = 'Tick at least one place to add.';
+        this.bumpModal(); return;
+      }
+      const stop = trip.stops[this.importStopIdx];
+      this.snapshot();
+      this.ensureItinerary(stop);
+      const maxDay = this.importStopDays() - 1;
+      const useDays = this.importUseDays && res.dayCount > 1;
+      const src = res.source && res.source !== 'note' ? res.source : '';
+      let added = 0, skipped = 0;
+      picked.forEach(a => {
+        const offset = useDays && a.day != null ? a.day : 0;
+        const dayIdx = Math.max(0, Math.min(maxDay, this.importDay + offset));
+        const day = stop.itinerary[dayIdx] || (stop.itinerary[dayIdx] = { items: [], outfits: [] });
+        if (!Array.isArray(day.items)) day.items = [];
+        const text = a.text.trim();
+        // re-importing the same post shouldn't duplicate what's already there
+        if (day.items.some(it => normKey(it.text) === normKey(text))) { skipped++; return; }
+        day.items.push({
+          time: (a.time || '').trim(),
+          text,
+          address: (a.address || '').trim(),
+          note: (a.note || '').trim(),
+          cost: (a.cost || '').trim(),
+          src,
+          srcUrl: res.url || ''
+        });
+        added++;
+      });
+      const landedOn = this.importDay;
+      this.importOpen = false;
+      this.importResult = null;
+      this.importRaw = '';
+      this.importMsg = '';
+      const label = res.sourceLabel || 'the shared post';
+      // arriving straight from the share sheet, the intro page is still up —
+      // step past it so the day just filled is what you actually land on
+      if (!this._introParked) this.skipIntro();
+      this.openStop(this.importStopIdx);            // navigate to that city's itinerary
+      this.activeDay = landedOn;
+      this._optimizeNote = added
+        ? { kind: 'ok', text: `Added ${added} place${added === 1 ? '' : 's'} from ${label}${skipped ? ` · ${skipped} already on the day` : ''}. Pins appear as the addresses resolve; ⌘Z undoes the lot.` }
+        : { kind: 'warn', text: `Everything from ${label} was already on this day.` };
+      this.bumpModal();
+      this.scheduleSave();
+    }
+
     /* ---------- outfit closet ---------- */
     ensureCloset() { const t = this.currentTrip(); if (!Array.isArray(t.closet)) t.closet = []; return t.closet; }
     dayOutfits(stop, dayIdx) { this.ensureItinerary(stop); const d = stop.itinerary[dayIdx] || (stop.itinerary[dayIdx] = { items: [], outfits: [] }); if (!Array.isArray(d.outfits)) d.outfits = []; return d.outfits; }
@@ -3118,10 +3341,12 @@
       this.modalEl.innerHTML = web
         ? this.renderStickerPanel() +                          // leaves carry itinerary/accom/transport
           this.renderBudgetModal(budget, travelers, nights) +  // the bill prints over the panel area
-          this.renderSyncModal()
+          this.renderSyncModal() +
+          this.renderImportModal()
         : this.renderStickerPanel() +                          // app leaves carry itinerary/accom/transport
           this.renderBudgetModal(budget, travelers, nights) +
-          this.renderSyncModal();
+          this.renderSyncModal() +
+          this.renderImportModal();
 
       // re-attach persistent aside map node
       const holder = this.root.querySelector('#map-holder');
@@ -4163,9 +4388,13 @@
           <div class="mid">
             <input class="text" value="${escA(it.text)}" data-ch="item-text" data-i="${ii}" placeholder="">
             <div class="meta">
+              <div class="field field--time">${svg(I.clock, { w: 11, h: 11, stroke: 'currentColor' })}<input value="${escA(it.time)}" data-ch="item-time" data-i="${ii}" placeholder="Time"></div>
               <div class="field">${svg(I.pin, { w: 11, h: 11, stroke: 'currentColor' })}<input value="${escA(it.address)}" data-ch="item-address" data-i="${ii}" placeholder="Address">${hasAddr ? `<a class="maps" href="https://maps.google.com/?q=${encodeURIComponent(it.address || '')}" target="_blank" rel="noopener" title="Open in Maps">↗</a>` : ''}</div>
               <div class="field">${svg(I.msg, { w: 11, h: 11, stroke: 'currentColor' })}<input value="${escA(it.note)}" data-ch="item-note" data-i="${ii}" placeholder="Note"></div>
               <div class="cost-field"><span class="d">$</span><input value="${escA(it.cost)}" data-ch="item-cost" data-i="${ii}" inputmode="numeric"></div>
+              ${it.src ? (it.srcUrl
+                ? `<a class="item-src src--${escA(it.src)}" href="${escA(it.srcUrl)}" target="_blank" rel="noopener noreferrer" title="Open the post this came from">${esc(SRC_LABEL[it.src] || it.src)} ↗</a>`
+                : `<span class="item-src src--${escA(it.src)}">${esc(SRC_LABEL[it.src] || it.src)}</span>`) : ''}
             </div>
           </div>
           <button class="x" data-act="item-remove" data-i="${ii}" title="Remove">✕</button>
@@ -4190,6 +4419,7 @@
             <div class="day-main">
               <div class="day-head">
                 <div class="day-title">Day ${activeDay + 1}${dayDate(activeDay) ? ' · ' + esc(dayDate(activeDay)) : ''}</div>${wxChip}
+                <button class="import-btn" data-act="open-import" data-stop="${sIdx}" data-day="${activeDay}" title="Add places from a shared RedNote / TikTok / Instagram post">${svg(I.inbox, { w: 13, h: 13, sw: 1.7 })}<span>Import post</span></button>
                 <button class="optimize-btn" data-act="optimize-day" ${placedCount < 2 ? 'disabled' : ''} title="${placedCount < 2 ? 'Add an address to at least 2 activities first' : 'Reorder the day to avoid backtracking'}">${svg(I.spark, { w: 13, h: 13, sw: 1.6 })}<span>Optimize route</span></button>
               </div>
               ${note ? `<div class="optimize-note${note.kind === 'warn' ? ' warn' : ''}"><span>${esc(note.text)}</span><button class="on-x" data-act="optimize-dismiss" title="Dismiss">✕</button></div>` : ''}
@@ -4469,6 +4699,94 @@
       </div>`;
     }
 
+    // Review sheet for a shared post: the raw text on top, everything the
+    // extractor found below it — editable, tickable, and aimed at one day of
+    // one stay before anything is committed.
+    renderImportModal() {
+      if (!this.importOpen) return '';
+      const trip = this.currentTrip();
+      const stops = trip.stops || [];
+      const res = this.importResult;
+      const SIG = { list: 'listed', pin: 'pinned', time: 'time', place: 'place word', name: 'name', verb: 'activity', price: 'price', city: 'city', emoji: 'emoji', link: 'link only' };
+
+      const stopOpts = stops.map((s, i) =>
+        `<option value="${i}"${i === this.importStopIdx ? ' selected' : ''}>${esc(s.city || 'Stop ' + (i + 1))}</option>`).join('');
+      const days = this.importStopDays();
+      const dayOpts = Array.from({ length: days }, (_, i) =>
+        `<option value="${i}"${i === this.importDay ? ' selected' : ''}>Day ${i + 1}</option>`).join('');
+
+      let found = '';
+      if (res) {
+        const picked = res.activities.filter(a => a.use && (a.text || '').trim()).length;
+        const allOn = res.activities.every(a => a.use);
+        const spread = res.dayCount > 1;
+        const rows = res.activities.map(a => {
+          const chips = (a.signals || []).slice(0, 2).map(s => `<span class="imp-sig">${esc(SIG[s] || s)}</span>`).join('');
+          const dayChip = (spread && a.day != null) ? `<span class="imp-day">Day ${a.day + 1}</span>` : '';
+          return `<div class="imp-row${a.use ? ' on' : ''}">
+            <button class="imp-check" data-act="import-toggle" data-id="${escA(a.id)}" role="checkbox" aria-checked="${a.use}" title="${a.use ? 'Leave this one out' : 'Include this one'}">${a.use ? svg(I.check, { w: 11, h: 11, sw: 3.4, stroke: 'currentColor' }) : ''}</button>
+            <div class="imp-mid">
+              <input class="imp-name" value="${escA(a.text)}" data-ch="import-text" data-id="${escA(a.id)}" placeholder="Place or activity">
+              <div class="imp-meta">
+                <span class="imp-fld imp-fld--time">${svg(I.clock, { w: 11, h: 11 })}<input value="${escA(a.time)}" data-ch="import-time" data-id="${escA(a.id)}" placeholder="09:00"></span>
+                <span class="imp-fld">${svg(I.pin, { w: 11, h: 11 })}<input value="${escA(a.address)}" data-ch="import-address" data-id="${escA(a.id)}" placeholder="Address (optional)"></span>
+                ${a.cost ? `<span class="imp-cost">$${esc(a.cost)}</span>` : ''}
+                ${dayChip}
+              </div>
+              ${a.note ? `<div class="imp-note">${esc(a.note)}</div>` : ''}
+            </div>
+            <div class="imp-sigs">${chips}</div>
+          </div>`;
+        }).join('');
+
+        const target = stops.length ? `<div class="imp-target">
+            <span class="imp-lbl">Add to</span>
+            <select data-ch="import-stop">${stopOpts}</select>
+            <select data-ch="import-day">${dayOpts}</select>
+            ${spread ? `<label class="imp-spread"><input type="checkbox" data-ch="import-usedays"${this.importUseDays ? ' checked' : ''}>keep the post’s ${res.dayCount} days, one after another</label>` : ''}
+          </div>`
+          : `<p class="imp-empty">Add a city to your route first — then these can land on one of its days.</p>`;
+
+        found = `<div class="imp-found">
+          <div class="imp-found-hd">
+            <span class="imp-src imp-src--${escA(res.source)}">${esc(res.sourceLabel)}</span>
+            <span class="imp-count">${res.activities.length} found</span>
+            ${res.url ? `<a class="imp-link" href="${escA(res.url)}" target="_blank" rel="noopener noreferrer">open post ↗</a>` : ''}
+            <button class="imp-all" data-act="import-toggle-all">${allOn ? 'Select none' : 'Select all'}</button>
+          </div>
+          ${res.title ? `<div class="imp-post-title">${esc(res.title)}</div>` : ''}
+          ${target}
+          <div class="imp-rows">${rows}</div>
+          <button class="imp-apply" data-act="import-apply"${picked && stops.length ? '' : ' disabled'}>
+            Add ${picked} ${picked === 1 ? 'place' : 'places'}${stops.length && this.importStopIdx != null ? ' to ' + esc(stops[this.importStopIdx].city || 'this stop') + ' · Day ' + (this.importDay + 1) : ''}
+          </button>
+        </div>`;
+      }
+
+      return `<div class="overlay" data-act="overlay-import">
+        <div class="dialog import-dialog" data-stop>
+          <div class="head"><div class="row">
+            <div style="flex:1;min-width:0">
+              <div class="eyebrow">Import</div>
+              <div class="imp-title">From a shared post</div>
+              <div class="imp-sub">RedNote · TikTok · Instagram — share straight to Planner, or paste it here.</div>
+            </div>
+            <button class="modal-x" data-act="close-import">✕</button>
+          </div></div>
+          <div class="imp-body">
+            <textarea class="imp-paste" data-ch="import-raw" data-drop="import" rows="5"
+              placeholder="Paste the caption, the copied note, or just the link…">${esc(this.importRaw)}</textarea>
+            <div class="imp-actions">
+              <button class="sync-btn" data-act="import-paste">Paste from clipboard</button>
+              <button class="sync-btn primary" data-act="import-extract">Find places</button>
+            </div>
+            ${this.importMsg ? `<p class="imp-msg">${esc(this.importMsg)}</p>` : ''}
+            ${found}
+          </div>
+        </div>
+      </div>`;
+    }
+
     /* ============================================================
        EVENT DELEGATION
        ============================================================ */
@@ -4530,6 +4848,7 @@
       });
     }
     onEscape() {
+      if (this.importOpen) { this.closeImport(); return; }
       if (this.syncOpen) { this.syncOpen = false; this.bumpModal(); return; }
       // ledger leaves aren't dismissable — openStopIdx/accomOpenIdx are the
       // pages' stop selections there, not modals. The bill IS a modal on web.
@@ -4619,6 +4938,20 @@
         case 'close-sync': this.syncOpen = false; this.bumpModal(); break;
         case 'overlay-sync': if (e.target === t) { this.syncOpen = false; this.bumpModal(); } break;
         case 'sync-now': this.syncNow(); break;
+        // ---- social import ----
+        case 'open-import': this.openImport({ stopIdx: t.dataset.stop != null ? Number(t.dataset.stop) : null, day: t.dataset.day != null ? Number(t.dataset.day) : null }); break;
+        case 'close-import': this.closeImport(); break;
+        case 'overlay-import': if (e.target === t) this.closeImport(); break;
+        case 'import-extract': {
+          const box = this.modalEl.querySelector('.imp-paste');
+          if (box) this.importRaw = box.value;      // read live, before the change event lands
+          this.runImportExtract();
+          break;
+        }
+        case 'import-paste': this.importPasteFromClipboard(); break;
+        case 'import-toggle': this.importToggle(id); break;
+        case 'import-toggle-all': this.importToggleAll(); break;
+        case 'import-apply': this.importApply(); break;
         case 'open-web': this.openHostedWeb(); break;
         case 'close-iti': this.closeStop(); break;
         case 'overlay-iti': if (e.target === t) this.closeStop(); break;
@@ -4678,8 +5011,21 @@
         case 'todo-text': meta.todos[i].text = v; this.bump(); break;
         case 'pack-text': { const L = this.packList(trip, t.dataset.slot); if (L[i]) L[i].text = v; this.packOpen = t.dataset.slot; this.bump(); break; }
         case 'sync-code-in': this._syncCodeDraft = v; break;
+        // social import
+        case 'import-raw': this.importRaw = v; this.runImportExtract(); break;
+        case 'import-stop': {
+          this.importStopIdx = Math.max(0, Math.min(trip.stops.length - 1, Number(v) || 0));
+          this.importDay = Math.max(0, Math.min(this.importStopDays() - 1, this.importDay));
+          this.bumpModal(); break;
+        }
+        case 'import-day': this.importDay = Math.max(0, Math.min(this.importStopDays() - 1, Number(v) || 0)); this.bumpModal(); break;
+        case 'import-usedays': this.importUseDays = !!t.checked; this.bumpModal(); break;
+        case 'import-text': this.importSetField(t.dataset.id, 'text', v); break;
+        case 'import-time': this.importSetField(t.dataset.id, 'time', v); break;
+        case 'import-address': this.importSetField(t.dataset.id, 'address', v); break;
         // itinerary modal
         case 'iti-city': trip.stops[this.openStopIdx].city = v; this.bump(); break;
+        case 'item-time': trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i].time = v; this.bumpModal(); this.scheduleSave(); break;
         case 'item-text': trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i].text = v; this.bumpModal(); this.scheduleSave(); break;
         case 'item-address': trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i].address = v; this.bumpModal(); this.scheduleSave(); break;
         case 'item-note': trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i].note = v; this.bumpModal(); this.scheduleSave(); break;
@@ -4814,6 +5160,12 @@
         const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
         if (f && f.type.startsWith('image/')) this.addToStickerStock([f]);
       }
+      // a post, a caption or a bare link dragged onto the import box
+      else if (drop === 'import') {
+        const dt = e.dataTransfer;
+        const txt = (dt && (dt.getData('text/plain') || dt.getData('text/uri-list'))) || '';
+        if (txt.trim()) { this.importRaw = txt; this.runImportExtract(); }
+      }
     }
     onDragEnd(e) {
       if (this._dragCellImg) { this._dragCellImg.style.opacity = ''; this._dragCellImg = null; }
@@ -4852,6 +5204,14 @@
       }
     }
     onPaste(e) {
+      // the import box is a drop-off, not a text editor: a paste replaces what's
+      // in it and extracts straight away
+      const impBox = e.target.closest('.imp-paste');
+      if (impBox) {
+        const txt = (e.clipboardData && e.clipboardData.getData('text/plain')) || '';
+        if (txt.trim()) { e.preventDefault(); this.importRaw = txt; this.runImportExtract(); }
+        return;
+      }
       const closetZone = e.target.closest('[data-drop="closet-zone"]');
       if (closetZone) {
         const items = (e.clipboardData && e.clipboardData.items) || [];

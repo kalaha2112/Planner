@@ -11,6 +11,20 @@
   "theme_color": "#e8e4dc",
   "lang": "en",
   "categories": ["travel", "productivity"],
+  "share_target": {
+    "action": "./",
+    "method": "GET",
+    "params": { "title": "title", "text": "text", "url": "url" }
+  },
+  "shortcuts": [
+    {
+      "name": "Import a shared post",
+      "short_name": "Import",
+      "description": "Paste a RedNote, TikTok or Instagram post and pull the places out of it.",
+      "url": "./?import=1",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ],
   "icons": [
     { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },

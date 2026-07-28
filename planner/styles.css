@@ -2611,6 +2611,118 @@ html { -webkit-tap-highlight-color: transparent; }
 .touch-arrow.on { opacity: 1; }
 
 /* ============================================================
+   SOCIAL IMPORT — the shared-post review sheet
+   A RedNote / TikTok / Instagram share arrives as text; this dialog
+   shows what was pulled out of it, editable, before it lands on a day.
+   ============================================================ */
+.overlay[data-act="overlay-import"] { z-index: 1560; }   /* above sync (1550), below top-actions */
+.import-dialog { max-width: 620px; }
+.imp-title { font-family: var(--serif); font-weight: 700; font-size: 26px; color: var(--ink); line-height: 1.05; }
+.imp-sub { font-family: var(--sans); font-size: 12px; color: var(--ink-soft); margin-top: 6px; }
+.imp-body { padding: 20px 30px 26px; display: flex; flex-direction: column; gap: 12px; }
+.imp-paste {
+  width: 100%; box-sizing: border-box; resize: vertical; min-height: 96px;
+  font-family: var(--sans); font-size: 13px; line-height: 1.5; color: var(--ink);
+  background: var(--surface); border: 1px dashed var(--dash); border-radius: var(--r-sm);
+  padding: 12px 14px; outline-offset: 2px;
+}
+.imp-paste::placeholder { color: var(--ink-mute); }
+.imp-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.imp-actions .sync-btn { flex: 1; text-align: center; }
+.imp-msg { font-family: var(--sans); font-size: 12px; line-height: 1.45; color: var(--ink-soft); margin: 0; }
+
+.imp-found { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--line-soft); padding-top: 14px; }
+.imp-found-hd { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.imp-src {
+  font-family: var(--caps); font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--on-brown); background: var(--brown); border-radius: var(--r-pill); padding: 4px 10px 3px; line-height: 1;
+}
+.imp-src--rednote { background: var(--red); }
+.imp-src--instagram { background: var(--gold); }
+.imp-count { font-family: var(--sans); font-size: 12px; color: var(--ink-soft); }
+.imp-link { font-family: var(--sans); font-size: 12px; font-weight: 600; color: var(--gold); text-decoration: none; }
+.imp-all {
+  margin-left: auto; font-family: var(--sans); font-size: 12px; font-weight: 600; color: var(--ink-soft);
+  background: transparent; border: 1px solid var(--line-soft); border-radius: var(--r-pill); padding: 4px 11px; cursor: pointer;
+}
+.imp-all:hover { background: var(--line-2); color: var(--ink); }
+.imp-post-title { font-family: var(--serif); font-size: 15px; font-style: italic; color: var(--ink-mid); line-height: 1.35; }
+
+.imp-target { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.imp-lbl { font-family: var(--caps); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-mute); }
+.imp-target select {
+  font-family: var(--sans); font-size: 12.5px; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line-soft); border-radius: var(--r-sm); padding: 6px 8px; max-width: 46%;
+}
+.imp-spread { display: flex; align-items: center; gap: 6px; font-family: var(--sans); font-size: 11.5px; color: var(--ink-soft); cursor: pointer; }
+.imp-spread input { accent-color: var(--red); }
+.imp-empty { font-family: var(--sans); font-size: 12.5px; color: var(--ink-soft); margin: 0; }
+
+.imp-rows { display: flex; flex-direction: column; }
+.imp-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 9px 0; border-bottom: 1px solid var(--line-soft); opacity: .5; transition: opacity .15s;
+}
+.imp-row.on { opacity: 1; }
+.imp-row:last-child { border-bottom: none; }
+.imp-check {
+  flex-shrink: 0; margin-top: 3px; width: 18px; height: 18px; padding: 0; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--line); border-radius: var(--r-check); background: transparent; color: var(--on-brown);
+}
+.imp-row.on .imp-check { background: var(--red); border-color: var(--red); color: #fff; }
+.imp-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.imp-name {
+  font-family: var(--sans); font-size: 13.5px; font-weight: 500; color: var(--ink);
+  border: none; background: transparent; padding: 2px 0; width: 100%; outline-offset: 2px;
+}
+.imp-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.imp-fld { display: flex; align-items: center; gap: 5px; flex: 1; min-width: 130px; }
+.imp-fld--time { flex: 0 0 78px; min-width: 78px; }
+.imp-fld > svg { color: var(--ink-mute); flex-shrink: 0; }
+.imp-fld input {
+  font-family: var(--sans); font-size: 11.5px; color: var(--ink-soft);
+  border: none; background: transparent; padding: 1px 0; flex: 1; min-width: 0; outline-offset: 2px;
+}
+.imp-cost { font-family: var(--sans); font-size: 11.5px; font-weight: 600; color: var(--ink-mid); font-variant-numeric: tabular-nums; }
+.imp-day {
+  font-family: var(--caps); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; line-height: 1;
+  color: var(--green); background: var(--green-bg); border-radius: var(--r-pill); padding: 4px 8px 3px;
+}
+.imp-note { font-family: var(--sans); font-size: 11px; color: var(--ink-mute); line-height: 1.4; }
+.imp-sigs { flex-shrink: 0; display: flex; align-items: center; gap: 6px; padding-top: 6px; max-width: 40%; justify-content: flex-end; flex-wrap: wrap; }
+.imp-sig { font-family: var(--sans); font-size: 9.5px; letter-spacing: .04em; color: var(--ink-faint); white-space: nowrap; }
+.imp-sig + .imp-sig::before { content: "·"; margin-right: 6px; color: var(--ink-faint); }
+.imp-apply {
+  font-family: var(--sans); font-size: 13px; font-weight: 600; cursor: pointer;
+  padding: 11px 16px; border-radius: var(--r-sm); border: 1px solid var(--red);
+  background: var(--red); color: #fff; width: 100%;
+}
+.imp-apply:hover:not(:disabled) { background: color-mix(in oklch, var(--red) 88%, #000); }
+.imp-apply:disabled { opacity: .45; cursor: not-allowed; }
+
+/* day-header entry point, sitting beside "Optimize route" */
+.import-btn {
+  margin-left: auto; flex-shrink: 0;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--sans); font-size: 12px; font-weight: 600; letter-spacing: .01em;
+  color: var(--ink-soft); background: transparent;
+  border: 1px solid var(--line-soft); border-radius: var(--r-pill);
+  padding: 6px 13px 6px 11px; cursor: pointer; transition: background .15s, color .15s;
+}
+.import-btn:hover { background: var(--line-2); color: var(--ink); }
+
+/* provenance chip on an imported activity row */
+.item-src {
+  flex-shrink: 0; font-family: var(--sans); font-size: 9.5px; font-weight: 600;
+  letter-spacing: .06em; text-transform: uppercase; text-decoration: none;
+  color: var(--ink-mute); border: 1px solid var(--line-soft); border-radius: var(--r-pill);
+  padding: 2px 7px; line-height: 1.5;
+}
+a.item-src:hover { color: var(--red); border-color: var(--red); }
+.item .field--time { flex: 0 0 74px; min-width: 74px; }
+
+/* ============================================================
    TOUCH DEVICES (no hover) — placed LAST so these win the source-order
    cascade over the base rules above. Controls that are otherwise
    hover-revealed/hover-lit must be reachable, and the native date picker

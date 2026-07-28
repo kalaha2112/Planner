@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-28T14:53:42.954Z
+  Built: 2026-07-28T15:30:25.784Z
 -->
 
 <html lang="en">
@@ -3338,6 +3338,118 @@ html { -webkit-tap-highlight-color: transparent; }
 .touch-arrow.on { opacity: 1; }
 
 /* ============================================================
+   SOCIAL IMPORT — the shared-post review sheet
+   A RedNote / TikTok / Instagram share arrives as text; this dialog
+   shows what was pulled out of it, editable, before it lands on a day.
+   ============================================================ */
+.overlay[data-act="overlay-import"] { z-index: 1560; }   /* above sync (1550), below top-actions */
+.import-dialog { max-width: 620px; }
+.imp-title { font-family: var(--serif); font-weight: 700; font-size: 26px; color: var(--ink); line-height: 1.05; }
+.imp-sub { font-family: var(--sans); font-size: 12px; color: var(--ink-soft); margin-top: 6px; }
+.imp-body { padding: 20px 30px 26px; display: flex; flex-direction: column; gap: 12px; }
+.imp-paste {
+  width: 100%; box-sizing: border-box; resize: vertical; min-height: 96px;
+  font-family: var(--sans); font-size: 13px; line-height: 1.5; color: var(--ink);
+  background: var(--surface); border: 1px dashed var(--dash); border-radius: var(--r-sm);
+  padding: 12px 14px; outline-offset: 2px;
+}
+.imp-paste::placeholder { color: var(--ink-mute); }
+.imp-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.imp-actions .sync-btn { flex: 1; text-align: center; }
+.imp-msg { font-family: var(--sans); font-size: 12px; line-height: 1.45; color: var(--ink-soft); margin: 0; }
+
+.imp-found { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--line-soft); padding-top: 14px; }
+.imp-found-hd { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.imp-src {
+  font-family: var(--caps); font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--on-brown); background: var(--brown); border-radius: var(--r-pill); padding: 4px 10px 3px; line-height: 1;
+}
+.imp-src--rednote { background: var(--red); }
+.imp-src--instagram { background: var(--gold); }
+.imp-count { font-family: var(--sans); font-size: 12px; color: var(--ink-soft); }
+.imp-link { font-family: var(--sans); font-size: 12px; font-weight: 600; color: var(--gold); text-decoration: none; }
+.imp-all {
+  margin-left: auto; font-family: var(--sans); font-size: 12px; font-weight: 600; color: var(--ink-soft);
+  background: transparent; border: 1px solid var(--line-soft); border-radius: var(--r-pill); padding: 4px 11px; cursor: pointer;
+}
+.imp-all:hover { background: var(--line-2); color: var(--ink); }
+.imp-post-title { font-family: var(--serif); font-size: 15px; font-style: italic; color: var(--ink-mid); line-height: 1.35; }
+
+.imp-target { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.imp-lbl { font-family: var(--caps); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-mute); }
+.imp-target select {
+  font-family: var(--sans); font-size: 12.5px; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line-soft); border-radius: var(--r-sm); padding: 6px 8px; max-width: 46%;
+}
+.imp-spread { display: flex; align-items: center; gap: 6px; font-family: var(--sans); font-size: 11.5px; color: var(--ink-soft); cursor: pointer; }
+.imp-spread input { accent-color: var(--red); }
+.imp-empty { font-family: var(--sans); font-size: 12.5px; color: var(--ink-soft); margin: 0; }
+
+.imp-rows { display: flex; flex-direction: column; }
+.imp-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 9px 0; border-bottom: 1px solid var(--line-soft); opacity: .5; transition: opacity .15s;
+}
+.imp-row.on { opacity: 1; }
+.imp-row:last-child { border-bottom: none; }
+.imp-check {
+  flex-shrink: 0; margin-top: 3px; width: 18px; height: 18px; padding: 0; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--line); border-radius: var(--r-check); background: transparent; color: var(--on-brown);
+}
+.imp-row.on .imp-check { background: var(--red); border-color: var(--red); color: #fff; }
+.imp-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.imp-name {
+  font-family: var(--sans); font-size: 13.5px; font-weight: 500; color: var(--ink);
+  border: none; background: transparent; padding: 2px 0; width: 100%; outline-offset: 2px;
+}
+.imp-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.imp-fld { display: flex; align-items: center; gap: 5px; flex: 1; min-width: 130px; }
+.imp-fld--time { flex: 0 0 78px; min-width: 78px; }
+.imp-fld > svg { color: var(--ink-mute); flex-shrink: 0; }
+.imp-fld input {
+  font-family: var(--sans); font-size: 11.5px; color: var(--ink-soft);
+  border: none; background: transparent; padding: 1px 0; flex: 1; min-width: 0; outline-offset: 2px;
+}
+.imp-cost { font-family: var(--sans); font-size: 11.5px; font-weight: 600; color: var(--ink-mid); font-variant-numeric: tabular-nums; }
+.imp-day {
+  font-family: var(--caps); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; line-height: 1;
+  color: var(--green); background: var(--green-bg); border-radius: var(--r-pill); padding: 4px 8px 3px;
+}
+.imp-note { font-family: var(--sans); font-size: 11px; color: var(--ink-mute); line-height: 1.4; }
+.imp-sigs { flex-shrink: 0; display: flex; align-items: center; gap: 6px; padding-top: 6px; max-width: 40%; justify-content: flex-end; flex-wrap: wrap; }
+.imp-sig { font-family: var(--sans); font-size: 9.5px; letter-spacing: .04em; color: var(--ink-faint); white-space: nowrap; }
+.imp-sig + .imp-sig::before { content: "·"; margin-right: 6px; color: var(--ink-faint); }
+.imp-apply {
+  font-family: var(--sans); font-size: 13px; font-weight: 600; cursor: pointer;
+  padding: 11px 16px; border-radius: var(--r-sm); border: 1px solid var(--red);
+  background: var(--red); color: #fff; width: 100%;
+}
+.imp-apply:hover:not(:disabled) { background: color-mix(in oklch, var(--red) 88%, #000); }
+.imp-apply:disabled { opacity: .45; cursor: not-allowed; }
+
+/* day-header entry point, sitting beside "Optimize route" */
+.import-btn {
+  margin-left: auto; flex-shrink: 0;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--sans); font-size: 12px; font-weight: 600; letter-spacing: .01em;
+  color: var(--ink-soft); background: transparent;
+  border: 1px solid var(--line-soft); border-radius: var(--r-pill);
+  padding: 6px 13px 6px 11px; cursor: pointer; transition: background .15s, color .15s;
+}
+.import-btn:hover { background: var(--line-2); color: var(--ink); }
+
+/* provenance chip on an imported activity row */
+.item-src {
+  flex-shrink: 0; font-family: var(--sans); font-size: 9.5px; font-weight: 600;
+  letter-spacing: .06em; text-transform: uppercase; text-decoration: none;
+  color: var(--ink-mute); border: 1px solid var(--line-soft); border-radius: var(--r-pill);
+  padding: 2px 7px; line-height: 1.5;
+}
+a.item-src:hover { color: var(--red); border-color: var(--red); }
+.item .field--time { flex: 0 0 74px; min-width: 74px; }
+
+/* ============================================================
    TOUCH DEVICES (no hover) — placed LAST so these win the source-order
    cascade over the base rules above. Controls that are otherwise
    hover-revealed/hover-lit must be reachable, and the native date picker
@@ -3374,6 +3486,511 @@ html { -webkit-tap-highlight-color: transparent; }
       <feMorphology operator="dilate" radius="0.3"/>
     </filter>
   </svg>
+  <!-- shared-post extractor (RedNote / TikTok / Instagram → itinerary rows);
+       loads before app.js, which calls window.SocialImport -->
+  <script>
+/* social-import.js */
+/* ============================================================
+   social-import.js — shared social post → itinerary extractor
+   ------------------------------------------------------------
+   Turns whatever a share sheet hands over (a RedNote / 小红书
+   note, a TikTok video caption, an Instagram reel link, or a
+   plain pasted note) into a list of *candidate activities* the
+   planner can drop onto an itinerary day.
+
+   Everything here is PURE and offline: no network, no API key,
+   no scraping. The social apps block cross-origin fetches of
+   their pages, so the only text we ever see is the text the
+   user shared — a caption, a copied note body, a link, or all
+   three. That is enough: the posts people save for travel are
+   almost always structured lists ("📍1. …  地址：…  ¥…").
+
+   Public API
+     SocialImport.parse(rawText, { cities })  → ParseResult
+     SocialImport.detectSource(rawText)       → source id
+     SocialImport.SOURCES                     → source metadata
+
+   ParseResult = {
+     source, sourceLabel, url, links[], title, city, tags[],
+     dayCount,                       // distinct "Day N" headers seen
+     activities: [{
+       id, use, day,                 // day: 0-based, or null
+       time, text, address, note, cost, signals[]
+     }]
+   }
+   ============================================================ */
+;(function (global) {
+  'use strict';
+
+  /* ---------- sources ---------- */
+  const SOURCES = [
+    {
+      id: 'rednote', label: 'RedNote',
+      hosts: ['xiaohongshu.com', 'xhslink.com', 'xhs.cn', 'xhsl.ink', 'rednote.com'],
+      marks: [/小红书/, /rednote/i, /xhs/i]
+    },
+    {
+      id: 'tiktok', label: 'TikTok',
+      hosts: ['tiktok.com', 'vm.tiktok.com', 'vt.tiktok.com', 'douyin.com'],
+      marks: [/tiktok/i, /抖音/]
+    },
+    {
+      id: 'instagram', label: 'Instagram',
+      hosts: ['instagram.com', 'instagr.am', 'ig.me'],
+      marks: [/instagram/i, /\breels?\b/i]
+    }
+  ];
+  const SOURCE_LABEL = { rednote: 'RedNote', tiktok: 'TikTok', instagram: 'Instagram', note: 'Shared note' };
+
+  /* ---------- lexicon ----------
+     Deliberately multilingual: the posts worth importing are as often
+     Chinese/Japanese as English. A word here only *contributes* to a
+     score, so a stray match never creates an activity on its own. */
+  const PLACE_WORDS = [
+    // food & drink
+    'cafe', 'café', 'coffee', 'espresso', 'restaurant', 'bistro', 'brasserie', 'trattoria', 'osteria',
+    'izakaya', 'ramen', 'sushi', 'yakitori', 'bakery', 'boulangerie', 'patisserie', 'brunch', 'breakfast',
+    'lunch', 'dinner', 'bar', 'wine bar', 'pub', 'rooftop', 'food hall', 'street food', 'night market',
+    // shops
+    'market', 'mall', 'store', 'shop', 'boutique', 'bookstore', 'bookshop', 'vintage',
+    // sights
+    'museum', 'gallery', 'palace', 'castle', 'temple', 'shrine', 'church', 'cathedral', 'basilica',
+    'mosque', 'synagogue', 'monastery', 'abbey', 'tower', 'bridge', 'square', 'plaza', 'piazza',
+    'park', 'garden', 'zoo', 'aquarium', 'planetarium', 'observatory', 'viewpoint', 'lookout',
+    'beach', 'lake', 'river', 'canal', 'falls', 'waterfall', 'mountain', 'valley', 'island',
+    'harbor', 'harbour', 'pier', 'port', 'station', 'airport', 'district', 'quarter', 'old town',
+    'street', 'avenue', 'boulevard', 'alley', 'lane',
+    // stays & doing
+    'hotel', 'hostel', 'ryokan', 'onsen', 'spa', 'trail', 'hike', 'tour', 'cruise', 'ferry',
+    'club', 'theatre', 'theater', 'cinema', 'stadium', 'arena', 'library', 'workshop', 'class',
+    // ja
+    '神社', '寺', '城', '公園', '美術館', '博物館', '庭園', '温泉', '駅', '商店街', '横丁', '屋台',
+    '食堂', '喫茶', 'ラーメン', 'カフェ', '展望台', '市場',
+    // zh
+    '公园', '博物馆', '美术馆', '咖啡', '餐厅', '饭店', '酒吧', '市场', '夜市', '广场', '教堂',
+    '古城', '老城', '观景台', '景点', '小吃', '甜品', '面包', '书店', '酒店', '民宿', '车站',
+    '寺庙', '街区', '园林', '海滩', '瀑布', '步道', '大社', '神宫', '古镇', '胡同', '塔', '桥', '湖', '山', '寺', '宫',
+    // ko
+    '카페', '시장', '공원', '거리', '맛집'
+  ];
+
+  const ACTION_WORDS = [
+    'visit', 'see', 'explore', 'wander', 'walk', 'stroll', 'eat', 'try', 'taste', 'sample', 'drink',
+    'grab', 'shop', 'browse', 'book', 'stay', 'watch', 'catch', 'hike', 'climb', 'ride', 'tour',
+    'check out', 'must see', 'must-see', 'must try', 'must-try', 'must visit', 'must-visit',
+    'don\'t miss', 'do not miss', 'stop by', 'swing by', 'sunset at', 'sunrise at',
+    '打卡', '必去', '必吃', '必玩', '必逛', '推荐', '逛', '体验', '散步', 'おすすめ', '巡り'
+  ];
+
+  /* attribute lines — "地址：…", "Address: …" — attach to the activity above.
+     Latin keywords require the colon; a bare "Entrance to the park was
+     lovely" is prose, not a price. */
+  const ATTRS = [
+    { key: 'address', rx: /^(?:📍|🗺️|🏠)?\s*(?:地址|地點|地点|所在地|住所|위치|주소|address|addr|location|where)\s*[:：]\s*(.+)$/i },
+    { key: 'hours', rx: /^(?:🕒|⏰)?\s*(?:营业时间|營業時間|开放时间|開放時間|営業時間|時間|영업시간|hours|opening hours|open|timing|timings)\s*[:：]\s*(.+)$/i },
+    { key: 'price', rx: /^(?:💰|💵)?\s*(?:人均|均价|均價)\s*[:：]?\s*(.+)$/ },
+    { key: 'price', rx: /^(?:💰|💵)?\s*(?:价格|價格|费用|費用|门票|門票|예산|price|cost|budget|ticket|entry fee|entrance fee|admission)\s*[:：]\s*(.+)$/i },
+    { key: 'note', rx: /^(?:💡|📝|⚠️)?\s*(?:tip|tips|note|notes|推荐理由|推薦理由|注意|贴士|備考|메모)\s*[:：]\s*(.+)$/i },
+    { key: 'note', rx: /^(?:🚇|🚉)?\s*(?:交通|how to get there|getting there|transport|nearest station|最寄り駅)\s*[:：]\s*(.+)$/i }
+  ];
+
+  /* platform share-sheet boilerplate — never an activity */
+  const BOILERPLATE = [
+    /复制本条信息[^\n]*/g, /复制这段(描述|内容)[^\n]*/g, /打开[【\[]?(小红书|抖音)[】\]]?[^\n]*/g,
+    /查看(精彩内容|全文)[！!。]?/g, /点击链接[^\n]*/g, /长按复制[^\n]*/g,
+    /check\s+out\s+[^\n]*?\bon\s+tiktok\b[^\n]*/gi, /\b(?:check\s+out|watch)\s+[^\n]{0,60}?['’]s\s+(?:video|post|reel)[!.]?/gi, /watch\s+[^\n]*?\bon\s+tiktok\b[^\n]*/gi,
+    /\bon\s+tiktok\b\s*$/gim, /\bsee\s+this\s+instagram\b[^\n]*/gi,
+    /\bshared\s+(?:via|from)\s+(?:instagram|tiktok|rednote)\b[^\n]*/gi,
+    /\bsent\s+via\s+instagram\b[^\n]*/gi, /\bview\s+(?:profile|post|reel)\s+on\s+instagram\b[^\n]*/gi,
+    /\bdownload\s+the\s+app\b[^\n]*/gi
+  ];
+
+  /* ---------- small regex kit ---------- */
+  const RX_URL = /\bhttps?:\/\/[^\s"'<>）)】\]，,；;]+/gi;
+  const RX_HASHTAG = /[#＃]([^\s#＃,，。.!！?？]+)/g;
+  const RX_MARKER = /^\s*(?:[0-9]{1,2}\s*[.、)．,]|[\u2460-\u2473]|[\u2776-\u277F]|[-–—•*·‣▪◦▫]|【|\[)\s*/;
+  const RX_LEAD_EMOJI = /^\s*(?:\p{Extended_Pictographic}️?\s*)+/u;
+  const RX_TRAIL_PUNCT = /[\s，。,.;；:：、~～\-–—|｜]+$/;
+  const RX_DAY = /^\s*(?:day\s*([0-9]{1,2})\b|d([0-9]{1,2})\b|第\s*([0-9]{1,2}|[一二三四五六七八九十])\s*[天日]|([0-9]{1,2})\s*日目|([0-9]{1,2})일차)/i;
+  const CN_NUM = { '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10 };
+  const RX_CJK = /[぀-ヿ㐀-鿿가-힯]/;
+  const RX_APP_NAME = /^(?:tiktok|instagram|rednote|xiaohongshu|小红书|抖音|reels?|douyin)$/i;
+
+  const clean = (s) => String(s == null ? '' : s)
+    .replace(/\r\n?/g, '\n')
+    .replace(/[\u200B-\u200F\u202A-\u202E\uFEFF]/g, '')
+    .replace(/ /g, ' ');
+
+  const tidy = (s) => String(s || '').replace(/\s+/g, ' ').trim();
+  const norm = (s) => tidy(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, '').toLowerCase(); } catch (e) { return ''; } };
+
+  /* ---------- links & source ---------- */
+  function extractLinks(text) {
+    const out = [];
+    const seen = new Set();
+    (clean(text).match(RX_URL) || []).forEach(raw => {
+      const url = raw.replace(/[.,;)】\]]+$/, '');
+      if (seen.has(url)) return;
+      seen.add(url);
+      const host = hostOf(url);
+      const src = SOURCES.find(s => s.hosts.some(h => host === h || host.endsWith('.' + h)));
+      out.push({ url, host, source: src ? src.id : 'note' });
+    });
+    return out;
+  }
+
+  function detectSource(text) {
+    const links = extractLinks(text);
+    const hit = links.find(l => l.source !== 'note');
+    if (hit) return hit.source;
+    const t = clean(text);
+    const marked = SOURCES.find(s => s.marks.some(rx => rx.test(t)));
+    return marked ? marked.id : 'note';
+  }
+
+  /* ---------- time ----------
+     Only a time at the *head* of a line counts as the activity's time.
+     That keeps "open 8:00–19:00" (an opening-hours line) from being read
+     as "be there at 8". */
+  function leadingTime(line) {
+    let m = line.match(/^\s*(?:(上午|中午|下午|晚上|傍晚|凌晨)\s*)?(\d{1,2})\s*[:：.]\s*(\d{2})\s*(am|pm|a\.m\.|p\.m\.)?\s*(?:[-–—~～]\s*\d{1,2}\s*[:：.]?\s*\d{0,2}\s*(?:am|pm)?)?\s*(?:[-–—~：:|｜、,，)】\]]|\s)\s*/i);
+    if (m) {
+      const h = clockTo24(+m[2], m[4], m[1]);
+      if (h != null && +m[3] < 60) return { time: pad(h) + ':' + m[3], rest: line.slice(m[0].length) };
+    }
+    m = line.match(/^\s*(?:(上午|中午|下午|晚上|傍晚|凌晨)\s*)?(\d{1,2})\s*(am|pm|a\.m\.|p\.m\.)\s*(?:[-–—~：:|｜、,，)】\]]|\s)\s*/i);
+    if (m) {
+      const h = clockTo24(+m[2], m[3], m[1]);
+      if (h != null) return { time: pad(h) + ':00', rest: line.slice(m[0].length) };
+    }
+    m = line.match(/^\s*(上午|中午|下午|晚上|傍晚|凌晨)?\s*(\d{1,2})\s*[点時时]\s*(半|\d{1,2}\s*分?)?\s*/);
+    if (m && (m[1] || m[3] != null)) {
+      const h = clockTo24(+m[2], null, m[1]);
+      const min = !m[3] ? '00' : (m[3] === '半' ? '30' : pad(parseInt(m[3], 10) || 0));
+      if (h != null) return { time: pad(h) + ':' + min, rest: line.slice(m[0].length) };
+    }
+    return null;
+  }
+  function clockTo24(h, ampm, cn) {
+    if (!(h >= 0 && h <= 24)) return null;
+    const a = (ampm || '').toLowerCase().replace(/\./g, '');
+    if (a === 'pm' && h < 12) h += 12;
+    if (a === 'am' && h === 12) h = 0;
+    if (!a && cn) {
+      if ((cn === '下午' || cn === '晚上' || cn === '傍晚') && h < 12) h += 12;
+      if (cn === '凌晨' && h === 12) h = 0;
+    }
+    return h % 24;
+  }
+  const pad = (n) => String(n).padStart(2, '0');
+
+  /* ---------- money ----------
+     `cost` feeds the planner's Activities budget line, which is plain
+     dollars — so only a $ (or bare) amount lands there. Anything in a
+     foreign currency is kept as a note instead of silently distorting
+     the budget. */
+  function extractMoney(line) {
+    let m = line.match(/([$])\s?(\d[\d,]*(?:\.\d{1,2})?)/);
+    if (m) return { cost: m[2].replace(/,/g, ''), label: m[0], rest: line.replace(m[0], ' ') };
+    m = line.match(/([¥￥€£₩฿])\s?(\d[\d,]*(?:\.\d{1,2})?)/);
+    if (m) return { cost: '', label: m[1] + m[2], rest: line.replace(m[0], ' ') };
+    m = line.match(/(?:人均|均价|均價)\s*[¥￥$]?\s*(\d[\d,]*)/);
+    if (m) return { cost: '', label: '人均 ' + m[1], rest: line.replace(m[0], ' ') };
+    m = line.match(/\b(\d[\d,]*(?:\.\d{1,2})?)\s*(元|円|圓|yen|rmb|eur|euros?|gbp|krw|usd|dollars?)\b/i);
+    if (m) return { cost: /usd|dollars?/i.test(m[2]) ? m[1].replace(/,/g, '') : '', label: m[0], rest: line.replace(m[0], ' ') };
+    return null;
+  }
+
+  /* ---------- day headers ---------- */
+  function dayHeader(line) {
+    const m = line.match(RX_DAY);
+    if (!m) return null;
+    const raw = m[1] || m[2] || m[3] || m[4] || m[5];
+    const n = CN_NUM[raw] || parseInt(raw, 10);
+    if (!(n >= 1 && n <= 60)) return null;
+    return { day: n - 1, rest: line.slice(m[0].length).replace(/^[\s:：.、)\-–—|｜]+/, '') };
+  }
+
+  /* ---------- scoring ----------
+     A line becomes a candidate activity only if it clears SCORE_MIN.
+     Signals are kept on the candidate so the UI can show *why* it was
+     picked, and so a reviewer can spot a bad guess at a glance. */
+  const SCORE_MIN = 3;
+  function scoreLine(line, ctx) {
+    const signals = [];
+    let score = 0;
+    const lower = norm(line);
+    if (!lower) return { score: 0, signals };
+
+    if (ctx.marker) { score += 3; signals.push('list'); }
+    if (/📍|🗺️|🏛️|⛩️/.test(line)) { score += 3; signals.push('pin'); }
+    else if (ctx.leadEmoji) { score += 2; signals.push('emoji'); }
+    if (ctx.time) { score += 2; signals.push('time'); }
+    if (ctx.money) { score += 1; signals.push('price'); }
+
+    const cjk = RX_CJK.test(line);
+    const place = PLACE_WORDS.find(w => (RX_CJK.test(w) ? line.includes(w) : new RegExp('\\b' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + 's?\\b', 'i').test(lower)));
+    if (place) { score += 2; signals.push('place'); }
+    const action = ACTION_WORDS.find(w => (RX_CJK.test(w) ? line.includes(w) : lower.includes(w)));
+    if (action) { score += 2; signals.push('verb'); }
+    // a run of capitalised words reads as a proper name ("Fushimi Inari Shrine");
+    // the longer the run, the more it looks like a venue and not a sentence start
+    const nameRun = line.match(/(^|\s)((?:[A-Z][\w'’&.-]*)(?:\s+(?:[A-Z][\w'’&.-]*|de|di|du|da|la|le|el|van|von|of|the))+)/);
+    if (nameRun) { score += nameRun[2].split(/\s+/).length >= 3 ? 2 : 1; signals.push('name'); }
+    // CJK has no capitalisation to lean on, so a short line naming a place
+    // carries the same weight a Latin proper-name run would
+    if (cjk && place && line.length <= 24) score += 1;
+    if (ctx.cities && ctx.cities.length) {
+      const city = ctx.cities.find(c => lower.includes(c));
+      if (city) { score += 1; signals.push('city'); }
+    }
+
+    // long prose without a marker is a caption, not an activity
+    const words = lower.split(/\s+/).length;
+    if (!ctx.marker && !cjk && words > 14) score -= 3;
+    if (cjk && line.length > 60 && !ctx.marker) score -= 2;
+    return { score, signals, nameRun: !!nameRun };
+  }
+
+  /* ---------- main ---------- */
+  function parse(raw, opts) {
+    const options = opts || {};
+    const cities = (options.cities || []).map(norm).filter(c => c.length > 2);
+    const text = clean(raw);
+    const links = extractLinks(text);
+    const source = detectSource(text);
+    const primary = (links.find(l => l.source === source) || links[0] || {}).url || '';
+
+    // strip URLs + share boilerplate before line analysis
+    let body = text.replace(RX_URL, ' ');
+    BOILERPLATE.forEach(rx => { body = body.replace(rx, ' '); });
+
+    const tags = [];
+    body = body.replace(RX_HASHTAG, (_, t) => { tags.push(t); return ' '; });
+
+    const rawLines = body.split('\n').map(l => l.replace(/\s+$/, ''));
+    const activities = [];
+    const days = new Set();
+    let currentDay = null;
+    let title = '';
+
+    const push = (act) => { activities.push(act); return act; };
+    const last = () => activities[activities.length - 1] || null;
+
+    let firstLine = true;
+    for (let li = 0; li < rawLines.length; li++) {
+      let line = tidy(rawLines[li]);
+      if (!line) continue;
+      // 【标题 - 作者 | 小红书】 — the RedNote share wrapper
+      const wrapped = line.match(/^【\s*(.+?)\s*】$/);
+      if (wrapped) line = wrapped[1].split(/\s+-\s+|\s*[|｜]\s*/)[0];
+      // RedNote share text prefixes the note title with its like counter
+      // ("59 东京咖啡合集"). Only on the opening line, and only ahead of CJK —
+      // a Latin headline legitimately starts with a number ("3 days in Kyoto").
+      if (firstLine) line = line.replace(/^\d{1,6}\s+(?=[　-鿿가-힯])/, '');
+      firstLine = false;
+      if (!line || line.length < 2) continue;
+
+      // --- day header ("Day 2", "第三天") ---
+      const dh = dayHeader(line);
+      if (dh) {
+        currentDay = dh.day;
+        days.add(dh.day);
+        if (!dh.rest) continue;
+        line = dh.rest;                      // "Day 2 — Fushimi Inari" keeps going
+      }
+
+      // --- attribute line → enrich the activity above ---
+      const attr = matchAttr(line);
+      if (attr) {
+        const target = last();
+        if (target) {
+          applyAttr(target, attr);
+          continue;
+        }
+        // an address with nothing above it still describes a place
+        if (attr.key !== 'address') continue;
+        line = attr.value;
+      }
+
+      // --- strip decoration: "📍1. …", "☕️ …", "- 09:00 …" ---
+      // markers and lead emoji interleave, so peel until nothing more comes off
+      let rest = line, marker = false, leadEmoji = false;
+      for (let pass = 0; pass < 4; pass++) {
+        const mk = rest.match(RX_MARKER);
+        if (mk && mk[0].trim()) { rest = rest.slice(mk[0].length); marker = true; continue; }
+        const em = rest.match(RX_LEAD_EMOJI);
+        if (em && em[0].trim()) { rest = rest.slice(em[0].length); leadEmoji = true; continue; }
+        break;
+      }
+      rest = rest.replace(/^[】\]]\s*/, '');
+
+      const t = leadingTime(rest);
+      if (t) rest = t.rest;
+      const m = extractMoney(rest);
+      if (m) rest = m.rest;
+
+      let name = tidy(rest).replace(RX_TRAIL_PUNCT, '');
+      const ctx = { marker, leadEmoji, time: !!t, money: !!m, cities };
+      const { score, signals, nameRun } = scoreLine(line, ctx);
+
+      // The opening line of a post is its headline, not a stop on the route —
+      // unless it carries a list marker, a pin or a time, which make it a real
+      // entry. If nothing else parses out, the headline becomes the fallback row.
+      if (!title && !marker && !leadEmoji && !t && !/📍/.test(line) && name.length >= 3) {
+        title = name;
+        continue;
+      }
+
+      // Inside a day-by-day post ("Day 2 …"), plain lines are the plan — accept
+      // them on a lighter signal than a free-form caption needs.
+      const threshold = currentDay != null ? SCORE_MIN - 1 : SCORE_MIN;
+
+      if (score < threshold || name.length < 2 || name.length > 140) {
+        // not an activity — but a stray line right under one is often its note
+        const prev = last();
+        if (prev && !prev.note && !nameRun && name.length >= 4 && name.length <= 90 && score >= 1) prev.note = name;
+        continue;
+      }
+
+      // "Fushimi Inari Shrine — go early, it gets packed" → name + note.
+      // Worth doing beyond tidiness: with no address, the day map geocodes the
+      // activity text, and a sentence of advice never resolves to a pin.
+      const aside = splitTrailingNote(name);
+      let note = '';
+      if (aside) { name = aside.name; note = aside.note; }
+
+      // an inline address ("Blue Bottle, 1-4-8 Hirano, Koto City")
+      let address = '';
+      const split = splitInlineAddress(name);
+      if (split) { name = split.name; address = split.address; }
+
+      const act = push({
+        id: 'sa' + activities.length + '-' + Math.random().toString(36).slice(2, 7),
+        use: true,
+        day: currentDay,
+        time: t ? t.time : '',
+        text: name,
+        address,
+        note: m && !m.cost ? joinNote(note, m.label) : note,
+        cost: m && m.cost ? m.cost : '',
+        signals
+      });
+      if (!title) title = act.text;
+    }
+
+    // Android share sheets often pass the app's own name as the share title —
+    // "TikTok" is not this post's headline.
+    if (RX_APP_NAME.test(tidy(title))) title = '';
+
+    dedupe(activities);
+    const trimmed = activities.slice(0, 60);
+
+    // nothing structured found → keep the share itself as one reviewable row
+    if (!trimmed.length) {
+      const fallback = tidy(title) || firstMeaningfulLine(rawLines) || (SOURCE_LABEL[source] + ' post');
+      trimmed.push({
+        id: 'sa-link', use: true, day: null, time: '',
+        text: fallback.slice(0, 120), address: '', note: '', cost: '',
+        signals: ['link']
+      });
+    }
+
+    return {
+      source,
+      sourceLabel: SOURCE_LABEL[source] || SOURCE_LABEL.note,
+      url: primary,
+      links,
+      title: tidy(title).slice(0, 140),
+      city: guessCity(text, tags, cities, options.cities || []),
+      tags,
+      dayCount: days.size,
+      activities: trimmed
+    };
+  }
+
+  function matchAttr(line) {
+    for (const a of ATTRS) {
+      const m = line.match(a.rx);
+      if (m && tidy(m[1])) return { key: a.key, value: tidy(m[1]).replace(RX_TRAIL_PUNCT, '') };
+    }
+    // "📍 Kiyomizu-dera, 1-294 Kiyomizu" — a pin line with no label
+    const pin = line.match(/^\s*📍\s*(.+)$/);
+    if (pin && /\d/.test(pin[1]) && /[,，]/.test(pin[1])) return { key: 'address', value: tidy(pin[1]) };
+    return null;
+  }
+
+  function applyAttr(act, attr) {
+    if (attr.key === 'address') { act.address = act.address || attr.value; return; }
+    if (attr.key === 'price') {
+      const m = extractMoney(attr.value);
+      if (m && m.cost) act.cost = act.cost || m.cost;
+      else act.note = joinNote(act.note, m ? m.label : attr.value);
+      return;
+    }
+    act.note = joinNote(act.note, (attr.key === 'hours' ? 'Hours ' : '') + attr.value);
+  }
+  const joinNote = (a, b) => (a ? a + ' · ' + b : b).slice(0, 180);
+
+  /* "Name, 12 Some Street, City" → name + address, when a later segment
+     carries a street number (or a CJK administrative suffix) and the first
+     does not. */
+  const RX_ADDR_TAIL = /[市区區町丁目路街道県縣府省郡村시구로]/;
+  function splitInlineAddress(s) {
+    const parts = s.split(/\s*[,，]\s*/).filter(Boolean);
+    if (parts.length < 2 || /\d/.test(parts[0])) return null;
+    const tail = parts.slice(1);
+    if (!tail.some(p => /\d/.test(p)) && !tail.some(p => RX_ADDR_TAIL.test(p))) return null;
+    return { name: parts[0], address: tail.join(', ') };
+  }
+
+  /* "Kiyomizu-dera — go at sunrise" → name + note. Only a spaced dash counts,
+     so hyphenated names ("Kiyomizu-dera") stay whole. */
+  function splitTrailingNote(s) {
+    const m = s.match(/^(.{3,}?)\s+[—–\-·|｜]\s+(.{4,})$/);
+    if (!m) return null;
+    if (/^\d/.test(m[2]) && m[2].length < 12) return null;    // "Room 4 - 12" is not a note
+    return { name: tidy(m[1]).replace(RX_TRAIL_PUNCT, ''), note: tidy(m[2]) };
+  }
+
+  /* keep the FIRST occurrence — it's the one the attribute lines
+     (address / hours / price) were attached to */
+  function dedupe(list) {
+    const seen = new Set();
+    for (let i = 0; i < list.length; i++) {
+      const k = norm(list[i].text);
+      if (!k || seen.has(k)) { list.splice(i, 1); i--; }
+      else seen.add(k);
+    }
+  }
+
+  function firstMeaningfulLine(lines) {
+    for (const l of lines) {
+      const s = tidy(l);
+      if (s.length >= 4) return s;
+    }
+    return '';
+  }
+
+  /* City guess: longest known city name mentioned in the post (hashtags
+     count too — "#kyototravel" is the usual give-away). */
+  function guessCity(text, tags, citiesNorm, citiesRaw) {
+    const hay = norm(text + ' ' + tags.join(' '));
+    let best = '', bestLen = 0;
+    citiesNorm.forEach((c, i) => {
+      if (c.length > bestLen && hay.includes(c)) { best = citiesRaw[i]; bestLen = c.length; }
+    });
+    return best;
+  }
+
+  const SocialImport = { parse, detectSource, extractLinks, SOURCES, SOURCE_LABEL, _internals: { leadingTime, extractMoney, dayHeader, scoreLine, splitInlineAddress, splitTrailingNote } };
+
+  global.SocialImport = SocialImport;
+  if (typeof module !== 'undefined' && module.exports) module.exports = SocialImport;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script>
   <script>
 /* app.js */
 /* ============================================================
@@ -3878,6 +4495,10 @@ html { -webkit-tap-highlight-color: transparent; }
 
   const WEEK = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
+  // where an imported activity came from — stamped on the item by the social
+  // importer and shown as a small chip on the row
+  const SRC_LABEL = { rednote: 'RedNote', tiktok: 'TikTok', instagram: 'Instagram' };
+
   /* ---- icons (Lucide-style) ---- */
   const I = {
     undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
@@ -3895,7 +4516,9 @@ html { -webkit-tap-highlight-color: transparent; }
     clipboard: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>',
     sticker: '<rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
     route: '<rect x="3" y="4" width="18" height="14" rx="3"/><path d="M3 10h18"/><rect x="7" y="6" width="4" height="3" rx="1"/><rect x="13" y="6" width="4" height="3" rx="1"/><path d="M7 18l-2 3"/><path d="M17 18l2 3"/>',
-    home: '<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 9.5V20a1 1 0 0 0 1 1H10v-6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v6h3.5a1 1 0 0 0 1-1V9.5"/>'
+    home: '<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 9.5V20a1 1 0 0 0 1 1H10v-6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v6h3.5a1 1 0 0 0 1-1V9.5"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 1.9"/>',
+    inbox: '<path d="M4 13h4l1.6 3h4.8l1.6-3h4"/><path d="M5.4 5.6 3.2 12.3A2 2 0 0 0 3 13v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4a2 2 0 0 0-.2-.7l-2.2-6.7A2 2 0 0 0 16.7 4H7.3a2 2 0 0 0-1.9 1.6z"/>'
   };
   const svg = (paths, opt = {}) => {
     const { w = 16, h = 16, sw = 2, fill = 'none', stroke = 'currentColor' } = opt;
@@ -3927,6 +4550,14 @@ html { -webkit-tap-highlight-color: transparent; }
       this._lastCoordKey = '';
       this._history = [];
       this.stickerPanelOpen = false;
+      // ---- social import (shared RedNote / TikTok / Instagram post → itinerary) ----
+      this.importOpen = false;
+      this.importRaw = '';         // the shared text, as pasted / handed over by the share sheet
+      this.importResult = null;    // SocialImport.parse() output, or null before extraction
+      this.importStopIdx = null;   // which city the picked activities land in
+      this.importDay = 0;          // which day of that stay
+      this.importUseDays = true;   // honour "Day 1 / Day 2" headers found in the post
+      this.importMsg = '';         // one-line status under the paste box
       // ---- web ledger (≥701px): a vertical stack of full-width leaves —
       // scrolling down slides the next page up from below, the same motion
       // as the intro→trip scroll. Which leaf is open + the slide lock are
@@ -4089,6 +4720,7 @@ html { -webkit-tap-highlight-color: transparent; }
       this.initIntro();
       this.initLedgerNav();
       this.initTouchPointer();
+      this.initShareTarget();   // ?title=&text=&url= from the PWA share sheet
       // crossing the mobile-map breakpoint (resizing an iPad window, rotating)
       // swaps the whole layout live: ≤700px the app page, ≥701px the web ledger.
       // Leaving the ledger, its always-open leaf selections must not linger as
@@ -4208,6 +4840,7 @@ html { -webkit-tap-highlight-color: transparent; }
       ta.innerHTML = `
         <button class="tool-btn" data-act="undo" title="Undo (⌘Z)" aria-label="Undo" disabled>${svg(I.undo)}</button>
         <button class="tool-btn sync-toggle-btn" data-act="open-sync" title="Sync across devices" aria-label="Sync across devices"><span class="sync-dot s-off"></span>${svg(I.sync)}</button>
+        <button class="tool-btn import-toggle-btn" data-act="open-import" title="Import a shared post" aria-label="Import a shared post">${svg(I.inbox)}</button>
         <button class="tool-btn sticker-toggle-btn" data-act="toggle-stickers" title="Memories" aria-label="Memories">${svg(I.sticker)}</button>
         <button class="theme-btn" data-act="toggle-theme" aria-label="Toggle dark mode" title="Toggle dark mode">
           <svg class="ic-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
@@ -4236,7 +4869,7 @@ html { -webkit-tap-highlight-color: transparent; }
       // modals — only the bill and the floating panels count as "open" there
       // app itinerary/accom/transport now live on always-rendered leaves too
       // (not modals), so only the bill and the floating panels count as "open"
-      return this.syncOpen || this.budgetOpen || this.stickerPanelOpen;
+      return this.syncOpen || this.budgetOpen || this.stickerPanelOpen || this.importOpen;
     }
     // sync pulls must not clobber content mid-edit. The app blocks while an
     // editing modal is open; the ledger's leaves are always open, so there we
@@ -4263,6 +4896,13 @@ html { -webkit-tap-highlight-color: transparent; }
       if (dot) dot.className = 'sync-dot s-' + (this.isLinked() ? this._syncStatus : 'off');
       const memBtn = ta.querySelector('.sticker-toggle-btn');
       if (memBtn) memBtn.classList.toggle('active', this.stickerPanelOpen);
+      const impBtn = ta.querySelector('.import-toggle-btn');
+      if (impBtn) {
+        impBtn.classList.toggle('active', this.importOpen);
+        // unlike sync, importing is useful on every page — it only steps aside
+        // for another open dialog
+        impBtn.style.display = (this._anyModalOpen() && !this.importOpen) ? 'none' : '';
+      }
       const themeBtn = ta.querySelector('[data-act="toggle-theme"]');
       if (themeBtn) themeBtn.setAttribute('aria-pressed', String(document.documentElement.getAttribute('data-theme') === 'dark'));
     }
@@ -4658,7 +5298,8 @@ html { -webkit-tap-highlight-color: transparent; }
       this.modalEl.innerHTML =
         this.renderStickerPanel() +
         this.renderBudgetModal(budget, travelers, nights) +
-        this.renderSyncModal();
+        this.renderSyncModal() +
+        this.renderImportModal();
       this.mountDayMap();
       this.updateTopActions();   // sticker toggle / sync-modal actions change cluster state
     }
@@ -6277,6 +6918,205 @@ html { -webkit-tap-highlight-color: transparent; }
       this.bump();
     }
 
+    /* ============================================================
+       SOCIAL IMPORT — a shared post becomes itinerary rows
+       ------------------------------------------------------------
+       Travel research now arrives as a RedNote note, a TikTok video
+       or an Instagram reel. Those apps block cross-origin reads of
+       their pages, so nothing here fetches anything: the app takes
+       the text the SHARE SHEET hands over (or a paste), runs it
+       through social-import.js, and shows the places it found for
+       review before they land on a day.
+
+       Three ways in, all funnelling through receiveShare():
+         · the PWA share target  — manifest `share_target`, arriving
+           as ?title=&text=&url= on boot (initShareTarget)
+         · paste / clipboard     — the import dialog's box
+         · drop                  — text or a link dropped on the box
+       ============================================================ */
+    // Vocabulary the extractor matches a post's city against: this trip's
+    // stops first (so "Kyoto" resolves to YOUR Kyoto), then the atlas.
+    importCityList() {
+      const names = [];
+      const seen = new Set();
+      const add = (c) => { const k = normKey(c); if (k && !seen.has(k)) { seen.add(k); names.push(c); } };
+      Object.values(this.data.trips || {}).forEach(t => (t.stops || []).forEach(s => { if (s.city) add(s.city.trim()); }));
+      Object.keys(CITY_MAP).forEach(add);
+      return names;
+    }
+    importStopDays() {
+      const stop = this.importStopIdx != null ? this.currentTrip().stops[this.importStopIdx] : null;
+      return stop ? Math.max(1, Number(stop.nights) || 1) : 1;
+    }
+    openImport(opts = {}) {
+      const trip = this.currentTrip();
+      if (opts.raw != null) { this.importRaw = opts.raw; this.importResult = null; this.importMsg = ''; }
+      const n = trip.stops.length;
+      if (n) {
+        // default target: whatever city/day is already in focus
+        const s = opts.stopIdx != null ? opts.stopIdx
+          : this.openStopIdx != null ? this.openStopIdx
+          : (this.appStopIdx || 0);
+        this.importStopIdx = Math.max(0, Math.min(n - 1, s));
+        const d = opts.day != null ? opts.day : (this.activeDay != null ? this.activeDay : 0);
+        this.importDay = Math.max(0, Math.min(this.importStopDays() - 1, d));
+      } else { this.importStopIdx = null; this.importDay = 0; }
+      this.importOpen = true;
+      if (opts.extract && (this.importRaw || '').trim()) this.runImportExtract();
+      else this.bumpModal();
+    }
+    closeImport() { this.importOpen = false; this.importMsg = ''; this.bumpModal(); }
+    // A share payload from any of the three routes in.
+    receiveShare(payload = {}) {
+      const title = (payload.title || '').trim();
+      const text = (payload.text || '').trim();
+      const url = (payload.url || '').trim();
+      const parts = [];
+      if (title && !text.includes(title)) parts.push(title);
+      if (text) parts.push(text);
+      if (url && !text.includes(url)) parts.push(url);
+      const raw = parts.join('\n').trim();
+      if (!raw) return false;
+      this.openImport({ raw, extract: true });
+      return true;
+    }
+    // PWA share target: Android's share sheet opens the app at
+    // ?title=…&text=…&url=… (see manifest.webmanifest). Consume the payload,
+    // then scrub it from the address bar so a refresh doesn't re-import it.
+    initShareTarget() {
+      let params;
+      try { params = new URLSearchParams(location.search); } catch (e) { return; }
+      const payload = { title: params.get('title') || '', text: params.get('text') || '', url: params.get('url') || '' };
+      const bare = params.get('import');   // the "Import a shared post" app shortcut
+      if (!payload.title && !payload.text && !payload.url && !bare) return;
+      try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
+      if (!this.receiveShare(payload) && bare) this.openImport({ raw: '' });
+    }
+    runImportExtract() {
+      const raw = (this.importRaw || '').trim();
+      this.importMsg = '';
+      if (!raw) {
+        this.importResult = null;
+        this.importMsg = 'Nothing to read yet — paste the shared post, or just its link.';
+        this.bumpModal(); return;
+      }
+      const SI = window.SocialImport;
+      if (!SI) {
+        this.importResult = null;
+        this.importMsg = 'The importer didn’t load. Reload the app and try again.';
+        this.bumpModal(); return;
+      }
+      const res = SI.parse(raw, { cities: this.importCityList() });
+      this.importResult = res;
+      // aim at the city the post is about, when it's one of this trip's stops
+      const stops = this.currentTrip().stops;
+      if (res.city) {
+        const i = stops.findIndex(s => normKey(s.city) === normKey(res.city));
+        if (i >= 0) {
+          this.importStopIdx = i;
+          this.importDay = Math.max(0, Math.min(this.importStopDays() - 1, this.importDay));
+        }
+      }
+      this.importUseDays = res.dayCount > 1;
+      if (res.activities.length === 1 && res.activities[0].signals.indexOf('link') >= 0) {
+        this.importMsg = 'No places stood out — only the link came through. Paste the post’s caption or note text for a full read.';
+      }
+      this.bumpModal();
+    }
+    importFind(id) {
+      const list = (this.importResult && this.importResult.activities) || [];
+      return list.find(a => a.id === id) || null;
+    }
+    importToggle(id) { const a = this.importFind(id); if (a) { a.use = !a.use; this.bumpModal(); } }
+    importToggleAll() {
+      const list = (this.importResult && this.importResult.activities) || [];
+      const on = !list.every(a => a.use);
+      list.forEach(a => { a.use = on; });
+      this.bumpModal();
+    }
+    importSetField(id, key, v) {
+      const a = this.importFind(id); if (!a) return;
+      a[key] = v;
+      if (key === 'text' && !v.trim()) a.use = false;
+      this.bumpModal();
+    }
+    async importPasteFromClipboard() {
+      if (!(navigator.clipboard && navigator.clipboard.readText)) {
+        this.importMsg = 'This browser won’t hand over the clipboard — paste into the box with ⌘V / long-press → Paste.';
+        this.bumpModal(); return;
+      }
+      try {
+        const txt = await navigator.clipboard.readText();
+        if (!txt || !txt.trim()) {
+          this.importMsg = 'Clipboard is empty — copy the post (or its link) first.';
+          this.bumpModal(); return;
+        }
+        this.importRaw = txt;
+        this.runImportExtract();
+      } catch (err) {
+        this.importMsg = 'Couldn’t read the clipboard — paste into the box instead.';
+        this.bumpModal();
+      }
+    }
+    // Commit the ticked rows onto the chosen stay. Times ride along in the
+    // item's `time` field, so the day optimizer keeps them in order.
+    importApply() {
+      const res = this.importResult;
+      const trip = this.currentTrip();
+      if (!res) return;
+      if (this.importStopIdx == null || !trip.stops[this.importStopIdx]) {
+        this.importMsg = 'Add a city to the route first — there’s nowhere to put these yet.';
+        this.bumpModal(); return;
+      }
+      const picked = res.activities.filter(a => a.use && (a.text || '').trim());
+      if (!picked.length) {
+        this.importMsg = 'Tick at least one place to add.';
+        this.bumpModal(); return;
+      }
+      const stop = trip.stops[this.importStopIdx];
+      this.snapshot();
+      this.ensureItinerary(stop);
+      const maxDay = this.importStopDays() - 1;
+      const useDays = this.importUseDays && res.dayCount > 1;
+      const src = res.source && res.source !== 'note' ? res.source : '';
+      let added = 0, skipped = 0;
+      picked.forEach(a => {
+        const offset = useDays && a.day != null ? a.day : 0;
+        const dayIdx = Math.max(0, Math.min(maxDay, this.importDay + offset));
+        const day = stop.itinerary[dayIdx] || (stop.itinerary[dayIdx] = { items: [], outfits: [] });
+        if (!Array.isArray(day.items)) day.items = [];
+        const text = a.text.trim();
+        // re-importing the same post shouldn't duplicate what's already there
+        if (day.items.some(it => normKey(it.text) === normKey(text))) { skipped++; return; }
+        day.items.push({
+          time: (a.time || '').trim(),
+          text,
+          address: (a.address || '').trim(),
+          note: (a.note || '').trim(),
+          cost: (a.cost || '').trim(),
+          src,
+          srcUrl: res.url || ''
+        });
+        added++;
+      });
+      const landedOn = this.importDay;
+      this.importOpen = false;
+      this.importResult = null;
+      this.importRaw = '';
+      this.importMsg = '';
+      const label = res.sourceLabel || 'the shared post';
+      // arriving straight from the share sheet, the intro page is still up —
+      // step past it so the day just filled is what you actually land on
+      if (!this._introParked) this.skipIntro();
+      this.openStop(this.importStopIdx);            // navigate to that city's itinerary
+      this.activeDay = landedOn;
+      this._optimizeNote = added
+        ? { kind: 'ok', text: `Added ${added} place${added === 1 ? '' : 's'} from ${label}${skipped ? ` · ${skipped} already on the day` : ''}. Pins appear as the addresses resolve; ⌘Z undoes the lot.` }
+        : { kind: 'warn', text: `Everything from ${label} was already on this day.` };
+      this.bumpModal();
+      this.scheduleSave();
+    }
+
     /* ---------- outfit closet ---------- */
     ensureCloset() { const t = this.currentTrip(); if (!Array.isArray(t.closet)) t.closet = []; return t.closet; }
     dayOutfits(stop, dayIdx) { this.ensureItinerary(stop); const d = stop.itinerary[dayIdx] || (stop.itinerary[dayIdx] = { items: [], outfits: [] }); if (!Array.isArray(d.outfits)) d.outfits = []; return d.outfits; }
@@ -6496,10 +7336,12 @@ html { -webkit-tap-highlight-color: transparent; }
       this.modalEl.innerHTML = web
         ? this.renderStickerPanel() +                          // leaves carry itinerary/accom/transport
           this.renderBudgetModal(budget, travelers, nights) +  // the bill prints over the panel area
-          this.renderSyncModal()
+          this.renderSyncModal() +
+          this.renderImportModal()
         : this.renderStickerPanel() +                          // app leaves carry itinerary/accom/transport
           this.renderBudgetModal(budget, travelers, nights) +
-          this.renderSyncModal();
+          this.renderSyncModal() +
+          this.renderImportModal();
 
       // re-attach persistent aside map node
       const holder = this.root.querySelector('#map-holder');
@@ -7541,9 +8383,13 @@ html { -webkit-tap-highlight-color: transparent; }
           <div class="mid">
             <input class="text" value="${escA(it.text)}" data-ch="item-text" data-i="${ii}" placeholder="">
             <div class="meta">
+              <div class="field field--time">${svg(I.clock, { w: 11, h: 11, stroke: 'currentColor' })}<input value="${escA(it.time)}" data-ch="item-time" data-i="${ii}" placeholder="Time"></div>
               <div class="field">${svg(I.pin, { w: 11, h: 11, stroke: 'currentColor' })}<input value="${escA(it.address)}" data-ch="item-address" data-i="${ii}" placeholder="Address">${hasAddr ? `<a class="maps" href="https://maps.google.com/?q=${encodeURIComponent(it.address || '')}" target="_blank" rel="noopener" title="Open in Maps">↗</a>` : ''}</div>
               <div class="field">${svg(I.msg, { w: 11, h: 11, stroke: 'currentColor' })}<input value="${escA(it.note)}" data-ch="item-note" data-i="${ii}" placeholder="Note"></div>
               <div class="cost-field"><span class="d">$</span><input value="${escA(it.cost)}" data-ch="item-cost" data-i="${ii}" inputmode="numeric"></div>
+              ${it.src ? (it.srcUrl
+                ? `<a class="item-src src--${escA(it.src)}" href="${escA(it.srcUrl)}" target="_blank" rel="noopener noreferrer" title="Open the post this came from">${esc(SRC_LABEL[it.src] || it.src)} ↗</a>`
+                : `<span class="item-src src--${escA(it.src)}">${esc(SRC_LABEL[it.src] || it.src)}</span>`) : ''}
             </div>
           </div>
           <button class="x" data-act="item-remove" data-i="${ii}" title="Remove">✕</button>
@@ -7568,6 +8414,7 @@ html { -webkit-tap-highlight-color: transparent; }
             <div class="day-main">
               <div class="day-head">
                 <div class="day-title">Day ${activeDay + 1}${dayDate(activeDay) ? ' · ' + esc(dayDate(activeDay)) : ''}</div>${wxChip}
+                <button class="import-btn" data-act="open-import" data-stop="${sIdx}" data-day="${activeDay}" title="Add places from a shared RedNote / TikTok / Instagram post">${svg(I.inbox, { w: 13, h: 13, sw: 1.7 })}<span>Import post</span></button>
                 <button class="optimize-btn" data-act="optimize-day" ${placedCount < 2 ? 'disabled' : ''} title="${placedCount < 2 ? 'Add an address to at least 2 activities first' : 'Reorder the day to avoid backtracking'}">${svg(I.spark, { w: 13, h: 13, sw: 1.6 })}<span>Optimize route</span></button>
               </div>
               ${note ? `<div class="optimize-note${note.kind === 'warn' ? ' warn' : ''}"><span>${esc(note.text)}</span><button class="on-x" data-act="optimize-dismiss" title="Dismiss">✕</button></div>` : ''}
@@ -7847,6 +8694,94 @@ html { -webkit-tap-highlight-color: transparent; }
       </div>`;
     }
 
+    // Review sheet for a shared post: the raw text on top, everything the
+    // extractor found below it — editable, tickable, and aimed at one day of
+    // one stay before anything is committed.
+    renderImportModal() {
+      if (!this.importOpen) return '';
+      const trip = this.currentTrip();
+      const stops = trip.stops || [];
+      const res = this.importResult;
+      const SIG = { list: 'listed', pin: 'pinned', time: 'time', place: 'place word', name: 'name', verb: 'activity', price: 'price', city: 'city', emoji: 'emoji', link: 'link only' };
+
+      const stopOpts = stops.map((s, i) =>
+        `<option value="${i}"${i === this.importStopIdx ? ' selected' : ''}>${esc(s.city || 'Stop ' + (i + 1))}</option>`).join('');
+      const days = this.importStopDays();
+      const dayOpts = Array.from({ length: days }, (_, i) =>
+        `<option value="${i}"${i === this.importDay ? ' selected' : ''}>Day ${i + 1}</option>`).join('');
+
+      let found = '';
+      if (res) {
+        const picked = res.activities.filter(a => a.use && (a.text || '').trim()).length;
+        const allOn = res.activities.every(a => a.use);
+        const spread = res.dayCount > 1;
+        const rows = res.activities.map(a => {
+          const chips = (a.signals || []).slice(0, 2).map(s => `<span class="imp-sig">${esc(SIG[s] || s)}</span>`).join('');
+          const dayChip = (spread && a.day != null) ? `<span class="imp-day">Day ${a.day + 1}</span>` : '';
+          return `<div class="imp-row${a.use ? ' on' : ''}">
+            <button class="imp-check" data-act="import-toggle" data-id="${escA(a.id)}" role="checkbox" aria-checked="${a.use}" title="${a.use ? 'Leave this one out' : 'Include this one'}">${a.use ? svg(I.check, { w: 11, h: 11, sw: 3.4, stroke: 'currentColor' }) : ''}</button>
+            <div class="imp-mid">
+              <input class="imp-name" value="${escA(a.text)}" data-ch="import-text" data-id="${escA(a.id)}" placeholder="Place or activity">
+              <div class="imp-meta">
+                <span class="imp-fld imp-fld--time">${svg(I.clock, { w: 11, h: 11 })}<input value="${escA(a.time)}" data-ch="import-time" data-id="${escA(a.id)}" placeholder="09:00"></span>
+                <span class="imp-fld">${svg(I.pin, { w: 11, h: 11 })}<input value="${escA(a.address)}" data-ch="import-address" data-id="${escA(a.id)}" placeholder="Address (optional)"></span>
+                ${a.cost ? `<span class="imp-cost">$${esc(a.cost)}</span>` : ''}
+                ${dayChip}
+              </div>
+              ${a.note ? `<div class="imp-note">${esc(a.note)}</div>` : ''}
+            </div>
+            <div class="imp-sigs">${chips}</div>
+          </div>`;
+        }).join('');
+
+        const target = stops.length ? `<div class="imp-target">
+            <span class="imp-lbl">Add to</span>
+            <select data-ch="import-stop">${stopOpts}</select>
+            <select data-ch="import-day">${dayOpts}</select>
+            ${spread ? `<label class="imp-spread"><input type="checkbox" data-ch="import-usedays"${this.importUseDays ? ' checked' : ''}>keep the post’s ${res.dayCount} days, one after another</label>` : ''}
+          </div>`
+          : `<p class="imp-empty">Add a city to your route first — then these can land on one of its days.</p>`;
+
+        found = `<div class="imp-found">
+          <div class="imp-found-hd">
+            <span class="imp-src imp-src--${escA(res.source)}">${esc(res.sourceLabel)}</span>
+            <span class="imp-count">${res.activities.length} found</span>
+            ${res.url ? `<a class="imp-link" href="${escA(res.url)}" target="_blank" rel="noopener noreferrer">open post ↗</a>` : ''}
+            <button class="imp-all" data-act="import-toggle-all">${allOn ? 'Select none' : 'Select all'}</button>
+          </div>
+          ${res.title ? `<div class="imp-post-title">${esc(res.title)}</div>` : ''}
+          ${target}
+          <div class="imp-rows">${rows}</div>
+          <button class="imp-apply" data-act="import-apply"${picked && stops.length ? '' : ' disabled'}>
+            Add ${picked} ${picked === 1 ? 'place' : 'places'}${stops.length && this.importStopIdx != null ? ' to ' + esc(stops[this.importStopIdx].city || 'this stop') + ' · Day ' + (this.importDay + 1) : ''}
+          </button>
+        </div>`;
+      }
+
+      return `<div class="overlay" data-act="overlay-import">
+        <div class="dialog import-dialog" data-stop>
+          <div class="head"><div class="row">
+            <div style="flex:1;min-width:0">
+              <div class="eyebrow">Import</div>
+              <div class="imp-title">From a shared post</div>
+              <div class="imp-sub">RedNote · TikTok · Instagram — share straight to Planner, or paste it here.</div>
+            </div>
+            <button class="modal-x" data-act="close-import">✕</button>
+          </div></div>
+          <div class="imp-body">
+            <textarea class="imp-paste" data-ch="import-raw" data-drop="import" rows="5"
+              placeholder="Paste the caption, the copied note, or just the link…">${esc(this.importRaw)}</textarea>
+            <div class="imp-actions">
+              <button class="sync-btn" data-act="import-paste">Paste from clipboard</button>
+              <button class="sync-btn primary" data-act="import-extract">Find places</button>
+            </div>
+            ${this.importMsg ? `<p class="imp-msg">${esc(this.importMsg)}</p>` : ''}
+            ${found}
+          </div>
+        </div>
+      </div>`;
+    }
+
     /* ============================================================
        EVENT DELEGATION
        ============================================================ */
@@ -7908,6 +8843,7 @@ html { -webkit-tap-highlight-color: transparent; }
       });
     }
     onEscape() {
+      if (this.importOpen) { this.closeImport(); return; }
       if (this.syncOpen) { this.syncOpen = false; this.bumpModal(); return; }
       // ledger leaves aren't dismissable — openStopIdx/accomOpenIdx are the
       // pages' stop selections there, not modals. The bill IS a modal on web.
@@ -7997,6 +8933,20 @@ html { -webkit-tap-highlight-color: transparent; }
         case 'close-sync': this.syncOpen = false; this.bumpModal(); break;
         case 'overlay-sync': if (e.target === t) { this.syncOpen = false; this.bumpModal(); } break;
         case 'sync-now': this.syncNow(); break;
+        // ---- social import ----
+        case 'open-import': this.openImport({ stopIdx: t.dataset.stop != null ? Number(t.dataset.stop) : null, day: t.dataset.day != null ? Number(t.dataset.day) : null }); break;
+        case 'close-import': this.closeImport(); break;
+        case 'overlay-import': if (e.target === t) this.closeImport(); break;
+        case 'import-extract': {
+          const box = this.modalEl.querySelector('.imp-paste');
+          if (box) this.importRaw = box.value;      // read live, before the change event lands
+          this.runImportExtract();
+          break;
+        }
+        case 'import-paste': this.importPasteFromClipboard(); break;
+        case 'import-toggle': this.importToggle(id); break;
+        case 'import-toggle-all': this.importToggleAll(); break;
+        case 'import-apply': this.importApply(); break;
         case 'open-web': this.openHostedWeb(); break;
         case 'close-iti': this.closeStop(); break;
         case 'overlay-iti': if (e.target === t) this.closeStop(); break;
@@ -8056,8 +9006,21 @@ html { -webkit-tap-highlight-color: transparent; }
         case 'todo-text': meta.todos[i].text = v; this.bump(); break;
         case 'pack-text': { const L = this.packList(trip, t.dataset.slot); if (L[i]) L[i].text = v; this.packOpen = t.dataset.slot; this.bump(); break; }
         case 'sync-code-in': this._syncCodeDraft = v; break;
+        // social import
+        case 'import-raw': this.importRaw = v; this.runImportExtract(); break;
+        case 'import-stop': {
+          this.importStopIdx = Math.max(0, Math.min(trip.stops.length - 1, Number(v) || 0));
+          this.importDay = Math.max(0, Math.min(this.importStopDays() - 1, this.importDay));
+          this.bumpModal(); break;
+        }
+        case 'import-day': this.importDay = Math.max(0, Math.min(this.importStopDays() - 1, Number(v) || 0)); this.bumpModal(); break;
+        case 'import-usedays': this.importUseDays = !!t.checked; this.bumpModal(); break;
+        case 'import-text': this.importSetField(t.dataset.id, 'text', v); break;
+        case 'import-time': this.importSetField(t.dataset.id, 'time', v); break;
+        case 'import-address': this.importSetField(t.dataset.id, 'address', v); break;
         // itinerary modal
         case 'iti-city': trip.stops[this.openStopIdx].city = v; this.bump(); break;
+        case 'item-time': trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i].time = v; this.bumpModal(); this.scheduleSave(); break;
         case 'item-text': trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i].text = v; this.bumpModal(); this.scheduleSave(); break;
         case 'item-address': trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i].address = v; this.bumpModal(); this.scheduleSave(); break;
         case 'item-note': trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i].note = v; this.bumpModal(); this.scheduleSave(); break;
@@ -8192,6 +9155,12 @@ html { -webkit-tap-highlight-color: transparent; }
         const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
         if (f && f.type.startsWith('image/')) this.addToStickerStock([f]);
       }
+      // a post, a caption or a bare link dragged onto the import box
+      else if (drop === 'import') {
+        const dt = e.dataTransfer;
+        const txt = (dt && (dt.getData('text/plain') || dt.getData('text/uri-list'))) || '';
+        if (txt.trim()) { this.importRaw = txt; this.runImportExtract(); }
+      }
     }
     onDragEnd(e) {
       if (this._dragCellImg) { this._dragCellImg.style.opacity = ''; this._dragCellImg = null; }
@@ -8230,6 +9199,14 @@ html { -webkit-tap-highlight-color: transparent; }
       }
     }
     onPaste(e) {
+      // the import box is a drop-off, not a text editor: a paste replaces what's
+      // in it and extracts straight away
+      const impBox = e.target.closest('.imp-paste');
+      if (impBox) {
+        const txt = (e.clipboardData && e.clipboardData.getData('text/plain')) || '';
+        if (txt.trim()) { e.preventDefault(); this.importRaw = txt; this.runImportExtract(); }
+        return;
+      }
       const closetZone = e.target.closest('[data-drop="closet-zone"]');
       if (closetZone) {
         const items = (e.clipboardData && e.clipboardData.items) || [];

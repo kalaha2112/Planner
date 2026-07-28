@@ -21,7 +21,7 @@ const path = require('path');
 
 const DIR = __dirname;
 const OUT = path.join(DIR, 'standalone.html');
-const SOURCES = ['index.html', 'styles.css', 'app.js', 'vendor/leaflet/leaflet.css', 'vendor/leaflet/leaflet.js', 'vendor/topojson/topojson.min.js', 'vendor/topojson/countries-110m.json', 'vendor/topojson/countries-50m.json'];
+const SOURCES = ['index.html', 'styles.css', 'app.js', 'social-import.js', 'vendor/leaflet/leaflet.css', 'vendor/leaflet/leaflet.js', 'vendor/topojson/topojson.min.js', 'vendor/topojson/countries-110m.json', 'vendor/topojson/countries-50m.json'];
 
 const read = (rel) => fs.readFileSync(path.join(DIR, rel), 'utf8');
 
@@ -34,6 +34,7 @@ function build() {
   const worldAtlas50 = read('vendor/topojson/countries-50m.json');   // detailed basemap for the stop map
   const styles = read('styles.css');
   const app = read('app.js');
+  const socialImport = read('social-import.js');
 
   // NOTE: use FUNCTION replacements — a string replacement would interpret
   // `$&`, `$1`, `$$` etc., which the inlined JS/CSS contains in abundance
@@ -58,12 +59,18 @@ function build() {
     /<link rel="stylesheet" href="styles\.css(?:\?v=\d+)?">/,
     () => `<style>\n/* styles.css */\n${styles}\n</style>`
   );
-  // 5) app.js <script src> (with optional ?v=) → inline <script>
+  // 5) social-import.js <script src> (with optional ?v=) → inline <script>
+  //    (must stay ahead of app.js, which reads window.SocialImport)
+  html = html.replace(
+    /<script src="social-import\.js(?:\?v=\d+)?"><\/script>/,
+    () => `<script>\n/* social-import.js */\n${socialImport}\n</script>`
+  );
+  // 6) app.js <script src> (with optional ?v=) → inline <script>
   html = html.replace(
     /<script src="app\.js(?:\?v=\d+)?"><\/script>/,
     () => `<script>\n/* app.js */\n${app}\n</script>`
   );
-  // 6) PWA wiring is meaningless on file:// (no manifest fetch, no service
+  // 7) PWA wiring is meaningless on file:// (no manifest fetch, no service
   //    worker, icon paths won't travel with the single file) — strip both blocks
   html = html.replace(/[ \t]*<!-- PWA: installable app[\s\S]*?<link rel="apple-touch-icon"[^>]*>\n/, '');
   html = html.replace(/[ \t]*<!-- PWA: offline cache[\s\S]*?<\/script>\n/, '');
@@ -73,7 +80,7 @@ function build() {
 
   // sanity: every external app/style/leaflet ref should now be inlined
   const leftovers = (html.match(/href="(styles\.css|vendor\/leaflet\/leaflet\.css)/g) || [])
-    .concat(html.match(/src="(app\.js|vendor\/leaflet\/leaflet\.js|vendor\/topojson\/topojson\.min\.js)/g) || []);
+    .concat(html.match(/src="(app\.js|social-import\.js|vendor\/leaflet\/leaflet\.js|vendor\/topojson\/topojson\.min\.js)/g) || []);
   if (leftovers.length) {
     console.error('⚠ build: some references were not inlined:', leftovers.join(', '));
     process.exitCode = 1;
