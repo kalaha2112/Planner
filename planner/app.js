@@ -3672,21 +3672,6 @@
         }
       }
     }
-    // On scroll-stop: if you came to rest near the middle of the itinerary↔transport
-    // slide, glide to the exact halfway so it's a clean, stable park showing both
-    // panels. Only the middle is magnetic — the ends and the rest of the page stay
-    // free scroll, so this never makes leaving Route/Itinerary/Transport feel sticky.
-    _parkHalfway() {
-      if (!this._webMag() || !this._introParked || (this._anyModalOpen && this._anyModalOpen())) return;
-      const group = this.root.querySelector('.leaf-group'); if (!group) return;
-      const range = group.offsetHeight - window.innerHeight; if (range <= 0) return;
-      const mid = Math.round((window.scrollY || 0) + group.getBoundingClientRect().top + range / 2);
-      const dist = Math.abs((window.scrollY || 0) - mid);
-      if (dist > 1 && dist <= range * 0.18) {                 // stopped near the split (~a fifth of the slide)
-        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        window.scrollTo({ top: mid, behavior: reduced ? 'auto' : 'smooth' });
-      }
-    }
     _syncLeafClasses() {
       const book = this.root.querySelector('.ledger-book'); if (!book) return;
       book.dataset.page = String(this.magIdx);
@@ -3842,11 +3827,8 @@
       // pinned range (see _onLedgerScroll). A rAF-coalesced scroll listener keeps
       // the slide in lock-step with the scroll. Wired once (init) — no-op off web.
       window.addEventListener('scroll', () => {
-        if (!this._scrollRaf) this._scrollRaf = requestAnimationFrame(() => { this._scrollRaf = null; this._onLedgerScroll(); });
-        // when scrolling stops near the middle of the slide, settle onto the exact
-        // halfway split so it's an easy, stable place to park (both panels shown)
-        clearTimeout(this._parkT);
-        this._parkT = setTimeout(() => this._parkHalfway(), 130);
+        if (this._scrollRaf) return;
+        this._scrollRaf = requestAnimationFrame(() => { this._scrollRaf = null; this._onLedgerScroll(); });
       }, { passive: true });
       // Keyboard: Escape clears the packing panel; ↑/↓ · PageUp/PageDown step
       // between sections (via magGoto, which also drives the horizontal slide);

@@ -1514,9 +1514,9 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   /* the ledger is a vertical scroll page (Route · the itinerary+transport stage ·
      Packing); the intro-lock class freezes it during the cover. Route and Packing
      scroll freely; the middle stage (.leaf-group) pins to the viewport and its two
-     panels slide as you scroll through it (_onLedgerScroll). When you stop scrolling
-     near the halfway of that slide, JS gently settles onto the exact split so it's a
-     restable "park" showing both panels (see _parkHalfway). */
+     panels slide as you scroll through it (_onLedgerScroll). It's pure native scroll
+     end to end — nothing snaps or re-scrolls the window — so you can rest anywhere,
+     including the halfway split where both panels show, without it fighting you. */
   :root {
     --ledger-rule:   rgba(26, 26, 26, .05);    /* faint account-book ruling */
     --ledger-margin: rgba(145, 4, 12, .16);    /* the red margin line */
