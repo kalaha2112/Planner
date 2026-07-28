@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-28T15:30:25.784Z
+  Built: 2026-07-28T18:28:18.822Z
 -->
 
 <html lang="en">
@@ -4840,7 +4840,6 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       ta.innerHTML = `
         <button class="tool-btn" data-act="undo" title="Undo (⌘Z)" aria-label="Undo" disabled>${svg(I.undo)}</button>
         <button class="tool-btn sync-toggle-btn" data-act="open-sync" title="Sync across devices" aria-label="Sync across devices"><span class="sync-dot s-off"></span>${svg(I.sync)}</button>
-        <button class="tool-btn import-toggle-btn" data-act="open-import" title="Import a shared post" aria-label="Import a shared post">${svg(I.inbox)}</button>
         <button class="tool-btn sticker-toggle-btn" data-act="toggle-stickers" title="Memories" aria-label="Memories">${svg(I.sticker)}</button>
         <button class="theme-btn" data-act="toggle-theme" aria-label="Toggle dark mode" title="Toggle dark mode">
           <svg class="ic-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
@@ -4896,13 +4895,6 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       if (dot) dot.className = 'sync-dot s-' + (this.isLinked() ? this._syncStatus : 'off');
       const memBtn = ta.querySelector('.sticker-toggle-btn');
       if (memBtn) memBtn.classList.toggle('active', this.stickerPanelOpen);
-      const impBtn = ta.querySelector('.import-toggle-btn');
-      if (impBtn) {
-        impBtn.classList.toggle('active', this.importOpen);
-        // unlike sync, importing is useful on every page — it only steps aside
-        // for another open dialog
-        impBtn.style.display = (this._anyModalOpen() && !this.importOpen) ? 'none' : '';
-      }
       const themeBtn = ta.querySelector('[data-act="toggle-theme"]');
       if (themeBtn) themeBtn.setAttribute('aria-pressed', String(document.documentElement.getAttribute('data-theme') === 'dark'));
     }

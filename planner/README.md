@@ -160,9 +160,8 @@ posts people save for travel are almost always structured lists.
    out of the address bar, and opens the review sheet already filled in.
    *iOS/iPadOS doesn't implement Web Share Target* — there, use **Copy link** / **Copy** in the
    post's menu and paste (route 2).
-2. **Paste** — the inbox button in the top-right cluster (or **Import post** on a day header)
-   opens the sheet; paste into the box, or hit **Paste from clipboard**. A paste extracts
-   immediately.
+2. **Paste** — **Import post** on any day header opens the sheet, already aimed at that city and
+   day; paste into the box, or hit **Paste from clipboard**. A paste extracts immediately.
 3. **Drop** — drag a link or selected text onto the box.
 
 **What it extracts** (`social-import.js`, a pure module with no app dependencies)
