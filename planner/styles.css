@@ -209,8 +209,8 @@
   --on-brown:   #FFF7EA;
   --on-accent:  #FFF7EA;
   --red:        #E1401B;   /* vermilion: cash, flight, active */
-  --shell:      #FBEFDD;   /* sun-bleached cream */
-  --surface:    #FFFAF1;
+  --shell:      #FFFFFF;   /* white page */
+  --surface:    #FFFFFF;
 
   --gold:       #F0A202;   /* marigold: miles, award, itinerary */
   --gold-soft:  #FDF0D5;
@@ -233,23 +233,23 @@
   --hover-soft: #FFF3E2;
   --cal-hover:  #FAD9BE;
   --rm-hover:   #FDE4DB;
-  --chip-glass: rgba(255,250,241,.92);
-  --card-glass: rgba(255,250,241,.90);
-  --ep-glass:   rgba(255,247,234,.94);
+  --chip-glass: rgba(255,255,255,.92);
+  --card-glass: rgba(255,255,255,.90);
+  --ep-glass:   rgba(255,255,255,.94);
 
-  --map-sea:       #FBEFDD;
+  --map-sea:       #FFFFFF;
   --map-land:      #2A1810;
-  --map-land-line: #FBEFDD;
+  --map-land-line: #FFFFFF;
   --map-route:     #F0A202;
-  --map-label:     #FBEFDD;
+  --map-label:     #FFFFFF;
   --mc-dates:      #0A5A4E;
 
-  --mini-sea:    #FBEFDD;
+  --mini-sea:    #FFFFFF;
   --mini-land:   #F3E0C6;
   --mini-border: #C2825A;
   --mini-route:  #2A1810;
   --mini-leader: #7B5B45;
-  --mini-ring:   #FFFAF1;
+  --mini-ring:   #FFFFFF;
 
   /* printed receipt, retinted to the same warm stock */
   --paper:       #FFF4DF;
@@ -376,7 +376,7 @@
   --on-brown:   #F2F7E2;
   --on-accent:  #FFFFFF;
   --red:        #FF5A2B;   /* papaya: cash, flight, active */
-  --shell:      #F6F8EF;   /* pale chartreuse white */
+  --shell:      #FFFFFF;   /* white page */
   --surface:    #FFFFFF;
 
   --gold:       #FFA800;   /* amber: miles, award, itinerary */
@@ -402,16 +402,16 @@
   --rm-hover:   #FFE6DC;
   --chip-glass: rgba(255,255,255,.80);
   --card-glass: rgba(255,255,255,.72);
-  --ep-glass:   rgba(246,248,239,.88);
+  --ep-glass:   rgba(255,255,255,.88);
 
-  --map-sea:       #F6F8EF;
+  --map-sea:       #FFFFFF;
   --map-land:      #141709;
-  --map-land-line: #F6F8EF;
+  --map-land-line: #FFFFFF;
   --map-route:     #FF5A2B;
   --map-label:     #EFF6DF;
   --mc-dates:      #4E7700;
 
-  --mini-sea:    #F6F8EF;
+  --mini-sea:    #FFFFFF;
   --mini-land:   #E9EFD8;
   --mini-border: #A8B287;
   --mini-route:  #141709;
@@ -538,7 +538,7 @@
 [data-skin="pop"] body::before,
 body[data-skin="pop"]::before {
   content: ''; position: fixed; inset: 0; z-index: 9999;
-  pointer-events: none; opacity: .045;
+  pointer-events: none; opacity: .028;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23g)'/%3E%3C/svg%3E");
 }
 /* surfaces that already carry a frame just get the heavier weight… */
@@ -569,8 +569,10 @@ body[data-skin="pop"]::before {
 [data-skin="pop"] .mc-city-display { letter-spacing: .02em; }
 
 /* ---- B: aurora backdrop, frosted surfaces, gradient primaries ---- */
-[data-skin="neon"] body,
-body[data-skin="neon"] {
+/* the aurora wash is a dark-mode device — in light mode it would tint the page,
+   and light mode is meant to be plain white */
+[data-skin="neon"][data-theme="dark"] body,
+body[data-skin="neon"][data-theme="dark"] {
   background-image:
     radial-gradient(60vw 50vh at 12% -8%,  color-mix(in oklch, var(--brown) 24%, transparent), transparent 70%),
     radial-gradient(55vw 45vh at 92% 8%,   color-mix(in oklch, var(--red)   20%, transparent), transparent 70%);
