@@ -12,25 +12,32 @@ Cormorant Garamond / DM Sans type stack and an ink/brown/red paper palette. The 
 design's functional accents (gold for award miles / itinerary, green for dates / train) are
 retained so the route's color-coding stays legible.
 
-## Skins
+## Visual language — Night Market
 
-Two candidate visual directions ship alongside the classic editorial look, defined as token
-packs in the `SKINS` block of `styles.css` and selected with `data-skin` on `<html>`:
+The planner is skinned as **Night Market**: acid lime, amber and papaya over a
+green-black, with gradient accents on primary actions, frosted glass on the stop cards
+and halo shadows instead of outlines. Light mode is plain white; dark mode is the hero,
+where an aurora wash sits behind the page and the accents glow.
 
-| Skin | `?skin=` | Look |
+| Role | Light | Dark |
 |---|---|---|
-| Classic | `?skin=classic` | The original ink-on-paper editorial palette (default) |
-| A · Sunset Express | `?skin=pop` | Retro travel poster — flat saturated colour on warm cream, hard offset shadows, Fraunces / Outfit / Anton |
-| B · Night Market | `?skin=neon` | Neon signage after dark — acid lime / amber / papaya on a green-black, gradient accents, frosted glass, Space Grotesk / Sora |
+| Page / surface | `#FFFFFF` | `#0E1109` / `#171B10` |
+| Ink | `#141709` | `#EFF6DF` |
+| Structural (pills, buttons, nodes) | `#232A0E` | `#EFF6DF` |
+| Cash / flight / active | `#FF5A2B` papaya | `#FF7A3D` |
+| Miles / award / itinerary | `#FFA800` amber | `#FFBE3D` |
+| Dates / train / saved | `#6FA800` lime | `#A8E82C` |
 
-The skin is applied pre-paint by the boot script in `index.html` (so it never flashes), and
-persisted in `localStorage['europe-trip-skin-v1']` — `?skin=` in the URL wins and is saved, so a
-link can hand someone a specific look. Both skins carry matching `[data-theme="dark"]` overrides,
-so the existing dark-mode toggle keeps working in all three. Neither skin's ramp uses blue,
-pink or purple; transport-mode colours are tokens too (`--mode-*`, read by `MODE_HEX` in
-`app.js`), so route pips and leg lines recolour with the skin instead of being frozen in JS.
+Type: **Space Grotesk** (display), **Sora** (UI), **Bebas Neue** (caps),
+**Instrument Serif** (the italic date and sub lines).
 
-Open `mockups.html` to compare the two side by side in light and dark.
+It is all driven by the custom properties in `:root` and `[data-theme="dark"]` at the top
+of `styles.css` — including the transport-mode colours (`--mode-*`, read by `MODE_HEX` in
+`app.js`), so route pips, leg lines and map dashes recolour with the palette rather than
+being frozen in JS. The `SURFACE TREATMENT` block near the foot of the sheet carries the
+few things a token can't express (aurora, glass, gradient fills); it sits late in the file
+deliberately, because those plain class selectors only beat the component rules they
+override by source order.
 
 ## 3D and motion
 
@@ -43,7 +50,7 @@ Open `mockups.html` to compare the two side by side in light and dark.
   - low-poly **card icons** (calendar, bed, plane) on the three entry cards, built from
     primitives so there are no asset files to fetch.
 
-  Everything reads its colours from the skin tokens, so it all re-themes with the app.
+  Everything reads its colours from the design tokens, so it all re-themes with the app.
 - **GSAP + ScrollTrigger** (`vendor/gsap/`) — the scroll motion over the overview: the date
   range, map, entry cards, stats and to-dos reveal and stagger in, the map parallaxes and tilts
   as it passes (returning flat when settled, so Leaflet's hit-testing is never distorted), and

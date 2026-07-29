@@ -6,107 +6,107 @@
 
 :root {
   /* ---- Wanderbook palette (base) ---- */
-  --ink:        #1a1a1a;   /* primary text */
-  --ink-mid:    #3d3826;
-  --ink-soft:   #7a7260;   /* secondary text */
-  --ink-mute:   #a89e8c;   /* muted / placeholder */
-  --ink-faint:  #c8c2ae;   /* faintest */
-  --brown:      #000000;   /* structural: dark pills, buttons, nodes (was brown #23140C) */
-  --red:        #91040C;   /* interactive / active: stops, cash, flight */
-  --shell:      #FAFAFA;   /* paper page background */
-  --surface:    #FAFAFA;   /* card surface */
+  --ink: #141709;   /* primary text */
+  --ink-mid: #2E3418;
+  --ink-soft: #5E6742;   /* secondary text */
+  --ink-mute: #8E9670;   /* muted / placeholder */
+  --ink-faint: #CFD6B6;   /* faintest */
+  --brown: #232A0E;   /* structural: dark pills, buttons, nodes (was brown #23140C) */
+  --red: #FF5A2B;   /* interactive / active: stops, cash, flight */
+  --shell: #FFFFFF;   /* paper page background */
+  --surface: #FFFFFF;   /* card surface */
 
   /* ---- retained functional accents ---- */
-  --gold:       #C8901F;   /* miles / award / itinerary / links */
-  --gold-soft:  #FCF7EC;   /* itinerary button surface */
-  --gold-border:#F0E2C9;
-  --gold-hover: #F8EFD8;
-  --green:      #5E8475;   /* sub-dates, saved, train, chosen */
-  --green-dark: #46604F;   /* overnight train */
-  --green-bg:   #EAF4EF;
+  --gold: #FFA800;   /* miles / award / itinerary / links */
+  --gold-soft: #FFF3DA;   /* itinerary button surface */
+  --gold-border: #FFDFA4;
+  --gold-hover: #FFEAC2;
+  --green: #6FA800;   /* sub-dates, saved, train, chosen */
+  --green-dark: #4E7700;   /* overnight train */
+  --green-bg: #EDF7D6;
 
   /* ---- hairlines / borders — a two-tier weight ladder ---- */
-  --line:       #000000;   /* STRONG: container frames + title rules */
-  --line-soft:  #D9D3C6;   /* QUIET: internal row dividers + input underlines */
-  --line-2:     #efeae0;   /* subtle FILL only (hover/active/code bg) — not a line */
-  --line-3:     #000000;   /* spine / secondary rules */
-  --dash:       #000000;   /* dashed outlines */
+  --line: #141709;   /* STRONG: container frames + title rules */
+  --line-soft: #DFE5CC;   /* QUIET: internal row dividers + input underlines */
+  --line-2: #EFF3E2;   /* subtle FILL only (hover/active/code bg) — not a line */
+  --line-3: #6FA800;   /* spine / secondary rules */
+  --dash: #A8B287;   /* dashed outlines */
 
   /* ---- calendar / closet warm fills ---- */
-  --stay-fill:  #FBEEE9;   /* calendar cell FILL (kept) */
-  --stay-line:  #000000;   /* calendar cell border (line) */
-  --map-bg:     #EDE7E2;
+  --stay-fill: #FFE9CC;   /* calendar cell FILL (kept) */
+  --stay-line: #141709;   /* calendar cell border (line) */
+  --map-bg: #E9EFD8;
 
   /* ---- themed literals (light values; see [data-theme="dark"] below) ---- */
-  --on-brown:      #fff;                    /* text/icons on --brown surfaces */
-  --hover-soft:    #faf8f4;                 /* accom-btn hover + add-outfit bg */
-  --cal-hover:     #F6E0D8;                 /* cal-cell hover + drag-target */
-  --rm-hover:      #fef2f2;                 /* .opt .rm:hover */
-  --chip-glass:    rgba(255,255,255,.86);   /* outfit/stock delete chips */
-  --card-glass:    rgba(255,255,255,.8);    /* .mc-front / .mc-back faces */
-  --ep-glass:      rgba(245,242,236,.92);   /* .map-ep chips */
-  --map-sea:       #FAFAFA;                 /* stop map: ocean = web background, so it blends */
-  --map-land:      #1A1A1A;                 /* stop map: black land */
+  --on-brown: #F2F7E2;                    /* text/icons on --brown surfaces */
+  --hover-soft: #FAFCF3;                 /* accom-btn hover + add-outfit bg */
+  --cal-hover: #FFDCAE;                 /* cal-cell hover + drag-target */
+  --rm-hover: #FFE6DC;                 /* .opt .rm:hover */
+  --chip-glass: rgba(255,255,255,.80);   /* outfit/stock delete chips */
+  --card-glass: rgba(255,255,255,.72);    /* .mc-front / .mc-back faces */
+  --ep-glass: rgba(255,255,255,.88);   /* .map-ep chips */
+  --map-sea: #FFFFFF;                 /* stop map: ocean = web background, so it blends */
+  --map-land: #141709;                 /* stop map: black land */
   --map-land-line: #FFFFFF;                 /* stop map: white country borders */
-  --map-route:     #C8901F;                 /* stop map: gold route dash — stands out from the white borders */
-  --map-label:     #E8E4DC;                 /* .map-city-label — light, readable on the black land */
-  --mc-dates:      #2c6a37;                 /* .mc-dates-display */
+  --map-route: #FF5A2B;                 /* stop map: gold route dash — stands out from the white borders */
+  --map-label: #EFF6DF;                 /* .map-city-label — light, readable on the black land */
+  --mc-dates: #4E7700;                 /* .mc-dates-display */
   /* itinerary mini "paper map" SVG */
-  --mini-sea:      oklch(95.5% 0.004 70);
-  --mini-land:     oklch(91% 0.008 70);
-  --mini-border:   oklch(75% 0.01 70);
-  --mini-route:    oklch(22% 0.025 70);
-  --mini-leader:   oklch(40% 0.012 70);
-  --mini-ring:     oklch(97% 0.005 60);
+  --mini-sea: #FFFFFF;
+  --mini-land: #E9EFD8;
+  --mini-border: #A8B287;
+  --mini-route: #141709;
+  --mini-leader: #5E6742;
+  --mini-ring: #FFFFFF;
 
   /* ---- transport modes — read by app.js (MODE_HEX) so route pips, legs and
      map dashes recolour with the skin instead of being frozen in JS ---- */
-  --mode-flight:    #91040C;
-  --mode-train:     #336184;
-  --mode-bus:       #EEB90F;
-  --mode-overnight: #46604F;
-  --mode-award:     #C8901F;
+  --mode-flight: #FF5A2B;
+  --mode-train: #6FA800;
+  --mode-bus: #FFA800;
+  --mode-overnight: #4E7700;
+  --mode-award: #C87A00;
 
   /* ---- text/icons on an ACCENT fill (--red / --brown / --green) ----
      Separate from --on-brown: that one flips with the theme (black pills go
      white in dark), this one rides coloured fills that stay coloured. */
-  --on-accent: #fff;
+  --on-accent: #FFFFFF;
 
   /* ---- receipt "printed paper" — the budget modal is a deliberate physical
      object (thermal paper + mono ink) rather than app chrome, so it gets its
      own sub-palette instead of following --surface/--ink. ---- */
-  --paper:       #fbfaf4;   /* the stock itself */
-  --paper-ink:   #111;      /* primary print */
-  --paper-soft:  #555;      /* secondary print */
-  --paper-mute:  #777;      /* tertiary print */
-  --paper-faint: #888;      /* footnote print */
-  --paper-line:  #999;      /* dashed field rules */
+  --paper: #FFFFFF;   /* the stock itself */
+  --paper-ink: #141709;      /* primary print */
+  --paper-soft: #46502C;      /* secondary print */
+  --paper-mute: #5E6742;      /* tertiary print */
+  --paper-faint: #8E9670;      /* footnote print */
+  --paper-line: #CFD6B6;      /* dashed field rules */
 
   /* ---- elevation ladder — one token per role so a skin can restyle depth
      wholesale (soft blur vs. hard offset) without touching call sites ---- */
-  --shadow-rest:  0 1px 2px rgba(33,26,24,.04);    /* cards at rest */
-  --shadow-card:  0 2px 10px rgba(33,26,24,.10);   /* raised card faces */
-  --shadow-lift:  0 5px 14px rgba(33,26,24,.16);   /* dragging / picked up */
-  --shadow-pop:   0 4px 14px rgba(35,20,12,.3);    /* buttons, pins, chips */
-  --shadow-modal: 0 24px 70px rgba(35,20,12,.28);  /* dialogs */
-  --shadow-page:  -3px 3px 10px rgba(35,20,12,.10);/* ledger page edge */
+  --shadow-rest: 0 1px 3px rgba(20,23,9,.07);    /* cards at rest */
+  --shadow-card: 0 8px 28px rgba(20,23,9,.10);   /* raised card faces */
+  --shadow-lift: 0 16px 40px rgba(20,23,9,.22);   /* dragging / picked up */
+  --shadow-pop: 0 6px 22px color-mix(in oklch, var(--red) 42%, transparent);    /* buttons, pins, chips */
+  --shadow-modal: 0 32px 90px rgba(20,23,9,.28);  /* dialogs */
+  --shadow-page: -6px 0 30px rgba(20,23,9,.10);/* ledger page edge */
 
   /* ---- type ---- */
-  --serif:  'Playfair Display', Georgia, serif;
+  --serif: 'Space Grotesk', system-ui, sans-serif;
   --mono:   ui-monospace, 'SF Mono', Menlo, Consolas, 'Courier New', monospace;   /* receipt */
-  --sans:   'Sora', system-ui, sans-serif;
-  --caps:   'Bebas Neue', 'DM Sans', sans-serif;
-  --script: 'Jost', sans-serif;
-  --display-alt: 'Josefin Sans', sans-serif;   /* stop-card city names + route headings */
+  --sans: 'Sora', system-ui, sans-serif;
+  --caps: 'Bebas Neue', 'DM Sans', sans-serif;
+  --script: 'Instrument Serif', Georgia, serif;
+  --display-alt: 'Space Grotesk', system-ui, sans-serif;   /* stop-card city names + route headings */
 
   /* ---- radii (from spec) ---- */
-  --r-pill: 999px; --r-modal: 18px; --r-card: 13px; --r-cell: 12px;
-  --r-btn: 9px; --r-sm: 8px; --r-xs: 7px; --r-check: 6px;
+  --r-pill: 999px; --r-modal: 26px; --r-card: 20px; --r-cell: 14px;
+  --r-btn: 12px; --r-sm: 10px; --r-xs: 9px; --r-check: 7px;
 
-  /* ---- skin hooks — no-ops in the classic skin, driven by [data-skin] ---- */
+  /* ---- surface treatment knobs, read by the SURFACE TREATMENT block ---- */
   --border-w:  1px;      /* frame weight on cards / modals */
-  --card-blur: 0px;      /* frosted-glass strength on translucent faces */
-  --grad-accent: none;   /* gradient fill for primary actions ("none" = flat) */
+  --card-blur: 16px;      /* frosted-glass strength on translucent faces */
+  --grad-accent: linear-gradient(135deg, var(--gold), var(--red));   /* gradient fill for primary actions ("none" = flat) */
 }
 
 /* ============================================================
@@ -119,55 +119,73 @@
    ============================================================ */
 [data-theme="dark"] {
   /* ink ladder, reversed: ink brightest, faint closest to the bg */
-  --ink:        #F2EFE7;
-  --ink-mid:    #DCD5C3;
-  --ink-soft:   #A9A08E;
-  --ink-mute:   #7C7464;
-  --ink-faint:  #514C3D;
-  --brown:      #FAFAF7;   /* black pills/buttons go white… */
-  --on-brown:   #131313;   /* …with dark text on them */
-  --red:        #C93A41;   /* brightened from #91040C */
-  --shell:      #121210;   /* warm near-black, not pure black */
-  --surface:    #161614;
+  --ink: #EFF6DF;
+  --ink-mid: #CDD9B4;
+  --ink-soft: #94A177;
+  --ink-mute: #6B7654;
+  --ink-faint: #3A4229;
+  --brown: #EFF6DF;   /* black pills/buttons go white… */
+  --on-brown: #12180A;   /* …with dark text on them */
+  --red: #FF7A3D;   /* brightened from #91040C */
+  --shell: #0E1109;   /* warm near-black, not pure black */
+  --surface: #171B10;
 
-  --gold:       #E0AC3E;   /* brightened from #C8901F */
-  --gold-soft:  #2A2315;
-  --gold-border:#4D3F1F;
-  --gold-hover: #362D1A;
-  --green:      #7FA893;   /* brightened from #5E8475 */
-  --green-dark: #628268;   /* brightened from #46604F */
-  --green-bg:   #1B2721;
+  --gold: #FFBE3D;   /* brightened from #C8901F */
+  --gold-soft: #33280C;
+  --gold-border: #5C4A14;
+  --gold-hover: #43340F;
+  --green: #A8E82C;   /* brightened from #5E8475 */
+  --green-dark: #7FB81C;   /* brightened from #46604F */
+  --green-bg: #23300E;
 
-  --line:       #FFFFFF;   /* pure-white hairlines mirror the black ones */
-  --line-soft:  #3A362E;   /* QUIET divider: dim warm grey, not white */
-  --line-2:     #26241F;   /* subtle fill only — stays a fill */
-  --line-3:     #FFFFFF;
-  --dash:       #FFFFFF;
+  --line: #EFF6DF;   /* pure-white hairlines mirror the black ones */
+  --line-soft: #333A24;   /* QUIET divider: dim warm grey, not white */
+  --line-2: #1E2416;   /* subtle fill only — stays a fill */
+  --line-3: #A8E82C;
+  --dash: #5C6845;
 
-  --stay-fill:  #2A211D;
-  --stay-line:  #FFFFFF;
-  --map-bg:     #1E1B18;
+  --stay-fill: #33280C;
+  --stay-line: #EFF6DF;
+  --map-bg: #141810;
 
-  --hover-soft:    #211F1B;
-  --cal-hover:     #33241F;
-  --rm-hover:      #391B1E;
-  --chip-glass:    rgba(28,28,26,.86);
-  --card-glass:    rgba(22,22,20,.85);
-  --ep-glass:      rgba(28,26,23,.92);
-  --map-sea:       #121210;   /* stop map: ocean = dark page bg, so it blends (no box) */
-  --map-land:      #ECE7DC;   /* stop map: beige land (app version; web mutes it — see media query) */
-  --map-land-line: #7C7059;   /* stop map: sepia borders (app); web darkens them — see media query */
-  --map-route:     #8A5A2C;   /* stop map: brown route — reads on the beige land and dark ocean */
-  --map-label:     #4A4234;   /* .map-city-label — dark, readable on the beige land */
-  --mc-dates:      #8CC49A;
-  --mini-sea:      #14120F;
-  --mini-land:     #201D19;
-  --mini-border:   #4B453C;
-  --mini-route:    #F2EFE7;
-  --mini-leader:   #A9A08E;
-  --mini-ring:     #121210;
+  --hover-soft: #1D2215;
+  --cal-hover: #3E3413;
+  --rm-hover: #3A2113;
+  --chip-glass: rgba(23,27,16,.84);
+  --card-glass: rgba(23,27,16,.70);
+  --ep-glass: rgba(14,17,9,.88);
+  --map-sea: #0E1109;   /* stop map: ocean = dark page bg, so it blends (no box) */
+  --map-land: #1E2416;   /* stop map: beige land (app version; web mutes it — see media query) */
+  --map-land-line: #4A5535;   /* stop map: sepia borders (app); web darkens them — see media query */
+  --map-route: #FF7A3D;   /* stop map: brown route — reads on the beige land and dark ocean */
+  --map-label: #EFF6DF;   /* .map-city-label — dark, readable on the beige land */
+  --mc-dates: #A8E82C;
+  --mini-sea: #0E1109;
+  --mini-land: #141810;
+  --mini-border: #3A4229;
+  --mini-route: #EFF6DF;
+  --mini-leader: #94A177;
+  --mini-ring: #171B10;
 
   color-scheme: dark;   /* native scrollbars, inputs, date pickers */
+  --on-accent: #12180A;
+  --paper: #171B10;
+  --paper-ink: #EFF6DF;
+  --paper-soft: #CDD9B4;
+  --paper-mute: #94A177;
+  --paper-faint: #6B7654;
+  --paper-line: #3A4229;
+  --shadow-rest: 0 1px 3px rgba(0,0,0,.45);
+  --shadow-card: 0 8px 28px rgba(0,0,0,.55);
+  --shadow-lift: 0 16px 40px rgba(0,0,0,.65);
+  --shadow-pop: 0 6px 24px color-mix(in oklch, var(--red) 55%, transparent);
+  --shadow-modal: 0 32px 90px rgba(0,0,0,.70);
+  --shadow-page: -6px 0 30px rgba(0,0,0,.50);
+  --mode-flight: #FF7A3D;
+  --mode-train: #A8E82C;
+  --mode-bus: #FFBE3D;
+  --mode-overnight: #7FB81C;
+  --mode-award: #FFBE3D;
 }
 /* route-modal OSM tiles: soft-invert to a dark basemap. :not(.daymap) because
    the day-plan map also carries .map and has its own theme treatment below. */
@@ -179,436 +197,6 @@
 }
 [data-theme="dark"] .leaflet-control-attribution {
   background: rgba(18,18,16,.7); color: var(--ink-mute);
-}
-
-/* ============================================================
-   SKINS — two candidate visual directions, layered on the tokens
-   above. Set data-skin="pop" | "neon" on <html> (pre-paint, from
-   index.html) to swap the whole app's personality; with no
-   data-skin the classic editorial look above is unchanged.
-
-   Specificity is what makes this work with no !important:
-   [data-skin][data-theme] is (0,2,0) and outranks the plain
-   [data-theme="dark"] block, while custom properties inherit — so
-   the same selectors also apply to a wrapper <div>, which is how
-   mockups.html shows all four combinations on one page.
-   ============================================================ */
-
-/* ------------------------------------------------------------
-   A — "SUNSET EXPRESS" · retro travel poster.
-   Flat saturated colour on warm cream, hard offset shadows,
-   chunky type. Fun via warmth and punch.
-   ------------------------------------------------------------ */
-[data-skin="pop"] {
-  --ink:        #2A1810;   /* roasted brown-black */
-  --ink-mid:    #4B3324;
-  --ink-soft:   #7B5B45;
-  --ink-mute:   #A98871;
-  --ink-faint:  #D8C3AE;
-  --brown:      #6E2A12;   /* burnt umber: pills, buttons, route nodes */
-  --on-brown:   #FFF7EA;
-  --on-accent:  #FFF7EA;
-  --red:        #E1401B;   /* vermilion: cash, flight, active */
-  --shell:      #FFFFFF;   /* white page */
-  --surface:    #FFFFFF;
-
-  --gold:       #F0A202;   /* marigold: miles, award, itinerary */
-  --gold-soft:  #FDF0D5;
-  --gold-border:#F3DCA8;
-  --gold-hover: #FBE7BF;
-  --green:      #0E7C6B;   /* sea teal: dates, train, saved */
-  --green-dark: #0A5A4E;
-  --green-bg:   #DCF0EA;
-
-  --line:       #2A1810;
-  --line-soft:  #E0CDB6;
-  --line-2:     #F5E7D3;
-  --line-3:     #6E2A12;
-  --dash:       #C2825A;
-
-  --stay-fill:  #FBDCC8;
-  --stay-line:  #2A1810;
-  --map-bg:     #F0DFC8;
-
-  --hover-soft: #FFF3E2;
-  --cal-hover:  #FAD9BE;
-  --rm-hover:   #FDE4DB;
-  --chip-glass: rgba(255,255,255,.92);
-  --card-glass: rgba(255,255,255,.90);
-  --ep-glass:   rgba(255,255,255,.94);
-
-  --map-sea:       #FFFFFF;
-  --map-land:      #2A1810;
-  --map-land-line: #FFFFFF;
-  --map-route:     #F0A202;
-  --map-label:     #FFFFFF;
-  --mc-dates:      #0A5A4E;
-
-  --mini-sea:    #FFFFFF;
-  --mini-land:   #F3E0C6;
-  --mini-border: #C2825A;
-  --mini-route:  #2A1810;
-  --mini-leader: #7B5B45;
-  --mini-ring:   #FFFFFF;
-
-  /* printed receipt, retinted to the same warm stock */
-  --paper:       #FFF4DF;
-  --paper-ink:   #2A1810;
-  --paper-soft:  #6B4A34;
-  --paper-mute:  #8A6A52;
-  --paper-faint: #A98871;
-  --paper-line:  #C2825A;
-
-  /* hard poster shadows — flat offsets in ink, no blur */
-  --shadow-rest:  2px 2px 0 var(--ink);
-  --shadow-card:  3px 3px 0 var(--ink);
-  --shadow-lift:  5px 5px 0 var(--ink);
-  --shadow-pop:   3px 3px 0 var(--ink);
-  --shadow-modal: 8px 8px 0 var(--ink);
-  --shadow-page:  -3px 3px 0 var(--ink);
-
-  --serif:       'Fraunces', Georgia, serif;
-  --sans:        'Outfit', system-ui, sans-serif;
-  --caps:        'Anton', 'Bebas Neue', sans-serif;
-  --script:      'Fraunces', Georgia, serif;
-  --display-alt: 'Anton', 'Bebas Neue', sans-serif;
-
-  --r-modal: 22px; --r-card: 18px; --r-cell: 14px;
-  --r-btn: 12px; --r-sm: 10px; --r-xs: 9px; --r-check: 7px;
-
-  --border-w: 2px;
-
-  --mode-flight:    #E1401B;
-  --mode-train:     #0E7C6B;
-  --mode-bus:       #F0A202;
-  --mode-overnight: #6E2A12;
-  --mode-award:     #B8700A;
-}
-
-[data-skin="pop"][data-theme="dark"] {
-  --ink:        #FCF1E1;
-  --ink-mid:    #E4CDB4;
-  --ink-soft:   #B4947A;
-  --ink-mute:   #8A6C55;
-  --ink-faint:  #55402F;
-  --brown:      #FFD9A8;
-  --on-brown:   #221206;
-  --on-accent:  #221206;
-  --red:        #FF6B3D;
-  --shell:      #180E07;
-  --surface:    #221408;
-
-  --gold:       #FFC145;
-  --gold-soft:  #3A2A10;
-  --gold-border:#5E4520;
-  --gold-hover: #47330F;
-  --green:      #38C2AA;
-  --green-dark: #2A9A86;
-  --green-bg:   #12302B;
-
-  --line:       #FFE8CC;
-  --line-soft:  #4A3524;
-  --line-2:     #2E1D0E;
-  --line-3:     #FFD9A8;
-  --dash:       #B4947A;
-
-  --stay-fill:  #3A2113;
-  --stay-line:  #FFE8CC;
-  --map-bg:     #2A1A0E;
-
-  --hover-soft: #2C1B0C;
-  --cal-hover:  #45260F;
-  --rm-hover:   #431D10;
-  --chip-glass: rgba(34,20,8,.90);
-  --card-glass: rgba(34,20,8,.88);
-  --ep-glass:   rgba(24,14,7,.94);
-
-  --map-sea:       #180E07;
-  --map-land:      #F3E0C6;
-  --map-land-line: #8A6C55;
-  --map-route:     #FF6B3D;
-  --map-label:     #2A1810;
-  --mc-dates:      #38C2AA;
-
-  --mini-sea:    #180E07;
-  --mini-land:   #2A1810;
-  --mini-border: #55402F;
-  --mini-route:  #FCF1E1;
-  --mini-leader: #B4947A;
-  --mini-ring:   #221408;
-
-  --paper:       #2B1A0C;
-  --paper-ink:   #FFEBD2;
-  --paper-soft:  #D8B694;
-  --paper-mute:  #B4947A;
-  --paper-faint: #8A6C55;
-  --paper-line:  #6B4A34;
-
-  /* offsets stay hard, but throw cream instead of ink */
-  --shadow-rest:  2px 2px 0 var(--line);
-  --shadow-card:  3px 3px 0 var(--line);
-  --shadow-lift:  5px 5px 0 var(--line);
-  --shadow-pop:   3px 3px 0 var(--line);
-  --shadow-modal: 8px 8px 0 var(--line);
-  --shadow-page:  -3px 3px 0 var(--line);
-
-  --mode-flight:    #FF6B3D;
-  --mode-train:     #38C2AA;
-  --mode-bus:       #FFC145;
-  --mode-overnight: #FFD9A8;
-  --mode-award:     #FFC145;
-}
-
-/* ------------------------------------------------------------
-   B — "NIGHT MARKET" · neon signage after dark.
-   Acid lime, amber and papaya over a green-black. Gradient accents,
-   frosted glass, halo shadows. Dark is the hero. Fun via heat and
-   glow rather than hue variety — the ramp is strictly warm + green,
-   with no blue, pink or purple anywhere.
-   ------------------------------------------------------------ */
-[data-skin="neon"] {
-  --ink:        #141709;   /* green-black */
-  --ink-mid:    #2E3418;
-  --ink-soft:   #5E6742;
-  --ink-mute:   #8E9670;
-  --ink-faint:  #CFD6B6;
-  --brown:      #232A0E;   /* deep olive-black: pills, buttons, nodes */
-  --on-brown:   #F2F7E2;
-  --on-accent:  #FFFFFF;
-  --red:        #FF5A2B;   /* papaya: cash, flight, active */
-  --shell:      #FFFFFF;   /* white page */
-  --surface:    #FFFFFF;
-
-  --gold:       #FFA800;   /* amber: miles, award, itinerary */
-  --gold-soft:  #FFF3DA;
-  --gold-border:#FFDFA4;
-  --gold-hover: #FFEAC2;
-  --green:      #6FA800;   /* acid lime: dates, train, saved */
-  --green-dark: #4E7700;
-  --green-bg:   #EDF7D6;
-
-  --line:       #141709;
-  --line-soft:  #DFE5CC;
-  --line-2:     #EFF3E2;
-  --line-3:     #6FA800;
-  --dash:       #A8B287;
-
-  --stay-fill:  #FFE9CC;
-  --stay-line:  #141709;
-  --map-bg:     #E9EFD8;
-
-  --hover-soft: #FAFCF3;
-  --cal-hover:  #FFDCAE;
-  --rm-hover:   #FFE6DC;
-  --chip-glass: rgba(255,255,255,.80);
-  --card-glass: rgba(255,255,255,.72);
-  --ep-glass:   rgba(255,255,255,.88);
-
-  --map-sea:       #FFFFFF;
-  --map-land:      #141709;
-  --map-land-line: #FFFFFF;
-  --map-route:     #FF5A2B;
-  --map-label:     #EFF6DF;
-  --mc-dates:      #4E7700;
-
-  --mini-sea:    #FFFFFF;
-  --mini-land:   #E9EFD8;
-  --mini-border: #A8B287;
-  --mini-route:  #141709;
-  --mini-leader: #5E6742;
-  --mini-ring:   #FFFFFF;
-
-  --paper:       #FFFFFF;
-  --paper-ink:   #141709;
-  --paper-soft:  #46502C;
-  --paper-mute:  #5E6742;
-  --paper-faint: #8E9670;
-  --paper-line:  #CFD6B6;
-
-  /* soft, wide elevation — depth instead of edges; the glow is thrown by the
-     hot accent, not the structural colour, so it stays warm */
-  --shadow-rest:  0 1px 3px rgba(20,23,9,.07);
-  --shadow-card:  0 8px 28px rgba(20,23,9,.10);
-  --shadow-lift:  0 16px 40px rgba(20,23,9,.22);
-  --shadow-pop:   0 6px 22px color-mix(in oklch, var(--red) 42%, transparent);
-  --shadow-modal: 0 32px 90px rgba(20,23,9,.28);
-  --shadow-page:  -6px 0 30px rgba(20,23,9,.10);
-
-  --serif:       'Space Grotesk', system-ui, sans-serif;
-  --sans:        'Sora', system-ui, sans-serif;
-  --caps:        'Bebas Neue', 'DM Sans', sans-serif;
-  --script:      'Instrument Serif', Georgia, serif;
-  --display-alt: 'Space Grotesk', system-ui, sans-serif;
-
-  --r-modal: 26px; --r-card: 20px; --r-cell: 14px;
-  --r-btn: 12px; --r-sm: 10px; --r-xs: 9px; --r-check: 7px;
-
-  --card-blur: 16px;
-  --grad-accent: linear-gradient(135deg, var(--gold), var(--red));
-
-  --mode-flight:    #FF5A2B;
-  --mode-train:     #6FA800;
-  --mode-bus:       #FFA800;
-  --mode-overnight: #4E7700;
-  --mode-award:     #C87A00;
-}
-
-[data-skin="neon"][data-theme="dark"] {
-  --ink:        #EFF6DF;
-  --ink-mid:    #CDD9B4;
-  --ink-soft:   #94A177;
-  --ink-mute:   #6B7654;
-  --ink-faint:  #3A4229;
-  --brown:      #EFF6DF;   /* pills invert to a bright cream, like the classic dark */
-  --on-brown:   #12180A;
-  --on-accent:  #12180A;
-  --red:        #FF7A3D;
-  --shell:      #0E1109;   /* green-black, never blue-black */
-  --surface:    #171B10;
-
-  --gold:       #FFBE3D;
-  --gold-soft:  #33280C;
-  --gold-border:#5C4A14;
-  --gold-hover: #43340F;
-  --green:      #A8E82C;
-  --green-dark: #7FB81C;
-  --green-bg:   #23300E;
-
-  --line:       #EFF6DF;
-  --line-soft:  #333A24;
-  --line-2:     #1E2416;
-  --line-3:     #A8E82C;
-  --dash:       #5C6845;
-
-  --stay-fill:  #33280C;
-  --stay-line:  #EFF6DF;
-  --map-bg:     #141810;
-
-  --hover-soft: #1D2215;
-  --cal-hover:  #3E3413;
-  --rm-hover:   #3A2113;
-  --chip-glass: rgba(23,27,16,.84);
-  --card-glass: rgba(23,27,16,.70);
-  --ep-glass:   rgba(14,17,9,.88);
-
-  --map-sea:       #0E1109;
-  --map-land:      #1E2416;
-  --map-land-line: #4A5535;
-  --map-route:     #FF7A3D;
-  --map-label:     #EFF6DF;
-  --mc-dates:      #A8E82C;
-
-  --mini-sea:    #0E1109;
-  --mini-land:   #141810;
-  --mini-border: #3A4229;
-  --mini-route:  #EFF6DF;
-  --mini-leader: #94A177;
-  --mini-ring:   #171B10;
-
-  --paper:       #171B10;
-  --paper-ink:   #EFF6DF;
-  --paper-soft:  #CDD9B4;
-  --paper-mute:  #94A177;
-  --paper-faint: #6B7654;
-  --paper-line:  #3A4229;
-
-  --shadow-rest:  0 1px 3px rgba(0,0,0,.45);
-  --shadow-card:  0 8px 28px rgba(0,0,0,.55);
-  --shadow-lift:  0 16px 40px rgba(0,0,0,.65);
-  --shadow-pop:   0 6px 24px color-mix(in oklch, var(--red) 55%, transparent);
-  --shadow-modal: 0 32px 90px rgba(0,0,0,.70);
-  --shadow-page:  -6px 0 30px rgba(0,0,0,.50);
-
-  --mode-flight:    #FF7A3D;
-  --mode-train:     #A8E82C;
-  --mode-bus:       #FFBE3D;
-  --mode-overnight: #7FB81C;
-  --mode-award:     #FFBE3D;
-
-  color-scheme: dark;
-}
-
-/* ============================================================
-   SKIN TEXTURE LAYERS — the part that isn't expressible as a
-   token: backdrops, borders, glass and gradient fills. Kept
-   deliberately small; everything else rides the tokens above.
-   ============================================================ */
-
-/* ---- A: paper grain over the whole shell, and real 2px frames ---- */
-[data-skin="pop"] body::before,
-body[data-skin="pop"]::before {
-  content: ''; position: fixed; inset: 0; z-index: 9999;
-  pointer-events: none; opacity: .028;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23g)'/%3E%3C/svg%3E");
-}
-/* surfaces that already carry a frame just get the heavier weight… */
-[data-skin="pop"] .card,
-[data-skin="pop"] .mc-front,
-[data-skin="pop"] .mc-back {
-  border-width: var(--border-w);
-}
-/* …and the borderless panels get a real poster frame + hard offset, which is
-   what actually makes this skin read as print rather than as a tinted app */
-[data-skin="pop"] .summary,
-[data-skin="pop"] .todos,
-[data-skin="pop"] .app-card,
-[data-skin="pop"] .opt,
-[data-skin="pop"] .accom-btn,
-[data-skin="pop"] .dialog,
-[data-skin="pop"] .imp-sheet {
-  border: var(--border-w) solid var(--line);
-  box-shadow: var(--shadow-card);
-}
-[data-skin="pop"] .app-card:active { box-shadow: var(--shadow-rest); }
-/* the one-off shadows the token ladder doesn't reach, squared off to match */
-[data-skin="pop"] .map-pop,
-[data-skin="pop"] .mobile-map-pop,
-[data-skin="pop"] .budget-dialog { box-shadow: var(--shadow-modal); }
-[data-skin="pop"] .optimize-btn:hover:not(:disabled) { box-shadow: var(--shadow-rest); }
-/* Anton/Fraunces run larger on the page than Bebas/Playfair did */
-[data-skin="pop"] .mc-city-display { letter-spacing: .02em; }
-
-/* ---- B: aurora backdrop, frosted surfaces, gradient primaries ---- */
-/* the aurora wash is a dark-mode device — in light mode it would tint the page,
-   and light mode is meant to be plain white */
-[data-skin="neon"][data-theme="dark"] body,
-body[data-skin="neon"][data-theme="dark"] {
-  background-image:
-    radial-gradient(60vw 50vh at 12% -8%,  color-mix(in oklch, var(--brown) 24%, transparent), transparent 70%),
-    radial-gradient(55vw 45vh at 92% 8%,   color-mix(in oklch, var(--red)   20%, transparent), transparent 70%);
-  background-attachment: fixed;
-  background-repeat: no-repeat;
-}
-[data-skin="neon"] .mc-front,
-[data-skin="neon"] .mc-back,
-[data-skin="neon"] .map-ep {
-  backdrop-filter: blur(var(--card-blur)) saturate(1.3);
-  -webkit-backdrop-filter: blur(var(--card-blur)) saturate(1.3);
-}
-[data-skin="neon"] .tab-active,
-[data-skin="neon"] .app-tab.on,
-[data-skin="neon"] .app-pill.on,
-[data-skin="neon"] .t-pill.active,
-[data-skin="neon"] .sync-btn.primary,
-[data-skin="neon"] .imp-apply {
-  background: var(--grad-accent);
-  box-shadow: var(--shadow-pop);
-}
-/* borderless panels lift on light instead of being outlined */
-[data-skin="neon"] .summary,
-[data-skin="neon"] .todos,
-[data-skin="neon"] .app-card,
-[data-skin="neon"] .opt,
-[data-skin="neon"] .accom-btn { box-shadow: var(--shadow-card); }
-[data-skin="neon"] .map-pop,
-[data-skin="neon"] .mobile-map-pop,
-[data-skin="neon"] .budget-dialog { box-shadow: var(--shadow-modal); }
-[data-skin="neon"] .optimize-btn:hover:not(:disabled) { box-shadow: var(--shadow-pop); }
-/* the receipt is a lit panel here, not paper — drop the printer's warm tint */
-[data-skin="neon"] .budget-dialog { background: var(--paper); }
-
-@media (prefers-reduced-motion: reduce) {
-  [data-skin="pop"] body::before, body[data-skin="pop"]::before { opacity: .03; }
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -3220,6 +2808,55 @@ html { -webkit-tap-highlight-color: transparent; }
 }
 a.item-src:hover { color: var(--red); border-color: var(--red); }
 .item .field--time { flex: 0 0 74px; min-width: 74px; }
+
+/* ============================================================
+   SURFACE TREATMENT — the part of the look that isn't expressible
+   as a token: the aurora backdrop, frosted glass and the gradient
+   fills on primary actions. Everything else rides the tokens above.
+
+   Placed near the END of the sheet on purpose. These selectors are
+   plain class selectors, so they only beat the component rules they
+   override (.tab-active's flat --brown fill, .optimize-btn's hover
+   shadow) by source order. Moved earlier, the components would win
+   and the gradients and halos would silently stop applying.
+   ============================================================ */
+
+/* the aurora wash is a dark-mode device — in light mode it would tint the page,
+   and light mode is meant to be plain white */
+[data-theme="dark"] body {
+  background-image:
+    radial-gradient(60vw 50vh at 12% -8%,  color-mix(in oklch, var(--brown) 24%, transparent), transparent 70%),
+    radial-gradient(55vw 45vh at 92% 8%,   color-mix(in oklch, var(--red)   20%, transparent), transparent 70%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+.mc-front,
+.mc-back,
+.map-ep {
+  backdrop-filter: blur(var(--card-blur)) saturate(1.3);
+  -webkit-backdrop-filter: blur(var(--card-blur)) saturate(1.3);
+}
+.tab-active,
+.app-tab.on,
+.app-pill.on,
+.t-pill.active,
+.sync-btn.primary,
+.imp-apply {
+  background: var(--grad-accent);
+  box-shadow: var(--shadow-pop);
+}
+/* borderless panels lift on light instead of being outlined */
+.summary,
+.todos,
+.app-card,
+.opt,
+.accom-btn { box-shadow: var(--shadow-card); }
+.map-pop,
+.mobile-map-pop,
+.budget-dialog { box-shadow: var(--shadow-modal); }
+.optimize-btn:hover:not(:disabled) { box-shadow: var(--shadow-pop); }
+/* the receipt is a lit panel here, not paper — drop the printer's warm tint */
+.budget-dialog { background: var(--paper); }
 
 /* ============================================================
    TOUCH DEVICES (no hover) — placed LAST so these win the source-order

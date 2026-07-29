@@ -11,7 +11,7 @@
 
   <!-- PWA: installable app (stripped from standalone.html — file:// can't register a SW) -->
   <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#e8e4dc">
+  <meta name="theme-color" content="#ffffff">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -19,15 +19,14 @@
   <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 
-  <!-- Type stacks for every skin — the classic editorial set plus the two
-       candidate skins' families (see the SKINS block in styles.css). Loaded
-       async so fonts never block first paint. Trim to the winning skin's
-       families once a direction is chosen. -->
+  <!-- Night Market type stack — Space Grotesk (display), Sora (UI), Bebas Neue
+       (caps), Instrument Serif (the italic date/sub lines). Loaded async so
+       fonts never block first paint. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,400;1,9..144,700&family=Instrument+Serif:ital@0;1&family=Josefin+Sans:wght@700&family=Jost:ital,wght@1,300;1,400&family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700;900&family=Sora:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap">
-  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,400;1,9..144,700&family=Instrument+Serif:ital@0;1&family=Josefin+Sans:wght@700&family=Jost:ital,wght@1,300;1,400&family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700;900&family=Sora:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-  <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,400;1,9..144,700&family=Instrument+Serif:ital@0;1&family=Josefin+Sans:wght@700&family=Jost:ital,wght@1,300;1,400&family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700;900&family=Sora:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=Sora:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=Sora:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=Sora:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
 
   <!-- Leaflet (interactive route map) — vendored locally so it loads without a CDN -->
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
@@ -46,36 +45,21 @@
   <script src="vendor/gsap/gsap.min.js"></script>
   <script src="vendor/gsap/ScrollTrigger.min.js"></script>
 
-  <!-- pre-paint theme + skin boot: must run BEFORE styles apply so a saved
-       dark theme or skin never flashes the wrong look on load (kept out of the
-       PWA blocks, which build.js strips from standalone.html).
-
-       Skin precedence: ?skin=… in the URL wins and is persisted, so a link can
-       hand someone a specific look; otherwise the last saved skin is restored.
-       ?skin=classic (or any unknown value) clears back to the default. -->
+  <!-- pre-paint theme boot: must run BEFORE styles apply so a saved dark
+       theme never flashes light on load (kept out of the PWA blocks, which
+       build.js strips from standalone.html) -->
   <script>
     (function () {
-      var el = document.documentElement;
       try {
         if (localStorage.getItem('europe-trip-theme-v1') === 'dark')
-          el.setAttribute('data-theme', 'dark');
+          document.documentElement.setAttribute('data-theme', 'dark');
       } catch (e) {}
-      try {
-        var SKINS = ['pop', 'neon'];
-        var q = new URLSearchParams(location.search).get('skin');
-        var skin;
-        if (q !== null) {
-          skin = SKINS.indexOf(q) > -1 ? q : '';
-          try { localStorage.setItem('europe-trip-skin-v1', skin); } catch (e) {}
-        } else {
-          skin = localStorage.getItem('europe-trip-skin-v1') || '';
-          if (SKINS.indexOf(skin) < 0) skin = '';
-        }
-        if (skin) el.setAttribute('data-skin', skin);
-      } catch (e) {}
+      // the short-lived ?skin= experiment is over — clear any saved value so an
+      // old bookmark can't leave a stale attribute behind
+      try { localStorage.removeItem('europe-trip-skin-v1'); } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="styles.css?v=194">
+  <link rel="stylesheet" href="styles.css?v=195">
 </head>
 <body>
   <main id="app"></main>
@@ -94,7 +78,7 @@
   <!-- shared-post extractor (RedNote / TikTok / Instagram → itinerary rows);
        loads before app.js, which calls window.SocialImport -->
   <script src="social-import.js?v=1"></script>
-  <script src="app.js?v=184"></script>
+  <script src="app.js?v=185"></script>
   <!-- PWA: offline cache + install support (no-op on file:// and non-secure origins) -->
   <script>
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {

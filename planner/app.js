@@ -328,7 +328,7 @@
   const MODE_HEX = new Proxy({}, {
     get(_, mode) {
       const el = document.documentElement;
-      const key = (el.getAttribute('data-skin') || '') + '|' + (el.getAttribute('data-theme') || '');
+      const key = el.getAttribute('data-theme') || 'light';
       if (_modeCacheKey !== key) { _modeCache = {}; _modeCacheKey = key; }
       if (_modeCache[mode] === undefined) {
         const v = MODE_VAR[mode] ? getComputedStyle(el).getPropertyValue(MODE_VAR[mode]).trim() : '';
