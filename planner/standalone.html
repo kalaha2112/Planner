@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-29T16:09:14.130Z
+  Built: 2026-07-29T16:13:00.127Z
 -->
 
 <html lang="en">
@@ -924,7 +924,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
   --stay-fill: #33280C;
   --stay-line: #EFF6DF;
-  --map-bg: #141810;
+  /* ---- maps keep their original dark cartography: the beige-land / sepia-
+     border / brown-route treatment is tuned for legibility over tiles, not to
+     match the app palette, so the reskin deliberately does not touch it ---- */
+  --map-bg: #1E1B18;
 
   --hover-soft: #1D2215;
   --cal-hover: #3E3413;
@@ -932,18 +935,18 @@ svg.leaflet-image-layer.leaflet-interactive path {
   --chip-glass: rgba(23,27,16,.84);
   --card-glass: rgba(23,27,16,.70);
   --ep-glass: rgba(14,17,9,.88);
-  --map-sea: #0E1109;   /* stop map: ocean = dark page bg, so it blends (no box) */
-  --map-land: #1E2416;   /* stop map: beige land (app version; web mutes it — see media query) */
-  --map-land-line: #4A5535;   /* stop map: sepia borders (app); web darkens them — see media query */
-  --map-route: #FF7A3D;   /* stop map: brown route — reads on the beige land and dark ocean */
-  --map-label: #EFF6DF;   /* .map-city-label — dark, readable on the beige land */
+  --map-sea: #121210;   /* stop map: ocean = dark page bg, so it blends (no box) */
+  --map-land: #ECE7DC;   /* stop map: beige land (app version; web mutes it — see media query) */
+  --map-land-line: #7C7059;   /* stop map: sepia borders (app); web darkens them — see media query */
+  --map-route: #8A5A2C;   /* stop map: brown route — reads on the beige land and dark ocean */
+  --map-label: #4A4234;   /* .map-city-label — dark, readable on the beige land */
   --mc-dates: #A8E82C;
-  --mini-sea: #0E1109;
-  --mini-land: #141810;
-  --mini-border: #3A4229;
-  --mini-route: #EFF6DF;
-  --mini-leader: #94A177;
-  --mini-ring: #171B10;
+  --mini-sea: #14120F;
+  --mini-land: #201D19;
+  --mini-border: #4B453C;
+  --mini-route: #F2EFE7;
+  --mini-leader: #A9A08E;
+  --mini-ring: #121210;
 
   color-scheme: dark;   /* native scrollbars, inputs, date pickers */
   --on-accent: #12180A;
