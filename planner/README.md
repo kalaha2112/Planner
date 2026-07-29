@@ -34,16 +34,24 @@ Open `mockups.html` to compare the two side by side in light and dark.
 
 ## 3D and motion
 
-- **three.js** (`vendor/three/`) — the intro hero globe and the low-poly props (suitcase,
-  calendar, bed, plane) that serve as the overview's object and card icons. Everything is built
-  from primitives, so there are no asset files to fetch and the single-file build still works
-  offline. Props read their colours from the skin tokens.
-- **GSAP + ScrollTrigger** (`vendor/gsap/`) — the scroll-driven reveals on the overview blocks:
-  staggered stat tiles, the route strip sliding in, meter bars filling, and a light parallax on
-  the map.
+- **three.js** (`vendor/three/`) — three things, all layered onto the existing layout rather
+  than replacing it:
+  - the **intro hero globe** (graticule, country outlines from the shared 110m atlas, lit stop
+    markers and a route that traces itself out), sitting over the flat SVG globe;
+  - the **packing case**, which is the original `PK_ART_*` artwork on textured planes moving in
+    real perspective — the same drawing, turning and swaying in 3D, opening as you scroll;
+  - low-poly **card icons** (calendar, bed, plane) on the three entry cards, built from
+    primitives so there are no asset files to fetch.
 
-Both layers are strictly additive. Without WebGL, without three/GSAP, or under
-`prefers-reduced-motion`, the flat SVG globe and icons stay and nothing animates.
+  Everything reads its colours from the skin tokens, so it all re-themes with the app.
+- **GSAP + ScrollTrigger** (`vendor/gsap/`) — the scroll motion over the overview: the date
+  range, map, entry cards, stats and to-dos reveal and stagger in, the map parallaxes and tilts
+  as it passes (returning flat when settled, so Leaflet's hit-testing is never distorted), and
+  the packing case's open/close is scrubbed against scroll position.
+
+Both layers are strictly additive, and the fallbacks are tested: without WebGL, without
+three/GSAP, or under `prefers-reduced-motion`, the flat SVG globe, the flat SVG card icons and
+the original two-PNG suitcase crossfade are what render, and nothing animates.
 
 ## Run
 

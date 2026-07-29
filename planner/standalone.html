@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-07-29T04:30:10.873Z
+  Built: 2026-07-29T15:57:37.443Z
 -->
 
 <html lang="en">
@@ -2335,183 +2335,20 @@ a { color: inherit; }
 }
 
 /* ============================================================
-   OVERVIEW BLOCKS — hero masthead, stat tiles, route strip and
-   progress meters that open the app overview. Skin-agnostic:
-   every colour, radius, frame weight and shadow comes from the
-   token layer, so both skins restyle these for free.
-   ============================================================ */
-.ov-hero { margin: 2px 4px 16px; }
-.ov-hero-eyebrow {
-  font-family: var(--sans); font-size: 10px; font-weight: 600;
-  letter-spacing: .14em; text-transform: uppercase; color: var(--ink-mute);
-  /* clear the fixed undo/memories/theme cluster, same allowance as .app-tabs */
-  padding-right: 130px; min-height: 15px;
-}
-.ov-hero-title {
-  font-family: var(--serif); font-weight: 900;
-  font-size: clamp(34px, 11vw, 54px); line-height: .96; letter-spacing: -.02em;
-  color: var(--ink); margin: 7px 0 0;
-}
-.ov-hero-count { display: flex; align-items: baseline; gap: 8px; margin-top: 10px; }
-.ov-hero-count .n {
-  font-family: var(--caps); font-size: 40px; line-height: 1;
-  letter-spacing: .01em; color: var(--red);
-}
-.ov-hero-count .l {
-  font-family: var(--script); font-size: 15px; font-style: italic;
-  color: var(--green);
-}
-
-.ov-tiles {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
-  margin: 0 4px 18px;
-}
-.ov-tile {
-  background: var(--surface); border: var(--border-w) solid var(--line);
-  border-radius: var(--r-card); padding: 12px 6px 10px; text-align: center;
-  box-shadow: var(--shadow-rest);
-}
-.ov-tile--accent { background: var(--brown); border-color: var(--brown); }
-.ov-tile--accent .ov-tile-v, .ov-tile--accent .ov-tile-c { color: var(--on-brown); }
-.ov-tile-v {
-  font-family: var(--caps); font-size: 30px; line-height: 1;
-  color: var(--ink); letter-spacing: .01em;
-}
-.ov-tile-c {
-  font-family: var(--sans); font-size: 9px; font-weight: 600; margin-top: 5px;
-  letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft);
-}
-
-.ov-block-hd {
-  font-family: var(--sans); font-size: 10px; font-weight: 600;
-  letter-spacing: .14em; text-transform: uppercase;
-  color: var(--ink-mute); margin: 0 4px 9px;
-}
-.ov-strip-wrap { margin: 0 0 18px; }
-.ov-strip {
-  display: flex; align-items: stretch; gap: 0;
-  overflow-x: auto; scroll-snap-type: x proximity;
-  padding: 2px 4px 10px; margin: 0 -4px;
-  -webkit-overflow-scrolling: touch; scrollbar-width: none;
-}
-.ov-strip::-webkit-scrollbar { display: none; }
-.ov-leg { display: flex; align-items: center; flex: 0 0 auto; scroll-snap-align: start; }
-.ov-leg-line {
-  width: 26px; height: 0; flex: 0 0 auto;
-  border-top: 2px dashed var(--leg, var(--ink-faint));
-}
-.ov-node {
-  flex: 0 0 auto; min-width: 116px; max-width: 168px;
-  background: var(--surface); border: var(--border-w) solid var(--line);
-  border-radius: var(--r-card); padding: 10px 13px;
-  box-shadow: var(--shadow-rest); position: relative;
-}
-.ov-node::before {
-  content: ''; position: absolute; top: 9px; right: 10px;
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--leg, transparent);
-}
-.ov-node-city {
-  font-family: var(--display-alt); font-size: 15px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: .04em; color: var(--ink);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 12px;
-}
-.ov-node-sub {
-  font-family: var(--sans); font-size: 11px; color: var(--ink-soft); margin-top: 3px;
-  white-space: nowrap;
-}
-
-.ov-meters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 4px 18px; }
-.ov-meter {
-  background: var(--surface); border: var(--border-w) solid var(--line);
-  border-radius: var(--r-card); padding: 12px 14px 13px;
-  box-shadow: var(--shadow-rest);
-}
-.ov-meter-hd {
-  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
-  font-family: var(--sans); font-size: 11px; font-weight: 600; color: var(--ink);
-}
-.ov-meter-n { color: var(--ink-mute); font-variant-numeric: tabular-nums; }
-.ov-meter-track {
-  margin-top: 9px; height: 7px; border-radius: 999px;
-  background: var(--line-soft); overflow: hidden;
-}
-.ov-meter-fill {
-  display: block; height: 100%; border-radius: 999px;
-  background: var(--green); transition: width .5s cubic-bezier(.22,.61,.36,1);
-}
-.ov-meter--alt .ov-meter-fill { background: var(--gold); }
-
-/* ---- 3D hero globe -------------------------------------------
-   The canvas is appended INSIDE .intro-globe and stretched over the
-   flat SVG globe, which stays in the DOM as the fallback. Without
-   this sizing the canvas mounts at 0×0 and the 3D globe is invisible.
-   .has-globe-3d is set by the mount, and retires the SVG. ------- */
-.intro-globe-3d {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  display: block;
-}
-.intro-globe.has-globe-3d > svg { visibility: hidden; }
-
-/* ---- 3D props ------------------------------------------------
+   3D PROPS — the three.js objects mounted into ordinary UI slots.
    A canvas is added inside the host only when three.js + WebGL are
    available; until then (and under reduced motion) the flat SVG
    icon underneath is what shows. .is-3d is set by the mount, and
-   hides the fallback. ---------------------------------------- */
+   retires the fallback.
+   ============================================================ */
 .obj3d-canvas { display: block; width: 100%; height: 100%; }
 .app-card-ico {
-  position: relative; display: block;
+  position: relative;
   width: 42px; height: 42px;
   display: flex; align-items: center; justify-content: center;
 }
 .app-card-ico.is-3d > svg { display: none; }
 .app-card-ico .obj3d-canvas { position: absolute; inset: 0; }
-
-.ov-object {
-  display: grid; grid-template-columns: 1.05fr 1fr; gap: 10px; align-items: center;
-  margin: 0 4px 18px; padding: 14px 16px;
-  background: var(--surface); border: var(--border-w) solid var(--line);
-  border-radius: var(--r-card); box-shadow: var(--shadow-card);
-}
-.ov-object-stage {
-  aspect-ratio: 1 / 1; min-height: 120px;
-  border-radius: var(--r-sm);
-  background: radial-gradient(60% 60% at 50% 45%, var(--line-2), transparent 72%);
-}
-.ov-object-figure {
-  font-family: var(--caps); font-size: 46px; line-height: 1;
-  color: var(--red); margin-top: 4px;
-}
-.ov-object-figure span { font-size: 22px; margin-left: 2px; color: var(--ink-soft); }
-.ov-object-note {
-  font-family: var(--sans); font-size: 11px; color: var(--ink-soft); margin-top: 6px; line-height: 1.45;
-}
-.ov-object-btn {
-  margin-top: 11px; padding: 8px 14px; cursor: pointer;
-  border: none; border-radius: var(--r-pill);
-  background: var(--brown); color: var(--on-brown);
-  font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: .02em;
-}
-[data-skin="neon"] .ov-object-btn { background: var(--grad-accent); box-shadow: var(--shadow-pop); }
-[data-skin="neon"] .ov-object { border-color: transparent; }
-
-/* the ledger is a fixed-height book — these blocks belong to the scrolling
-   app overview only, so keep them out of the wide layout entirely */
-@media (min-width: 701px) {
-  .ov-hero, .ov-tiles, .ov-strip-wrap, .ov-meters, .ov-object { display: none; }
-}
-
-/* skin A frames these in ink and throws the hard poster offset */
-[data-skin="pop"] .ov-tile,
-[data-skin="pop"] .ov-node,
-[data-skin="pop"] .ov-meter { box-shadow: var(--shadow-card); }
-/* skin B lifts them on a soft halo and fills the accent tile with the gradient */
-[data-skin="neon"] .ov-tile,
-[data-skin="neon"] .ov-node,
-[data-skin="neon"] .ov-meter { border-color: transparent; box-shadow: var(--shadow-card); }
-[data-skin="neon"] .ov-tile--accent { background: var(--grad-accent); box-shadow: var(--shadow-pop); }
-[data-skin="neon"] .ov-meter-fill { background: var(--grad-accent); }
 
 /* ============================================================
    PLACED STICKER LAYER
@@ -3380,8 +3217,18 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    covers it first — gapless in both directions */
 .pk-bp.anim-open .pk-art--closed { opacity: 0; transition: opacity .42s ease; }
 
+/* the 3D case: sits over the flat art inside the same box, and only retires
+   the PNG layers once it has actually built (.has-case-3d). Sits UNDER the
+   leaders and chips, which keep their own 640x560 coordinate space. */
+.pk-case3d {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  display: block; z-index: 1; pointer-events: none;
+}
+.pk-bp.has-case-3d .pk-art { opacity: 0 !important; }
+
 /* dashed leaders grow up out of the case (origin at the case end) */
-.pk-leads { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.pk-leads { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
 .pk-leads line {
   stroke: var(--ink-faint); stroke-width: 1.6; stroke-dasharray: 2 6; stroke-linecap: round;
   transform-box: fill-box; transform-origin: center bottom;
@@ -5668,7 +5515,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       this._buildIntroGlobe(svg);                       // graticule + stops now…
       this._ensureAtlas().then(() => this._buildIntroGlobe(svg));   // …continents when the atlas lands
       this._initGlobe3D(globeWrap);                                 // 3D upgrade (no-op without WebGL/three)
-      this._introGlobeRefresh = () => { this._themeGlobe3D(); this._themeObjects3D(); this._buildIntroGlobe(svg); };   // stops added while intro open
+      this._introGlobeRefresh = () => { this._themeGlobe3D(); this._themeObjects3D(); this._themePackCase(); this._buildIntroGlobe(svg); };   // stops added while intro open
       // pointer parallax: nudge the globe a few degrees toward the cursor
       this._globePar = this._globePar || { lat: 0, lng: 0, tlat: 0, tlng: 0 };
       globeWrap.addEventListener('pointermove', (e) => {
@@ -5742,8 +5589,11 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
         if (this._webMag()) {
           const active = this.root.querySelector('.ledger-leaf.active');
           this._playEnter(active && (active.querySelector('.leaf-inner') || active));
-        } else {
-          // app version: content reveals as it scrolls into view
+        } else if (!this._motionAvailable()) {
+          // app version: content reveals as it scrolls into view.
+          // Skipped when the GSAP layer is running — it owns the overview's
+          // reveals, and running both would have two systems writing opacity
+          // and transform on the same elements.
           this._revealOnScroll(this.root.querySelector('.app-ov'), { stagger: true });
         }
       };
@@ -6133,6 +5983,201 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
     }
 
     /* ============================================================
+       3D PACKING CASE — the packing sheet's carry-on, given depth.
+
+       The art is two hand-drawn PNG alpha masks (PK_ART_CLOSED /
+       PK_ART_OPEN) that the CSS tints with --ink. Both are put on
+       textured planes and moved in real perspective — turning,
+       tilting, swaying and travelling in z — so the case is the
+       original drawing animated in 3D, not a model that replaces it
+       and not a flat image given fake thickness.
+
+       The two arts are different drawings, not two poses of one mesh,
+       so open/close turns between the two planes in 3D rather than
+       crossfading them flat.
+
+       The <canvas> mounts INSIDE .pk-bp and only retires the .pk-art
+       layers once it has actually built. Without three.js/WebGL, or
+       under reduced motion, the original PNG crossfade is untouched.
+       The chips and dashed leaders keep their own 640x560 coordinate
+       space and are not moved.
+       ============================================================ */
+
+    // Re-colour an alpha-masked PNG into a solid tint — the same thing the CSS
+    // `background: var(--ink)` + `mask-image` pair does for the flat art.
+    _tintTexture(T, img, color, existing) {
+      const cvs = (existing && existing.image) || document.createElement('canvas');
+      cvs.width = img.width; cvs.height = img.height;
+      const ctx = cvs.getContext('2d');
+      ctx.clearRect(0, 0, cvs.width, cvs.height);
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.drawImage(img, 0, 0);
+      ctx.globalCompositeOperation = 'source-in';
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, cvs.width, cvs.height);
+      ctx.globalCompositeOperation = 'source-over';
+      if (existing) { existing.needsUpdate = true; return existing; }
+      const tex = new T.CanvasTexture(cvs);
+      if (T.SRGBColorSpace) tex.colorSpace = T.SRGBColorSpace;
+      return tex;
+    }
+
+    _loadImage(src) {
+      return new Promise((res, rej) => {
+        const im = new Image();
+        im.onload = () => res(im);
+        im.onerror = rej;
+        im.src = src;
+      });
+    }
+
+    // One artwork as a textured plane. No extrusion: the case is the drawing
+    // itself, moving in 3D — turning, tilting and parallaxing in perspective —
+    // rather than a flat image given fake thickness.
+    async _packArtMesh(T, src) {
+      const img = await this._loadImage(src);
+      const ar = img.width / img.height;
+      const h = 2.4, w = h * ar;
+      const geo = new T.PlaneGeometry(w, h, 1, 1);
+
+      // NOTE: deliberately NOT alphaMap. three.js samples alphaMap from the
+      // texture's GREEN channel, and this artwork is black ink on transparent —
+      // green is 0 everywhere it is drawn, so an alphaMap makes the whole plane
+      // vanish. Tinting into a canvas and using it as a normal map is both
+      // correct and an exact match for what the CSS mask produces.
+      const tex = this._tintTexture(T, img, '#1a1a1a');
+      const mat = new T.MeshBasicMaterial({ map: tex, transparent: true, side: T.DoubleSide, depthWrite: false });
+
+      const mesh = new T.Mesh(geo, mat);
+      mesh.userData.faceMat = mat;
+      mesh.userData.srcImg = img;
+      return mesh;
+    }
+
+    async _mountPackCase3D(bp) {
+      const T = window.THREE;
+      if (!T || !bp || bp.dataset.case3d) return null;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
+
+      let renderer;
+      try { renderer = new T.WebGLRenderer({ alpha: true, antialias: true }); }
+      catch (e) { return null; }
+      if (!renderer || !renderer.getContext()) return null;
+
+      bp.dataset.case3d = '1';
+      const canvas = renderer.domElement;
+      canvas.className = 'pk-case3d';
+      renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+      bp.appendChild(canvas);
+
+      const scene = new T.Scene();
+      const camera = new T.PerspectiveCamera(30, 1, .1, 50);
+      camera.position.set(0, 0, 5.2);
+      const pivot = new T.Group();
+      scene.add(pivot);
+
+      const [closed, open] = await Promise.all([
+        this._packArtMesh(T, PK_ART_CLOSED),
+        this._packArtMesh(T, PK_ART_OPEN),
+      ]);
+      if (!closed || !open) {                     // trace failed — leave the PNGs alone
+        renderer.dispose(); canvas.remove();
+        delete bp.dataset.case3d;
+        return null;
+      }
+      open.position.y = -.35;                     // the open drawing sits lower in its box
+      pivot.add(closed); pivot.add(open);
+
+      const rec = { T, renderer, scene, camera, pivot, canvas, bp, closed, open, t: 0, raf: 0 };
+      this._packCases = (this._packCases || []).filter(r => r.bp.isConnected);
+      this._packCases.push(rec);
+
+      const resize = () => {
+        const w = bp.clientWidth || 1, h = bp.clientHeight || w;
+        renderer.setSize(w, h, false);
+        camera.aspect = w / h; camera.updateProjectionMatrix();
+      };
+      rec.resize = resize; resize();
+      if ('ResizeObserver' in window) { rec.ro = new ResizeObserver(resize); rec.ro.observe(bp); }
+      this._themePackCase(rec);
+
+      // t: 0 = closed, 1 = open. The scroll scrubber writes it directly;
+      // otherwise it eases toward whatever .anim-open says, so the existing
+      // IntersectionObserver path keeps driving the case.
+      rec.setOpen = (t) => { rec.t = Math.max(0, Math.min(1, t)); rec.scrubbed = true; };
+      rec.t = bp.classList.contains('anim-open') ? 1 : 0;
+
+      let visible = true;
+      if ('IntersectionObserver' in window) {
+        rec.io = new IntersectionObserver(([e]) => { visible = e.isIntersecting; }, { rootMargin: '100px' });
+        rec.io.observe(bp);
+      }
+      const ease = (x) => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+      const tick = () => {
+        rec.raf = requestAnimationFrame(tick);
+        if (!visible) return;
+        if (!rec.scrubbed) {
+          const target = bp.classList.contains('anim-open') ? 1 : 0;
+          rec.t += (target - rec.t) * 0.12;
+          if (Math.abs(target - rec.t) < 0.002) rec.t = target;
+        }
+        const e = ease(rec.t);
+        const now = performance.now() / 1000;
+        // a slow idle sway so the case is alive even when the scroll is still
+        const swayY = Math.sin(now * .55) * .13;
+        const swayX = Math.sin(now * .37 + 1.1) * .06;
+
+        // closed case turns away as it opens; open case turns in to face us
+        closed.rotation.y = e * 1.6 + swayY;
+        closed.rotation.x = e * -.3 + swayX;
+        closed.position.z = e * -1.2;
+        closed.scale.setScalar(1 - e * .25);
+        closed.userData.faceMat.opacity = 1 - Math.min(1, e * 1.7);
+        closed.visible = e < .7;
+
+        open.rotation.y = (1 - e) * -1.45 + swayY;
+        open.rotation.x = (1 - e) * .38 + swayX;
+        open.position.z = (1 - e) * -1.0;
+        open.scale.setScalar(.82 + e * .18);
+        open.userData.faceMat.opacity = Math.max(0, (e - .25) / .75);
+        open.visible = e > .18;
+
+        renderer.render(scene, camera);
+      };
+      rec.raf = requestAnimationFrame(tick);
+      bp.classList.add('has-case-3d');
+      return rec;
+    }
+
+    // Re-read --ink so the case follows the skin, exactly as the CSS mask did.
+    _themePackCase(rec) {
+      const list = rec ? [rec] : (this._packCases || []);
+      if (!list.length) return;
+      const T = window.THREE;
+      const ink = getComputedStyle(document.documentElement).getPropertyValue('--ink').trim() || '#1a1a1a';
+      list.forEach((r) => {
+        [r.closed, r.open].forEach((m) => {
+          if (!m) return;
+          if (T && m.userData.srcImg && m.userData.faceMat.map) {
+            this._tintTexture(T, m.userData.srcImg, ink, m.userData.faceMat.map);
+          }
+        });
+      });
+    }
+
+    _mountPackCases() {
+      (this._packCases || []).forEach((r) => {
+        if (r.bp.isConnected) return;
+        cancelAnimationFrame(r.raf);
+        if (r.ro) r.ro.disconnect();
+        if (r.io) r.io.disconnect();
+        r.renderer.dispose();
+      });
+      this._packCases = (this._packCases || []).filter(r => r.bp.isConnected);
+      this.root.querySelectorAll('.pk-bp').forEach((bp) => { this._mountPackCase3D(bp); });
+    }
+
+    /* ============================================================
        THREE.JS HERO GLOBE — a real 3D globe for the intro.
        Layered OVER the existing SVG globe rather than replacing it:
        the SVG stays as the fallback for no-WebGL / no-three / reduced
@@ -6195,6 +6240,31 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       g3.shellMat = shellMat;
       pivot.add(new T.Mesh(new T.SphereGeometry(R * .995, 48, 32), shellMat));
 
+      // ---- atmosphere: a back-facing shell whose rim lights up at the limb.
+      //      BackSide + additive means it only shows where the sphere curves
+      //      away, giving a glow around the edge instead of a wash over it. ----
+      const atmoMat = new T.ShaderMaterial({
+        transparent: true, side: T.BackSide, blending: T.AdditiveBlending, depthWrite: false,
+        uniforms: { uColor: { value: new T.Color(0xffffff) }, uStrength: { value: 0.55 } },
+        vertexShader: `
+          varying vec3 vN; varying vec3 vP;
+          void main() {
+            vN = normalize(normalMatrix * normal);
+            vec4 mv = modelViewMatrix * vec4(position, 1.0);
+            vP = mv.xyz;
+            gl_Position = projectionMatrix * mv;
+          }`,
+        fragmentShader: `
+          uniform vec3 uColor; uniform float uStrength;
+          varying vec3 vN; varying vec3 vP;
+          void main() {
+            float rim = 1.0 - abs(dot(normalize(vN), normalize(-vP)));
+            gl_FragColor = vec4(uColor, pow(rim, 2.6) * uStrength);
+          }`,
+      });
+      g3.atmoMat = atmoMat;
+      pivot.add(new T.Mesh(new T.SphereGeometry(R * 1.16, 48, 32), atmoMat));
+
       // ---- graticule ----
       const grat = new T.Group();
       for (let la = -60; la <= 60; la += 30) {
@@ -6227,7 +6297,31 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       resize();
       if ('ResizeObserver' in window) { g3.ro = new ResizeObserver(resize); g3.ro.observe(wrap); }
 
-      const tick = () => { g3.raf = requestAnimationFrame(tick); renderer.render(scene, camera); };
+      const tick = (now) => {
+        g3.raf = requestAnimationFrame(tick);
+        const t = (now || 0) / 1000;
+        // stops breathe
+        if (g3.halos) {
+          const pulse = .22 + Math.sin(t * 2.1) * .12;
+          g3.halos.forEach((h, i) => {
+            const ph = Math.sin(t * 2.1 + i * .7);
+            h.material.opacity = .2 + ph * .14;
+            h.scale.setScalar(1 + ph * .22);
+          });
+          if (g3.atmoMat) g3.atmoMat.uniforms.uStrength.value = .5 + pulse * .25;
+        }
+        // the route traces itself out, then holds
+        if (g3.arcs && g3.arcs.length) {
+          g3.arcT = Math.min(1, g3.arcT + 0.006);
+          const total = g3.arcs.length;
+          g3.arcs.forEach((line, i) => {
+            const span = 1 / total;
+            const local = Math.max(0, Math.min(1, (g3.arcT - i * span) / span));
+            line.geometry.setDrawRange(0, Math.round(local * line.userData.count));
+          });
+        }
+        renderer.render(scene, camera);
+      };
       g3.raf = requestAnimationFrame(tick);
       g3.built = true;
       wrap.classList.add('has-globe-3d');
@@ -6267,6 +6361,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       if (g3.land) g3.land.children.forEach(l => l.material.color.copy(ink));
       if (g3.shellMat) g3.shellMat.color.copy(ink);
       if (g3.stopsGroup) g3.stopsGroup.children.forEach(o => o.material && o.material.color.copy(red));
+      if (g3.atmoMat) g3.atmoMat.uniforms.uColor.value.copy(new T.Color(pick('--gold', '#C8901F')));
       g3.inkColor = ink; g3.redColor = red;
     }
 
@@ -6279,26 +6374,45 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       const red = g3.redColor || new T.Color(0x91040C);
 
       const dotGeo = new T.SphereGeometry(R * .022, 12, 10);
+      const haloGeo = new T.SphereGeometry(R * .05, 12, 10);
+      g3.halos = [];
       stops.forEach(([la, lo]) => {
-        const m = new T.MeshBasicMaterial({ color: red });
-        const d = new T.Mesh(dotGeo, m);
-        d.position.copy(v(la, lo, R * 1.012));
+        const pos = v(la, lo, R * 1.012);
+        const d = new T.Mesh(dotGeo, new T.MeshBasicMaterial({ color: red }));
+        d.position.copy(pos);
         grp.add(d);
+        // a soft halo that breathes, so the stops read as lit rather than drawn
+        const halo = new T.Mesh(haloGeo, new T.MeshBasicMaterial({
+          color: red, transparent: true, opacity: .3, depthWrite: false, blending: T.AdditiveBlending,
+        }));
+        halo.position.copy(pos);
+        grp.add(halo);
+        g3.halos.push(halo);
       });
 
-      // route: great-circle-ish arcs lifted off the surface
+      // route: great-circle-ish arcs lifted off the surface. Drawn
+      // progressively (see the draw loop) so the trip traces itself out.
+      g3.arcs = [];
       for (let i = 1; i < stops.length; i++) {
         const a = v(stops[i - 1][0], stops[i - 1][1], R);
         const b = v(stops[i][0], stops[i][1], R);
         const pts = [];
-        for (let t = 0; t <= 1.0001; t += 1 / 40) {
+        const SEG = 48;
+        for (let k = 0; k <= SEG; k++) {
+          const t = k / SEG;
           const p = a.clone().lerp(b, t).normalize();
           p.multiplyScalar(R * (1 + 0.10 * Math.sin(Math.PI * t)));
           pts.push(p);
         }
+        const geo = new T.BufferGeometry().setFromPoints(pts);
+        geo.setDrawRange(0, 0);
         const mat = new T.LineBasicMaterial({ color: red, transparent: true, opacity: .9 });
-        grp.add(new T.Line(new T.BufferGeometry().setFromPoints(pts), mat));
+        const line = new T.Line(geo, mat);
+        line.userData.count = pts.length;
+        grp.add(line);
+        g3.arcs.push(line);
       }
+      g3.arcT = 0;
       g3.pivot.add(grp);
     }
 
@@ -6315,7 +6429,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
         g3.pivot.rotation.y = (-lng0deg - 90) * Math.PI / 180;
         g3.pivot.rotation.x = lat0deg * Math.PI / 180;
         const key = stops.map(p => p.join(',')).join('|');
-        if (key !== g3.stopsKey) { g3.stopsKey = key; this._setGlobe3DStops(stops); }
+        if (key !== g3.stopsKey) { g3.stopsKey = key; this._setGlobe3DStops(stops); g3.arcT = 0; }
       }
       const W = 400, R = 186, CX = 200, CY = 200;
       const lat0 = lat0deg * Math.PI / 180;
@@ -8484,91 +8598,165 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       this._animateStats();     // count-up the summary figures when they change
       // keep the app version's scroll-reveal armed across re-renders — only
       // blocks still below the fold are re-parked, so on-screen content never
-      // re-animates on an edit (navigation entrances own the visible cascade)
+      // re-animates on an edit (navigation entrances own the visible cascade).
+      //
+      // On the overview this IntersectionObserver reveal and the GSAP layer
+      // target overlapping elements (.meta-range, .app-card, .summary .stat),
+      // and the two fight: the observer parks them with a class while GSAP
+      // writes inline opacity/transform. So when GSAP is actually driving, it
+      // owns the overview's reveals and this stays out of the way. Sub-pages,
+      // and any browser without GSAP, keep using it as before.
       if (this._introParked && !this._webMag()) {
+        const gsapDrives = this.appPage === 0 && this._motionAvailable();
         const scope = this.appPage === 0
           ? this.root.querySelector('.app-ov')
           : this.root.querySelector('.app-leaf.active');
-        this._revealOnScroll(scope, { stagger: false });
+        if (!gsapDrives) this._revealOnScroll(scope, { stagger: false });
+        else if (this._revObs) this._revObs.disconnect();
       }
       this._mountOverviewObjects();
+      this._mountPackCases();
       this._initMotion();
     }
 
     /* ============================================================
-       MOTION LAYER — GSAP + ScrollTrigger.
-       Drives the overview blocks: each .ov-rise lifts in as it
-       enters the viewport, the stat tiles cascade, the route strip
-       slides its nodes in, and the meter bars fill from zero. The
-       map gets a light parallax so the page has depth while
-       scrolling. Fully additive: if GSAP failed to load, or the
-       user prefers reduced motion, everything stays where the CSS
-       already put it and the IntersectionObserver reveal above
-       remains the only animation.
+       MOTION LAYER — GSAP + ScrollTrigger over the ORIGINAL overview
+       composition (date range, map, entry cards, stats, packing,
+       to-dos). Nothing here changes layout; it only animates what the
+       app already renders.
+
+       Two rules are load-bearing, both learned the hard way:
+       • immediateRender:false on every from() tween. A from() otherwise
+         stamps its start-state (opacity:0) the instant it is built, so
+         any element whose trigger never fires is stranded invisible.
+         That blanked the entire overview once already.
+       • once:true with no reverse action, so scrolling back up never
+         re-hides content that has already been revealed.
+
+       It all lives in a gsap.context() scoped to .app-ov, reverted on
+       every re-render, because the app rebuilds its DOM wholesale
+       rather than patching it.
        ============================================================ */
+    // Single source of truth for "is the GSAP layer actually running?" — used
+    // by render() to decide whether to also arm the IntersectionObserver reveal.
+    _motionAvailable() {
+      return !!(window.gsap && window.ScrollTrigger)
+        && !this._webMag()
+        && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+
     _initMotion() {
       const g = window.gsap, ST = window.ScrollTrigger;
       if (!g || !ST) return;
-      if (this._webMag()) return;                 // ledger has its own entrances
+      if (this._webMag()) return;                 // the ledger has its own entrances
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
       if (!this._motionReg) { g.registerPlugin(ST); this._motionReg = true; }
 
-      // a re-render replaces the DOM these triggers pointed at
       if (this._motionCtx) this._motionCtx.revert();
-
       const scope = this.root.querySelector('.app-ov');
       if (!scope) return;
 
       this._motionCtx = g.context(() => {
-        // immediateRender:false is load-bearing — a from() tween would otherwise
-        // stamp opacity:0 the moment it's built, so anything whose trigger never
-        // fires would be stranded invisible. With it off, nothing is touched
-        // until the element actually scrolls in, and the CSS state is the
-        // fallback. once:true then leaves it visible for good (no reverse, which
-        // would blank the top blocks again the moment you scrolled back up).
-        const st = (trigger, start) => ({ trigger, start, once: true, toggleActions: 'play none none none' });
+        const reveal = (t, start) => ({ trigger: t, start, once: true, toggleActions: 'play none none none' });
 
-        g.utils.toArray('.ov-rise').forEach((el) => {
-          g.from(el, {
-            opacity: 0, y: 26, duration: .62, ease: 'power3.out',
-            immediateRender: false, scrollTrigger: st(el, 'top 92%')
-          });
-        });
-
-        const tiles = g.utils.toArray('.ov-tiles .ov-tile');
-        if (tiles.length) {
-          g.from(tiles, {
-            opacity: 0, y: 22, scale: .94, duration: .5, ease: 'back.out(1.6)', stagger: .07,
-            immediateRender: false, scrollTrigger: st('.ov-tiles', 'top 92%')
-          });
+        const range = scope.querySelector('.meta-range');
+        if (range) {
+          g.from(range, { opacity: 0, y: 18, duration: .5, ease: 'power3.out', immediateRender: false, scrollTrigger: reveal(range, 'top 95%') });
         }
 
-        const nodes = g.utils.toArray('.ov-strip .ov-leg');
-        if (nodes.length) {
-          g.from(nodes, {
-            opacity: 0, x: 34, duration: .5, ease: 'power3.out', stagger: .06,
-            immediateRender: false, scrollTrigger: st('.ov-strip', 'top 94%')
-          });
-        }
-
-        // bars grow from empty to whatever width the render already set
-        g.utils.toArray('.ov-meter-fill').forEach((bar) => {
-          g.from(bar, {
-            width: 0, duration: .9, ease: 'power2.out',
-            immediateRender: false, scrollTrigger: st(bar, 'top 96%')
-          });
-        });
-
+        // ---- map: rise, a light parallax, and the scrubbed tilt ----
         const map = scope.querySelector('.route.map-route');
         if (map) {
-          g.to(map, {
-            yPercent: -7, ease: 'none',
-            scrollTrigger: { trigger: map, start: 'top bottom', end: 'bottom top', scrub: .6 }
+          g.from(map, { opacity: 0, y: 26, duration: .6, ease: 'power3.out', immediateRender: false, scrollTrigger: reveal(map, 'top 96%') });
+          g.to(map, { yPercent: -5, ease: 'none', scrollTrigger: { trigger: map, start: 'top bottom', end: 'bottom top', scrub: .6 } });
+          this._mapTilt(g, ST, map);
+        }
+
+        // ---- entry cards: staggered rise ----
+        const cards = g.utils.toArray('.app-cards .app-card');
+        if (cards.length) {
+          g.from(cards, {
+            opacity: 0, y: 24, scale: .95, duration: .5, ease: 'back.out(1.5)', stagger: .08,
+            immediateRender: false, scrollTrigger: reveal('.app-cards', 'top 92%')
           });
         }
+
+        // ---- stats: rise, and kick the existing count-up as they arrive ----
+        const stats = g.utils.toArray('.summary .stat');
+        if (stats.length) {
+          g.from(stats, {
+            opacity: 0, y: 20, duration: .5, ease: 'power3.out', stagger: .09,
+            immediateRender: false,
+            scrollTrigger: Object.assign(reveal('.summary', 'top 92%'), {
+              onEnter: () => { this._statPrev = {}; this._animateStats(); },
+            })
+          });
+        }
+
+        // ---- to-dos: staggered rows (the packing block has its own list) ----
+        const todoBox = scope.querySelector('.todos:not(.pack-block)');
+        if (todoBox) {
+          g.from(todoBox, { opacity: 0, y: 20, duration: .5, ease: 'power3.out', immediateRender: false, scrollTrigger: reveal(todoBox, 'top 94%') });
+          const todos = g.utils.toArray('.todo', todoBox);
+          if (todos.length) {
+            g.from(todos, {
+              opacity: 0, x: -14, duration: .42, ease: 'power2.out', stagger: .05,
+              immediateRender: false, scrollTrigger: reveal(todoBox, 'top 90%')
+            });
+          }
+        }
+
+        this._packScrub(g, scope);
       }, scope);
 
       ST.refresh();
+    }
+
+    // Scrub the case between closed and open as the sheet crosses the viewport,
+    // instead of the binary IntersectionObserver snap. With no 3D case mounted
+    // (no WebGL) this still drives the original .anim-open class, so the flat
+    // PNG crossfade, the dashed leaders and the chips all play as before.
+    _packScrub(g, scope) {
+      const bp = scope.querySelector('.pk-bp');
+      if (!bp) return;
+      const rec = (this._packCases || []).find(r => r.bp === bp);
+      g.to({}, {
+        ease: 'none',
+        scrollTrigger: {
+          trigger: bp, start: 'top 88%', end: 'center 45%', scrub: .5,
+          onUpdate: (self) => {
+            const t = self.progress;
+            if (rec) rec.setOpen(t);
+            bp.classList.toggle('anim-open', t > .55);
+          },
+        },
+      });
+    }
+
+    // Scroll-scrubbed perspective tilt on the map.
+    //
+    // A CSS 3D transform distorts Leaflet's hit-testing, so the tilt is only
+    // scrubbed in while the map is travelling through the viewport and returns
+    // to exactly 0deg once it is settled in the middle — panning, dragging and
+    // pin taps always happen flat.
+    _mapTilt(g, ST, map) {
+      const holder = map.querySelector('.main-map-wrap');
+      if (!holder) return;
+      map.style.perspective = '1100px';
+      const setTilt = g.quickSetter(holder, 'rotateX', 'deg');
+      const eps = map.querySelectorAll('.map-ep');
+      ST.create({
+        trigger: map, start: 'top bottom', end: 'bottom top', scrub: .4,
+        onUpdate: (self) => {
+          // 1 at the edges of the pass, 0 through the middle where it is usable
+          const away = Math.abs(self.progress - .5) * 2;
+          const eased = away * away;
+          setTilt(eased * 14);
+          eps.forEach(e => { e.style.transform = `translateZ(${eased * 26}px)`; });
+        },
+        onLeave: () => { setTilt(0); eps.forEach(e => { e.style.transform = ''; }); },
+        onLeaveBack: () => { setTilt(0); eps.forEach(e => { e.style.transform = ''; }); },
+      });
     }
 
     // Tween the summary figures (nights / total / miles) from their previous
@@ -8950,7 +9138,6 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       const overview = `
       <div class="app-ov">
         <div class="page" style="position:relative">
-          ${this.renderOvBlocks(trip, meta, d, fmt, nights, budget, travelers)}
           ${this.renderMetaRange(trip)}
           <div class="route map-route">
             <div id="main-map-holder" class="main-map-wrap"></div>
@@ -9301,100 +9488,6 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
         ${pinsHtml}
       </div>
       ${homeEl}`;
-    }
-
-    /* ============================================================
-       OVERVIEW BLOCKS — the designed top of the app overview: a hero
-       masthead, a stat-tile grid, a scrollable route strip and two
-       progress cards. Everything here is derived from real trip state
-       (stops, legs, dates, packing, to-dos) — nothing is invented.
-       Each block carries .ov-rise so the GSAP/ScrollTrigger layer in
-       _initMotion() can reveal them on scroll.
-       ============================================================ */
-    renderOvBlocks(trip, meta, d, fmt, nights, budget, travelers) {
-      const stops = trip.stops || [];
-      const legs = [trip.outboundLeg, ...stops.map(s => s.leg)];
-
-      // ---- countdown: whole days between today and departure ----
-      const DAY = 86400000;
-      const midnight = (x) => { const t = new Date(x); t.setHours(0, 0, 0, 0); return t; };
-      let countLbl = '', countNum = '';
-      if (trip.depart) {
-        const diff = Math.round((midnight(trip.depart) - midnight(new Date())) / DAY);
-        const end = trip.returnDate ? Math.round((midnight(trip.returnDate) - midnight(new Date())) / DAY) : diff;
-        if (diff > 0) { countNum = String(diff); countLbl = diff === 1 ? 'day to go' : 'days to go'; }
-        else if (end >= 0) { countNum = String(1 - diff); countLbl = 'day of the trip'; }
-        else { countNum = '✓'; countLbl = 'trip complete'; }
-      }
-
-      const hero = `<header class="ov-hero ov-rise">
-        <div class="ov-hero-eyebrow">${stops.length} stop${stops.length === 1 ? '' : 's'} · ${nights} night${nights === 1 ? '' : 's'} · ${travelers} traveller${travelers === 1 ? '' : 's'}</div>
-        <h1 class="ov-hero-title">${esc(trip.label || 'Untitled trip')}</h1>
-        ${countNum ? `<div class="ov-hero-count"><span class="n">${esc(countNum)}</span><span class="l">${esc(countLbl)}</span></div>` : ''}
-      </header>`;
-
-      // ---- stat tiles: facts the money summary below doesn't already show ----
-      const legCount = legs.filter(Boolean).length;
-      const tile = (v, c, mod) => `<div class="ov-tile${mod ? ' ' + mod : ''}"><div class="ov-tile-v">${esc(String(v))}</div><div class="ov-tile-c">${esc(c)}</div></div>`;
-      const tiles = `<div class="ov-tiles ov-rise">
-        ${tile(stops.length, stops.length === 1 ? 'stop' : 'stops')}
-        ${tile(nights, 'nights')}
-        ${tile(legCount, legCount === 1 ? 'leg' : 'legs', 'ov-tile--accent')}
-        ${tile(travelers, travelers === 1 ? 'traveller' : 'travellers')}
-      </div>`;
-
-      // ---- route strip: origin → each stop → home, coloured by leg mode ----
-      const node = (label, sub, mode, i) => {
-        const col = mode ? MODE_HEX[mode] : '';
-        return `<div class="ov-leg">
-          ${i > 0 ? `<span class="ov-leg-line"${col ? ` style="--leg:${col}"` : ''}></span>` : ''}
-          <div class="ov-node"${col ? ` style="--leg:${col}"` : ''}>
-            <div class="ov-node-city">${esc(label)}</div>
-            ${sub ? `<div class="ov-node-sub">${esc(sub)}</div>` : ''}
-          </div>
-        </div>`;
-      };
-      let strip = node(trip.originLabel || 'Home', d ? fmt(d.origin) : '', null, 0);
-      stops.forEach((st, i) => {
-        const r = d ? d.stops[i] : null;
-        const n = Math.max(1, Number(st.nights) || 1);
-        strip += node(st.city || 'Stop ' + (i + 1), r ? `${fmt(r.start)} · ${n}n` : `${n} night${n === 1 ? '' : 's'}`, (legs[i] || {}).mode, i + 1);
-      });
-      strip += node(trip.homeLabel || 'Home', d ? fmt(d.home) : '', (legs[stops.length] || {}).mode, stops.length + 1);
-      const routeStrip = `<section class="ov-strip-wrap ov-rise">
-        <div class="ov-block-hd">Route</div>
-        <div class="ov-strip">${strip}</div>
-      </section>`;
-
-      // ---- progress: packing + pre-trip to-dos ----
-      const packItems = Object.values(trip.packing || {}).flat();
-      const packDone = packItems.filter(i => i && i.done).length;
-      const todos = meta.todos || [];
-      const todoDone = todos.filter(t => t && t.done).length;
-      const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
-      const meter = (label, done, total, mod) => `<div class="ov-meter${mod ? ' ' + mod : ''}">
-        <div class="ov-meter-hd"><span>${esc(label)}</span><span class="ov-meter-n">${done}/${total}</span></div>
-        <div class="ov-meter-track"><span class="ov-meter-fill" style="width:${pct(done, total)}%"></span></div>
-      </div>`;
-      const meters = `<div class="ov-meters ov-rise">
-        ${meter('Packed', packDone, packItems.length)}
-        ${meter('Pre-trip to-do', todoDone, todos.length, 'ov-meter--alt')}
-      </div>`;
-
-      // the suitcase: a real 3D prop as the block's centrepiece, with the
-      // packing figure beside it (falls back to just the figure without WebGL)
-      const packPct = pct(packDone, packItems.length);
-      const suitcase = `<section class="ov-object ov-rise">
-        <div class="ov-object-stage" data-obj3d-kind="suitcase" data-obj3d-dist="4.0" data-obj3d-spin="0.28"></div>
-        <div class="ov-object-copy">
-          <div class="ov-block-hd">The suitcase</div>
-          <div class="ov-object-figure">${packPct}<span>%</span></div>
-          <p class="ov-object-note">${packDone} of ${packItems.length} item${packItems.length === 1 ? '' : 's'} packed</p>
-          <button class="ov-object-btn" data-act="app-goto" data-i="0">Open packing</button>
-        </div>
-      </section>`;
-
-      return hero + tiles + routeStrip + suitcase + meters;
     }
 
     renderSummary(nights, grand, perPerson, miles, balance, travelers) {

@@ -1541,183 +1541,20 @@ a { color: inherit; }
 }
 
 /* ============================================================
-   OVERVIEW BLOCKS — hero masthead, stat tiles, route strip and
-   progress meters that open the app overview. Skin-agnostic:
-   every colour, radius, frame weight and shadow comes from the
-   token layer, so both skins restyle these for free.
-   ============================================================ */
-.ov-hero { margin: 2px 4px 16px; }
-.ov-hero-eyebrow {
-  font-family: var(--sans); font-size: 10px; font-weight: 600;
-  letter-spacing: .14em; text-transform: uppercase; color: var(--ink-mute);
-  /* clear the fixed undo/memories/theme cluster, same allowance as .app-tabs */
-  padding-right: 130px; min-height: 15px;
-}
-.ov-hero-title {
-  font-family: var(--serif); font-weight: 900;
-  font-size: clamp(34px, 11vw, 54px); line-height: .96; letter-spacing: -.02em;
-  color: var(--ink); margin: 7px 0 0;
-}
-.ov-hero-count { display: flex; align-items: baseline; gap: 8px; margin-top: 10px; }
-.ov-hero-count .n {
-  font-family: var(--caps); font-size: 40px; line-height: 1;
-  letter-spacing: .01em; color: var(--red);
-}
-.ov-hero-count .l {
-  font-family: var(--script); font-size: 15px; font-style: italic;
-  color: var(--green);
-}
-
-.ov-tiles {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
-  margin: 0 4px 18px;
-}
-.ov-tile {
-  background: var(--surface); border: var(--border-w) solid var(--line);
-  border-radius: var(--r-card); padding: 12px 6px 10px; text-align: center;
-  box-shadow: var(--shadow-rest);
-}
-.ov-tile--accent { background: var(--brown); border-color: var(--brown); }
-.ov-tile--accent .ov-tile-v, .ov-tile--accent .ov-tile-c { color: var(--on-brown); }
-.ov-tile-v {
-  font-family: var(--caps); font-size: 30px; line-height: 1;
-  color: var(--ink); letter-spacing: .01em;
-}
-.ov-tile-c {
-  font-family: var(--sans); font-size: 9px; font-weight: 600; margin-top: 5px;
-  letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft);
-}
-
-.ov-block-hd {
-  font-family: var(--sans); font-size: 10px; font-weight: 600;
-  letter-spacing: .14em; text-transform: uppercase;
-  color: var(--ink-mute); margin: 0 4px 9px;
-}
-.ov-strip-wrap { margin: 0 0 18px; }
-.ov-strip {
-  display: flex; align-items: stretch; gap: 0;
-  overflow-x: auto; scroll-snap-type: x proximity;
-  padding: 2px 4px 10px; margin: 0 -4px;
-  -webkit-overflow-scrolling: touch; scrollbar-width: none;
-}
-.ov-strip::-webkit-scrollbar { display: none; }
-.ov-leg { display: flex; align-items: center; flex: 0 0 auto; scroll-snap-align: start; }
-.ov-leg-line {
-  width: 26px; height: 0; flex: 0 0 auto;
-  border-top: 2px dashed var(--leg, var(--ink-faint));
-}
-.ov-node {
-  flex: 0 0 auto; min-width: 116px; max-width: 168px;
-  background: var(--surface); border: var(--border-w) solid var(--line);
-  border-radius: var(--r-card); padding: 10px 13px;
-  box-shadow: var(--shadow-rest); position: relative;
-}
-.ov-node::before {
-  content: ''; position: absolute; top: 9px; right: 10px;
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--leg, transparent);
-}
-.ov-node-city {
-  font-family: var(--display-alt); font-size: 15px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: .04em; color: var(--ink);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 12px;
-}
-.ov-node-sub {
-  font-family: var(--sans); font-size: 11px; color: var(--ink-soft); margin-top: 3px;
-  white-space: nowrap;
-}
-
-.ov-meters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 4px 18px; }
-.ov-meter {
-  background: var(--surface); border: var(--border-w) solid var(--line);
-  border-radius: var(--r-card); padding: 12px 14px 13px;
-  box-shadow: var(--shadow-rest);
-}
-.ov-meter-hd {
-  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
-  font-family: var(--sans); font-size: 11px; font-weight: 600; color: var(--ink);
-}
-.ov-meter-n { color: var(--ink-mute); font-variant-numeric: tabular-nums; }
-.ov-meter-track {
-  margin-top: 9px; height: 7px; border-radius: 999px;
-  background: var(--line-soft); overflow: hidden;
-}
-.ov-meter-fill {
-  display: block; height: 100%; border-radius: 999px;
-  background: var(--green); transition: width .5s cubic-bezier(.22,.61,.36,1);
-}
-.ov-meter--alt .ov-meter-fill { background: var(--gold); }
-
-/* ---- 3D hero globe -------------------------------------------
-   The canvas is appended INSIDE .intro-globe and stretched over the
-   flat SVG globe, which stays in the DOM as the fallback. Without
-   this sizing the canvas mounts at 0×0 and the 3D globe is invisible.
-   .has-globe-3d is set by the mount, and retires the SVG. ------- */
-.intro-globe-3d {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  display: block;
-}
-.intro-globe.has-globe-3d > svg { visibility: hidden; }
-
-/* ---- 3D props ------------------------------------------------
+   3D PROPS — the three.js objects mounted into ordinary UI slots.
    A canvas is added inside the host only when three.js + WebGL are
    available; until then (and under reduced motion) the flat SVG
    icon underneath is what shows. .is-3d is set by the mount, and
-   hides the fallback. ---------------------------------------- */
+   retires the fallback.
+   ============================================================ */
 .obj3d-canvas { display: block; width: 100%; height: 100%; }
 .app-card-ico {
-  position: relative; display: block;
+  position: relative;
   width: 42px; height: 42px;
   display: flex; align-items: center; justify-content: center;
 }
 .app-card-ico.is-3d > svg { display: none; }
 .app-card-ico .obj3d-canvas { position: absolute; inset: 0; }
-
-.ov-object {
-  display: grid; grid-template-columns: 1.05fr 1fr; gap: 10px; align-items: center;
-  margin: 0 4px 18px; padding: 14px 16px;
-  background: var(--surface); border: var(--border-w) solid var(--line);
-  border-radius: var(--r-card); box-shadow: var(--shadow-card);
-}
-.ov-object-stage {
-  aspect-ratio: 1 / 1; min-height: 120px;
-  border-radius: var(--r-sm);
-  background: radial-gradient(60% 60% at 50% 45%, var(--line-2), transparent 72%);
-}
-.ov-object-figure {
-  font-family: var(--caps); font-size: 46px; line-height: 1;
-  color: var(--red); margin-top: 4px;
-}
-.ov-object-figure span { font-size: 22px; margin-left: 2px; color: var(--ink-soft); }
-.ov-object-note {
-  font-family: var(--sans); font-size: 11px; color: var(--ink-soft); margin-top: 6px; line-height: 1.45;
-}
-.ov-object-btn {
-  margin-top: 11px; padding: 8px 14px; cursor: pointer;
-  border: none; border-radius: var(--r-pill);
-  background: var(--brown); color: var(--on-brown);
-  font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: .02em;
-}
-[data-skin="neon"] .ov-object-btn { background: var(--grad-accent); box-shadow: var(--shadow-pop); }
-[data-skin="neon"] .ov-object { border-color: transparent; }
-
-/* the ledger is a fixed-height book — these blocks belong to the scrolling
-   app overview only, so keep them out of the wide layout entirely */
-@media (min-width: 701px) {
-  .ov-hero, .ov-tiles, .ov-strip-wrap, .ov-meters, .ov-object { display: none; }
-}
-
-/* skin A frames these in ink and throws the hard poster offset */
-[data-skin="pop"] .ov-tile,
-[data-skin="pop"] .ov-node,
-[data-skin="pop"] .ov-meter { box-shadow: var(--shadow-card); }
-/* skin B lifts them on a soft halo and fills the accent tile with the gradient */
-[data-skin="neon"] .ov-tile,
-[data-skin="neon"] .ov-node,
-[data-skin="neon"] .ov-meter { border-color: transparent; box-shadow: var(--shadow-card); }
-[data-skin="neon"] .ov-tile--accent { background: var(--grad-accent); box-shadow: var(--shadow-pop); }
-[data-skin="neon"] .ov-meter-fill { background: var(--grad-accent); }
 
 /* ============================================================
    PLACED STICKER LAYER
@@ -2586,8 +2423,18 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    covers it first — gapless in both directions */
 .pk-bp.anim-open .pk-art--closed { opacity: 0; transition: opacity .42s ease; }
 
+/* the 3D case: sits over the flat art inside the same box, and only retires
+   the PNG layers once it has actually built (.has-case-3d). Sits UNDER the
+   leaders and chips, which keep their own 640x560 coordinate space. */
+.pk-case3d {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  display: block; z-index: 1; pointer-events: none;
+}
+.pk-bp.has-case-3d .pk-art { opacity: 0 !important; }
+
 /* dashed leaders grow up out of the case (origin at the case end) */
-.pk-leads { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.pk-leads { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
 .pk-leads line {
   stroke: var(--ink-faint); stroke-width: 1.6; stroke-dasharray: 2 6; stroke-linecap: round;
   transform-box: fill-box; transform-origin: center bottom;
