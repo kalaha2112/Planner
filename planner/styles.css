@@ -2625,9 +2625,9 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    TRIP STACK — the intro's trip switcher as a deck of cards.
 
    Collapsed: one card reading TRIP. Hover (pointer) or tap it
-   (touch) and the deck fans out as a diagonal cascade up and to
-   the left — heavy overlap, each card further back, smaller and
-   more rotated than the one in front of it.
+   (touch) and the deck cascades out horizontally — heavy overlap,
+   each card further back, smaller and more tilted than the one in
+   front of it. The tilt stays while fanned; only the offset moves.
 
    --i is depth into the deck (0 = front card, set in renderTabs so
    the open trip always leads), --n the number of trips. Clicking
@@ -2636,52 +2636,44 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    ============================================================ */
 .trip-stack {
   --card-w: 138px;
-  --card-h: 104px;
-  --dx: 46px;           /* step right, per card back */
-  --dy: -28px;          /* step up, per card back */
-  --rot: 5deg;          /* extra tilt, per card back */
+  --card-h: 86px;
+  --dx: 86px;           /* step right, per card back — wide enough to read each name */
+  --rot: -7deg;         /* the lean the whole deck holds while fanned */
   position: relative; flex: none;
   width: var(--card-w);
   height: var(--card-h);
-  margin-top: calc((var(--n) - 1) * 28px);   /* room to fan upward */
-  margin-right: calc((var(--n) - 1) * 46px);  /* room to fan rightward */
+  margin-top: 18px;                           /* room for the hover lift */
+  margin-bottom: 16px;                        /* room for the lean's lower corner */
+  margin-right: calc((var(--n) - 1) * 86px);  /* room to cascade rightward */
 }
 .trip-stack-cards { position: absolute; inset: 0; }
 
 .trip-card {
   position: absolute; left: 0; bottom: 0;
   width: var(--card-w); height: var(--card-h);
-  display: flex; flex-direction: column; justify-content: flex-end; gap: 2px;
-  padding: 11px 13px; text-align: left;
+  display: flex; align-items: center;
+  padding: 11px 14px; text-align: left;
   border: 1px solid var(--line-soft); border-radius: var(--r-card);
   background: var(--surface); color: var(--ink);
   cursor: pointer; overflow: hidden;
   box-shadow: var(--shadow-card);
-  transform-origin: 15% 100%;
+  transform-origin: 50% 100%;
   /* stacked: barely offset, just enough to show there is a deck */
   transform:
-    translate(calc(var(--i) * 4px), calc(var(--i) * -3px))
+    translateX(calc(var(--i) * 5px))
     rotate(calc(var(--i) * 1.2deg))
     scale(calc(1 - var(--i) * 0.02));
   z-index: calc(30 - var(--i));
   transition: transform .46s cubic-bezier(.22,.61,.36,1),
               box-shadow .3s ease, border-color .3s ease, opacity .3s ease;
 }
-.tc-eyebrow {
-  font-family: var(--sans); font-size: 8px; font-weight: 600;
-  letter-spacing: .14em; text-transform: uppercase; color: var(--ink-mute);
-}
 .tc-name {
-  font-family: var(--serif); font-weight: 700; font-size: 16px;
-  line-height: 1.1; color: var(--ink);
+  font-family: var(--serif); font-weight: 700; font-size: 15px;
+  line-height: 1.15; color: var(--ink);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   border: none; background: transparent; padding: 0; width: 100%;
 }
 .tc-name:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
-.tc-meta {
-  font-family: var(--sans); font-size: 10px; color: var(--ink-soft);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
 .tc-x {
   position: absolute; top: 6px; right: 8px;
   border: none; background: transparent; cursor: pointer;
@@ -2690,6 +2682,13 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   opacity: 0; transition: opacity .2s ease;
 }
 .trip-card.is-front { border-color: var(--line-3); box-shadow: var(--shadow-lift); }
+/* Cards are overlapped from the left, so only the right --dx of each one is
+   visible. Push the name of every covered card into that strip, otherwise the
+   start of each label sits underneath the card in front of it. The front card
+   is never covered, so it keeps its normal padding. */
+.trip-card:not(.is-front) {
+  padding-left: calc(var(--card-w) - var(--dx) + 10px);
+}
 
 /* the TRIP cover card sits over the deck until it is opened */
 .trip-stack-cover {
@@ -2707,8 +2706,8 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .trip-stack:hover .trip-card,
 .trip-stack.is-fanned .trip-card {
   transform:
-    translate(calc(var(--i) * var(--dx)), calc(var(--i) * var(--dy)))
-    rotate(calc(var(--i) * var(--rot)))
+    translateX(calc(var(--i) * var(--dx)))
+    rotate(var(--rot))
     scale(calc(1 - var(--i) * 0.045));
 }
 /* the cover lifts away and lets the deck through */
@@ -2720,7 +2719,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .trip-stack:hover .trip-card:hover,
 .trip-stack.is-fanned .trip-card:hover {
   transform:
-    translate(calc(var(--i) * var(--dx)), calc(var(--i) * var(--dy) - 8px))
+    translateX(calc(var(--i) * var(--dx))) translateY(-8px)
     rotate(0deg) scale(1.06);
   z-index: 35;
   box-shadow: var(--shadow-lift);

@@ -4751,9 +4751,9 @@
        TRIP STACK — the intro's trip switcher as a deck of cards.
 
        Collapsed it is a single card reading TRIP. Hovering it (or
-       tapping, on touch) fans the deck out as a diagonal cascade up
-       and to the left: heavy overlap, each card a little further
-       back, a little smaller and a little more rotated. The open
+       tapping, on touch) fans the deck out horizontally: heavy
+       overlap, each card a little further back, a little smaller
+       and a little more tilted than the one in front. The open
        trip is always the front card — biggest, most upright, on top —
        so clicking another trip brings its card to the front.
 
@@ -4769,25 +4769,18 @@
         (a === this.data.active ? -1 : 0) - (b === this.data.active ? -1 : 0));
 
       const cards = ordered.map((key, i) => {
-        const t = this.data.trips[key] || {};
-        const lbl = t.label || '';
-        const stops = (t.stops || []).length;
-        const nights = (t.stops || []).reduce((a, st) => a + (Number(st.nights) || 0), 0);
-        const meta = stops ? `${stops} stop${stops === 1 ? '' : 's'} · ${nights} night${nights === 1 ? '' : 's'}` : 'No stops yet';
+        const lbl = (this.data.trips[key] || {}).label || '';
         const common = `draggable="true" data-drag="trip" data-drop="trip" data-key="${escA(key)}" style="--i:${i}"`;
         if (key === this.data.active) {
           // the front card carries the rename field, so it is a div (an input
           // cannot live inside a button) — same as the old .tab-active pill
           return `<div class="trip-card is-front" ${common} title="Drag to reorder">
-            <span class="tc-eyebrow">Now planning</span>
             <input class="tc-name" value="${escA(lbl)}" data-ch="tab-rename" data-key="${escA(key)}" aria-label="Trip name">
-            <span class="tc-meta">${esc(meta)}</span>
             ${keys.length > 1 ? `<button class="tc-x" data-act="tab-remove" data-key="${escA(key)}" title="Remove this trip" aria-label="Remove trip">−</button>` : ''}
           </div>`;
         }
         return `<button class="trip-card" ${common} data-act="tab-select" title="Open this trip">
           <span class="tc-name">${esc(lbl)}</span>
-          <span class="tc-meta">${esc(meta)}</span>
         </button>`;
       }).join('');
 
