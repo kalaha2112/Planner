@@ -1134,6 +1134,20 @@ a { color: inherit; }
 }
 
 /* ============================================================
+   3D HERO GLOBE — the canvas is appended INSIDE .intro-globe and
+   stretched over the flat SVG globe, which stays in the DOM as the
+   fallback. Without this sizing the canvas has no height at all and
+   the globe is invisible. .has-globe-3d is set by the mount, and
+   only then is the SVG retired.
+   ============================================================ */
+.intro-globe-3d {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  display: block;
+}
+.intro-globe.has-globe-3d > svg { visibility: hidden; }
+
+/* ============================================================
    3D PROPS — the three.js objects mounted into ordinary UI slots.
    A canvas is added inside the host only when three.js + WebGL are
    available; until then (and under reduced motion) the flat SVG
