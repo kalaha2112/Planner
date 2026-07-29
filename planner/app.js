@@ -1687,9 +1687,11 @@
 
       const line = (pts, color, opacity, width) => {
         const geo = new T.BufferGeometry().setFromPoints(pts);
-        const mat = new T.LineBasicMaterial({ color, transparent: true, opacity, linewidth: width || 1 });
+        const mat = new T.LineBasicMaterial({ color, transparent: true, opacity, linewidth: width || 1, depthTest: false, depthWrite: false });
         g3.mats.push(mat);
-        return new T.Line(geo, mat);
+        const line = new T.Line(geo, mat);
+        line.renderOrder = 0;
+        return line;
       };
       g3.line = line;
 
@@ -1700,35 +1702,30 @@
       };
       g3.v = v;
 
-      // ---- a faint filled sphere so the far side reads as "behind" ----
-      const shellMat = new T.MeshBasicMaterial({ transparent: true, opacity: .04, depthWrite: true });
-      g3.shellMat = shellMat;
-      pivot.add(new T.Mesh(new T.SphereGeometry(R * .995, 48, 32), shellMat));
-
-      // ---- atmosphere: a back-facing shell whose rim lights up at the limb.
-      //      BackSide + additive means it only shows where the sphere curves
-      //      away, giving a glow around the edge instead of a wash over it. ----
-      const atmoMat = new T.ShaderMaterial({
-        transparent: true, side: T.BackSide, blending: T.AdditiveBlending, depthWrite: false,
-        uniforms: { uColor: { value: new T.Color(0xffffff) }, uStrength: { value: 0.55 } },
-        vertexShader: `
-          varying vec3 vN; varying vec3 vP;
-          void main() {
-            vN = normalize(normalMatrix * normal);
-            vec4 mv = modelViewMatrix * vec4(position, 1.0);
-            vP = mv.xyz;
-            gl_Position = projectionMatrix * mv;
-          }`,
-        fragmentShader: `
-          uniform vec3 uColor; uniform float uStrength;
-          varying vec3 vN; varying vec3 vP;
-          void main() {
-            float rim = 1.0 - abs(dot(normalize(vN), normalize(-vP)));
-            gl_FragColor = vec4(uColor, pow(rim, 2.6) * uStrength);
-          }`,
-      });
-      g3.atmoMat = atmoMat;
-      pivot.add(new T.Mesh(new T.SphereGeometry(R * 1.16, 48, 32), atmoMat));
+      // ---- depth-only occluder: writes nothing to the colour buffer, only to
+      //      depth, and renders before everything else. Without it the stop
+      //      markers and route arcs on the FAR side of the globe are still
+      //      drawn — they appear to reach the limb and then travel back across
+      //      the face instead of passing behind. Radius sits just inside the
+      //      land lines (R*1.004) so the near hemisphere is untouched. ----
+      // ---- depth-only occluder: writes to the depth buffer and nothing else.
+      //      It exists purely so the stop markers and route arcs on the FAR
+      //      side of the globe are hidden — without it they reach the limb and
+      //      then appear to travel back across the face.
+      //
+      //      Draw order is what keeps the globe see-through:
+      //        -1  this occluder      — depth only, invisible
+      //         0  graticule + land   — depthTest OFF, so the wireframe still
+      //                                 shows through both hemispheres
+      //         1  markers + arcs     — depthTest ON, so they pass behind
+      //      There is no filled shell: the globe is a wireframe, not a ball. ----
+      const occluder = new T.Mesh(
+        new T.SphereGeometry(R * 1.0, 48, 32),
+        new T.MeshBasicMaterial({ colorWrite: false, depthWrite: true })
+      );
+      occluder.renderOrder = -1;
+      pivot.add(occluder);
+      g3.shellMat = null;
 
       // ---- graticule ----
       const grat = new T.Group();
@@ -1767,13 +1764,11 @@
         const t = (now || 0) / 1000;
         // stops breathe
         if (g3.halos) {
-          const pulse = .22 + Math.sin(t * 2.1) * .12;
           g3.halos.forEach((h, i) => {
             const ph = Math.sin(t * 2.1 + i * .7);
             h.material.opacity = .2 + ph * .14;
             h.scale.setScalar(1 + ph * .22);
           });
-          if (g3.atmoMat) g3.atmoMat.uniforms.uStrength.value = (g3.atmoBase || .55) * (1 + pulse * .4);
         }
         // the route traces itself out, then holds
         if (g3.arcs && g3.arcs.length) {
@@ -1824,16 +1819,7 @@
       const red = new T.Color(pick('--red', '#91040C'));
       if (g3.grat) g3.grat.children.forEach(l => l.material.color.copy(ink));
       if (g3.land) g3.land.children.forEach(l => l.material.color.copy(ink));
-      if (g3.shellMat) g3.shellMat.color.copy(ink);
       if (g3.stopsGroup) g3.stopsGroup.children.forEach(o => o.material && o.material.color.copy(red));
-      if (g3.atmoMat) {
-        g3.atmoMat.uniforms.uColor.value.copy(new T.Color(pick('--gold', '#C8901F')));
-        // the limb glow is a night-sky effect: at full strength on a white page
-        // it reads as a haze around the globe rather than an atmosphere
-        const dark = document.documentElement.getAttribute('data-theme') === 'dark';
-        g3.atmoBase = dark ? .55 : .14;
-        g3.atmoMat.uniforms.uStrength.value = g3.atmoBase;
-      }
       g3.inkColor = ink; g3.redColor = red;
     }
 
@@ -1843,6 +1829,7 @@
       const T = g3.T, R = g3.R, v = g3.v;
       if (g3.stopsGroup) { g3.pivot.remove(g3.stopsGroup); }
       const grp = g3.stopsGroup = new T.Group();
+      grp.renderOrder = 1;
       const red = g3.redColor || new T.Color(0x91040C);
 
       const dotGeo = new T.SphereGeometry(R * .022, 12, 10);
@@ -1851,12 +1838,14 @@
       stops.forEach(([la, lo]) => {
         const pos = v(la, lo, R * 1.012);
         const d = new T.Mesh(dotGeo, new T.MeshBasicMaterial({ color: red }));
+        d.renderOrder = 1;
         d.position.copy(pos);
         grp.add(d);
         // a soft halo that breathes, so the stops read as lit rather than drawn
         const halo = new T.Mesh(haloGeo, new T.MeshBasicMaterial({
-          color: red, transparent: true, opacity: .3, depthWrite: false, blending: T.AdditiveBlending,
+          color: red, transparent: true, opacity: .3, depthWrite: false,
         }));
+        halo.renderOrder = 1;
         halo.position.copy(pos);
         grp.add(halo);
         g3.halos.push(halo);
@@ -1880,6 +1869,7 @@
         geo.setDrawRange(0, 0);
         const mat = new T.LineBasicMaterial({ color: red, transparent: true, opacity: .9 });
         const line = new T.Line(geo, mat);
+        line.renderOrder = 1;
         line.userData.count = pts.length;
         grp.add(line);
         g3.arcs.push(line);
