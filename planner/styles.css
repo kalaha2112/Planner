@@ -2620,8 +2620,118 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   -ms-overflow-style: none;
 }
 .intro-tabs::-webkit-scrollbar { display: none; }
-/* the "+" stays pinned in front while the tabs scroll behind it */
-.intro-tabs .add-trip { position: sticky; left: 0; z-index: 2; background: var(--shell); }
+
+/* ============================================================
+   TRIP STACK — the intro's trip switcher as a deck of cards.
+
+   Collapsed: one card reading TRIP. Hover (pointer) or tap it
+   (touch) and the deck fans out as a diagonal cascade up and to
+   the left — heavy overlap, each card further back, smaller and
+   more rotated than the one in front of it.
+
+   --i is depth into the deck (0 = front card, set in renderTabs so
+   the open trip always leads), --n the number of trips. Clicking
+   another trip re-renders it at --i 0, which is what brings its
+   card to the front, upright and full size.
+   ============================================================ */
+.trip-stack {
+  --card-w: 138px;
+  --card-h: 104px;
+  --dx: 46px;           /* step right, per card back */
+  --dy: -28px;          /* step up, per card back */
+  --rot: 5deg;          /* extra tilt, per card back */
+  position: relative; flex: none;
+  width: var(--card-w);
+  height: var(--card-h);
+  margin-top: calc((var(--n) - 1) * 28px);   /* room to fan upward */
+  margin-right: calc((var(--n) - 1) * 46px);  /* room to fan rightward */
+}
+.trip-stack-cards { position: absolute; inset: 0; }
+
+.trip-card {
+  position: absolute; left: 0; bottom: 0;
+  width: var(--card-w); height: var(--card-h);
+  display: flex; flex-direction: column; justify-content: flex-end; gap: 2px;
+  padding: 11px 13px; text-align: left;
+  border: 1px solid var(--line-soft); border-radius: var(--r-card);
+  background: var(--surface); color: var(--ink);
+  cursor: pointer; overflow: hidden;
+  box-shadow: var(--shadow-card);
+  transform-origin: 15% 100%;
+  /* stacked: barely offset, just enough to show there is a deck */
+  transform:
+    translate(calc(var(--i) * 4px), calc(var(--i) * -3px))
+    rotate(calc(var(--i) * 1.2deg))
+    scale(calc(1 - var(--i) * 0.02));
+  z-index: calc(30 - var(--i));
+  transition: transform .46s cubic-bezier(.22,.61,.36,1),
+              box-shadow .3s ease, border-color .3s ease, opacity .3s ease;
+}
+.tc-eyebrow {
+  font-family: var(--sans); font-size: 8px; font-weight: 600;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--ink-mute);
+}
+.tc-name {
+  font-family: var(--serif); font-weight: 700; font-size: 16px;
+  line-height: 1.1; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  border: none; background: transparent; padding: 0; width: 100%;
+}
+.tc-name:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+.tc-meta {
+  font-family: var(--sans); font-size: 10px; color: var(--ink-soft);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tc-x {
+  position: absolute; top: 6px; right: 8px;
+  border: none; background: transparent; cursor: pointer;
+  color: var(--ink-mute); font-family: var(--sans); font-size: 16px;
+  font-weight: 700; line-height: 1; padding: 2px 5px;
+  opacity: 0; transition: opacity .2s ease;
+}
+.trip-card.is-front { border-color: var(--line-3); box-shadow: var(--shadow-lift); }
+
+/* the TRIP cover card sits over the deck until it is opened */
+.trip-stack-cover {
+  position: absolute; inset: 0; z-index: 40;
+  border: 1px solid var(--line-3); border-radius: var(--r-card);
+  background: var(--brown); color: var(--on-brown);
+  font-family: var(--caps); font-size: 30px; letter-spacing: .1em;
+  text-transform: uppercase; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; box-shadow: var(--shadow-pop);
+  transition: transform .46s cubic-bezier(.22,.61,.36,1), opacity .3s ease;
+}
+
+/* ---- fanned: hover for pointers, .is-fanned once tapped ---- */
+.trip-stack:hover .trip-card,
+.trip-stack.is-fanned .trip-card {
+  transform:
+    translate(calc(var(--i) * var(--dx)), calc(var(--i) * var(--dy)))
+    rotate(calc(var(--i) * var(--rot)))
+    scale(calc(1 - var(--i) * 0.045));
+}
+/* the cover lifts away and lets the deck through */
+.trip-stack:hover .trip-stack-cover,
+.trip-stack.is-fanned .trip-stack-cover {
+  opacity: 0; pointer-events: none;
+  transform: translate(-14px, 10px) rotate(-4deg) scale(.94);
+}
+.trip-stack:hover .trip-card:hover,
+.trip-stack.is-fanned .trip-card:hover {
+  transform:
+    translate(calc(var(--i) * var(--dx)), calc(var(--i) * var(--dy) - 8px))
+    rotate(0deg) scale(1.06);
+  z-index: 35;
+  box-shadow: var(--shadow-lift);
+}
+.trip-stack:hover .is-front .tc-x,
+.trip-stack.is-fanned .is-front .tc-x { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .trip-card, .trip-stack-cover { transition: none; }
+}
+
 @media (max-width: 700px) {
   /* app version: narrative block on top, globe fully beneath it (no overlap).
      justify-content:flex-end anchors the globe (+ its fixed 3vh gap) to a

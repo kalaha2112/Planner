@@ -4747,23 +4747,55 @@
       });
     }
 
+    /* ============================================================
+       TRIP STACK — the intro's trip switcher as a deck of cards.
+
+       Collapsed it is a single card reading TRIP. Hovering it (or
+       tapping, on touch) fans the deck out as a diagonal cascade up
+       and to the left: heavy overlap, each card a little further
+       back, a little smaller and a little more rotated. The open
+       trip is always the front card — biggest, most upright, on top —
+       so clicking another trip brings its card to the front.
+
+       The card markup keeps every action the pill row had —
+       tab-select, tab-rename, tab-remove, add-trip and the native
+       drag-reorder attributes — so selecting, renaming, removing and
+       reordering all still run through the same delegated handlers.
+       ============================================================ */
     renderTabs() {
       const keys = this.tripKeys();
-      const pills = keys.map(key => {
-        const t = this.data.trips[key]; const lbl = t.label || '';
-        const w = Math.max(8, Math.min(22, lbl.length + 1)) + 'ch';
-        if (this.data.active === key) {
-          return `<div class="tab-active" draggable="true" data-drag="trip" data-drop="trip" data-key="${escA(key)}" title="Drag to reorder">
-            <input value="${escA(lbl)}" data-ch="tab-rename" data-key="${escA(key)}" style="width:${w}">
-            ${keys.length > 1 ? `<button class="tab-x" data-act="tab-remove" data-key="${escA(key)}" title="Remove this trip" aria-label="Remove trip">−</button>` : ''}
-            <span style="width:10px"></span>
+      // the open trip leads, so --i is depth into the deck: 0 = front card
+      const ordered = keys.slice().sort((a, b) =>
+        (a === this.data.active ? -1 : 0) - (b === this.data.active ? -1 : 0));
+
+      const cards = ordered.map((key, i) => {
+        const t = this.data.trips[key] || {};
+        const lbl = t.label || '';
+        const stops = (t.stops || []).length;
+        const nights = (t.stops || []).reduce((a, st) => a + (Number(st.nights) || 0), 0);
+        const meta = stops ? `${stops} stop${stops === 1 ? '' : 's'} · ${nights} night${nights === 1 ? '' : 's'}` : 'No stops yet';
+        const common = `draggable="true" data-drag="trip" data-drop="trip" data-key="${escA(key)}" style="--i:${i}"`;
+        if (key === this.data.active) {
+          // the front card carries the rename field, so it is a div (an input
+          // cannot live inside a button) — same as the old .tab-active pill
+          return `<div class="trip-card is-front" ${common} title="Drag to reorder">
+            <span class="tc-eyebrow">Now planning</span>
+            <input class="tc-name" value="${escA(lbl)}" data-ch="tab-rename" data-key="${escA(key)}" aria-label="Trip name">
+            <span class="tc-meta">${esc(meta)}</span>
+            ${keys.length > 1 ? `<button class="tc-x" data-act="tab-remove" data-key="${escA(key)}" title="Remove this trip" aria-label="Remove trip">−</button>` : ''}
           </div>`;
         }
-        return `<button class="tab-inactive" draggable="true" data-drag="trip" data-drop="trip" data-act="tab-select" data-key="${escA(key)}" title="Drag to reorder · click to open">${esc(lbl)}</button>`;
+        return `<button class="trip-card" ${common} data-act="tab-select" title="Open this trip">
+          <span class="tc-name">${esc(lbl)}</span>
+          <span class="tc-meta">${esc(meta)}</span>
+        </button>`;
       }).join('');
-      // "+" first (in front of every tab), then the tab pill; the row scrolls
-      // left/right (never wraps) so trips added to the end overflow to the right.
-      return `<button class="add-trip" data-act="add-trip" title="Add a trip" aria-label="Add a trip">+</button><div class="tabs">${pills}</div>`;
+
+      return `<div class="trip-stack" style="--n:${keys.length}">
+          <div class="trip-stack-cards">${cards}</div>
+          <button class="trip-stack-cover" data-act="trip-stack-toggle" aria-expanded="false" aria-label="Show trips">Trip</button>
+        </div>
+        <button class="add-trip" data-act="add-trip" title="Add a trip" aria-label="Add a trip">+</button>`;
     }
 
     renderMeta(trip, travelers) {
@@ -5761,7 +5793,17 @@
         case 'undo': this.undo(); break;
         case 'toggle-theme': this.toggleTheme(); break;
         case 'add-trip': this.addTrip(); break;
-        case 'tab-select': if (this.data.active !== key) { this.data.active = key; this._lastCoordKey = ''; this._openMapCardIdx = null; this._openMapCardFlipped = false; this.bump(); } break;
+        // touch has no hover, so the TRIP label toggles the deck open there.
+        // The class also pins the deck open on pointer devices once tapped.
+        case 'trip-stack-toggle': {
+          const stack = t.closest('.trip-stack');
+          if (stack) {
+            const open = stack.classList.toggle('is-fanned');
+            t.setAttribute('aria-expanded', String(open));
+          }
+          break;
+        }
+        case 'tab-select': if (this.data.active !== key) { this.data.active = key; this._lastCoordKey = ''; this._openMapCardIdx = null; this._openMapCardFlipped = false; this.bump(); } { const st = t.closest('.trip-stack'); if (st) st.classList.remove('is-fanned'); } break;
         case 'tab-remove': this.removeTrip(key); break;
         case 'traveler-inc': trip.travelers = Math.min(12, (Math.max(1, Number(trip.travelers) || 1)) + 1); this.bump(); break;
         case 'traveler-dec': trip.travelers = Math.max(1, (Math.max(1, Number(trip.travelers) || 1)) - 1); this.bump(); break;
