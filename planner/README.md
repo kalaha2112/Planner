@@ -12,6 +12,39 @@ Cormorant Garamond / DM Sans type stack and an ink/brown/red paper palette. The 
 design's functional accents (gold for award miles / itinerary, green for dates / train) are
 retained so the route's color-coding stays legible.
 
+## Skins
+
+Two candidate visual directions ship alongside the classic editorial look, defined as token
+packs in the `SKINS` block of `styles.css` and selected with `data-skin` on `<html>`:
+
+| Skin | `?skin=` | Look |
+|---|---|---|
+| Classic | `?skin=classic` | The original ink-on-paper editorial palette (default) |
+| A · Sunset Express | `?skin=pop` | Retro travel poster — flat saturated colour on warm cream, hard offset shadows, Fraunces / Outfit / Anton |
+| B · Night Market | `?skin=neon` | Neon signage after dark — acid lime / amber / papaya on a green-black, gradient accents, frosted glass, Space Grotesk / Sora |
+
+The skin is applied pre-paint by the boot script in `index.html` (so it never flashes), and
+persisted in `localStorage['europe-trip-skin-v1']` — `?skin=` in the URL wins and is saved, so a
+link can hand someone a specific look. Both skins carry matching `[data-theme="dark"]` overrides,
+so the existing dark-mode toggle keeps working in all three. Neither skin's ramp uses blue,
+pink or purple; transport-mode colours are tokens too (`--mode-*`, read by `MODE_HEX` in
+`app.js`), so route pips and leg lines recolour with the skin instead of being frozen in JS.
+
+Open `mockups.html` to compare the two side by side in light and dark.
+
+## 3D and motion
+
+- **three.js** (`vendor/three/`) — the intro hero globe and the low-poly props (suitcase,
+  calendar, bed, plane) that serve as the overview's object and card icons. Everything is built
+  from primitives, so there are no asset files to fetch and the single-file build still works
+  offline. Props read their colours from the skin tokens.
+- **GSAP + ScrollTrigger** (`vendor/gsap/`) — the scroll-driven reveals on the overview blocks:
+  staggered stat tiles, the route strip sliding in, meter bars filling, and a light parallax on
+  the map.
+
+Both layers are strictly additive. Without WebGL, without three/GSAP, or under
+`prefers-reduced-motion`, the flat SVG globe and icons stay and nothing animates.
+
 ## Run
 
 It's plain HTML/CSS/JS — open `index.html` in a browser, or serve the folder:

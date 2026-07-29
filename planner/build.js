@@ -21,7 +21,7 @@ const path = require('path');
 
 const DIR = __dirname;
 const OUT = path.join(DIR, 'standalone.html');
-const SOURCES = ['index.html', 'styles.css', 'app.js', 'social-import.js', 'vendor/leaflet/leaflet.css', 'vendor/leaflet/leaflet.js', 'vendor/topojson/topojson.min.js', 'vendor/topojson/countries-110m.json', 'vendor/topojson/countries-50m.json'];
+const SOURCES = ['index.html', 'styles.css', 'app.js', 'social-import.js', 'vendor/leaflet/leaflet.css', 'vendor/leaflet/leaflet.js', 'vendor/topojson/topojson.min.js', 'vendor/topojson/countries-110m.json', 'vendor/topojson/countries-50m.json', 'vendor/three/three.min.js', 'vendor/gsap/gsap.min.js', 'vendor/gsap/ScrollTrigger.min.js'];
 
 const read = (rel) => fs.readFileSync(path.join(DIR, rel), 'utf8');
 
@@ -35,6 +35,9 @@ function build() {
   const styles = read('styles.css');
   const app = read('app.js');
   const socialImport = read('social-import.js');
+  const threeJs = read('vendor/three/three.min.js');
+  const gsapJs = read('vendor/gsap/gsap.min.js');
+  const scrollTriggerJs = read('vendor/gsap/ScrollTrigger.min.js');
 
   // NOTE: use FUNCTION replacements — a string replacement would interpret
   // `$&`, `$1`, `$$` etc., which the inlined JS/CSS contains in abundance
@@ -53,6 +56,19 @@ function build() {
   html = html.replace(
     /<script src="vendor\/topojson\/topojson\.min\.js"><\/script>/,
     () => `<script>\n/* vendor/topojson/topojson.min.js */\n${topojsonJs}\n</script>\n<script>window.WORLD_ATLAS_DATA=${worldAtlas};window.WORLD_ATLAS_50=${worldAtlas50};</script>`
+  );
+  // 3b) three.js + GSAP + ScrollTrigger <script src> → inline <script>
+  html = html.replace(
+    /<script src="vendor\/three\/three\.min\.js"><\/script>/,
+    () => `<script>\n/* vendor/three/three.min.js */\n${threeJs}\n</script>`
+  );
+  html = html.replace(
+    /<script src="vendor\/gsap\/gsap\.min\.js"><\/script>/,
+    () => `<script>\n/* vendor/gsap/gsap.min.js */\n${gsapJs}\n</script>`
+  );
+  html = html.replace(
+    /<script src="vendor\/gsap\/ScrollTrigger\.min\.js"><\/script>/,
+    () => `<script>\n/* vendor/gsap/ScrollTrigger.min.js */\n${scrollTriggerJs}\n</script>`
   );
   // 4) styles.css <link> (with optional ?v=) → inline <style>
   html = html.replace(
@@ -80,7 +96,7 @@ function build() {
 
   // sanity: every external app/style/leaflet ref should now be inlined
   const leftovers = (html.match(/href="(styles\.css|vendor\/leaflet\/leaflet\.css)/g) || [])
-    .concat(html.match(/src="(app\.js|social-import\.js|vendor\/leaflet\/leaflet\.js|vendor\/topojson\/topojson\.min\.js)/g) || []);
+    .concat(html.match(/src="(app\.js|social-import\.js|vendor\/leaflet\/leaflet\.js|vendor\/topojson\/topojson\.min\.js|vendor\/three\/three\.min\.js|vendor\/gsap\/(?:gsap|ScrollTrigger)\.min\.js)/g) || []);
   if (leftovers.length) {
     console.error('⚠ build: some references were not inlined:', leftovers.join(', '));
     process.exitCode = 1;

@@ -59,16 +59,54 @@
   --mini-leader:   oklch(40% 0.012 70);
   --mini-ring:     oklch(97% 0.005 60);
 
+  /* ---- transport modes — read by app.js (MODE_HEX) so route pips, legs and
+     map dashes recolour with the skin instead of being frozen in JS ---- */
+  --mode-flight:    #91040C;
+  --mode-train:     #336184;
+  --mode-bus:       #EEB90F;
+  --mode-overnight: #46604F;
+  --mode-award:     #C8901F;
+
+  /* ---- text/icons on an ACCENT fill (--red / --brown / --green) ----
+     Separate from --on-brown: that one flips with the theme (black pills go
+     white in dark), this one rides coloured fills that stay coloured. */
+  --on-accent: #fff;
+
+  /* ---- receipt "printed paper" — the budget modal is a deliberate physical
+     object (thermal paper + mono ink) rather than app chrome, so it gets its
+     own sub-palette instead of following --surface/--ink. ---- */
+  --paper:       #fbfaf4;   /* the stock itself */
+  --paper-ink:   #111;      /* primary print */
+  --paper-soft:  #555;      /* secondary print */
+  --paper-mute:  #777;      /* tertiary print */
+  --paper-faint: #888;      /* footnote print */
+  --paper-line:  #999;      /* dashed field rules */
+
+  /* ---- elevation ladder — one token per role so a skin can restyle depth
+     wholesale (soft blur vs. hard offset) without touching call sites ---- */
+  --shadow-rest:  0 1px 2px rgba(33,26,24,.04);    /* cards at rest */
+  --shadow-card:  0 2px 10px rgba(33,26,24,.10);   /* raised card faces */
+  --shadow-lift:  0 5px 14px rgba(33,26,24,.16);   /* dragging / picked up */
+  --shadow-pop:   0 4px 14px rgba(35,20,12,.3);    /* buttons, pins, chips */
+  --shadow-modal: 0 24px 70px rgba(35,20,12,.28);  /* dialogs */
+  --shadow-page:  -3px 3px 10px rgba(35,20,12,.10);/* ledger page edge */
+
   /* ---- type ---- */
   --serif:  'Playfair Display', Georgia, serif;
   --mono:   ui-monospace, 'SF Mono', Menlo, Consolas, 'Courier New', monospace;   /* receipt */
   --sans:   'Sora', system-ui, sans-serif;
   --caps:   'Bebas Neue', 'DM Sans', sans-serif;
   --script: 'Jost', sans-serif;
+  --display-alt: 'Josefin Sans', sans-serif;   /* stop-card city names + route headings */
 
   /* ---- radii (from spec) ---- */
   --r-pill: 999px; --r-modal: 18px; --r-card: 13px; --r-cell: 12px;
   --r-btn: 9px; --r-sm: 8px; --r-xs: 7px; --r-check: 6px;
+
+  /* ---- skin hooks — no-ops in the classic skin, driven by [data-skin] ---- */
+  --border-w:  1px;      /* frame weight on cards / modals */
+  --card-blur: 0px;      /* frosted-glass strength on translucent faces */
+  --grad-accent: none;   /* gradient fill for primary actions ("none" = flat) */
 }
 
 /* ============================================================
@@ -141,6 +179,434 @@
 }
 [data-theme="dark"] .leaflet-control-attribution {
   background: rgba(18,18,16,.7); color: var(--ink-mute);
+}
+
+/* ============================================================
+   SKINS — two candidate visual directions, layered on the tokens
+   above. Set data-skin="pop" | "neon" on <html> (pre-paint, from
+   index.html) to swap the whole app's personality; with no
+   data-skin the classic editorial look above is unchanged.
+
+   Specificity is what makes this work with no !important:
+   [data-skin][data-theme] is (0,2,0) and outranks the plain
+   [data-theme="dark"] block, while custom properties inherit — so
+   the same selectors also apply to a wrapper <div>, which is how
+   mockups.html shows all four combinations on one page.
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   A — "SUNSET EXPRESS" · retro travel poster.
+   Flat saturated colour on warm cream, hard offset shadows,
+   chunky type. Fun via warmth and punch.
+   ------------------------------------------------------------ */
+[data-skin="pop"] {
+  --ink:        #2A1810;   /* roasted brown-black */
+  --ink-mid:    #4B3324;
+  --ink-soft:   #7B5B45;
+  --ink-mute:   #A98871;
+  --ink-faint:  #D8C3AE;
+  --brown:      #6E2A12;   /* burnt umber: pills, buttons, route nodes */
+  --on-brown:   #FFF7EA;
+  --on-accent:  #FFF7EA;
+  --red:        #E1401B;   /* vermilion: cash, flight, active */
+  --shell:      #FBEFDD;   /* sun-bleached cream */
+  --surface:    #FFFAF1;
+
+  --gold:       #F0A202;   /* marigold: miles, award, itinerary */
+  --gold-soft:  #FDF0D5;
+  --gold-border:#F3DCA8;
+  --gold-hover: #FBE7BF;
+  --green:      #0E7C6B;   /* sea teal: dates, train, saved */
+  --green-dark: #0A5A4E;
+  --green-bg:   #DCF0EA;
+
+  --line:       #2A1810;
+  --line-soft:  #E0CDB6;
+  --line-2:     #F5E7D3;
+  --line-3:     #6E2A12;
+  --dash:       #C2825A;
+
+  --stay-fill:  #FBDCC8;
+  --stay-line:  #2A1810;
+  --map-bg:     #F0DFC8;
+
+  --hover-soft: #FFF3E2;
+  --cal-hover:  #FAD9BE;
+  --rm-hover:   #FDE4DB;
+  --chip-glass: rgba(255,250,241,.92);
+  --card-glass: rgba(255,250,241,.90);
+  --ep-glass:   rgba(255,247,234,.94);
+
+  --map-sea:       #FBEFDD;
+  --map-land:      #2A1810;
+  --map-land-line: #FBEFDD;
+  --map-route:     #F0A202;
+  --map-label:     #FBEFDD;
+  --mc-dates:      #0A5A4E;
+
+  --mini-sea:    #FBEFDD;
+  --mini-land:   #F3E0C6;
+  --mini-border: #C2825A;
+  --mini-route:  #2A1810;
+  --mini-leader: #7B5B45;
+  --mini-ring:   #FFFAF1;
+
+  /* printed receipt, retinted to the same warm stock */
+  --paper:       #FFF4DF;
+  --paper-ink:   #2A1810;
+  --paper-soft:  #6B4A34;
+  --paper-mute:  #8A6A52;
+  --paper-faint: #A98871;
+  --paper-line:  #C2825A;
+
+  /* hard poster shadows — flat offsets in ink, no blur */
+  --shadow-rest:  2px 2px 0 var(--ink);
+  --shadow-card:  3px 3px 0 var(--ink);
+  --shadow-lift:  5px 5px 0 var(--ink);
+  --shadow-pop:   3px 3px 0 var(--ink);
+  --shadow-modal: 8px 8px 0 var(--ink);
+  --shadow-page:  -3px 3px 0 var(--ink);
+
+  --serif:       'Fraunces', Georgia, serif;
+  --sans:        'Outfit', system-ui, sans-serif;
+  --caps:        'Anton', 'Bebas Neue', sans-serif;
+  --script:      'Fraunces', Georgia, serif;
+  --display-alt: 'Anton', 'Bebas Neue', sans-serif;
+
+  --r-modal: 22px; --r-card: 18px; --r-cell: 14px;
+  --r-btn: 12px; --r-sm: 10px; --r-xs: 9px; --r-check: 7px;
+
+  --border-w: 2px;
+
+  --mode-flight:    #E1401B;
+  --mode-train:     #0E7C6B;
+  --mode-bus:       #F0A202;
+  --mode-overnight: #6E2A12;
+  --mode-award:     #B8700A;
+}
+
+[data-skin="pop"][data-theme="dark"] {
+  --ink:        #FCF1E1;
+  --ink-mid:    #E4CDB4;
+  --ink-soft:   #B4947A;
+  --ink-mute:   #8A6C55;
+  --ink-faint:  #55402F;
+  --brown:      #FFD9A8;
+  --on-brown:   #221206;
+  --on-accent:  #221206;
+  --red:        #FF6B3D;
+  --shell:      #180E07;
+  --surface:    #221408;
+
+  --gold:       #FFC145;
+  --gold-soft:  #3A2A10;
+  --gold-border:#5E4520;
+  --gold-hover: #47330F;
+  --green:      #38C2AA;
+  --green-dark: #2A9A86;
+  --green-bg:   #12302B;
+
+  --line:       #FFE8CC;
+  --line-soft:  #4A3524;
+  --line-2:     #2E1D0E;
+  --line-3:     #FFD9A8;
+  --dash:       #B4947A;
+
+  --stay-fill:  #3A2113;
+  --stay-line:  #FFE8CC;
+  --map-bg:     #2A1A0E;
+
+  --hover-soft: #2C1B0C;
+  --cal-hover:  #45260F;
+  --rm-hover:   #431D10;
+  --chip-glass: rgba(34,20,8,.90);
+  --card-glass: rgba(34,20,8,.88);
+  --ep-glass:   rgba(24,14,7,.94);
+
+  --map-sea:       #180E07;
+  --map-land:      #F3E0C6;
+  --map-land-line: #8A6C55;
+  --map-route:     #FF6B3D;
+  --map-label:     #2A1810;
+  --mc-dates:      #38C2AA;
+
+  --mini-sea:    #180E07;
+  --mini-land:   #2A1810;
+  --mini-border: #55402F;
+  --mini-route:  #FCF1E1;
+  --mini-leader: #B4947A;
+  --mini-ring:   #221408;
+
+  --paper:       #2B1A0C;
+  --paper-ink:   #FFEBD2;
+  --paper-soft:  #D8B694;
+  --paper-mute:  #B4947A;
+  --paper-faint: #8A6C55;
+  --paper-line:  #6B4A34;
+
+  /* offsets stay hard, but throw cream instead of ink */
+  --shadow-rest:  2px 2px 0 var(--line);
+  --shadow-card:  3px 3px 0 var(--line);
+  --shadow-lift:  5px 5px 0 var(--line);
+  --shadow-pop:   3px 3px 0 var(--line);
+  --shadow-modal: 8px 8px 0 var(--line);
+  --shadow-page:  -3px 3px 0 var(--line);
+
+  --mode-flight:    #FF6B3D;
+  --mode-train:     #38C2AA;
+  --mode-bus:       #FFC145;
+  --mode-overnight: #FFD9A8;
+  --mode-award:     #FFC145;
+}
+
+/* ------------------------------------------------------------
+   B — "NIGHT MARKET" · neon signage after dark.
+   Acid lime, amber and papaya over a green-black. Gradient accents,
+   frosted glass, halo shadows. Dark is the hero. Fun via heat and
+   glow rather than hue variety — the ramp is strictly warm + green,
+   with no blue, pink or purple anywhere.
+   ------------------------------------------------------------ */
+[data-skin="neon"] {
+  --ink:        #141709;   /* green-black */
+  --ink-mid:    #2E3418;
+  --ink-soft:   #5E6742;
+  --ink-mute:   #8E9670;
+  --ink-faint:  #CFD6B6;
+  --brown:      #232A0E;   /* deep olive-black: pills, buttons, nodes */
+  --on-brown:   #F2F7E2;
+  --on-accent:  #FFFFFF;
+  --red:        #FF5A2B;   /* papaya: cash, flight, active */
+  --shell:      #F6F8EF;   /* pale chartreuse white */
+  --surface:    #FFFFFF;
+
+  --gold:       #FFA800;   /* amber: miles, award, itinerary */
+  --gold-soft:  #FFF3DA;
+  --gold-border:#FFDFA4;
+  --gold-hover: #FFEAC2;
+  --green:      #6FA800;   /* acid lime: dates, train, saved */
+  --green-dark: #4E7700;
+  --green-bg:   #EDF7D6;
+
+  --line:       #141709;
+  --line-soft:  #DFE5CC;
+  --line-2:     #EFF3E2;
+  --line-3:     #6FA800;
+  --dash:       #A8B287;
+
+  --stay-fill:  #FFE9CC;
+  --stay-line:  #141709;
+  --map-bg:     #E9EFD8;
+
+  --hover-soft: #FAFCF3;
+  --cal-hover:  #FFDCAE;
+  --rm-hover:   #FFE6DC;
+  --chip-glass: rgba(255,255,255,.80);
+  --card-glass: rgba(255,255,255,.72);
+  --ep-glass:   rgba(246,248,239,.88);
+
+  --map-sea:       #F6F8EF;
+  --map-land:      #141709;
+  --map-land-line: #F6F8EF;
+  --map-route:     #FF5A2B;
+  --map-label:     #EFF6DF;
+  --mc-dates:      #4E7700;
+
+  --mini-sea:    #F6F8EF;
+  --mini-land:   #E9EFD8;
+  --mini-border: #A8B287;
+  --mini-route:  #141709;
+  --mini-leader: #5E6742;
+  --mini-ring:   #FFFFFF;
+
+  --paper:       #FFFFFF;
+  --paper-ink:   #141709;
+  --paper-soft:  #46502C;
+  --paper-mute:  #5E6742;
+  --paper-faint: #8E9670;
+  --paper-line:  #CFD6B6;
+
+  /* soft, wide elevation — depth instead of edges; the glow is thrown by the
+     hot accent, not the structural colour, so it stays warm */
+  --shadow-rest:  0 1px 3px rgba(20,23,9,.07);
+  --shadow-card:  0 8px 28px rgba(20,23,9,.10);
+  --shadow-lift:  0 16px 40px rgba(20,23,9,.22);
+  --shadow-pop:   0 6px 22px color-mix(in oklch, var(--red) 42%, transparent);
+  --shadow-modal: 0 32px 90px rgba(20,23,9,.28);
+  --shadow-page:  -6px 0 30px rgba(20,23,9,.10);
+
+  --serif:       'Space Grotesk', system-ui, sans-serif;
+  --sans:        'Sora', system-ui, sans-serif;
+  --caps:        'Bebas Neue', 'DM Sans', sans-serif;
+  --script:      'Instrument Serif', Georgia, serif;
+  --display-alt: 'Space Grotesk', system-ui, sans-serif;
+
+  --r-modal: 26px; --r-card: 20px; --r-cell: 14px;
+  --r-btn: 12px; --r-sm: 10px; --r-xs: 9px; --r-check: 7px;
+
+  --card-blur: 16px;
+  --grad-accent: linear-gradient(135deg, var(--gold), var(--red));
+
+  --mode-flight:    #FF5A2B;
+  --mode-train:     #6FA800;
+  --mode-bus:       #FFA800;
+  --mode-overnight: #4E7700;
+  --mode-award:     #C87A00;
+}
+
+[data-skin="neon"][data-theme="dark"] {
+  --ink:        #EFF6DF;
+  --ink-mid:    #CDD9B4;
+  --ink-soft:   #94A177;
+  --ink-mute:   #6B7654;
+  --ink-faint:  #3A4229;
+  --brown:      #EFF6DF;   /* pills invert to a bright cream, like the classic dark */
+  --on-brown:   #12180A;
+  --on-accent:  #12180A;
+  --red:        #FF7A3D;
+  --shell:      #0E1109;   /* green-black, never blue-black */
+  --surface:    #171B10;
+
+  --gold:       #FFBE3D;
+  --gold-soft:  #33280C;
+  --gold-border:#5C4A14;
+  --gold-hover: #43340F;
+  --green:      #A8E82C;
+  --green-dark: #7FB81C;
+  --green-bg:   #23300E;
+
+  --line:       #EFF6DF;
+  --line-soft:  #333A24;
+  --line-2:     #1E2416;
+  --line-3:     #A8E82C;
+  --dash:       #5C6845;
+
+  --stay-fill:  #33280C;
+  --stay-line:  #EFF6DF;
+  --map-bg:     #141810;
+
+  --hover-soft: #1D2215;
+  --cal-hover:  #3E3413;
+  --rm-hover:   #3A2113;
+  --chip-glass: rgba(23,27,16,.84);
+  --card-glass: rgba(23,27,16,.70);
+  --ep-glass:   rgba(14,17,9,.88);
+
+  --map-sea:       #0E1109;
+  --map-land:      #1E2416;
+  --map-land-line: #4A5535;
+  --map-route:     #FF7A3D;
+  --map-label:     #EFF6DF;
+  --mc-dates:      #A8E82C;
+
+  --mini-sea:    #0E1109;
+  --mini-land:   #141810;
+  --mini-border: #3A4229;
+  --mini-route:  #EFF6DF;
+  --mini-leader: #94A177;
+  --mini-ring:   #171B10;
+
+  --paper:       #171B10;
+  --paper-ink:   #EFF6DF;
+  --paper-soft:  #CDD9B4;
+  --paper-mute:  #94A177;
+  --paper-faint: #6B7654;
+  --paper-line:  #3A4229;
+
+  --shadow-rest:  0 1px 3px rgba(0,0,0,.45);
+  --shadow-card:  0 8px 28px rgba(0,0,0,.55);
+  --shadow-lift:  0 16px 40px rgba(0,0,0,.65);
+  --shadow-pop:   0 6px 24px color-mix(in oklch, var(--red) 55%, transparent);
+  --shadow-modal: 0 32px 90px rgba(0,0,0,.70);
+  --shadow-page:  -6px 0 30px rgba(0,0,0,.50);
+
+  --mode-flight:    #FF7A3D;
+  --mode-train:     #A8E82C;
+  --mode-bus:       #FFBE3D;
+  --mode-overnight: #7FB81C;
+  --mode-award:     #FFBE3D;
+
+  color-scheme: dark;
+}
+
+/* ============================================================
+   SKIN TEXTURE LAYERS — the part that isn't expressible as a
+   token: backdrops, borders, glass and gradient fills. Kept
+   deliberately small; everything else rides the tokens above.
+   ============================================================ */
+
+/* ---- A: paper grain over the whole shell, and real 2px frames ---- */
+[data-skin="pop"] body::before,
+body[data-skin="pop"]::before {
+  content: ''; position: fixed; inset: 0; z-index: 9999;
+  pointer-events: none; opacity: .045;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+/* surfaces that already carry a frame just get the heavier weight… */
+[data-skin="pop"] .card,
+[data-skin="pop"] .mc-front,
+[data-skin="pop"] .mc-back {
+  border-width: var(--border-w);
+}
+/* …and the borderless panels get a real poster frame + hard offset, which is
+   what actually makes this skin read as print rather than as a tinted app */
+[data-skin="pop"] .summary,
+[data-skin="pop"] .todos,
+[data-skin="pop"] .app-card,
+[data-skin="pop"] .opt,
+[data-skin="pop"] .accom-btn,
+[data-skin="pop"] .dialog,
+[data-skin="pop"] .imp-sheet {
+  border: var(--border-w) solid var(--line);
+  box-shadow: var(--shadow-card);
+}
+[data-skin="pop"] .app-card:active { box-shadow: var(--shadow-rest); }
+/* the one-off shadows the token ladder doesn't reach, squared off to match */
+[data-skin="pop"] .map-pop,
+[data-skin="pop"] .mobile-map-pop,
+[data-skin="pop"] .budget-dialog { box-shadow: var(--shadow-modal); }
+[data-skin="pop"] .optimize-btn:hover:not(:disabled) { box-shadow: var(--shadow-rest); }
+/* Anton/Fraunces run larger on the page than Bebas/Playfair did */
+[data-skin="pop"] .mc-city-display { letter-spacing: .02em; }
+
+/* ---- B: aurora backdrop, frosted surfaces, gradient primaries ---- */
+[data-skin="neon"] body,
+body[data-skin="neon"] {
+  background-image:
+    radial-gradient(60vw 50vh at 12% -8%,  color-mix(in oklch, var(--brown) 24%, transparent), transparent 70%),
+    radial-gradient(55vw 45vh at 92% 8%,   color-mix(in oklch, var(--red)   20%, transparent), transparent 70%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+[data-skin="neon"] .mc-front,
+[data-skin="neon"] .mc-back,
+[data-skin="neon"] .map-ep {
+  backdrop-filter: blur(var(--card-blur)) saturate(1.3);
+  -webkit-backdrop-filter: blur(var(--card-blur)) saturate(1.3);
+}
+[data-skin="neon"] .tab-active,
+[data-skin="neon"] .app-tab.on,
+[data-skin="neon"] .app-pill.on,
+[data-skin="neon"] .t-pill.active,
+[data-skin="neon"] .sync-btn.primary,
+[data-skin="neon"] .imp-apply {
+  background: var(--grad-accent);
+  box-shadow: var(--shadow-pop);
+}
+/* borderless panels lift on light instead of being outlined */
+[data-skin="neon"] .summary,
+[data-skin="neon"] .todos,
+[data-skin="neon"] .app-card,
+[data-skin="neon"] .opt,
+[data-skin="neon"] .accom-btn { box-shadow: var(--shadow-card); }
+[data-skin="neon"] .map-pop,
+[data-skin="neon"] .mobile-map-pop,
+[data-skin="neon"] .budget-dialog { box-shadow: var(--shadow-modal); }
+[data-skin="neon"] .optimize-btn:hover:not(:disabled) { box-shadow: var(--shadow-pop); }
+/* the receipt is a lit panel here, not paper — drop the printer's warm tint */
+[data-skin="neon"] .budget-dialog { background: var(--paper); }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-skin="pop"] body::before, body[data-skin="pop"]::before { opacity: .03; }
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -339,11 +805,11 @@ a { color: inherit; }
 .card {
   background: var(--surface); border: 1px solid var(--line);
   border-radius: var(--r-card); padding: 11px 16px 11px;
-  box-shadow: 0 1px 2px rgba(33,26,24,.04);
+  box-shadow: var(--shadow-rest);
 }
 .stop .head { display: flex; align-items: center; gap: 10px; }
 .stop .city {
-  font-family: 'Josefin Sans', sans-serif; font-size: 36px; font-weight: 700;
+  font-family: var(--display-alt); font-size: 36px; font-weight: 700;
   letter-spacing: .06em; text-transform: uppercase; color: var(--ink);
   border: none; background: transparent; padding: 0; flex: 1; min-width: 0; outline-offset: 3px;
 }
@@ -363,7 +829,7 @@ a { color: inherit; }
 .nights input::-webkit-inner-spin-button,
 .nights input::-webkit-outer-spin-button { display: none; }
 .nights span { font-family: var(--sans); font-size: 10px; color: var(--ink-mute); }
-.stop .subdate { font-family: 'Jost', sans-serif; font-style: italic; font-weight: 300; font-size: 14px; color: var(--green); margin: 1px 0 6px; }
+.stop .subdate { font-family: var(--script); font-style: italic; font-weight: 300; font-size: 14px; color: var(--green); margin: 1px 0 6px; }
 .accom-btn {
   display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
   border: none; background: transparent; border-radius: var(--r-xs);
@@ -385,9 +851,9 @@ a { color: inherit; }
 .grip svg { display: block; }
 /* pointer-drag reorder feedback */
 .stop.dragging { z-index: 6; opacity: .97; will-change: transform; transform: translateZ(0); }
-.stop.dragging > .card { box-shadow: 0 5px 14px rgba(33,26,24,.16); border-color: var(--red); }
-.stop.drop-before:not(.dragging) > .card { box-shadow: 0 -3px 0 -1px var(--red), 0 1px 2px rgba(33,26,24,.04); }
-.stop.drop-after:not(.dragging) > .card { box-shadow: 0 3px 0 -1px var(--red), 0 1px 2px rgba(33,26,24,.04); }
+.stop.dragging > .card { box-shadow: var(--shadow-lift); border-color: var(--red); }
+.stop.drop-before:not(.dragging) > .card { box-shadow: 0 -3px 0 -1px var(--red), var(--shadow-rest); }
+.stop.drop-after:not(.dragging) > .card { box-shadow: 0 3px 0 -1px var(--red), var(--shadow-rest); }
 .trash {
   display: flex; align-items: flex-end; justify-content: center; width: 18px; height: 20px;
   color: var(--ink-faint); border: none; background: transparent; cursor: pointer;
@@ -453,7 +919,7 @@ a { color: inherit; }
 .todo { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
 .todo .box {
   flex-shrink: 0; width: 19px; height: 19px; border-radius: var(--r-check);
-  border: 1.5px solid var(--dash); background: var(--surface); color: #fff;
+  border: 1.5px solid var(--dash); background: var(--surface); color: var(--on-accent);
   cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
 }
 .todo .box.done { background: var(--green); border-color: var(--green); }
@@ -484,7 +950,7 @@ a { color: inherit; }
 .overlay[data-act="overlay-sync"] { z-index: 1550; }
 .dialog {
   background: var(--shell); width: 100%; border-radius: var(--r-modal);
-  box-shadow: 0 24px 70px rgba(35,20,12,.28); overflow: hidden;
+  box-shadow: var(--shadow-modal); overflow: hidden;
 }
 .dialog .head { padding: 24px 30px 20px; background: var(--surface); border-bottom: 1px solid var(--line); }
 .dialog .head .row { display: flex; align-items: flex-start; gap: 14px; }
@@ -592,7 +1058,7 @@ a { color: inherit; }
   background: var(--brown); color: var(--on-brown);
   font-family: var(--sans); font-size: 12px; font-weight: 600;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  box-shadow: 0 4px 14px rgba(35,20,12,.3);
+  box-shadow: var(--shadow-pop);
 }
 .item .mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
 .item .text { font-family: var(--sans); font-size: 14px; color: var(--ink); border: none; background: transparent; padding: 4px 0; width: 100%; outline-offset: 2px; }
@@ -706,7 +1172,7 @@ a { color: inherit; }
   flex-shrink: 0; width: 22px; height: 22px; margin-top: 1px;
   border-radius: 50%; display: flex; align-items: center; justify-content: center;
   font-family: var(--sans); font-size: 11px; font-weight: 700; line-height: 1;
-  color: #fff; font-variant-numeric: tabular-nums;
+  color: var(--on-accent); font-variant-numeric: tabular-nums;
   background: var(--red);
 }
 .item-num.placed { background: var(--red); }
@@ -725,7 +1191,7 @@ a { color: inherit; }
   width: 28px; height: 28px;
   border-radius: 50% 50% 50% 0;
   transform: rotate(-45deg);
-  background: var(--red); color: #fff;
+  background: var(--red); color: var(--on-accent);
   font-family: var(--sans); font-size: 11px; font-weight: 700; line-height: 1;
 }
 .day-pin span::after {
@@ -819,15 +1285,15 @@ a { color: inherit; }
   background:
     repeating-linear-gradient(0deg, transparent 0 27px, rgba(0,0,0,.03) 27px 28px),
     linear-gradient(90deg, rgba(0,0,0,.05), transparent 7%, transparent 93%, rgba(0,0,0,.05)),
-    #fbfaf4;
+    var(--paper);
   box-shadow: 0 16px 38px rgba(0,0,0,.34);
   font-family: var(--mono);
 }
 .budget-dialog::after {   /* torn zigzag bottom edge */
   content: ''; position: absolute; left: 0; right: 0; bottom: -12px; height: 12px;
   background:
-    linear-gradient(45deg, transparent 33.33%, #fbfaf4 33.33% 66.66%, transparent 66.66%),
-    linear-gradient(-45deg, transparent 33.33%, #fbfaf4 33.33% 66.66%, transparent 66.66%);
+    linear-gradient(45deg, transparent 33.33%, var(--paper) 33.33% 66.66%, transparent 66.66%),
+    linear-gradient(-45deg, transparent 33.33%, var(--paper) 33.33% 66.66%, transparent 66.66%);
   background-size: 14px 28px;
   background-position: 0 -14px;
   filter: drop-shadow(0 5px 5px rgba(0,0,0,.12));
@@ -841,35 +1307,35 @@ a { color: inherit; }
 @media (prefers-reduced-motion: reduce) { .budget-dialog.printing { animation: none; } }
 
 .budget-dialog .head { position: relative; text-align: center; background: transparent; border-bottom: 1px dashed rgba(0,0,0,.45); padding: 24px 22px 16px; }
-.budget-dialog .eyebrow { font-family: var(--mono); font-weight: 700; color: #111; letter-spacing: .12em; font-size: 19px; margin-bottom: 9px; }
-.budget-dialog .modal-x { position: absolute; top: 12px; right: 14px; border: none; background: transparent; color: #777; font-family: var(--mono); padding: 4px; }
-.budget-total { font-family: var(--mono); font-weight: 700; font-size: 30px; letter-spacing: .02em; color: #111; line-height: 1; }
-.budget-sub { font-family: var(--mono); font-size: 10.5px; color: #555; margin-top: 6px; }
+.budget-dialog .eyebrow { font-family: var(--mono); font-weight: 700; color: var(--paper-ink); letter-spacing: .12em; font-size: 19px; margin-bottom: 9px; }
+.budget-dialog .modal-x { position: absolute; top: 12px; right: 14px; border: none; background: transparent; color: var(--paper-mute); font-family: var(--mono); padding: 4px; }
+.budget-total { font-family: var(--mono); font-weight: 700; font-size: 30px; letter-spacing: .02em; color: var(--paper-ink); line-height: 1; }
+.budget-sub { font-family: var(--mono); font-size: 10.5px; color: var(--paper-soft); margin-top: 6px; }
 .budget-body { padding: 6px 22px 26px; }
 .bline { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px dashed rgba(0,0,0,.3); }
 .bline .info { flex: 1; min-width: 0; }
-.bline .info .l { font-family: var(--mono); font-size: 12.5px; font-weight: 700; color: #111; text-transform: uppercase; letter-spacing: .02em; }
-.bline .info .m { font-family: var(--mono); font-size: 9.5px; color: #777; margin-top: 3px; }
+.bline .info .l { font-family: var(--mono); font-size: 12.5px; font-weight: 700; color: var(--paper-ink); text-transform: uppercase; letter-spacing: .02em; }
+.bline .info .m { font-family: var(--mono); font-size: 9.5px; color: var(--paper-mute); margin-top: 3px; }
 .bline .edit { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
-.bline .edit input { font-family: var(--mono); font-size: 12.5px; width: 62px; border: none; border-bottom: 1px dashed #999; border-radius: 0; padding: 4px 2px; background: transparent; text-align: right; color: #111; font-variant-numeric: tabular-nums; }
-.bline .edit .u { font-family: var(--mono); font-size: 8.5px; color: #777; width: 62px; }
-.bline .amt { font-family: var(--mono); font-size: 13px; font-weight: 700; color: #111; width: 74px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
-.bline .amt input { font-family: var(--mono); font-size: 13px; font-weight: 700; color: #111; border: none; background: transparent; text-align: right; padding: 0; outline: none; cursor: text; width: 74px; font-variant-numeric: tabular-nums; }
-.btotal { display: flex; align-items: baseline; justify-content: space-between; padding: 16px 0 4px; border-top: 3px double #111; margin-top: -1px; }
-.btotal .l { font-family: var(--mono); font-size: 13px; font-weight: 700; color: #111; text-transform: uppercase; letter-spacing: .12em; }
-.btotal .v { font-family: var(--mono); font-weight: 700; font-size: 21px; color: #111; letter-spacing: .02em; }
-.budget-note { font-family: var(--mono); font-size: 9.5px; color: #888; line-height: 1.55; margin: 10px 0 0; text-align: center; }
+.bline .edit input { font-family: var(--mono); font-size: 12.5px; width: 62px; border: none; border-bottom: 1px dashed var(--paper-line); border-radius: 0; padding: 4px 2px; background: transparent; text-align: right; color: var(--paper-ink); font-variant-numeric: tabular-nums; }
+.bline .edit .u { font-family: var(--mono); font-size: 8.5px; color: var(--paper-mute); width: 62px; }
+.bline .amt { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--paper-ink); width: 74px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.bline .amt input { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--paper-ink); border: none; background: transparent; text-align: right; padding: 0; outline: none; cursor: text; width: 74px; font-variant-numeric: tabular-nums; }
+.btotal { display: flex; align-items: baseline; justify-content: space-between; padding: 16px 0 4px; border-top: 3px double var(--paper-ink); margin-top: -1px; }
+.btotal .l { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--paper-ink); text-transform: uppercase; letter-spacing: .12em; }
+.btotal .v { font-family: var(--mono); font-weight: 700; font-size: 21px; color: var(--paper-ink); letter-spacing: .02em; }
+.budget-note { font-family: var(--mono); font-size: 9.5px; color: var(--paper-faint); line-height: 1.55; margin: 10px 0 0; text-align: center; }
 /* thin fake barcode + ticket number */
 .receipt-barcode {
   height: 26px; margin: 16px auto 0; width: 76%;
   background: repeating-linear-gradient(90deg,
-    #111 0 2px, transparent 2px 4px,
-    #111 4px 5px, transparent 5px 9px,
-    #111 9px 12px, transparent 12px 14px,
-    #111 14px 15px, transparent 15px 19px,
-    #111 19px 21px, transparent 21px 24px);
+    var(--paper-ink) 0 2px, transparent 2px 4px,
+    var(--paper-ink) 4px 5px, transparent 5px 9px,
+    var(--paper-ink) 9px 12px, transparent 12px 14px,
+    var(--paper-ink) 14px 15px, transparent 15px 19px,
+    var(--paper-ink) 19px 21px, transparent 21px 24px);
 }
-.receipt-barcode-num { font-family: var(--mono); font-size: 9.5px; letter-spacing: .4em; text-align: center; color: #111; margin-top: 5px; }
+.receipt-barcode-num { font-family: var(--mono); font-size: 9.5px; letter-spacing: .4em; text-align: center; color: var(--paper-ink); margin-top: 5px; }
 
 /* ---- Accommodation modal ---- */
 .accom-dialog { max-width: 640px; }
@@ -913,7 +1379,7 @@ a { color: inherit; }
   cursor: pointer; transition: border-color .15s, background .15s, color .15s;
 }
 .t-pill:hover { border-color: var(--ink-mute); color: var(--ink); }
-.t-pill.active { color: #fff; }
+.t-pill.active { color: var(--on-accent); }
 .t-row-3 { display: grid; grid-template-columns: 1fr 1fr 52px; gap: 20px; }
 .t-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .t-fld { display: flex; flex-direction: column; gap: 7px; }
@@ -1075,6 +1541,185 @@ a { color: inherit; }
 }
 
 /* ============================================================
+   OVERVIEW BLOCKS — hero masthead, stat tiles, route strip and
+   progress meters that open the app overview. Skin-agnostic:
+   every colour, radius, frame weight and shadow comes from the
+   token layer, so both skins restyle these for free.
+   ============================================================ */
+.ov-hero { margin: 2px 4px 16px; }
+.ov-hero-eyebrow {
+  font-family: var(--sans); font-size: 10px; font-weight: 600;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--ink-mute);
+  /* clear the fixed undo/memories/theme cluster, same allowance as .app-tabs */
+  padding-right: 130px; min-height: 15px;
+}
+.ov-hero-title {
+  font-family: var(--serif); font-weight: 900;
+  font-size: clamp(34px, 11vw, 54px); line-height: .96; letter-spacing: -.02em;
+  color: var(--ink); margin: 7px 0 0;
+}
+.ov-hero-count { display: flex; align-items: baseline; gap: 8px; margin-top: 10px; }
+.ov-hero-count .n {
+  font-family: var(--caps); font-size: 40px; line-height: 1;
+  letter-spacing: .01em; color: var(--red);
+}
+.ov-hero-count .l {
+  font-family: var(--script); font-size: 15px; font-style: italic;
+  color: var(--green);
+}
+
+.ov-tiles {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  margin: 0 4px 18px;
+}
+.ov-tile {
+  background: var(--surface); border: var(--border-w) solid var(--line);
+  border-radius: var(--r-card); padding: 12px 6px 10px; text-align: center;
+  box-shadow: var(--shadow-rest);
+}
+.ov-tile--accent { background: var(--brown); border-color: var(--brown); }
+.ov-tile--accent .ov-tile-v, .ov-tile--accent .ov-tile-c { color: var(--on-brown); }
+.ov-tile-v {
+  font-family: var(--caps); font-size: 30px; line-height: 1;
+  color: var(--ink); letter-spacing: .01em;
+}
+.ov-tile-c {
+  font-family: var(--sans); font-size: 9px; font-weight: 600; margin-top: 5px;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft);
+}
+
+.ov-block-hd {
+  font-family: var(--sans); font-size: 10px; font-weight: 600;
+  letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink-mute); margin: 0 4px 9px;
+}
+.ov-strip-wrap { margin: 0 0 18px; }
+.ov-strip {
+  display: flex; align-items: stretch; gap: 0;
+  overflow-x: auto; scroll-snap-type: x proximity;
+  padding: 2px 4px 10px; margin: 0 -4px;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+.ov-strip::-webkit-scrollbar { display: none; }
+.ov-leg { display: flex; align-items: center; flex: 0 0 auto; scroll-snap-align: start; }
+.ov-leg-line {
+  width: 26px; height: 0; flex: 0 0 auto;
+  border-top: 2px dashed var(--leg, var(--ink-faint));
+}
+.ov-node {
+  flex: 0 0 auto; min-width: 116px; max-width: 168px;
+  background: var(--surface); border: var(--border-w) solid var(--line);
+  border-radius: var(--r-card); padding: 10px 13px;
+  box-shadow: var(--shadow-rest); position: relative;
+}
+.ov-node::before {
+  content: ''; position: absolute; top: 9px; right: 10px;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--leg, transparent);
+}
+.ov-node-city {
+  font-family: var(--display-alt); font-size: 15px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .04em; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 12px;
+}
+.ov-node-sub {
+  font-family: var(--sans); font-size: 11px; color: var(--ink-soft); margin-top: 3px;
+  white-space: nowrap;
+}
+
+.ov-meters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 4px 18px; }
+.ov-meter {
+  background: var(--surface); border: var(--border-w) solid var(--line);
+  border-radius: var(--r-card); padding: 12px 14px 13px;
+  box-shadow: var(--shadow-rest);
+}
+.ov-meter-hd {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  font-family: var(--sans); font-size: 11px; font-weight: 600; color: var(--ink);
+}
+.ov-meter-n { color: var(--ink-mute); font-variant-numeric: tabular-nums; }
+.ov-meter-track {
+  margin-top: 9px; height: 7px; border-radius: 999px;
+  background: var(--line-soft); overflow: hidden;
+}
+.ov-meter-fill {
+  display: block; height: 100%; border-radius: 999px;
+  background: var(--green); transition: width .5s cubic-bezier(.22,.61,.36,1);
+}
+.ov-meter--alt .ov-meter-fill { background: var(--gold); }
+
+/* ---- 3D hero globe -------------------------------------------
+   The canvas is appended INSIDE .intro-globe and stretched over the
+   flat SVG globe, which stays in the DOM as the fallback. Without
+   this sizing the canvas mounts at 0×0 and the 3D globe is invisible.
+   .has-globe-3d is set by the mount, and retires the SVG. ------- */
+.intro-globe-3d {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  display: block;
+}
+.intro-globe.has-globe-3d > svg { visibility: hidden; }
+
+/* ---- 3D props ------------------------------------------------
+   A canvas is added inside the host only when three.js + WebGL are
+   available; until then (and under reduced motion) the flat SVG
+   icon underneath is what shows. .is-3d is set by the mount, and
+   hides the fallback. ---------------------------------------- */
+.obj3d-canvas { display: block; width: 100%; height: 100%; }
+.app-card-ico {
+  position: relative; display: block;
+  width: 42px; height: 42px;
+  display: flex; align-items: center; justify-content: center;
+}
+.app-card-ico.is-3d > svg { display: none; }
+.app-card-ico .obj3d-canvas { position: absolute; inset: 0; }
+
+.ov-object {
+  display: grid; grid-template-columns: 1.05fr 1fr; gap: 10px; align-items: center;
+  margin: 0 4px 18px; padding: 14px 16px;
+  background: var(--surface); border: var(--border-w) solid var(--line);
+  border-radius: var(--r-card); box-shadow: var(--shadow-card);
+}
+.ov-object-stage {
+  aspect-ratio: 1 / 1; min-height: 120px;
+  border-radius: var(--r-sm);
+  background: radial-gradient(60% 60% at 50% 45%, var(--line-2), transparent 72%);
+}
+.ov-object-figure {
+  font-family: var(--caps); font-size: 46px; line-height: 1;
+  color: var(--red); margin-top: 4px;
+}
+.ov-object-figure span { font-size: 22px; margin-left: 2px; color: var(--ink-soft); }
+.ov-object-note {
+  font-family: var(--sans); font-size: 11px; color: var(--ink-soft); margin-top: 6px; line-height: 1.45;
+}
+.ov-object-btn {
+  margin-top: 11px; padding: 8px 14px; cursor: pointer;
+  border: none; border-radius: var(--r-pill);
+  background: var(--brown); color: var(--on-brown);
+  font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: .02em;
+}
+[data-skin="neon"] .ov-object-btn { background: var(--grad-accent); box-shadow: var(--shadow-pop); }
+[data-skin="neon"] .ov-object { border-color: transparent; }
+
+/* the ledger is a fixed-height book — these blocks belong to the scrolling
+   app overview only, so keep them out of the wide layout entirely */
+@media (min-width: 701px) {
+  .ov-hero, .ov-tiles, .ov-strip-wrap, .ov-meters, .ov-object { display: none; }
+}
+
+/* skin A frames these in ink and throws the hard poster offset */
+[data-skin="pop"] .ov-tile,
+[data-skin="pop"] .ov-node,
+[data-skin="pop"] .ov-meter { box-shadow: var(--shadow-card); }
+/* skin B lifts them on a soft halo and fills the accent tile with the gradient */
+[data-skin="neon"] .ov-tile,
+[data-skin="neon"] .ov-node,
+[data-skin="neon"] .ov-meter { border-color: transparent; box-shadow: var(--shadow-card); }
+[data-skin="neon"] .ov-tile--accent { background: var(--grad-accent); box-shadow: var(--shadow-pop); }
+[data-skin="neon"] .ov-meter-fill { background: var(--grad-accent); }
+
+/* ============================================================
    PLACED STICKER LAYER
    ============================================================ */
 .placed-stickers-layer {
@@ -1197,7 +1842,7 @@ a { color: inherit; }
   padding: 6px 12px; border-radius: 999px;
   background: var(--brown); color: var(--on-brown);
   font-family: var(--sans); font-size: 12px; font-weight: 600; white-space: nowrap;
-  box-shadow: 0 4px 14px rgba(35,20,12,.3);
+  box-shadow: var(--shadow-pop);
 }
 .tab-active.drag-source, .tab-inactive.drag-source { opacity: .4; }
 .tab-active.drag-target, .tab-inactive.drag-target { box-shadow: 0 0 0 2px var(--red); }
@@ -1258,7 +1903,7 @@ a { color: inherit; }
   background: var(--surface); color: var(--ink); white-space: nowrap; transition: background .15s, border-color .15s;
 }
 .sync-btn:hover { background: var(--line-2); }
-.sync-btn.primary { background: var(--red); border-color: var(--red); color: #fff; }
+.sync-btn.primary { background: var(--red); border-color: var(--red); color: var(--on-accent); }
 .sync-btn.primary:hover { background: color-mix(in oklch, var(--red) 88%, #000); }
 .sync-btn.ghost { color: var(--ink-soft); }
 .sync-btn:disabled { opacity: .45; cursor: not-allowed; pointer-events: none; }
@@ -1391,7 +2036,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 [data-theme="dark"] .leg-train           { stroke: var(--green); }
 [data-theme="dark"] .leg-overnight-train { stroke: var(--green-dark); }
 [data-theme="dark"] .leg-flying-blue     { stroke: var(--gold); }
-[data-theme="dark"] .leg-bus             { stroke: #6E96BE; }
+[data-theme="dark"] .leg-bus             { stroke: var(--mode-bus); }
 
 /* itinerary mini "paper map" SVG + main-map card leader lines
    (inline SVG — class rules beat presentation attributes) */
@@ -1464,7 +2109,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 /* web ledger: static pin number — the tap opens the dock card, so the number
    itself must not intercept the pointer */
 .map-pin-main .pin-order-num {
-  color: #fff; font-family: var(--sans); font-weight: 700; font-size: 9px; line-height: 1;
+  color: var(--on-accent); font-family: var(--sans); font-weight: 700; font-size: 9px; line-height: 1;
   pointer-events: none; user-select: none;
 }
 /* web only: bigger stop pins (both themes) — matches the web PIN_R (15) in app.js */
@@ -1629,7 +2274,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .ss-top { display: flex; align-items: center; gap: 10px; }
   .ss-num {
     flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
-    background: var(--red); color: #fff;
+    background: var(--red); color: var(--on-accent);
     font-family: var(--sans); font-size: 11px; font-weight: 700;
     display: flex; align-items: center; justify-content: center;
   }
@@ -1646,7 +2291,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .ss-li:last-child { border-bottom: none; }
   .ss-num-input {
     flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
-    border: none; background: var(--red); color: #fff; padding: 0; cursor: pointer;
+    border: none; background: var(--red); color: var(--on-accent); padding: 0; cursor: pointer;
     font-family: var(--sans); font-size: 11px; font-weight: 700; text-align: center; line-height: 22px;
     appearance: none; -moz-appearance: textfield;
   }
@@ -1841,7 +2486,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     border: 1px solid var(--line); border-right: none;
     border-radius: 9px 0 0 9px;
     padding: 14px 5px; cursor: pointer;
-    box-shadow: -3px 3px 10px rgba(35, 20, 12, .10);
+    box-shadow: var(--shadow-page);
     transition: transform .18s, color .15s, background .15s;
   }
   .ledger-tab:hover { transform: translateX(-3px); color: var(--ink); }
@@ -2196,7 +2841,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   border-radius: var(--r-card);
   border: 1px solid var(--line);
   background: var(--card-glass);
-  box-shadow: 0 2px 10px rgba(33,26,24,.10);
+  box-shadow: var(--shadow-card);
   backface-visibility: hidden; -webkit-backface-visibility: hidden;
   overflow: hidden;
 }
@@ -2213,7 +2858,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   border-radius: 50%; opacity: 0.85;
 }
 .mc-city-display {
-  font-family: 'Josefin Sans', sans-serif; font-weight: 800;
+  font-family: var(--display-alt); font-weight: 800;
   text-transform: uppercase; letter-spacing: .06em; line-height: 1.1;
   font-size: 12cqw;
   color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -2272,7 +2917,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .pin-order-input {
   width: 2.97cqi; height: 2.97cqi;
   border-radius: 50%; border: none;
-  background: transparent; color: #fff;
+  background: transparent; color: var(--on-accent);
   font-size: 1.22cqi; /* 9px / 740px × 100 */
   font-weight: 700; text-align: center;
   cursor: pointer; padding: 0; line-height: 2.97cqi;
@@ -2670,7 +3315,7 @@ html { -webkit-tap-highlight-color: transparent; }
   display: flex; align-items: center; justify-content: center;
   border: 1.5px solid var(--line); border-radius: var(--r-check); background: transparent; color: var(--on-brown);
 }
-.imp-row.on .imp-check { background: var(--red); border-color: var(--red); color: #fff; }
+.imp-row.on .imp-check { background: var(--red); border-color: var(--red); color: var(--on-accent); }
 .imp-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .imp-name {
   font-family: var(--sans); font-size: 13.5px; font-weight: 500; color: var(--ink);
@@ -2696,7 +3341,7 @@ html { -webkit-tap-highlight-color: transparent; }
 .imp-apply {
   font-family: var(--sans); font-size: 13px; font-weight: 600; cursor: pointer;
   padding: 11px 16px; border-radius: var(--r-sm); border: 1px solid var(--red);
-  background: var(--red); color: #fff; width: 100%;
+  background: var(--red); color: var(--on-accent); width: 100%;
 }
 .imp-apply:hover:not(:disabled) { background: color-mix(in oklch, var(--red) 88%, #000); }
 .imp-apply:disabled { opacity: .45; cursor: not-allowed; }

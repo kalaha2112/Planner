@@ -16,7 +16,7 @@
    ============================================================ */
 'use strict';
 
-const VERSION = 'v88';
+const VERSION = 'v89';
 const SHELL_CACHE = `planner-shell-${VERSION}`;
 const FONT_CACHE = 'planner-fonts';
 const TILE_CACHE = 'planner-tiles';
@@ -40,6 +40,9 @@ const SHELL_ASSETS = [
   './vendor/topojson/countries-110m.json',
   './vendor/topojson/countries-50m.json',
   './vendor/supabase/supabase.js',
+  './vendor/three/three.min.js',
+  './vendor/gsap/gsap.min.js',
+  './vendor/gsap/ScrollTrigger.min.js',
   './icons/icon.svg',
   './icons/icon-192.png',
   './icons/icon-512.png',
