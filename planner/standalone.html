@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-02T23:34:44.161Z
+  Built: 2026-08-02T23:41:42.445Z
 -->
 
 <html lang="en">
@@ -3422,7 +3422,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   height: var(--card-h);
   margin-top: 18px;                           /* room for the hover lift */
   margin-bottom: 16px;                        /* room for the lean's lower corner */
-  margin-right: calc((var(--n) - 1) * 86px);  /* room to cascade rightward */
+  margin-right: calc((var(--n) - 1) * var(--dx));  /* room to cascade rightward */
 }
 .trip-stack-cards { position: absolute; inset: 0; }
 
@@ -3513,6 +3513,24 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 
 @media (prefers-reduced-motion: reduce) {
   .trip-card, .trip-stack-cover { transition: none; }
+}
+
+/* App version: the deck shares the bottom of the intro with the globe on a
+   much narrower screen, so it scales down as a set — card box, cascade step
+   and type all by the same ~0.78, so the proportions are unchanged. Every
+   other measurement (the covered-name padding, the cascade room) is derived
+   from these, so they follow on their own. */
+@media (max-width: 700px) {
+  .trip-stack {
+    --card-w: 108px;
+    --card-h: 48px;
+    --dx: 67px;
+  }
+  .trip-card { padding: 8px 11px; }
+  .tc-name { font-size: 12px; }
+  .tc-x { font-size: 13px; top: 4px; right: 6px; }
+  .trip-stack-cover { font-size: 20px; letter-spacing: .09em; }
+  .trip-card:not(.is-front) { padding-left: calc(var(--card-w) - var(--dx) + 11px); }
 }
 
 @media (max-width: 700px) {
