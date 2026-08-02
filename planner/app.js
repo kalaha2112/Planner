@@ -4911,11 +4911,11 @@
         </button>`;
       }).join('');
 
-      return `<div class="trip-stack" style="--n:${keys.length}">
+      return `<button class="add-trip" data-act="add-trip" title="Add a trip" aria-label="Add a trip">+</button>
+        <div class="trip-stack" style="--n:${keys.length}">
           <div class="trip-stack-cards">${cards}</div>
           <button class="trip-stack-cover" data-act="trip-stack-toggle" aria-expanded="false" aria-label="Show trips">Trip</button>
-        </div>
-        <button class="add-trip" data-act="add-trip" title="Add a trip" aria-label="Add a trip">+</button>`;
+        </div>`;
     }
 
     renderMeta(trip, travelers) {

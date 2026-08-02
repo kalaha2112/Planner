@@ -2636,7 +2636,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    ============================================================ */
 .trip-stack {
   --card-w: 138px;
-  --card-h: 86px;
+  --card-h: 62px;
   --dx: 86px;           /* step right, per card back — wide enough to read each name */
   --rot: -7deg;         /* the lean the whole deck holds while fanned */
   position: relative; flex: none;
@@ -2651,10 +2651,14 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .trip-card {
   position: absolute; left: 0; bottom: 0;
   width: var(--card-w); height: var(--card-h);
-  display: flex; align-items: center;
-  padding: 11px 14px; text-align: left;
-  border: 1px solid var(--line-soft); border-radius: var(--r-card);
-  background: var(--surface); color: var(--ink);
+  display: flex; align-items: center; justify-content: center;
+  padding: 10px 14px; text-align: center;
+  border: none; border-radius: var(--r-card);
+  /* frosted rather than a flat white fill; --card-glass / --card-blur are the
+     same tokens the stop cards and map chips already use */
+  background: var(--card-glass); color: var(--ink);
+  backdrop-filter: blur(var(--card-blur)) saturate(1.4);
+  -webkit-backdrop-filter: blur(var(--card-blur)) saturate(1.4);
   cursor: pointer; overflow: hidden;
   box-shadow: var(--shadow-card);
   transform-origin: 50% 100%;
@@ -2669,7 +2673,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 }
 .tc-name {
   font-family: var(--serif); font-weight: 700; font-size: 15px;
-  line-height: 1.15; color: var(--ink);
+  line-height: 1.15; color: var(--ink); text-align: center;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   border: none; background: transparent; padding: 0; width: 100%;
 }
@@ -2681,21 +2685,23 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   font-weight: 700; line-height: 1; padding: 2px 5px;
   opacity: 0; transition: opacity .2s ease;
 }
-.trip-card.is-front { border-color: var(--line-3); box-shadow: var(--shadow-lift); }
+.trip-card.is-front { box-shadow: var(--shadow-lift); }
 /* Cards are overlapped from the left, so only the right --dx of each one is
-   visible. Push the name of every covered card into that strip, otherwise the
-   start of each label sits underneath the card in front of it. The front card
-   is never covered, so it keeps its normal padding. */
+   visible. Reserving the covered part as padding means justify-content:center
+   centres each name inside the strip that actually shows, rather than under
+   the card in front of it. The front card is never covered. */
 .trip-card:not(.is-front) {
-  padding-left: calc(var(--card-w) - var(--dx) + 10px);
+  padding-left: calc(var(--card-w) - var(--dx) + 14px);
 }
 
 /* the TRIP cover card sits over the deck until it is opened */
 .trip-stack-cover {
   position: absolute; inset: 0; z-index: 40;
-  border: 1px solid var(--line-3); border-radius: var(--r-card);
-  background: var(--brown); color: var(--on-brown);
-  font-family: var(--caps); font-size: 30px; letter-spacing: .1em;
+  border: none; border-radius: var(--r-card);
+  background: var(--card-glass); color: var(--ink);
+  backdrop-filter: blur(var(--card-blur)) saturate(1.4);
+  -webkit-backdrop-filter: blur(var(--card-blur)) saturate(1.4);
+  font-family: var(--caps); font-size: 26px; letter-spacing: .1em;
   text-transform: uppercase; line-height: 1;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; box-shadow: var(--shadow-pop);
