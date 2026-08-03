@@ -1065,6 +1065,7 @@
         raf = 0;
         cur += (target - cur) * 0.38;                    // tracking — a touch snappier (settles faster, still a smooth glide)
         if (Math.abs(target - cur) < 0.0008) cur = target;
+        this._introProgress = cur;                       // 0 = cover, 1 = parked — the unfold rides this
         const e = easeInOut(clamp01(cur));
         overlay.style.transform = `translate3d(0, ${(-cur * 100).toFixed(3)}%, 0)`;
         appRoot.style.transform = `translate3d(0, ${((1 - cur) * vh()).toFixed(2)}px, 0)`;   // rises from below to fill
@@ -1155,6 +1156,26 @@
       document.addEventListener('keydown', onKey, true);
       // tests / power users: jump straight to the app
       this._introSkip = () => { target = 1; cur = 1; apply(); };
+      // Same destination as _introSkip, but travelled over `ms` instead of
+      // snapped. The unfold rides this: with the skip there is no park motion
+      // at all to synchronise against, so the globe had to invent its own
+      // duration and could never line up with the map's arrival.
+      //
+      // target is pinned to cur each frame so apply() doesn't re-arm its own
+      // rAF and race this one to the finish.
+      this._introGlide = (ms) => {
+        const t0 = performance.now(), from = cur;
+        cancelAnimationFrame(raf); raf = 0;
+        const run = () => {
+          const k = Math.min(1, (performance.now() - t0) / ms);
+          cur = from + (1 - from) * easeInOut(k);
+          target = cur;
+          apply();
+          if (k < 1) requestAnimationFrame(run);
+          else { cur = 1; target = 1; apply(); }
+        };
+        requestAnimationFrame(run);
+      };
       // web ledger: "close the notebook" — ease the cover back down
       this._introReturn = () => { target = 0; kick(); };
     }
@@ -1834,11 +1855,11 @@
 
        The canvas is lifted out of the intro to position:fixed at its
        current on-screen rect, the intro parks so the trip page comes
-       into flow, and then one timeline flies the canvas to where the
-       real map now sits while uFold morphs every vertex from its
-       spherical position to its place on a plate carrée. At the end
-       the flattened globe cross-fades into the actual map and the
-       canvas is put back, re-spherified, ready for next time.
+       into flow, and the canvas flies onto the map while uFold morphs
+       every vertex from its spherical position to its place on a
+       plate carrée. Both are driven by the intro's own park progress,
+       so the globe is flat exactly as the map lands; it then fades
+       into it and the canvas is put back re-spherified.
 
        Bails out (and just parks, as before) without GSAP, without the
        3D globe, or under prefers-reduced-motion.
@@ -1866,37 +1887,59 @@
       });
       wrap.classList.remove('has-globe-3d');           // the flat SVG is hidden anyway
 
-      // park the intro, then measure where the map actually landed
-      if (this._introSkip) this._introSkip();
+      // Glide the intro away rather than cutting to it, so there is a park
+      // motion for the fold to travel with. Both are driven by the same
+      // progress below, so the globe is flat exactly as the map lands.
+      if (this._introGlide) this._introGlide(600);
+      else if (this._introSkip) this._introSkip();
 
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        const map = this.root.querySelector('.route.map-route') || this.root.querySelector('.main-map-wrap');
-        const to = map ? map.getBoundingClientRect() : from;
-        const tl = g.timeline({
-          onComplete: () => {
+      const startRect = { l: from.left, t: from.top, w: from.width, h: from.height };
+      const findMap = () => this.root.querySelector('.route.map-route') || this.root.querySelector('.main-map-wrap');
+
+      // The fold is driven by the intro's OWN progress rather than a duration
+      // of its own. Timing it independently never lined up: whatever duration
+      // was picked, the map arrived when the park finished and the globe was
+      // still folding over it. Riding _introProgress means the globe is exactly
+      // flat at the instant the map lands, on any device, however fast the park
+      // happens to run.
+      //
+      // The destination is re-read every frame too — when this starts the map
+      // is still travelling into place, so a single sample would aim at where
+      // it was rather than where it ends up.
+      {
+        let done = false;
+        const step = () => {
+          if (done) return;
+          const e = Math.max(0, Math.min(1, this._introProgress || 0));
+          g3.uFold.value = e;
+
+          const m = findMap();
+          const to = m ? m.getBoundingClientRect() : from;
+          canvas.style.left = (startRect.l + (to.left - startRect.l) * e) + 'px';
+          canvas.style.top = (startRect.t + (to.top - startRect.t) * e) + 'px';
+          canvas.style.width = Math.max(40, startRect.w + (to.width - startRect.w) * e) + 'px';
+          canvas.style.height = Math.max(40, startRect.h + (to.height - startRect.h) * e) + 'px';
+          canvas.style.opacity = String(e > .88 ? Math.max(0, 1 - (e - .88) / .12) : 1);
+          g3.resize();
+
+          if (e >= .999) {
+            done = true;
             // hand off to the real map and put the globe back as a sphere
-            canvas.style.opacity = '0';
-            setTimeout(() => {
-              canvas.setAttribute('style', prevStyle);
-              canvas.style.opacity = '';
-              wrap.appendChild(canvas);
-              wrap.classList.add('has-globe-3d');
-              g3.uFold.value = 0;
-              g3.resize();
-              this._unfolding = false;
-              this._startGlobeIdle();
-            }, 260);
-          },
-        });
-        tl.to(g3.uFold, { value: 1, duration: 1.0, ease: 'power2.inOut' }, 0)
-          .to(canvas.style, {
-            left: to.left + 'px', top: to.top + 'px',
-            width: Math.max(40, to.width) + 'px', height: Math.max(40, to.height) + 'px',
-            duration: 1.0, ease: 'power2.inOut',
-            onUpdate: () => g3.resize(),
-          }, 0)
-          .to(canvas, { opacity: 0, duration: .32, ease: 'power1.in' }, .78);
-      }));
+            canvas.setAttribute('style', prevStyle);
+            canvas.style.opacity = '';
+            wrap.appendChild(canvas);
+            wrap.classList.add('has-globe-3d');
+            g3.uFold.value = 0;
+            g3.resize();
+            this._unfolding = false;
+            this._startGlobeIdle();
+            return;
+          }
+          requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      }
+
       return true;
     }
 
