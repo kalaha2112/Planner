@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-03T00:54:25.099Z
+  Built: 2026-08-03T21:40:00.667Z
 -->
 
 <html lang="en">
@@ -862,12 +862,15 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
   /* ---- elevation ladder — one token per role so a skin can restyle depth
      wholesale (soft blur vs. hard offset) without touching call sites ---- */
-  --shadow-rest: 0 1px 3px rgba(20,23,9,.07);    /* cards at rest */
-  --shadow-card: 0 8px 28px rgba(20,23,9,.10);   /* raised card faces */
-  --shadow-lift: 0 16px 40px rgba(20,23,9,.22);   /* dragging / picked up */
-  --shadow-pop: 0 6px 22px color-mix(in oklch, var(--red) 42%, transparent);    /* buttons, pins, chips */
-  --shadow-modal: 0 32px 90px rgba(20,23,9,.28);  /* dialogs */
-  --shadow-page: -6px 0 30px rgba(20,23,9,.10);/* ledger page edge */
+  /* Flat by design — no drop shadows anywhere. The ladder is kept as tokens
+     rather than deleted so depth can be dialled back in from one place, and
+     so every call site stays valid. */
+  --shadow-rest:  none;   /* cards at rest */
+  --shadow-card:  none;   /* raised card faces */
+  --shadow-lift:  none;   /* dragging / picked up */
+  --shadow-pop:   none;   /* buttons, pins, chips */
+  --shadow-modal: none;   /* dialogs */
+  --shadow-page:  none;   /* ledger page edge */
 
   /* ---- type ---- */
   --serif: 'Space Grotesk', system-ui, sans-serif;
@@ -956,12 +959,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
   --paper-mute: #94A177;
   --paper-faint: #6B7654;
   --paper-line: #3A4229;
-  --shadow-rest: 0 1px 3px rgba(0,0,0,.45);
-  --shadow-card: 0 8px 28px rgba(0,0,0,.55);
-  --shadow-lift: 0 16px 40px rgba(0,0,0,.65);
-  --shadow-pop: 0 6px 24px color-mix(in oklch, var(--red) 55%, transparent);
-  --shadow-modal: 0 32px 90px rgba(0,0,0,.70);
-  --shadow-page: -6px 0 30px rgba(0,0,0,.50);
   --mode-flight:    #C93A41;
   --mode-train: #A8E82C;
   --mode-bus: #FFBE3D;
@@ -1386,7 +1383,7 @@ a { color: inherit; }
 .cal-cell:hover { background: var(--cal-hover); }
 .cal-cell.active {
   border: 3px solid var(--brown); color: var(--ink);
-  transform: scale(1.05); box-shadow: 0 6px 20px rgba(35,20,12,.2);
+  transform: scale(1.05);
   z-index: 1;
 }
 .cal-cell img { width: 100%; flex: 1; min-height: 0; object-fit: contain; object-position: center; margin-top: 2px; margin-bottom: 6px; pointer-events: none; }
@@ -1467,7 +1464,7 @@ a { color: inherit; }
   border: 1px solid var(--gold-border); border-radius: var(--r-pill);
   padding: 6px 13px 6px 11px; cursor: pointer; transition: background .15s, box-shadow .15s;
 }
-.optimize-btn:hover:not(:disabled) { background: var(--gold-hover); box-shadow: 0 2px 8px rgba(35,20,12,.1); }
+.optimize-btn:hover:not(:disabled) { background: var(--gold-hover); }
 .optimize-btn:disabled { opacity: .45; cursor: not-allowed; }
 .optimize-btn svg { fill: currentColor; stroke: none; }
 
@@ -1657,7 +1654,6 @@ a { color: inherit; }
     repeating-linear-gradient(0deg, transparent 0 27px, rgba(0,0,0,.03) 27px 28px),
     linear-gradient(90deg, rgba(0,0,0,.05), transparent 7%, transparent 93%, rgba(0,0,0,.05)),
     var(--paper);
-  box-shadow: 0 16px 38px rgba(0,0,0,.34);
   font-family: var(--mono);
 }
 .budget-dialog::after {   /* torn zigzag bottom edge */
@@ -2888,7 +2884,6 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .pk-card {
   background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
   padding: 13px 15px 11px; text-align: left;
-  box-shadow: 0 14px 36px rgba(35, 20, 12, .12);
   animation: pkCardIn .18s ease both;
 }
 @keyframes pkCardIn { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
@@ -3220,7 +3215,6 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   color: var(--on-brown); background: var(--brown); border: none; border-radius: var(--r-btn);
   width: 36px; height: 36px; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 2px 8px rgba(33,26,24,.28);
   transition: opacity .15s;
 }
 .map-add-btn:hover  { opacity: .82; }
@@ -3261,7 +3255,6 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .main-cards-overlay .map-stop .mc-front,
   .main-cards-overlay .map-stop .mc-back {
     border-color: var(--line-3);
-    box-shadow: 0 10px 30px rgba(33,26,24,.28);
   }
   /* no hover-flip on touch (iOS tap-hover is unreliable) — flip only via
      .mc-editing, toggled by tapping the open card. Selectors mirror the
