@@ -940,9 +940,8 @@ a { color: inherit; }
 .opt .rm { flex-shrink: 0; width: 28px; height: 28px; border: none; background: transparent; color: var(--ink-faint); cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: var(--r-xs); transition: color .15s, background .15s; }
 .opt .rm:hover { color: var(--red); background: var(--rm-hover); }
 /* ---- collapsible options ----------------------------------------
-   Each option folds its field grid away; .shut also reveals a compact
-   price/distance summary in the header row so a collapsed option is
-   still worth reading. The caret flips to point right when shut. */
+   Each option folds its field grid away, leaving the hotel name, its
+   price and the controls. The caret flips to point right when shut. */
 .opt .opt-caret {
   flex-shrink: 0; width: 28px; height: 28px;
   border: none; background: transparent; color: var(--ink-mute);
@@ -952,12 +951,15 @@ a { color: inherit; }
 .opt .opt-caret:hover { color: var(--ink); background: var(--line-2); }
 .opt.shut .opt-caret { transform: rotate(-90deg); }
 .opt.shut .grid { display: none; }
-.opt-sum {
-  flex-shrink: 0; font-family: var(--sans); font-size: 11px;
+/* the price rides along only while shut — expanded, it already has its own
+   field in the grid below */
+.opt-price {
+  flex-shrink: 0; font-family: var(--sans); font-size: 12px; font-weight: 600;
   color: var(--ink-soft); white-space: nowrap;
-  opacity: 0; width: 0; overflow: hidden; transition: opacity .18s ease;
+  display: none;
 }
-.opt.shut .opt-sum { opacity: 1; width: auto; }
+.opt.shut .opt-price { display: inline; }
+.opt.shut .badge { display: none; }
 
 .accom-tools { display: flex; justify-content: flex-end; margin: 0 0 6px; }
 .accom-toggle-all {
@@ -970,7 +972,7 @@ a { color: inherit; }
 .accom-toggle-all:hover { color: var(--ink); background: var(--line-2); }
 
 @media (prefers-reduced-motion: reduce) {
-  .opt .opt-caret, .opt-sum { transition: none; }
+  .opt .opt-caret { transition: none; }
 }
 .opt .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; }
 .opt .fld { display: flex; flex-direction: column; gap: 4px; }
