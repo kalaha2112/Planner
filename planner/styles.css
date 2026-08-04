@@ -2736,8 +2736,15 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   transition: transform .46s cubic-bezier(.22,.61,.36,1), opacity .3s ease;
 }
 
-/* ---- fanned: hover for pointers, .is-fanned once tapped ---- */
-.trip-stack:hover .trip-card,
+/* ---- fanned ------------------------------------------------------
+   .is-fanned is the real state (set from app state, so it survives a
+   re-render). The :hover equivalents are a pointer-only convenience
+   and MUST stay behind (hover: hover).
+
+   On touch, a tap raises :hover before the click resolves. With the
+   hover rule unscoped that set the cover to pointer-events:none
+   mid-tap, so the tap fell through to the card underneath and the
+   deck never opened — on a phone the cover looked completely dead. */
 .trip-stack.is-fanned .trip-card {
   transform:
     translateX(calc(var(--i) * var(--dx)))
@@ -2745,21 +2752,37 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     scale(calc(1 - var(--i) * 0.045));
 }
 /* the cover lifts away and lets the deck through */
-.trip-stack:hover .trip-stack-cover,
 .trip-stack.is-fanned .trip-stack-cover {
   opacity: 0; pointer-events: none;
   transform: translate(-14px, 10px) rotate(-4deg) scale(.94);
 }
-.trip-stack:hover .trip-card:hover,
 .trip-stack.is-fanned .trip-card:hover {
   transform:
     translateX(calc(var(--i) * var(--dx))) translateY(-8px)
     rotate(0deg) scale(1.06);
   z-index: 35;
-  box-shadow: var(--shadow-lift);
 }
-.trip-stack:hover .is-front .tc-x,
 .trip-stack.is-fanned .is-front .tc-x { opacity: 1; }
+
+@media (hover: hover) {
+  .trip-stack:hover .trip-card {
+    transform:
+      translateX(calc(var(--i) * var(--dx)))
+      rotate(var(--rot))
+      scale(calc(1 - var(--i) * 0.045));
+  }
+  .trip-stack:hover .trip-stack-cover {
+    opacity: 0; pointer-events: none;
+    transform: translate(-14px, 10px) rotate(-4deg) scale(.94);
+  }
+  .trip-stack:hover .trip-card:hover {
+    transform:
+      translateX(calc(var(--i) * var(--dx))) translateY(-8px)
+      rotate(0deg) scale(1.06);
+    z-index: 35;
+  }
+  .trip-stack:hover .is-front .tc-x { opacity: 1; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .trip-card, .trip-stack-cover { transition: none; }

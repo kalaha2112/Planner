@@ -4968,10 +4968,15 @@
         </button>`;
       }).join('');
 
+      // Fanned-ness is app state, not a class on the node. renderIntroTabs()
+      // replaces this markup wholesale, so a class toggled onto .trip-stack was
+      // wiped by the next re-render — the deck silently snapped shut and the
+      // TRIP cover went back to intercepting taps aimed at the cards.
+      const fanned = this._tripDeckOpen ? ' is-fanned' : '';
       return `<button class="add-trip" data-act="add-trip" title="Add a trip" aria-label="Add a trip">+</button>
-        <div class="trip-stack" style="--n:${keys.length}">
+        <div class="trip-stack${fanned}" style="--n:${keys.length}">
           <div class="trip-stack-cards">${cards}</div>
-          <button class="trip-stack-cover" data-act="trip-stack-toggle" aria-expanded="false" aria-label="Show trips">Trip</button>
+          <button class="trip-stack-cover" data-act="trip-stack-toggle" aria-expanded="${!!this._tripDeckOpen}" aria-label="Show trips">Trip</button>
         </div>`;
     }
 
@@ -5987,22 +5992,18 @@
         case 'add-trip': this.addTrip(); break;
         // touch has no hover, so the TRIP label toggles the deck open there.
         // The class also pins the deck open on pointer devices once tapped.
-        case 'trip-stack-toggle': {
-          const stack = t.closest('.trip-stack');
-          if (stack) {
-            const open = stack.classList.toggle('is-fanned');
-            t.setAttribute('aria-expanded', String(open));
-          }
+        case 'trip-stack-toggle':
+          this._tripDeckOpen = !this._tripDeckOpen;
+          if (this._introTabsRefresh) this._introTabsRefresh();
           break;
-        }
         case 'tab-select': {
           if (this.data.active !== key) { this.data.active = key; this._lastCoordKey = ''; this._openMapCardIdx = null; this._openMapCardFlipped = false; this.bump(); }
-          const st = t.closest('.trip-stack');
-          if (st) st.classList.remove('is-fanned');
+          const fromDeck = !!t.closest('.trip-stack');
+          this._tripDeckOpen = false;
           // picked from the intro deck: unroll the globe into the map. The globe
           // already shows this trip's stops after the bump() above, so the
           // flattened map lands on the right route.
-          if (st && !this._introParked) this._unfoldToMap();
+          if (fromDeck && !this._introParked) this._unfoldToMap();
           break;
         }
         case 'tab-remove': this.removeTrip(key); break;
