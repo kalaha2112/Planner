@@ -939,6 +939,39 @@ a { color: inherit; }
 .opt .badge { font-family: var(--sans); font-size: 9px; font-weight: 700; color: var(--green); background: var(--green-bg); border-radius: var(--r-pill); padding: 3px 9px; letter-spacing: .06em; text-transform: uppercase; flex-shrink: 0; }
 .opt .rm { flex-shrink: 0; width: 28px; height: 28px; border: none; background: transparent; color: var(--ink-faint); cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: var(--r-xs); transition: color .15s, background .15s; }
 .opt .rm:hover { color: var(--red); background: var(--rm-hover); }
+/* ---- collapsible options ----------------------------------------
+   Each option folds its field grid away; .shut also reveals a compact
+   price/distance summary in the header row so a collapsed option is
+   still worth reading. The caret flips to point right when shut. */
+.opt .opt-caret {
+  flex-shrink: 0; width: 28px; height: 28px;
+  border: none; background: transparent; color: var(--ink-mute);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  border-radius: var(--r-xs); transition: color .15s, background .15s, transform .22s ease;
+}
+.opt .opt-caret:hover { color: var(--ink); background: var(--line-2); }
+.opt.shut .opt-caret { transform: rotate(-90deg); }
+.opt.shut .grid { display: none; }
+.opt-sum {
+  flex-shrink: 0; font-family: var(--sans); font-size: 11px;
+  color: var(--ink-soft); white-space: nowrap;
+  opacity: 0; width: 0; overflow: hidden; transition: opacity .18s ease;
+}
+.opt.shut .opt-sum { opacity: 1; width: auto; }
+
+.accom-tools { display: flex; justify-content: flex-end; margin: 0 0 6px; }
+.accom-toggle-all {
+  border: none; background: transparent; cursor: pointer;
+  font-family: var(--sans); font-size: 11px; font-weight: 600;
+  letter-spacing: .04em; color: var(--ink-soft);
+  padding: 4px 8px; border-radius: var(--r-xs);
+  transition: color .15s, background .15s;
+}
+.accom-toggle-all:hover { color: var(--ink); background: var(--line-2); }
+
+@media (prefers-reduced-motion: reduce) {
+  .opt .opt-caret, .opt-sum { transition: none; }
+}
 .opt .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; }
 .opt .fld { display: flex; flex-direction: column; gap: 4px; }
 .opt .fld--addr { grid-column: 1 / -1; }

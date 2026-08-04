@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-03T21:40:00.667Z
+  Built: 2026-08-04T00:40:57.214Z
 -->
 
 <html lang="en">
@@ -1717,6 +1717,39 @@ a { color: inherit; }
 .opt .badge { font-family: var(--sans); font-size: 9px; font-weight: 700; color: var(--green); background: var(--green-bg); border-radius: var(--r-pill); padding: 3px 9px; letter-spacing: .06em; text-transform: uppercase; flex-shrink: 0; }
 .opt .rm { flex-shrink: 0; width: 28px; height: 28px; border: none; background: transparent; color: var(--ink-faint); cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: var(--r-xs); transition: color .15s, background .15s; }
 .opt .rm:hover { color: var(--red); background: var(--rm-hover); }
+/* ---- collapsible options ----------------------------------------
+   Each option folds its field grid away; .shut also reveals a compact
+   price/distance summary in the header row so a collapsed option is
+   still worth reading. The caret flips to point right when shut. */
+.opt .opt-caret {
+  flex-shrink: 0; width: 28px; height: 28px;
+  border: none; background: transparent; color: var(--ink-mute);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  border-radius: var(--r-xs); transition: color .15s, background .15s, transform .22s ease;
+}
+.opt .opt-caret:hover { color: var(--ink); background: var(--line-2); }
+.opt.shut .opt-caret { transform: rotate(-90deg); }
+.opt.shut .grid { display: none; }
+.opt-sum {
+  flex-shrink: 0; font-family: var(--sans); font-size: 11px;
+  color: var(--ink-soft); white-space: nowrap;
+  opacity: 0; width: 0; overflow: hidden; transition: opacity .18s ease;
+}
+.opt.shut .opt-sum { opacity: 1; width: auto; }
+
+.accom-tools { display: flex; justify-content: flex-end; margin: 0 0 6px; }
+.accom-toggle-all {
+  border: none; background: transparent; cursor: pointer;
+  font-family: var(--sans); font-size: 11px; font-weight: 600;
+  letter-spacing: .04em; color: var(--ink-soft);
+  padding: 4px 8px; border-radius: var(--r-xs);
+  transition: color .15s, background .15s;
+}
+.accom-toggle-all:hover { color: var(--ink); background: var(--line-2); }
+
+@media (prefers-reduced-motion: reduce) {
+  .opt .opt-caret, .opt-sum { transition: none; }
+}
 .opt .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; }
 .opt .fld { display: flex; flex-direction: column; gap: 4px; }
 .opt .fld--addr { grid-column: 1 / -1; }
@@ -9875,12 +9908,26 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       if (!stop.accom) stop.accom = { options: [] };
       const accomList = stop.accom.options;
       const stampIdx = this._justChoseAccom; this._justChoseAccom = null;   // one-shot: stamp the badge only when just chosen
-      const opts = accomList.map((o, oi) => `<div class="opt${o.chosen ? ' chosen' : ''}">
+      // collapse state is view-only (never saved), and belongs to one stop —
+      // reset it whenever a different stop's options are being shown
+      if (this._accomCollapsedStop !== idx) { this._accomCollapsedStop = idx; this._accomCollapsed = new Set(); }
+      const collapsed = this._accomCollapsed || (this._accomCollapsed = new Set());
+      const allCollapsed = accomList.length > 0 && accomList.every((_, oi) => collapsed.has(oi));
+      const caret = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>`;
+
+      const opts = accomList.map((o, oi) => {
+        const isShut = collapsed.has(oi);
+        // when shut, the fields are hidden — surface the two that matter most
+        // so a collapsed row is still worth reading
+        const sum = [o.totalPrice, o.distance].map(x => (x || '').trim()).filter(Boolean).join(' · ');
+        return `<div class="opt${o.chosen ? ' chosen' : ''}${isShut ? ' shut' : ''}">
         <div class="top">
           <button class="choose" data-act="accom-choose" data-i="${oi}" title="${o.chosen ? 'Unchose this option' : 'Choose this option'}">${o.chosen ? svg(I.check, { w: 11, h: 11, sw: 3.5, stroke: '#fff' }) : ''}</button>
           <input class="name" value="${escA(o.name)}" data-ch="accom-name" data-i="${oi}" placeholder="Place name…">
+          ${sum ? `<span class="opt-sum">${esc(sum)}</span>` : ''}
           ${o.chosen ? `<span class="badge${oi === stampIdx ? ' stamp-in' : ''}">Chosen</span>` : ''}
           <button class="rm" data-act="accom-remove" data-i="${oi}" title="Remove option">${svg(I.trash, { w: 13, h: 13, sw: 2.4 })}</button>
+          <button class="opt-caret" data-act="accom-toggle" data-i="${oi}" aria-expanded="${!isShut}" title="${isShut ? 'Expand' : 'Collapse'} this option">${caret}</button>
         </div>
         <div class="grid">
           <div class="fld fld--addr"><label>Address</label><div class="lk"><input value="${escA(o.address)}" data-ch="accom-address" data-i="${oi}" placeholder="Street, city — for the map & optimizer">${/\S/.test(o.address || '') ? `<a class="maps" href="https://maps.google.com/?q=${encodeURIComponent(o.address || '')}" target="_blank" rel="noopener" title="Open in Maps">↗</a>` : ''}</div></div>
@@ -9889,8 +9936,12 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
           <div class="fld"><label>Distance</label><input value="${escA(o.distance)}" data-ch="accom-distance" data-i="${oi}" placeholder="e.g. 300m to centre"></div>
           <div class="fld"><label>Features</label><input value="${escA(o.features)}" data-ch="accom-features" data-i="${oi}" placeholder="e.g. breakfast, pool, A/C"></div>
         </div>
-      </div>`).join('');
+      </div>`;
+      }).join('');
       return `<div class="accom-body">
+        ${accomList.length > 1 ? `<div class="accom-tools">
+          <button class="accom-toggle-all" data-act="accom-toggle-all">${allCollapsed ? 'Expand all' : 'Collapse all'}</button>
+        </div>` : ''}
         ${stop.accom.options.length === 0 ? `<p class="empty-note" style="margin:4px 0">No options yet — add one below to start researching.</p>` : ''}
         ${opts}
         <button class="add-option" data-act="accom-add" style="width:100%">+</button>
@@ -10377,8 +10428,23 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
         case 'closet-paste': this.pasteImageFromClipboard('closet'); break;
         case 'outfit-delete': this.removeOutfitFromCloset(id); break;
         case 'accom-choose': this.chooseAccomOption(this.accomOpenIdx, i); break;
-        case 'accom-remove': this.removeAccomOption(this.accomOpenIdx, i); break;
+        case 'accom-remove': if (this._accomCollapsed) this._accomCollapsed.clear(); this.removeAccomOption(this.accomOpenIdx, i); break;
         case 'accom-add': this.addAccomOption(this.accomOpenIdx); break;
+        case 'accom-toggle': {
+          const set = this._accomCollapsed || (this._accomCollapsed = new Set());
+          if (set.has(i)) set.delete(i); else set.add(i);
+          this.render();
+          break;
+        }
+        case 'accom-toggle-all': {
+          const list = (this.currentTrip().stops[this.accomOpenIdx]?.accom?.options) || [];
+          const set = this._accomCollapsed || (this._accomCollapsed = new Set());
+          const everyShut = list.length > 0 && list.every((_, oi) => set.has(oi));
+          set.clear();
+          if (!everyShut) list.forEach((_, oi) => set.add(oi));
+          this.render();
+          break;
+        }
         case 'toggle-stickers': this.stickerPanelOpen = !this.stickerPanelOpen; this.bumpModal(); break;
         case 'close-stickers': this.stickerPanelOpen = false; this.bumpModal(); break;
         case 'sticker-panel-add': this.modalEl.querySelector('.sticker-file').click(); break;

@@ -5550,12 +5550,26 @@
       if (!stop.accom) stop.accom = { options: [] };
       const accomList = stop.accom.options;
       const stampIdx = this._justChoseAccom; this._justChoseAccom = null;   // one-shot: stamp the badge only when just chosen
-      const opts = accomList.map((o, oi) => `<div class="opt${o.chosen ? ' chosen' : ''}">
+      // collapse state is view-only (never saved), and belongs to one stop —
+      // reset it whenever a different stop's options are being shown
+      if (this._accomCollapsedStop !== idx) { this._accomCollapsedStop = idx; this._accomCollapsed = new Set(); }
+      const collapsed = this._accomCollapsed || (this._accomCollapsed = new Set());
+      const allCollapsed = accomList.length > 0 && accomList.every((_, oi) => collapsed.has(oi));
+      const caret = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>`;
+
+      const opts = accomList.map((o, oi) => {
+        const isShut = collapsed.has(oi);
+        // when shut, the fields are hidden — surface the two that matter most
+        // so a collapsed row is still worth reading
+        const sum = [o.totalPrice, o.distance].map(x => (x || '').trim()).filter(Boolean).join(' · ');
+        return `<div class="opt${o.chosen ? ' chosen' : ''}${isShut ? ' shut' : ''}">
         <div class="top">
           <button class="choose" data-act="accom-choose" data-i="${oi}" title="${o.chosen ? 'Unchose this option' : 'Choose this option'}">${o.chosen ? svg(I.check, { w: 11, h: 11, sw: 3.5, stroke: '#fff' }) : ''}</button>
           <input class="name" value="${escA(o.name)}" data-ch="accom-name" data-i="${oi}" placeholder="Place name…">
+          ${sum ? `<span class="opt-sum">${esc(sum)}</span>` : ''}
           ${o.chosen ? `<span class="badge${oi === stampIdx ? ' stamp-in' : ''}">Chosen</span>` : ''}
           <button class="rm" data-act="accom-remove" data-i="${oi}" title="Remove option">${svg(I.trash, { w: 13, h: 13, sw: 2.4 })}</button>
+          <button class="opt-caret" data-act="accom-toggle" data-i="${oi}" aria-expanded="${!isShut}" title="${isShut ? 'Expand' : 'Collapse'} this option">${caret}</button>
         </div>
         <div class="grid">
           <div class="fld fld--addr"><label>Address</label><div class="lk"><input value="${escA(o.address)}" data-ch="accom-address" data-i="${oi}" placeholder="Street, city — for the map & optimizer">${/\S/.test(o.address || '') ? `<a class="maps" href="https://maps.google.com/?q=${encodeURIComponent(o.address || '')}" target="_blank" rel="noopener" title="Open in Maps">↗</a>` : ''}</div></div>
@@ -5564,8 +5578,12 @@
           <div class="fld"><label>Distance</label><input value="${escA(o.distance)}" data-ch="accom-distance" data-i="${oi}" placeholder="e.g. 300m to centre"></div>
           <div class="fld"><label>Features</label><input value="${escA(o.features)}" data-ch="accom-features" data-i="${oi}" placeholder="e.g. breakfast, pool, A/C"></div>
         </div>
-      </div>`).join('');
+      </div>`;
+      }).join('');
       return `<div class="accom-body">
+        ${accomList.length > 1 ? `<div class="accom-tools">
+          <button class="accom-toggle-all" data-act="accom-toggle-all">${allCollapsed ? 'Expand all' : 'Collapse all'}</button>
+        </div>` : ''}
         ${stop.accom.options.length === 0 ? `<p class="empty-note" style="margin:4px 0">No options yet — add one below to start researching.</p>` : ''}
         ${opts}
         <button class="add-option" data-act="accom-add" style="width:100%">+</button>
@@ -6052,8 +6070,23 @@
         case 'closet-paste': this.pasteImageFromClipboard('closet'); break;
         case 'outfit-delete': this.removeOutfitFromCloset(id); break;
         case 'accom-choose': this.chooseAccomOption(this.accomOpenIdx, i); break;
-        case 'accom-remove': this.removeAccomOption(this.accomOpenIdx, i); break;
+        case 'accom-remove': if (this._accomCollapsed) this._accomCollapsed.clear(); this.removeAccomOption(this.accomOpenIdx, i); break;
         case 'accom-add': this.addAccomOption(this.accomOpenIdx); break;
+        case 'accom-toggle': {
+          const set = this._accomCollapsed || (this._accomCollapsed = new Set());
+          if (set.has(i)) set.delete(i); else set.add(i);
+          this.render();
+          break;
+        }
+        case 'accom-toggle-all': {
+          const list = (this.currentTrip().stops[this.accomOpenIdx]?.accom?.options) || [];
+          const set = this._accomCollapsed || (this._accomCollapsed = new Set());
+          const everyShut = list.length > 0 && list.every((_, oi) => set.has(oi));
+          set.clear();
+          if (!everyShut) list.forEach((_, oi) => set.add(oi));
+          this.render();
+          break;
+        }
         case 'toggle-stickers': this.stickerPanelOpen = !this.stickerPanelOpen; this.bumpModal(); break;
         case 'close-stickers': this.stickerPanelOpen = false; this.bumpModal(); break;
         case 'sticker-panel-add': this.modalEl.querySelector('.sticker-file').click(); break;
