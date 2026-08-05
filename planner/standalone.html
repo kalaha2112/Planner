@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-04T20:31:17.921Z
+  Built: 2026-08-05T18:08:01.904Z
 -->
 
 <html lang="en">
@@ -5462,7 +5462,8 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
         raf = 0;
         cur += (target - cur) * 0.38;                    // tracking — a touch snappier (settles faster, still a smooth glide)
         if (Math.abs(target - cur) < 0.0008) cur = target;
-        this._introProgress = cur;                       // 0 = cover, 1 = parked — the unfold rides this
+        this._introProgress = cur;                       // 0 = cover, 1 = parked
+        this._syncFold(clamp01(cur));                    // the globe unrolls with the scroll
         const e = easeInOut(clamp01(cur));
         overlay.style.transform = `translate3d(0, ${(-cur * 100).toFixed(3)}%, 0)`;
         appRoot.style.transform = `translate3d(0, ${((1 - cur) * vh()).toFixed(2)}px, 0)`;   // rises from below to fill
@@ -5553,26 +5554,6 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       document.addEventListener('keydown', onKey, true);
       // tests / power users: jump straight to the app
       this._introSkip = () => { target = 1; cur = 1; apply(); };
-      // Same destination as _introSkip, but travelled over `ms` instead of
-      // snapped. The unfold rides this: with the skip there is no park motion
-      // at all to synchronise against, so the globe had to invent its own
-      // duration and could never line up with the map's arrival.
-      //
-      // target is pinned to cur each frame so apply() doesn't re-arm its own
-      // rAF and race this one to the finish.
-      this._introGlide = (ms) => {
-        const t0 = performance.now(), from = cur;
-        cancelAnimationFrame(raf); raf = 0;
-        const run = () => {
-          const k = Math.min(1, (performance.now() - t0) / ms);
-          cur = from + (1 - from) * easeInOut(k);
-          target = cur;
-          apply();
-          if (k < 1) requestAnimationFrame(run);
-          else { cur = 1; target = 1; apply(); }
-        };
-        requestAnimationFrame(run);
-      };
       // web ledger: "close the notebook" — ease the cover back down
       this._introReturn = () => { target = 0; kick(); };
     }
@@ -6248,96 +6229,63 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
     }
 
     /* ============================================================
-       UNFOLD TO MAP — picking a trip unrolls the globe into the map.
+       UNFOLD TO MAP — the globe unrolls as you scroll off the cover.
 
-       The canvas is lifted out of the intro to position:fixed at its
-       current on-screen rect, the intro parks so the trip page comes
-       into flow, and the canvas flies onto the map while uFold morphs
-       every vertex from its spherical position to its place on a
-       plate carrée. Both are driven by the intro's own park progress,
-       so the globe is flat exactly as the map lands; it then fades
-       into it and the canvas is put back re-spherified.
+       Driven straight from the intro's scroll progress (0 = cover,
+       1 = parked), so the scroll gesture IS the unfold: drag down and
+       the sphere flattens while it travels toward the map, drag back
+       up and it re-forms. One progress value drives the fold and the
+       movement together, so it unfolds *during* the trip rather than
+       moving first and unfolding on arrival. Nothing is timed, so it
+       can never fall out of step with the page.
 
-       Bails out (and just parks, as before) without GSAP, without the
-       3D globe, or under prefers-reduced-motion.
+       The canvas is lifted to position:fixed for the trip, because
+       left inside .intro-globe it would ride the overlay upward and
+       off screen instead of onto the map. The map's rect is re-read
+       every frame — it is still rising from below while this runs.
+
+       No-ops without the 3D globe or under prefers-reduced-motion, in
+       which case the intro behaves exactly as it did before.
        ============================================================ */
-    _unfoldToMap() {
-      const g = window.gsap, g3 = this._g3;
-      if (!g || !g3 || !g3.built || this._unfolding) return false;
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
-      if (this._introParked) return false;             // map is already on screen
-
+    _syncFold(p) {
+      const g3 = this._g3;
+      if (!g3 || !g3.built) return;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
       const canvas = g3.canvas, wrap = g3.wrap;
-      const from = canvas.getBoundingClientRect();
-      if (!from.width) return false;
 
-      this._unfolding = true;
-      this._stopGlobeIdle();
-
-      // fly the canvas free of the intro so it can cross the page
-      const prevStyle = canvas.getAttribute('style') || '';
-      document.body.appendChild(canvas);
-      Object.assign(canvas.style, {
-        position: 'fixed', left: from.left + 'px', top: from.top + 'px',
-        width: from.width + 'px', height: from.height + 'px',
-        zIndex: '1600', pointerEvents: 'none',
-      });
-      wrap.classList.remove('has-globe-3d');           // the flat SVG is hidden anyway
-
-      // Glide the intro away rather than cutting to it, so there is a park
-      // motion for the fold to travel with. Both are driven by the same
-      // progress below, so the globe is flat exactly as the map lands.
-      if (this._introGlide) this._introGlide(600);
-      else if (this._introSkip) this._introSkip();
-
-      const startRect = { l: from.left, t: from.top, w: from.width, h: from.height };
-      const findMap = () => this.root.querySelector('.route.map-route') || this.root.querySelector('.main-map-wrap');
-
-      // The fold is driven by the intro's OWN progress rather than a duration
-      // of its own. Timing it independently never lined up: whatever duration
-      // was picked, the map arrived when the park finished and the globe was
-      // still folding over it. Riding _introProgress means the globe is exactly
-      // flat at the instant the map lands, on any device, however fast the park
-      // happens to run.
-      //
-      // The destination is re-read every frame too — when this starts the map
-      // is still travelling into place, so a single sample would aim at where
-      // it was rather than where it ends up.
-      {
-        let done = false;
-        const step = () => {
-          if (done) return;
-          const e = Math.max(0, Math.min(1, this._introProgress || 0));
-          g3.uFold.value = e;
-
-          const m = findMap();
-          const to = m ? m.getBoundingClientRect() : from;
-          canvas.style.left = (startRect.l + (to.left - startRect.l) * e) + 'px';
-          canvas.style.top = (startRect.t + (to.top - startRect.t) * e) + 'px';
-          canvas.style.width = Math.max(40, startRect.w + (to.width - startRect.w) * e) + 'px';
-          canvas.style.height = Math.max(40, startRect.h + (to.height - startRect.h) * e) + 'px';
-          canvas.style.opacity = String(e > .88 ? Math.max(0, 1 - (e - .88) / .12) : 1);
+      // back at the cover: hand the globe back to the intro as a sphere
+      if (p <= 0.002) {
+        if (this._foldActive) {
+          canvas.setAttribute('style', this._foldPrevStyle || '');
+          wrap.appendChild(canvas);
+          this._foldActive = false;
           g3.resize();
-
-          if (e >= .999) {
-            done = true;
-            // hand off to the real map and put the globe back as a sphere
-            canvas.setAttribute('style', prevStyle);
-            canvas.style.opacity = '';
-            wrap.appendChild(canvas);
-            wrap.classList.add('has-globe-3d');
-            g3.uFold.value = 0;
-            g3.resize();
-            this._unfolding = false;
-            this._startGlobeIdle();
-            return;
-          }
-          requestAnimationFrame(step);
-        };
-        requestAnimationFrame(step);
+        }
+        g3.uFold.value = 0;
+        return;
       }
 
-      return true;
+      if (!this._foldActive) {
+        const r = canvas.getBoundingClientRect();
+        if (!r.width) return;
+        this._foldSrc = { l: r.left, t: r.top, w: r.width, h: r.height };
+        this._foldPrevStyle = canvas.getAttribute('style') || '';
+        document.body.appendChild(canvas);
+        Object.assign(canvas.style, { position: 'fixed', zIndex: '1600', pointerEvents: 'none' });
+        this._foldActive = true;
+      }
+
+      const m = this.root.querySelector('.route.map-route') || this.root.querySelector('.main-map-wrap');
+      const src = this._foldSrc;
+      const to = m ? m.getBoundingClientRect() : src;
+      g3.uFold.value = p;
+      canvas.style.left = (src.l + (to.left - src.l) * p) + 'px';
+      canvas.style.top = (src.t + (to.top - src.t) * p) + 'px';
+      canvas.style.width = Math.max(40, src.w + (to.width - src.w) * p) + 'px';
+      canvas.style.height = Math.max(40, src.h + (to.height - src.h) * p) + 'px';
+      // fade into the real map over the last stretch
+      canvas.style.opacity = String(p > .88 ? Math.max(0, 1 - (p - .88) / .12) : 1);
+      g3.resize();
     }
 
     // Build the country outlines once the shared 110m atlas is available.
@@ -10381,12 +10329,10 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
           break;
         case 'tab-select': {
           if (this.data.active !== key) { this.data.active = key; this._lastCoordKey = ''; this._openMapCardIdx = null; this._openMapCardFlipped = false; this.bump(); }
-          const fromDeck = !!t.closest('.trip-stack');
+          // Selecting a trip only selects it — the globe respins to the new
+          // region and the cover stays put. Entering the trip, and the unfold
+          // that goes with it, is the scroll gesture's job.
           this._tripDeckOpen = false;
-          // picked from the intro deck: unroll the globe into the map. The globe
-          // already shows this trip's stops after the bump() above, so the
-          // flattened map lands on the right route.
-          if (fromDeck && !this._introParked) this._unfoldToMap();
           break;
         }
         case 'tab-remove': this.removeTrip(key); break;
