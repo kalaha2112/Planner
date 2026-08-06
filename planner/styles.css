@@ -2887,26 +2887,6 @@ html { -webkit-tap-highlight-color: transparent; }
   textarea, [contenteditable="true"] { cursor: text; }
 }
 
-/* Touch pointer indicator — iOS/iPadOS have no cursor at all, so the "+" has
-   to be drawn there. Two bars rather than an image: they take --ink directly,
-   so the glyph follows the theme with no canvas and no repaint. The halo is a
-   pair of stacked drop-shadows on the PARENT, which follow the silhouette of
-   both bars together — an outline on each bar would leave a --shell seam
-   through the crossing. Driven by initTouchPointer(); pointer-events:none so
-   it never blocks taps. */
-.touch-cursor {
-  position: fixed; left: 0; top: 0; z-index: 2147483000;
-  width: 26px; height: 26px;
-  filter: drop-shadow(0 0 1px var(--shell)) drop-shadow(0 0 1px var(--shell));
-  pointer-events: none; opacity: 0; will-change: transform, opacity;
-  transition: opacity .18s ease;
-}
-.touch-cursor::before,
-.touch-cursor::after { content: ''; position: absolute; background: var(--ink); }
-.touch-cursor::before { left: 0; right: 0; top: 50%; height: 2.5px; transform: translateY(-50%); }
-.touch-cursor::after { top: 0; bottom: 0; left: 50%; width: 2.5px; transform: translateX(-50%); }
-.touch-cursor.on { opacity: 1; }
-
 /* ============================================================
    SOCIAL IMPORT — the shared-post review sheet
    A RedNote / TikTok / Instagram share arrives as text; this dialog
