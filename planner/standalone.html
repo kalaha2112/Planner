@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-06T17:01:29.695Z
+  Built: 2026-08-06T19:27:47.273Z
 -->
 
 <html lang="en">
@@ -1020,7 +1020,7 @@ a { color: inherit; }
   display: flex; align-items: center; justify-content: center;
   width: 34px; height: 34px;
   border: none; background: transparent;
-  border-radius: var(--r-btn); cursor: pointer; color: var(--ink-soft);
+  border-radius: var(--r-btn); cursor: crosshair; color: var(--ink-soft);
   transition: color .15s;
 }
 .tool-btn:hover { color: var(--ink); }
@@ -1069,7 +1069,7 @@ a { color: inherit; }
   display: flex; align-items: center; justify-content: center;
   width: 22px; height: 22px; margin-right: 6px;
   border: none; background: transparent; color: var(--on-brown); opacity: .7;
-  cursor: pointer; font-family: var(--sans); font-size: 17px; font-weight: 800;
+  cursor: crosshair; font-family: var(--sans); font-size: 17px; font-weight: 800;
   line-height: 1; padding: 0;
 }
 .tab-inactive {
@@ -1080,7 +1080,7 @@ a { color: inherit; }
 .add-trip {
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   width: 34px; height: 34px; border: 1px dashed var(--dash);
-  background: transparent; border-radius: var(--r-pill); cursor: pointer;
+  background: transparent; border-radius: var(--r-pill); cursor: crosshair;
   color: var(--ink-soft); font-family: var(--sans); font-size: 20px;
   font-weight: 800; line-height: 1;
 }
@@ -1101,10 +1101,10 @@ a { color: inherit; }
 }
 .meta-field.travelers input { width: 50px; }
 .travelers-pip { display: flex; flex-direction: row; align-items: center; gap: 2px; min-height: 24px; padding-bottom: 8px; transform: translateY(-0.1px); }
-.traveler-icon { background: none; border: none; padding: 0; cursor: pointer; color: var(--ink-soft); opacity: 0.85; line-height: 0; }
+.traveler-icon { background: none; border: none; padding: 0; cursor: crosshair; color: var(--ink-soft); opacity: 0.85; line-height: 0; }
 .traveler-icon:hover { color: var(--red); opacity: 1; }
 [data-theme="dark"] .traveler-icon { color: var(--ink); opacity: 1; }   /* white in dark mode */
-.traveler-add { background: none; border: 1px dashed var(--ink-faint); border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 12px; line-height: 1; cursor: pointer; color: var(--ink-faint); padding: 0; }
+.traveler-add { background: none; border: 1px dashed var(--ink-faint); border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 12px; line-height: 1; cursor: crosshair; color: var(--ink-faint); padding: 0; }
 .traveler-add:hover { border-color: var(--ink-soft); color: var(--ink-soft); }
 
 /* ============================================================
@@ -1138,7 +1138,7 @@ a { color: inherit; }
 .leg select {
   font-family: var(--sans); font-size: 12px; font-weight: 500;
   border: 1px solid var(--line); border-radius: var(--r-xs); padding: 5px 8px;
-  background: var(--surface); color: var(--ink); cursor: pointer;
+  background: var(--surface); color: var(--ink); cursor: crosshair;
 }
 .leg .dur {
   font-family: var(--sans); font-size: 12px; color: var(--ink-soft);
@@ -1160,7 +1160,7 @@ a { color: inherit; }
 .insert {
   font-family: var(--sans); font-size: 16px; font-weight: 700; line-height: 1;
   color: var(--ink-mute); border: 1px dashed var(--dash); background: transparent;
-  border-radius: var(--r-xs); padding: 3px 9px; cursor: pointer;
+  border-radius: var(--r-xs); padding: 3px 9px; cursor: crosshair;
 }
 
 /* stop card */
@@ -1185,7 +1185,7 @@ a { color: inherit; }
   flex-shrink: 0; display: flex; align-items: center; justify-content: center;
   width: 32px; height: 32px; color: var(--gold);
   border: 1px solid var(--gold-border); background: var(--gold-soft);
-  border-radius: var(--r-sm); cursor: pointer; transition: background .15s;
+  border-radius: var(--r-sm); cursor: crosshair; transition: background .15s;
 }
 .iti-btn:hover { background: var(--gold-hover); }
 .nights { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
@@ -1201,7 +1201,7 @@ a { color: inherit; }
 .accom-btn {
   display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
   border: none; background: transparent; border-radius: var(--r-xs);
-  padding: 4px 4px; margin-left: -4px; cursor: pointer; transition: background .15s;
+  padding: 4px 4px; margin-left: -4px; cursor: crosshair; transition: background .15s;
 }
 .accom-btn:hover { background: var(--hover-soft); }
 .accom-btn .lbl { flex: 1; min-width: 0; font-family: var(--sans); font-size: 12px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1224,7 +1224,7 @@ a { color: inherit; }
 .stop.drop-after:not(.dragging) > .card { box-shadow: 0 3px 0 -1px var(--red), var(--shadow-rest); }
 .trash {
   display: flex; align-items: flex-end; justify-content: center; width: 18px; height: 20px;
-  color: var(--ink-faint); border: none; background: transparent; cursor: pointer;
+  color: var(--ink-faint); border: none; background: transparent; cursor: crosshair;
   margin-left: auto; border-radius: var(--r-check); transition: color .15s; opacity: .7;
 }
 .trash svg { width: 13px; height: 13px; display: block; }
@@ -1234,7 +1234,7 @@ a { color: inherit; }
 .add-stop {
   font-family: var(--sans); font-size: 22px; font-weight: 800; line-height: 1;
   color: var(--on-brown); background: var(--brown); border: none; border-radius: var(--r-btn);
-  width: 42px; height: 42px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  width: 42px; height: 42px; cursor: crosshair; display: flex; align-items: center; justify-content: center;
   transition: opacity .15s;
 }
 .add-stop:hover { opacity: .80; }
@@ -1269,7 +1269,7 @@ a { color: inherit; }
 /* travellers half shrinks to its icons so the nights half takes the extra width */
 .stat-split .stat-travelers { flex: 0 0 auto; display: flex; align-items: center; }
 .stat-travelers .travelers-pip { min-height: 38px; padding-bottom: 0; align-items: center; flex-wrap: wrap; }
-.stat.clickable { cursor: pointer; }
+.stat.clickable { cursor: crosshair; }
 /* size hierarchy: the trip total is the headline, nights the mid-tier, and the
    reward-points figure is deliberately smaller (secondary info) */
 .stat .fig { font-family: var(--caps); font-size: 40px; letter-spacing: .02em; color: var(--ink); line-height: .9; }
@@ -1288,16 +1288,16 @@ a { color: inherit; }
 .todo .box {
   flex-shrink: 0; width: 19px; height: 19px; border-radius: var(--r-check);
   border: 1.5px solid var(--dash); background: var(--surface); color: var(--on-accent);
-  cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
+  cursor: crosshair; display: flex; align-items: center; justify-content: center; padding: 0;
 }
 .todo .box.done { background: var(--green); border-color: var(--green); }
 .todo input.txt { flex: 1; min-width: 0; font-family: var(--sans); font-size: 13px; font-weight: 500; color: var(--ink); border: none; background: transparent; padding: 2px 0; outline-offset: 2px; }
 .todo input.txt.done { color: var(--ink-mute); text-decoration: line-through; text-decoration-color: var(--green); animation: strikeThrough .3s cubic-bezier(0.16,1,0.3,1) both; }
-.todo .x { flex-shrink: 0; font-family: var(--sans); font-size: 12px; line-height: 1; color: var(--ink-faint); border: none; background: transparent; cursor: pointer; padding: 4px; }
+.todo .x { flex-shrink: 0; font-family: var(--sans); font-size: 12px; line-height: 1; color: var(--ink-faint); border: none; background: transparent; cursor: crosshair; padding: 4px; }
 .add-todo {
   font-family: var(--sans); font-size: 18px; font-weight: 800; line-height: 1;
   color: var(--ink); background: transparent; border: 1px dashed var(--dash);
-  border-radius: var(--r-sm); padding: 7px 14px; cursor: pointer; margin-top: 12px; width: 100%;
+  border-radius: var(--r-sm); padding: 7px 14px; cursor: crosshair; margin-top: 12px; width: 100%;
 }
 
 /* ============================================================
@@ -1329,7 +1329,7 @@ a { color: inherit; }
 .modal-x {
   font-family: var(--sans); font-size: 18px; line-height: 1; color: var(--ink-mute);
   border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-btn);
-  padding: 8px 12px; cursor: pointer; flex-shrink: 0;
+  padding: 8px 12px; cursor: crosshair; flex-shrink: 0;
 }
 @keyframes strikeThrough { from { text-decoration-color: transparent; } to { text-decoration-color: var(--green); } }
 
@@ -1376,7 +1376,7 @@ a { color: inherit; }
   position: relative; min-height: 120px; border-radius: var(--r-cell);
   background: var(--stay-fill); color: var(--ink-soft);
   font-family: var(--script); font-style: italic; font-weight: 300; font-size: 19px; letter-spacing: .01em;
-  cursor: pointer; display: flex; flex-direction: column; align-items: center;
+  cursor: crosshair; display: flex; flex-direction: column; align-items: center;
   padding: 10px 4px 0; overflow: hidden; width: 100%;
   border: 1px solid var(--stay-line); transition: background .15s;
 }
@@ -1438,11 +1438,11 @@ a { color: inherit; }
 .item .cost-field { flex: 0 1 72px; display: flex; align-items: center; gap: 3px; }
 .item .cost-field .d { font-family: var(--sans); font-size: 10px; font-weight: 500; color: var(--ink-mute); flex-shrink: 0; }
 .item .cost-field input { font-family: var(--sans); font-size: 10.5px; color: var(--ink-soft); border: none; background: transparent; padding: 2px 0; width: 100%; min-width: 0; font-variant-numeric: tabular-nums; }
-.item .x { font-family: var(--sans); font-size: 13px; line-height: 1; color: var(--ink-faint); border: none; background: transparent; cursor: pointer; padding: 5px; flex-shrink: 0; }
+.item .x { font-family: var(--sans); font-size: 13px; line-height: 1; color: var(--ink-faint); border: none; background: transparent; cursor: crosshair; padding: 5px; flex-shrink: 0; }
 .add-item, .add-option {
   font-family: var(--sans); font-size: 18px; font-weight: 800; line-height: 1;
   color: var(--ink); background: transparent; border: 1px dashed var(--dash);
-  border-radius: var(--r-btn); padding: 7px 16px; cursor: pointer; margin-top: 16px;
+  border-radius: var(--r-btn); padding: 7px 16px; cursor: crosshair; margin-top: 16px;
 }
 
 /* ---- day-plan route optimizer ---- */
@@ -1462,7 +1462,7 @@ a { color: inherit; }
   font-family: var(--sans); font-size: 12px; font-weight: 600; letter-spacing: .01em;
   color: var(--gold); background: var(--gold-soft);
   border: 1px solid var(--gold-border); border-radius: var(--r-pill);
-  padding: 6px 13px 6px 11px; cursor: pointer; transition: background .15s, box-shadow .15s;
+  padding: 6px 13px 6px 11px; cursor: crosshair; transition: background .15s, box-shadow .15s;
 }
 .optimize-btn:hover:not(:disabled) { background: var(--gold-hover); }
 .optimize-btn:disabled { opacity: .45; cursor: not-allowed; }
@@ -1476,7 +1476,7 @@ a { color: inherit; }
 }
 .optimize-note.warn { background: var(--gold-soft); border-color: var(--gold-border); }
 .optimize-note span { flex: 1; min-width: 0; }
-.optimize-note .on-x { flex-shrink: 0; border: none; background: transparent; color: var(--ink-mute); cursor: pointer; font-size: 12px; line-height: 1; padding: 2px; }
+.optimize-note .on-x { flex-shrink: 0; border: none; background: transparent; color: var(--ink-mute); cursor: crosshair; font-size: 12px; line-height: 1; padding: 2px; }
 
 /* ---- per-day focused map (inside the day column of the itinerary modal) ---- */
 .day-cols { display: flex; gap: 22px; align-items: flex-start; }
@@ -1547,7 +1547,7 @@ a { color: inherit; }
 .item-num:not(.placed):not(.empty) { background: var(--ink-faint); }  /* has address, locating */
 .item-num.empty { background: transparent; color: var(--ink-faint); border: 1.5px solid var(--line); }
 
-.map-stop-dot { cursor: pointer; }
+.map-stop-dot { cursor: crosshair; }
 
 /* numbered Leaflet divIcon pin — teardrop shape */
 .day-pin {
@@ -1603,11 +1603,11 @@ a { color: inherit; }
   overflow: hidden; cursor: grab; flex-shrink: 0;
 }
 .outfit img { width: 100%; height: 100%; object-fit: contain; }
-.outfit .del { position: absolute; bottom: 2px; right: 2px; width: 15px; height: 15px; border-radius: 50%; border: none; background: var(--chip-glass); color: var(--ink-soft); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; line-height: 1; padding: 0; }
+.outfit .del { position: absolute; bottom: 2px; right: 2px; width: 15px; height: 15px; border-radius: 50%; border: none; background: var(--chip-glass); color: var(--ink-soft); cursor: crosshair; display: flex; align-items: center; justify-content: center; font-size: 12px; line-height: 1; padding: 0; }
 .add-outfit {
   width: 52px; height: 62px; border: 2px dashed var(--dash); border-radius: var(--r-btn);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  cursor: pointer; background: var(--hover-soft); outline: none; flex-shrink: 0;
+  cursor: crosshair; background: var(--hover-soft); outline: none; flex-shrink: 0;
 }
 .add-outfit span { font-family: var(--sans); font-size: 10px; color: var(--ink-mute); }
 .add-outfit svg { color: var(--gold); }   /* icons use currentColor -> theme-aware */
@@ -1711,11 +1711,11 @@ a { color: inherit; }
 .accom-body { padding: 18px 26px 26px; display: flex; flex-direction: column; gap: 14px; }
 .opt { background: var(--surface); border-radius: var(--r-card); padding: 17px 18px; display: flex; flex-direction: column; gap: 12px; position: relative; }
 .opt .top { display: flex; align-items: flex-start; gap: 10px; }
-.opt .choose { flex-shrink: 0; margin-top: 3px; width: 20px; height: 20px; border-radius: var(--r-check); border: 2px solid var(--dash); background: var(--surface); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+.opt .choose { flex-shrink: 0; margin-top: 3px; width: 20px; height: 20px; border-radius: var(--r-check); border: 2px solid var(--dash); background: var(--surface); cursor: crosshair; display: flex; align-items: center; justify-content: center; padding: 0; }
 .opt.chosen .choose { border-color: var(--green); background: var(--green); }
 .opt .name { font-family: var(--sans); font-size: 16px; font-weight: 700; color: var(--ink); border: none; background: transparent; padding: 0; flex: 1; min-width: 0; outline-offset: 2px; }
 .opt .badge { font-family: var(--sans); font-size: 9px; font-weight: 700; color: var(--green); background: var(--green-bg); border-radius: var(--r-pill); padding: 3px 9px; letter-spacing: .06em; text-transform: uppercase; flex-shrink: 0; }
-.opt .rm { flex-shrink: 0; width: 28px; height: 28px; border: none; background: transparent; color: var(--ink-faint); cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: var(--r-xs); transition: color .15s, background .15s; }
+.opt .rm { flex-shrink: 0; width: 28px; height: 28px; border: none; background: transparent; color: var(--ink-faint); cursor: crosshair; display: flex; align-items: center; justify-content: center; border-radius: var(--r-xs); transition: color .15s, background .15s; }
 .opt .rm:hover { color: var(--red); background: var(--rm-hover); }
 /* ---- collapsible options ----------------------------------------
    Each option folds its field grid away, leaving the hotel name, its
@@ -1723,7 +1723,7 @@ a { color: inherit; }
 .opt .opt-caret {
   flex-shrink: 0; width: 28px; height: 28px;
   border: none; background: transparent; color: var(--ink-mute);
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  cursor: crosshair; display: flex; align-items: center; justify-content: center;
   border-radius: var(--r-xs); transition: color .15s, background .15s, transform .22s ease;
 }
 .opt .opt-caret:hover { color: var(--ink); background: var(--line-2); }
@@ -1741,7 +1741,7 @@ a { color: inherit; }
 
 .accom-tools { display: flex; justify-content: flex-end; margin: 0 0 6px; }
 .accom-toggle-all {
-  border: none; background: transparent; cursor: pointer;
+  border: none; background: transparent; cursor: crosshair;
   font-family: var(--sans); font-size: 11px; font-weight: 600;
   letter-spacing: .04em; color: var(--ink-soft);
   padding: 4px 8px; border-radius: var(--r-xs);
@@ -1778,7 +1778,7 @@ a { color: inherit; }
   font-family: var(--sans); font-size: 12px; font-weight: 600;
   padding: 6px 16px; border-radius: 20px;
   border: 1.5px solid var(--line); background: var(--surface); color: var(--ink-soft);
-  cursor: pointer; transition: border-color .15s, background .15s, color .15s;
+  cursor: crosshair; transition: border-color .15s, background .15s, color .15s;
 }
 .t-pill:hover { border-color: var(--ink-mute); color: var(--ink); }
 .t-pill.active { color: var(--on-accent); }
@@ -1848,7 +1848,7 @@ a { color: inherit; }
     color: var(--green-dark);
   }
   .app-ov .meta-range .date-tail { white-space: nowrap; }
-  .app-ov .meta-range .date-seg { position: relative; display: inline-block; cursor: pointer; color: inherit; white-space: nowrap; }
+  .app-ov .meta-range .date-seg { position: relative; display: inline-block; cursor: crosshair; color: inherit; white-space: nowrap; }
   /* parked + invisible by default (the ≥701px base rule doesn't reach here); the
      hover:none block below promotes it to a full-cover tap target on touch */
   .app-ov .meta-range .date-native {
@@ -1866,7 +1866,7 @@ a { color: inherit; }
     padding: 15px 8px; border: none; border-radius: var(--r-card);
     background: var(--surface); color: var(--ink);
     font-family: var(--sans); font-size: 12px; font-weight: 600;
-    cursor: pointer; transition: transform .1s ease;
+    cursor: crosshair; transition: transform .1s ease;
   }
   .app-card svg { color: var(--red); }
   .app-card:active { transform: scale(.97); }
@@ -1886,7 +1886,7 @@ a { color: inherit; }
     padding: 7px 2px; border: 1px solid transparent; border-radius: 12px;
     background: none; color: var(--ink-soft);
     font-family: var(--sans); font-size: 10px; font-weight: 600; letter-spacing: .01em;
-    cursor: pointer; transition: background .15s ease, color .15s ease;
+    cursor: crosshair; transition: background .15s ease, color .15s ease;
   }
   .app-tab svg { display: block; }
   .app-tab.on { background: var(--brown); color: var(--on-brown); }
@@ -1919,7 +1919,7 @@ a { color: inherit; }
   .app-pill {
     padding: 5px 12px; border: none; border-radius: 999px;
     background: var(--surface); color: var(--ink-soft);
-    font-family: var(--sans); font-size: 12px; font-weight: 600; cursor: pointer;
+    font-family: var(--sans); font-size: 12px; font-weight: 600; cursor: crosshair;
   }
   .app-pill.on { background: var(--brown); color: var(--on-brown); }
 
@@ -2013,7 +2013,7 @@ a { color: inherit; }
   background: var(--surface);
   color: var(--ink-soft);
   font-size: 13px; line-height: 1;
-  cursor: pointer;
+  cursor: crosshair;
   display: none;
   align-items: center; justify-content: center;
   padding: 0;
@@ -2108,7 +2108,7 @@ a { color: inherit; }
   border: none;
   background: var(--chip-glass);
   color: var(--ink-soft);
-  cursor: pointer;
+  cursor: crosshair;
   display: none;
   align-items: center; justify-content: center;
   font-size: 11px; line-height: 1;
@@ -2151,7 +2151,7 @@ a { color: inherit; }
 }
 .sync-code-out { font-variant-numeric: tabular-nums; letter-spacing: .02em; }
 .sync-btn {
-  font-family: var(--sans); font-size: 13px; font-weight: 600; cursor: pointer;
+  font-family: var(--sans); font-size: 13px; font-weight: 600; cursor: crosshair;
   padding: 10px 16px; border-radius: var(--r-sm); border: 1px solid var(--line);
   background: var(--surface); color: var(--ink); white-space: nowrap; transition: background .15s, border-color .15s;
 }
@@ -2533,7 +2533,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     font-family: var(--serif); font-size: 21px; font-weight: 700; letter-spacing: -.01em; color: var(--ink);
   }
   .ss-card input.city::placeholder { color: var(--ink-faint); font-weight: 400; }
-  .ss-x { flex-shrink: 0; border: none; background: transparent; color: var(--ink-faint); cursor: pointer; padding: 4px; font-size: 14px; line-height: 1; }
+  .ss-x { flex-shrink: 0; border: none; background: transparent; color: var(--ink-faint); cursor: crosshair; padding: 4px; font-size: 14px; line-height: 1; }
   .ss-x:hover { color: var(--red); }
   /* the stop list — a numbered marker (edit to reorder) + name + ✕ per stop */
   .ss-list { list-style: none; margin: 0; padding: 2px 0 0; display: flex; flex-direction: column; }
@@ -2541,14 +2541,14 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .ss-li:last-child { border-bottom: none; }
   .ss-num-input {
     flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
-    border: none; background: var(--red); color: var(--on-accent); padding: 0; cursor: pointer;
+    border: none; background: var(--red); color: var(--on-accent); padding: 0; cursor: crosshair;
     font-family: var(--sans); font-size: 11px; font-weight: 700; text-align: center; line-height: 22px;
     appearance: none; -moz-appearance: textfield;
   }
   .ss-num-input::-webkit-inner-spin-button, .ss-num-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   .ss-num-input:focus { outline: none; box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--red); }
   .ss-li-name {
-    flex: 1; min-width: 0; min-height: 1.25em; text-align: left; border: none; background: transparent; padding: 2px 0; cursor: pointer;
+    flex: 1; min-width: 0; min-height: 1.25em; text-align: left; border: none; background: transparent; padding: 2px 0; cursor: crosshair;
     font-family: var(--serif); font-size: 16px; font-weight: 600; letter-spacing: -.01em; color: var(--ink);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color .14s;
   }
@@ -2569,7 +2569,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     font-family: var(--sans); font-size: 10.5px; font-weight: 600; letter-spacing: .02em;
     color: var(--ink-soft); background: transparent;
     border: 1px solid var(--line); border-radius: 999px;
-    padding: 5px 11px; cursor: pointer;
+    padding: 5px 11px; cursor: crosshair;
     transition: color .14s, border-color .14s;
   }
   .ss-btns button:hover { color: var(--red); border-color: var(--red); }
@@ -2582,7 +2582,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     color: var(--green-dark);
   }
   .meta-range .date-tail { white-space: nowrap; }   /* year never orphans from the return date */
-  .meta-range .date-seg { position: relative; display: inline-block; cursor: pointer; color: inherit; white-space: nowrap; }
+  .meta-range .date-seg { position: relative; display: inline-block; cursor: crosshair; color: inherit; white-space: nowrap; }
   .meta-range .date-seg:hover .date-txt,
   .meta-range .date-seg:focus-visible .date-txt {
     text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px;
@@ -2702,7 +2702,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     font-family: var(--sans); font-size: 12px; font-weight: 500;
     color: var(--ink); background: var(--surface);
     border: none; border-radius: var(--r-pill);
-    padding: 6px 14px; cursor: pointer;
+    padding: 6px 14px; cursor: crosshair;
     transition: background .15s, color .15s;
   }
   .leaf-pill:hover { background: var(--hover-soft); }
@@ -2745,7 +2745,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     color: var(--ink-soft); background: var(--surface);
     border: 1px solid var(--line); border-right: none;
     border-radius: 9px 0 0 9px;
-    padding: 14px 5px; cursor: pointer;
+    padding: 14px 5px; cursor: crosshair;
     box-shadow: var(--shadow-page);
     transition: transform .18s, color .15s, background .15s;
   }
@@ -2766,7 +2766,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     display: flex; align-items: center; justify-content: center;
     font-family: var(--sans); font-size: 26px; font-weight: 300; line-height: 1;
     color: var(--ink-mute); background: transparent; border: none;
-    cursor: pointer; z-index: 7; opacity: .55;
+    cursor: crosshair; z-index: 7; opacity: .55;
     transition: opacity .15s, color .15s;
   }
   .ledger-edge:hover { opacity: 1; color: var(--ink); }
@@ -2869,7 +2869,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 
 /* a rising chip: label + count pill, also the hover/tap checklist target */
 .pk-slot {
-  position: absolute; width: 112px; height: 44px; cursor: pointer; z-index: 5; border-radius: 999px;
+  position: absolute; width: 112px; height: 44px; cursor: crosshair; z-index: 5; border-radius: 999px;
   opacity: 0; transform: translate(-50%, calc(-50% + 42px));
   transition: opacity .5s ease, transform .55s cubic-bezier(.22, .61, .36, 1);
   pointer-events: none;
@@ -2897,7 +2897,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   -webkit-mask-size: contain; mask-size: contain;
   -webkit-mask-position: center; mask-position: center;
   /* the icon is the click target that opens its category checklist */
-  pointer-events: auto; cursor: pointer; transition: transform .15s ease;
+  pointer-events: auto; cursor: crosshair; transition: transform .15s ease;
 }
 .pk-icon:hover { transform: translateX(-50%) scale(1.08); }
 .pk-icon:active { transform: translateX(-50%) scale(.94); }
@@ -3047,7 +3047,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .pk-hd { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
 .pk-hd .t { font-family: var(--sans); font-size: 13px; font-weight: 700; color: var(--ink); }
 .pk-hd .p { font-family: var(--mono); font-size: 10px; color: var(--ink-mute); margin-left: auto; font-variant-numeric: tabular-nums; }
-.pk-hd .x { border: none; background: transparent; color: var(--ink-faint); font-size: 12px; line-height: 1; cursor: pointer; padding: 2px 4px; }
+.pk-hd .x { border: none; background: transparent; color: var(--ink-faint); font-size: 12px; line-height: 1; cursor: crosshair; padding: 2px 4px; }
 .pk-hd .x:hover { color: var(--ink); }
 .pk-card .todo { padding: 4px 0; }
 .pk-none { font-family: var(--sans); font-size: 12px; color: var(--ink-mute); margin: 6px 0 8px; }
@@ -3119,7 +3119,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .mc-front {
   padding: 4.3cqw 5.8cqw 4.3cqw;
   display: flex; flex-direction: column; justify-content: flex-start; gap: 2cqw;
-  cursor: default;
+  cursor: crosshair;
 }
 .mc-mode-pip {
   position: absolute; top: 4.3cqw; right: 5.8cqw;
@@ -3189,7 +3189,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   background: transparent; color: var(--on-accent);
   font-size: 1.22cqi; /* 9px / 740px × 100 */
   font-weight: 700; text-align: center;
-  cursor: pointer; padding: 0; line-height: 2.97cqi;
+  cursor: crosshair; padding: 0; line-height: 2.97cqi;
   appearance: none; -moz-appearance: textfield;
   font-family: var(--sans);
 }
@@ -3209,7 +3209,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .map-leg-row select {
   font-family: var(--sans); font-size: 4.8cqw; font-weight: 500;
   border: 1px solid var(--line); border-radius: var(--r-xs); padding: 1.4cqw 2.4cqw;
-  background: var(--surface); color: var(--ink); cursor: pointer; max-width: 36.7cqw;
+  background: var(--surface); color: var(--ink); cursor: crosshair; max-width: 36.7cqw;
 }
 .map-leg-row .dur {
   font-family: var(--sans); font-size: 4.8cqw; color: var(--ink-soft);
@@ -3255,7 +3255,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   z-index: 4;
   font-family: var(--sans); font-size: 18px; font-weight: 800; line-height: 1;
   color: var(--on-brown); background: var(--brown); border: none; border-radius: var(--r-btn);
-  width: 36px; height: 36px; cursor: pointer;
+  width: 36px; height: 36px; cursor: crosshair;
   display: flex; align-items: center; justify-content: center;
   transition: opacity .15s;
 }
@@ -3412,7 +3412,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   width: 34px; height: 34px;
   display: flex; align-items: center; justify-content: center;
   border: none; background: transparent;   /* bare icon, like the tool buttons */
-  color: var(--ink-soft); cursor: pointer;
+  color: var(--ink-soft); cursor: crosshair;
   transition: color .15s;
 }
 .theme-btn:hover { color: var(--ink); }
@@ -3472,7 +3472,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   background: var(--card-glass); color: var(--ink);
   backdrop-filter: blur(var(--card-blur)) saturate(1.4);
   -webkit-backdrop-filter: blur(var(--card-blur)) saturate(1.4);
-  cursor: pointer; overflow: hidden;
+  cursor: crosshair; overflow: hidden;
   box-shadow: var(--shadow-card);
   transform-origin: 50% 100%;
   /* stacked: barely offset, just enough to show there is a deck */
@@ -3493,7 +3493,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .tc-name:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
 .tc-x {
   position: absolute; top: 6px; right: 8px;
-  border: none; background: transparent; cursor: pointer;
+  border: none; background: transparent; cursor: crosshair;
   color: var(--ink-mute); font-family: var(--sans); font-size: 16px;
   font-weight: 700; line-height: 1; padding: 2px 5px;
   opacity: 0; transition: opacity .2s ease;
@@ -3517,7 +3517,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   font-family: var(--caps); font-size: 26px; letter-spacing: .1em;
   text-transform: uppercase; line-height: 1;
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; box-shadow: var(--shadow-pop);
+  cursor: crosshair; box-shadow: var(--shadow-pop);
   transition: transform .46s cubic-bezier(.22,.61,.36,1), opacity .3s ease;
 }
 
@@ -3660,6 +3660,15 @@ html { -webkit-tap-highlight-color: transparent; }
   .cal-cell, .stop, .map-stop, .grip, .item-grip,
   .todo .box, .outfit, .stock-item, .placed-sticker,
   .opt .choose, .leaflet-container { cursor: crosshair; }
+  /* Leaflet ships its own cursors, and they were the pointing hand people
+     actually saw — every country path and route line carries
+     .leaflet-interactive, so the hand covered the whole map. styles.css
+     loads after leaflet.css, so matching its specificity is enough to take
+     these over. Panning still uses Leaflet's grab/grabbing: that is a real
+     affordance for a draggable surface, not a stray hand. */
+  .leaflet-interactive,
+  .leaflet-tooltip.leaflet-interactive,
+  .leaflet-popup-pane, .leaflet-control { cursor: crosshair; }
   /* text entry keeps an I-beam so the caret stays findable */
   input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]):not([type=range]),
   textarea, [contenteditable="true"] { cursor: text; }
@@ -3698,7 +3707,7 @@ html { -webkit-tap-highlight-color: transparent; }
 .imp-link { font-family: var(--sans); font-size: 12px; font-weight: 600; color: var(--gold); text-decoration: none; }
 .imp-all {
   margin-left: auto; font-family: var(--sans); font-size: 12px; font-weight: 600; color: var(--ink-soft);
-  background: transparent; border: 1px solid var(--line-soft); border-radius: var(--r-pill); padding: 4px 11px; cursor: pointer;
+  background: transparent; border: 1px solid var(--line-soft); border-radius: var(--r-pill); padding: 4px 11px; cursor: crosshair;
 }
 .imp-all:hover { background: var(--line-2); color: var(--ink); }
 .imp-post-title { font-family: var(--serif); font-size: 15px; font-style: italic; color: var(--ink-mid); line-height: 1.35; }
@@ -3709,7 +3718,7 @@ html { -webkit-tap-highlight-color: transparent; }
   font-family: var(--sans); font-size: 12.5px; color: var(--ink); background: var(--surface);
   border: 1px solid var(--line-soft); border-radius: var(--r-sm); padding: 6px 8px; max-width: 46%;
 }
-.imp-spread { display: flex; align-items: center; gap: 6px; font-family: var(--sans); font-size: 11.5px; color: var(--ink-soft); cursor: pointer; }
+.imp-spread { display: flex; align-items: center; gap: 6px; font-family: var(--sans); font-size: 11.5px; color: var(--ink-soft); cursor: crosshair; }
 .imp-spread input { accent-color: var(--red); }
 .imp-empty { font-family: var(--sans); font-size: 12.5px; color: var(--ink-soft); margin: 0; }
 
@@ -3721,7 +3730,7 @@ html { -webkit-tap-highlight-color: transparent; }
 .imp-row.on { opacity: 1; }
 .imp-row:last-child { border-bottom: none; }
 .imp-check {
-  flex-shrink: 0; margin-top: 3px; width: 18px; height: 18px; padding: 0; cursor: pointer;
+  flex-shrink: 0; margin-top: 3px; width: 18px; height: 18px; padding: 0; cursor: crosshair;
   display: flex; align-items: center; justify-content: center;
   border: 1.5px solid var(--line); border-radius: var(--r-check); background: transparent; color: var(--on-brown);
 }
@@ -3749,7 +3758,7 @@ html { -webkit-tap-highlight-color: transparent; }
 .imp-sig { font-family: var(--sans); font-size: 9.5px; letter-spacing: .04em; color: var(--ink-faint); white-space: nowrap; }
 .imp-sig + .imp-sig::before { content: "·"; margin-right: 6px; color: var(--ink-faint); }
 .imp-apply {
-  font-family: var(--sans); font-size: 13px; font-weight: 600; cursor: pointer;
+  font-family: var(--sans); font-size: 13px; font-weight: 600; cursor: crosshair;
   padding: 11px 16px; border-radius: var(--r-sm); border: 1px solid var(--red);
   background: var(--red); color: var(--on-accent); width: 100%;
 }
@@ -3768,7 +3777,7 @@ html { -webkit-tap-highlight-color: transparent; }
   font-family: var(--sans); font-size: 12px; font-weight: 600; letter-spacing: .01em;
   color: var(--ink-soft); background: transparent;
   border: 1px solid var(--line-soft); border-radius: var(--r-pill);
-  padding: 6px 13px 6px 11px; cursor: pointer; transition: background .15s, color .15s;
+  padding: 6px 13px 6px 11px; cursor: crosshair; transition: background .15s, color .15s;
 }
 .import-btn:hover { background: var(--line-2); color: var(--ink); }
 
