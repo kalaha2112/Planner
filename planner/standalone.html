@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-06T19:27:47.273Z
+  Built: 2026-08-06T21:38:40.228Z
 -->
 
 <html lang="en">
@@ -6201,6 +6201,12 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
        moving first and unfolding on arrival. Nothing is timed, so it
        can never fall out of step with the page.
 
+       That progress is remapped so the whole motion completes once the
+       map is properly in view — roughly the first third of the park —
+       rather than only when the page finishes parking. See the maths
+       further down for why "in view" is measured as a visible amount
+       of the map rather than its first pixel.
+
        The canvas is lifted to position:fixed for the trip, because
        left inside .intro-globe it would ride the overlay upward and
        off screen instead of onto the map. The map's rect is re-read
@@ -6209,14 +6215,14 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
        No-ops without the 3D globe or under prefers-reduced-motion, in
        which case the intro behaves exactly as it did before.
        ============================================================ */
-    _syncFold(p) {
+    _syncFold(cur) {
       const g3 = this._g3;
       if (!g3 || !g3.built) return;
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
       const canvas = g3.canvas, wrap = g3.wrap;
 
       // back at the cover: hand the globe back to the intro as a sphere
-      if (p <= 0.002) {
+      if (cur <= 0.002) {
         if (this._foldActive) {
           canvas.setAttribute('style', this._foldPrevStyle || '');
           wrap.appendChild(canvas);
@@ -6224,6 +6230,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
           g3.resize();
         }
         g3.uFold.value = 0;
+        this._foldDone = false;
         return;
       }
 
@@ -6240,6 +6247,45 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       const m = this.root.querySelector('.route.map-route') || this.root.querySelector('.main-map-wrap');
       const src = this._foldSrc;
       const to = m ? m.getBoundingClientRect() : src;
+
+      // Finish the whole handoff once the map is properly on screen, instead
+      // of stretching it over the entire park.
+      //
+      // Anchoring on the map's FIRST visible pixel does not work: it rests
+      // within 25-50px of the top of the trip page, so that pixel clears the
+      // fold at about 3% of the park and the unfold would be instantaneous.
+      // Anchor on a visible amount of it instead — a third of the viewport
+      // filled, or the whole map where it is shorter than that — which lands
+      // near a third of the park on both layouts rather than somewhere
+      // different on each.
+      //
+      // The trip page is translated (1 - cur) * vh while it rises, so taking
+      // that back off the live rect gives where the map will come to rest.
+      const vh = window.innerHeight || 1;
+      const restTop = to.top - (1 - cur) * vh;
+      const need = Math.min(vh * 0.3, to.height || vh * 0.3);
+      const enter = Math.min(1, Math.max(0.12, (restTop + need) / vh));
+      const p = Math.max(0, Math.min(1, cur / enter));
+
+      // landed and faded into the real map — stop paying for a rect write and
+      // a renderer resize on every remaining frame of the park
+      if (p >= 1) {
+        if (!this._foldDone) {
+          this._foldDone = true;
+          this._foldDoneAt = cur;
+          g3.uFold.value = 1;
+          canvas.style.opacity = '0';
+        }
+        return;
+      }
+      // `enter` is re-estimated every frame and drifts by a few thousandths as
+      // the page settles, so a finished fold must not be un-finished by the
+      // estimate alone — only by actually scrolling back up. Without this a
+      // pixel of late layout movement can pop the flattened plate back over
+      // the map it already handed off to.
+      if (this._foldDone && cur >= this._foldDoneAt) return;
+      this._foldDone = false;
+
       g3.uFold.value = p;
       canvas.style.left = (src.l + (to.left - src.l) * p) + 'px';
       canvas.style.top = (src.t + (to.top - src.t) * p) + 'px';
