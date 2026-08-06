@@ -762,6 +762,7 @@
       this.ensureMap(0);
       this.initIntro();
       this.initLedgerNav();
+      this._paintCursor();      // "+" cursor, drawn at the current --ink
       this.initTouchPointer();
       this.initShareTarget();   // ?title=&text=&url= from the PWA share sheet
       // crossing the mobile-map breakpoint (resizing an iPad window, rotating)
@@ -821,7 +822,7 @@
       this.render(); this.bumpModal(); this.touchMap();
     }
     /* Touch pointer indicator: iOS/iPadOS have no cursor, so show the same
-       dashed arrow at the fingertip — but only for taps and drags. When the
+       "+" at the fingertip — but only for taps and drags. When the
        browser claims the gesture as a scroll it fires pointercancel (and the
        page scrolls), so we hide instantly there; app drags capture the pointer
        (touch-action:none grips), so no cancel fires and the arrow follows the
@@ -829,11 +830,11 @@
     initTouchPointer() {
       if (this._touchArrow) return;
       const el = document.createElement('div');
-      el.className = 'touch-arrow';
+      el.className = 'touch-cursor';
       el.setAttribute('aria-hidden', 'true');
       document.body.appendChild(el);
       this._touchArrow = el;
-      const SIZE = 34, TIPX = SIZE * 21 / 32, TIPY = SIZE * 20 / 32, LIFT = 8;
+      const SIZE = 38, TIPX = SIZE / 2, TIPY = SIZE / 2, LIFT = 8;   // hotspot = the crossing
       let raf = 0, x = 0, y = 0, hideT = 0, down = false;
       const place = () => { raf = 0; el.style.transform = `translate3d(${x - LIFT - TIPX}px, ${y - LIFT - TIPY}px, 0)`; };
       const show = (e) => {
@@ -897,6 +898,46 @@
     }
     // Point the browser-chrome colour at whatever --shell currently resolves to,
     // so it tracks the active theme AND the active skin instead of two literals.
+    /* Repaint the "+" cursor from the live tokens.
+
+       A data-URI cursor is a frozen image — it cannot reference a custom
+       property — so the glyph is drawn here at the computed --ink and given
+       a --shell halo, and the result is written back onto :root as an inline
+       value (which outranks both baked fallbacks in styles.css). The halo is
+       what lets one glyph work on any background: in dark mode the map keeps
+       its light beige land, and a plain light "+" would disappear over it.
+
+       Two sizes, because `cursor` falls through its list when a UA refuses an
+       image and only 32x32 is universally rendered. The touch indicator picks
+       up the same --cur-img for free. */
+    _paintCursor() {
+      const cs = getComputedStyle(document.documentElement);
+      const ink = cs.getPropertyValue('--ink').trim() || '#141709';
+      const shell = cs.getPropertyValue('--shell').trim() || '#ffffff';
+      const draw = (S) => {
+        const c = document.createElement('canvas');
+        c.width = c.height = S;
+        const x = c.getContext('2d');
+        if (!x) return '';
+        const a = S * 0.375, w = S * 0.13, bow = S * 0.028;
+        x.translate(S / 2, S / 2);
+        x.rotate(-1.5 * Math.PI / 180);          // hand-placed, not machined
+        x.lineCap = 'round';
+        const arms = () => {
+          x.beginPath();
+          x.moveTo(-a, 0); x.quadraticCurveTo(0, -bow, a, 0);   // barely bowed, like a drawn stroke
+          x.moveTo(0, -a); x.quadraticCurveTo(bow, 0, 0, a);
+        };
+        x.strokeStyle = shell; x.lineWidth = w + S * 0.065; arms(); x.stroke();   // halo first
+        x.strokeStyle = ink; x.lineWidth = w; arms(); x.stroke();                 // glyph over it
+        return 'url(' + c.toDataURL('image/png') + ')';
+      };
+      try {
+        const big = draw(48), sm = draw(32);
+        if (big) document.documentElement.style.setProperty('--cur-img', big);
+        if (sm) document.documentElement.style.setProperty('--cur-img-sm', sm);
+      } catch (e) { /* no canvas — the baked PNGs in styles.css stand in */ }
+    }
     _syncThemeColor() {
       const themeMeta = document.querySelector('meta[name="theme-color"]');   // absent in standalone.html
       if (!themeMeta) return;
@@ -909,6 +950,7 @@
       else document.documentElement.removeAttribute('data-theme');
       this._syncThemeColor();
       try { localStorage.setItem('europe-trip-theme-v1', dark ? 'dark' : 'light'); } catch (e) {}
+      this._paintCursor();                                     // the "+" is drawn at --ink, so it must be redrawn
       if (this._introGlobeRefresh) this._introGlobeRefresh();   // globe strokes re-read --ink/--red
       this.updateTopActions();
     }

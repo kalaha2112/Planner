@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-05T18:08:01.904Z
+  Built: 2026-08-06T15:02:07.240Z
 -->
 
 <html lang="en">
@@ -2466,24 +2466,21 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
        when the window resizes */
     height: 100vh; height: 100dvh;
   }
-  /* large monitors (17"+): the map's minmax(0,1fr) let it balloon and
-     overshadow the dock + pins. Cap the map at a generous size and give the
-     leftover width to a flexible track that CENTERS the (slightly widened)
-     dock — so the map↔dock gap equals the dock↔tab-strip gap instead of all
-     the slack piling up on one side. The tab strip is reserved with a matching
-     right padding so the two gaps read equal. Gated at ≥1600px so the ≤1440
-     balance is untouched. */
+  /* large monitors (17"+): widen the dock (360 → 500) so it holds its own
+     against a big map, and let the map keep taking every remaining pixel.
+
+     An earlier pass capped the map at 1440px and centred the dock in the
+     leftover track. That balanced the gaps at 1600–1920, but it came apart
+     above them: past ~2500px the map stopped growing while the dock kept
+     drifting right, opening a 300–700px void down the middle of the spread.
+     Sizing the DOCK's track and leaving the map on 1fr keeps the two glued
+     12px apart at every width, and the slack goes where slack belongs — into
+     the map.
+
+     552px = the 500px dock plus its own 52px right margin (40px tab strip +
+     a 12px gap), so dock↔map and dock↔tabs stay equal. */
   @media (min-width: 1600px) {
-    .leaf-route .leaf-inner {
-      grid-template-columns: minmax(0, 1440px) 1fr;
-      padding-right: 52px;              /* reserve the tab strip (40px + 12px) */
-    }
-    .leaf-route .ledger-map { margin-right: 0; }   /* dock spacing is handled by centering */
-    .leaf-route .ledger-col {
-      width: 500px;                     /* grow the dock a touch, keep it dense */
-      justify-self: center;            /* map↔dock gap == dock↔tab-strip gap */
-      margin-right: 0;
-    }
+    .leaf-route .leaf-inner { grid-template-columns: minmax(0, 1fr) 552px; }
   }
   /* the map is a framed block inset from the page edges — left/top/bottom
      keep 24px of page margin; the right edge (facing the dock) is tighter
@@ -2626,6 +2623,16 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
      without touching the existing 12px gap to the page's right edge */
   .overlay[data-act="overlay-budget"] .receipt-wrap {
     width: 348px; max-width: 348px; flex: 0 0 348px;
+  }
+  /* ≥1600 the dock is 500px wide, so the bill has to grow with it or it stops
+     covering what it replaces: pinned to the page's right edge at a fixed
+     348px, its left edge fell ~200px short of the dock's and left a gap
+     between the map and the receipt. Same +40px overhang into the (hidden)
+     tab strip as above, so 500 + 40 = 540 lands the left edges together. */
+  @media (min-width: 1600px) {
+    .overlay[data-act="overlay-budget"] .receipt-wrap {
+      width: 540px; max-width: 540px; flex: 0 0 540px;
+    }
   }
   /* the bill covers the info panel exactly — blank the panel's contents while
      it's open (the panel surface itself stays, as the paper's backing) */
@@ -3635,41 +3642,58 @@ html { -webkit-tap-highlight-color: transparent; }
 }
 
 /* ============================================================
-   CUSTOM CURSOR — hand-drawn dashed arrow (fine pointers only)
+   CUSTOM CURSOR — a big hand-placed "+" (fine pointers only)
    PNG data-URI so it inlines into the single-file build and works
    in Safari (SVG cursors are unreliable there). Touch / coarse
    devices (the phone app) keep native no-cursor behaviour.
    Appended last so its cursor rules win over earlier grab/pointer
-   declarations by source order. Hotspot = arrowhead tip (21,20).
+   declarations by source order. Hotspot = the crossing, centred.
+
+   Two sizes, largest first: `cursor` falls through to the next
+   entry when a UA won't render an image, and 32x32 is the only
+   size every browser guarantees (Firefox on Windows/Linux ignores
+   anything larger). So 48 lands where it can and 32 catches the
+   rest, instead of dropping all the way back to a system arrow.
+
+   The glyph is --ink over a --shell halo so it stays readable on
+   any surface — dark mode keeps a light beige map, where a plain
+   light glyph would vanish. These two are the pre-JS / no-JS
+   fallback; _paintCursor() repaints them from the live tokens.
    ============================================================ */
-:root { --cur-arrow-img: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABo0lEQVR4AeyUv0vDQBTH2ystVWuHGOgPurkI4ig6C9LNXXAp6OLqIgouiiK66qirg5Nu/QccVXSuitI0JaOCNG3q5yRTRbiLJyIkvC/v7vK475fvvTuR+OMvFhA7EDsQO/C/HLAsq1Iul+eLxeIa+QRclUqlV/Jh1AdV2QFILrLZ7DNEdSGEJKz1+/3pZDL5EgTBA+uRQlkAuz+BBKS34L7T6aw4jjPUbDYnWq3WkfwXBcoCer3eNsRvkFTIk+l0epOxD34UygJc121DvI/lYzAek5fy+bzF0azbtj3KWqRQFiB3x+oDRLQhr3EEjVwuV2V9DzfOyJFCSwAM75BvgGFItzj/c9YugXSFpB+6AhKQnuJCHSp5I3zmCzTjbKFQmOI4bNa1QlsAuwcQVsEu48+AfEQIccNEXk+Segj10u8raVB5O66pmANaYUSAZOx2u8tc1VU51oExAfSFC/Ej0ApjAjKZzE4qlbqT/aCjwJgAHBgHjbAflDUYE+D7/iLvw4wyc1hoTIDneQ5vghfuq5yMCVBmHCiMBcQO/LoDAz33ZfoBAAD//0CvMfMAAAAGSURBVAMAlF+PQV5ggZIAAAAASUVORK5CYII=); }
-/* dark mode: the ink arrow vanishes on dark surfaces — swap to a white one
-   (same shape, inverted). Applies to the custom cursor and the touch arrow. */
-[data-theme="dark"] { --cur-arrow-img: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABnElEQVR4AeyUvUvDQBjGW/sBKi5qoV+biyCOorMg3dwFl4Iuri6i4KIooquOujo46dZ/wFFF56rUNrU1QyBCSEji70C3onfxRAop78N7H+WeH+/dm4HEP/9igLgCcQXiCvRXBUzTLDebzQXDMNbJp+i61WrZ6CjqB1W6AphdOo7TwKgWBIEwrCaTyZkwDF/Ij6xHCmkATn9GCczu0EM2m10tFAqDpVJpknws9qJIGiCVSu1g/I5JmTzled4W2WP+q5AGyOfzHQwPKPkYjifkZcuyRrn/jW63O8JapJAGEKcDcQhEB/MqV1C3bbvCeJ9qnIv9KFICwNzBcBMNYbpdLBYvML1iLqrCUD2UAMTxmJ4BUmPcIHs8wkU01263p7mOcdaVQhkA0wCICtr7csJ8mNa8ZS7akyQfygC9juZtiO644Srme+1/t6YFQBik0+kVWnVNjFWkDYCrecX4CSmFNgDXdXd9378X70GFQBsAFZhA9c/3IM2gDSCTySzhOouUQhtALpczaM03JXf+rA2AsyJFDBBX4M8r8NPL/AAAAP//tVCE+QAAAAZJREFUAwAmgI9Bb851jgAAAABJRU5ErkJggg==); }
+:root {
+  --cur-img: url(data:image/png;base64,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);
+  --cur-img-sm: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAEKUlEQVR4AcSWe1AVVRzHf7tbzCTcx0wgMREQyIDIdZTQacLREQULygpLGm+JOjKNZVIhExQjkhnRDQQnL0ymNDY+ehj+EzQUgX9QFlnBIKnExQfq9YV3F0RHYa/fs4KyvHRXxZ3zOXvO7zy+391zzt3L0x1cbrfbFwTdwRSkywBEXwSNED4F2lD+FXihrDlpNgCh0J6ent3r83IsQSHjufkvxJGjrXU2lLOA5qTZABRmNTT+zRUV2+jixS76fV8dFW+0IUzTWKYVPQZ4h6NVpXOguYnV/VmmFT0GJIPBoNJxXehgdTPLtKLHgMtoVGuJksh01UEWuQ10GTCZTKqpRdHF6g9hg2qeT/MAKLlMg94AhKmrqxNN5M0yLegyYDabh2iIoshiQxtYdBR0GfDyMhDHcappXeIFVr/3BjiOuwwl2WRSa92zN4D19QSPggjwFIiDAbfJaMLtZpIkZSOuRvvaW/Au2i39I5UlQMADZINKsB+0gnPgand3d5fTebL98OGDB+r/+qOudm91VVVVheASFcH+eWhr2RdUWJQf96nto5zR+Obb7QWSJP6Lua1ssGIAhW3t7cfXpWe89fTc+Jio6U9GBodFPPawn7/xgcBgb7JMmUAxM6Mo4dnZ9HLyc2Rd/BKJgwzU1P5CeZ/kkq3g41FZuSqVUpa9wkNzAyAeTjxRSF70ahJt+3oLNTT+Q21HHNTRcZ7w0UHT3U/19fsIuj7AzJyM6+3tpYOHmu++0ggzhodPYqfoEpolHrv6rCAI0rz4RNRHTt7ePhQxMZJiYmbSnNh4CgkJJd/xj1BAQCCFhoZRwjPzKW3Vakp/J5PeWJFGy5a+TtZFKbQgKZkSE56nuXPm0YwZs+g161IqKrQTrs3QlnkUWMoqLSmjzzdupg+yctGhhHbt2EPVP/9GTQ2t5DzRSf81HT23t+bPpj27f6pBW3t42MQrp8846dixo9TScogCgx4/lf3+h7sy31uzLjcn77P8vA2bigpLtpTay3Z8tXXnDzu3l1eUf19ZU1iwqTxy0uQVEE0H1/8RwYndc5znwuSF1ty30zKy4TwVT5k42TIl2tfXzx9v6EH08QEWEIuBzUScBw24cCz9UP0f7WtABlgJlgMrWAASQSxIAqWgB/2vG2AFBL4Da8F68CWoAPvBCaB0Zv36ENi+6SsrN4EX2F1mmRb6l0DLGNZXkOVedr+BICgG1MEbrSMX9BrgZVn9sGNtYMgS8ILyLGP2BoYY6NsDY2aAl933eQlk/HoO3FpjvQdo8DHkBeUUDD6uAz0OW1Z2zrAtowc7goMnqHpERiifeEkVvI2KXgPVSxYvp+gnppPBYKQlKak0dWo0k6tjmRb0GrBHRU2zV/5Ye9zR4iRbfvFViGbiF9OBu6akywCEOsGbIACw5IEsfzjlW8WuAQAA///Ttrn3AAAABklEQVQDAPMMwFCLOq35AAAAAElFTkSuQmCC);
+}
+/* dark mode: ink and shell swap, so the glyph and its halo swap with them */
+[data-theme="dark"] {
+  --cur-img: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAHyklEQVR4AdRYDXBU1RX+7n2w+7a77+1u01L8QaxlpEhR60iVtIBgWinV8lMYKDCSaYiEgFAUiFBMgm1AoEAgxAiWQsEEhowtWn+AxGRKgEDBYrXC4GDFH2ZQhH37E3Y32X3Xe+9uDJiNzOBj5nlnz73nnvfeOec759x3312Kb3i7JgDcuvMB3a9WaT71dc2vbtQ0V/a1ipPlADS/c4Wi0N0AKejV64bhWVlZ+aQbDnj8zpm4Bs1SAJpXzSOg8/On56KpeS8OHK7Hsbf2Y83aZSCMVLi9zp/D4mYpABCydNj9Q7C4eAFuuulGtLex40Zh7LhfE0rJ2naZVaOVADRC0CM7+56Mvt354wEgIP103dkn4w1XKbQMgMvl8gofCCFi6EQ9e35PykxKrpeMRZ1lAKLOaET4FInIQbCXka7rck5g+iVjUWcZABgIgrdgMMz7zj9d19JC6kszlgzUEi0pJQxgwVAolJp9qde97RlgtgXA/YcRNDID8KYBAMS+ABiI0VUGNM0D0Uw7A+Ap4AAyrwFKKTTdAwJm00UswiszkBmAuKxrYiHbuIREBsKhrgF4fWKrYLZeA4FwOALTNEXAO1HqVWrjDFAwQ3gdCmZ+E4nNjK8B+2ZAlJAAEOyijLw+vhcQ2AiAH16n1/kDXXfd6/aqOSboLeDtqzIAEK/Hpy7WfWoJP+ws0ryu+brPOcfjdxZqXjVf86lT3X51ksfrGKf5HKP4x99IN9ft8Tj6I0PLuBPrevd7PF7XeI/fOYMbK9Z9rgp+wtqu+9Q6zef6r+Z3ndH9LqbDZTgpPQUFzQoldZRgtrAR7LKENHEZlJA/gpBSAlJGKFaA0HIKWkko2UgI2aKAVFOq1BKi7IJCX1GE7u7K/3S/+qEAhUvaZQB0n1rKbwpB6XaIUuykoM9wY0tAMMvtdk/seV3PnL4/7HP73Xffeb347h815leY8vBEFM7Kx+PzH0XRwsfwZEkR+vW79RITHWxBYR62bNuA6h2bsKN2C7bVPIfNf6vCxk3rUPnsaqytWI4/ry7DsuVL8FTZH1BcWoQnFj2OeQtmY9ojU9G3X99ehIPimcpr1/oFAM3nXAVCSh6dU6AJIy+/Vot9B/fgzbcP4IMzx3H83aM4/EYj6hpewt9frMGWrc9i3fqVKFtWzB2fi9m/n8GBTJOGsr6T1a7/slFVnRg2fDB+NngQBmX/BEOG/hTDc4bigRE5ePChERg99iGMnzAGk6aMx9TcycjLn4oZM/PAfZKB2Vu/C6PHPAhQrFd96s1CuQTg9jsGEEIfE1GYt2CONDLg9v7o3bsX/N+2dOMUNr8WFfOsEBC1G8FkoUgC4KUy2eNxyygIoZ1JZFfsJ4ShIwNg+K7D6cQ3oUWjMYT4a5oRnAZvMgME+PjC+QsQuyiX2fq3o6ZW+sdgviQYCSCJ5D/EZPnSNWK4In36yTmcOHESTfsO4sVdr2Lzpm1Ys2o9VjxdjqV/WolXX9mD85+dx9mzn+Cjj87g/f+fxrsnT2HP7nrkPlyAKb/Nw8TxucjLnYnZM+ehaP6TKC1eJp9fV16Fv/5lK7ZX10rd9XUNOLD/EHa/VoeFC0og7gNjpS2B1reFoxJAi9H2Jv9+Kdi2dTsKp89F+apKrFy+FouKSjF92hz8ZvRkDBsyEnf0H4TeN9yGgXcNxYicMdyRadIBobR89TOorNiIDVWbceL4SYhaFQd5/ucWvn/Lzbi1bx+IT4nG1/dx4M1oPvhv1Nc1Sid31LwggyCeX7WyAktKnsYT3FkBLi93FiZN+J30o7p6ZwzMnBsyYk8J5wVJAIKJBOMbGNjgl/+5e9+a1ZVYv46/r5/fKZEfPXIM7506fS5gGO8wxhoBtpOvm0qTsRITZqFpJsdx/r5k0vwlv3bR4XDEhc4vk8PRPcyfO8LtDAkFoiRNOpLRrGRr9LpWsN5x0+xjtiVv41VxR8JMDGQJZAvdCZa4KxyIuUJGvJzrZZzk7wsAYsZv2B82YkPbYtEbhRGuqL/ZFu0hDIWNaA9+/Uf8+vBQIDYhZERnRXgkIoF4VSTY+gLn/0XM+BsA+RZjLOMbIRK5qIFgoJlkbnS0MD9GX2hpwdlYIPZhPBh/LxJpPdESaH3rYrDtaDgcbRa6Lxptxzoe6eAuA9AujkZxhjvbxBUd5/+SnGuXX2lkjH9U8JsUReF955+ZTKaEBGkmNf06fUYAV6uQHwOk55TKoZMaXmpSRkDsCYCpqvRcUTLHJckRphHYEwBfoNLzLgGkS4jYtYT44k1nQA4y2Jd2/C2VmiZsWkIOM7WIaVcllDQlAEISNi0hMFlClGbOADNTfifsW0KpDChU4pDRvrRrLyH7roHuaQBK5gwk04sYxKZrACxVQsoVAJA2m25kHTtxFyWU3geIbTMAEHxFSyTa5NVWioRkLOgyh+oqFZNE28fiUcMIiqETRcItUhZH/IJkLOgsBSC+KHkZfbq/6VBG144e+Q/frNk7CCKQ8YarEFoKQNhnxCyt29sAccB5n5/EhExQzfO1aGxoApi5WMytIssBRPj5gHtZJY6Y9w0eKU9w4hS3sKgEMFlZ2GjdZZXzQo/lAIRSfuApRDJxL4O5AozVMbDnTJPdHwrGLI2+sHVNAAjFoVDb4XAgXhQyYr8IB2KPRIKxBiG3mj4HAAD//54GT30AAAAGSURBVAMAdGcHjlrmueAAAAAASUVORK5CYII=);
+  --cur-img-sm: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAEyElEQVR4AbxWDVBUVRT+7ttYl3b37UMzyxhQG7Sc0PFvdKrJn3JscqZGHTVHDZvRtKTQUMSG1DImtR/GVCxSC1JQCaxswFEQdKTpD4YfESHQQBwrqd19+2gXaN/tvEXEBQUeDpw5575z7z0/35xz331PwF2Q2YwhJsk0DHdBvQJglYxzrEGmUiHAdM3I2GWrZDpNGCwkulk3AFEcEGYwBGTEbFgTXl75CzuakYzhw0OnW22mjbqzk4NuAJyxqWPGPsYi31gJq9WCyVMm4bXIFWAMk9AL0g8AEIYND/VL9cjokeAMwX6LPZzoBkCZZMWl+IWXJInmTBvoqY91A+BQHbIs+2WxiVaa8/4BYIBAAFyUsJ1FmwgGFkgrAoku1u3AubcTAEEQYLGYSXCfruxkrBuAqjY7ZKd/CygORGoDYwN0t0E3gMZGOBSlEaqqanlviq8NTO17AJTRwzlXO1ZBq4CXCX0CwBwYiIcsFuNoqzXwcbNtwEwCwZ1yh4MoijAwtk6UTFu6EqsU+KY5yBhOMXws+EbAaJFMcWKQKVuUAgtFyVRDhg1WydQyZGiQEhwaWj9ydFj5hMljC6ZNe+Lk089MN9jo5N/w9T2WRixCZNSqmWujIzd3JfPmP/+RzSoWU67FmqMPAE1SgoOHbo3ftuXZ49lHx58pODGiuOzcoJra0nsuVhfh56J85OZ/j2PfpeFg2n58kZIISbJp/jdl2vQnsX5DFNZEr+5SEnZuQ9K+XQLnLEFz1gCYAbbwQHIilixdCLrnoV21AwcNREBAAPqCJkwcB/p2DIYESbBYcK/2Ho8aFYb+osrKKnBwNxyQBUXBdVX1yjmn8nAn4pyj4XoDKi5cxA8FPyEv9yxqqi/jzz/+Ql1dPX6rqsGJ7FPYsysJOxP24rO9B5D85SEcTv0a32QeR3bWSZzOOYOCcz8i9WA6NqzbBM7Z55RP1VoAFXxjVGQM1kbFYvv7CVgfHYeIJa/guVnzMGncVIwICcf4sU81zJo55/yL85flRby0qr6qqrp5yAP3IyQkGGEjH0Zt7ZVrO7YlHP74g0+2xr+348NNb8XviVn39v6o12NSVy5fk7ksYlXWogUv58XGbD5Wfr7iVcXhjiYA8AFQ7E2JiuJekJn+7Tu7dyfFHUnNWJGfc3Z2SWnZxKt1dcGOvxsDXA73YJfdE+5yeGYw8AsAN2oB2sQlux6kulbLDs8ml71pvexwR5LtctnuWUy+81x2z2yazyB9ruJs+pT8/iNpBaApitOdTs5bFLsn3uX07JPlpqx/nS2Fbjeu0r7PmJ6tzGEgatVvjF6vqmm+QVN6Kr4K9NS4zY6DANAHqG2uPekcUSvh1XQ90isAlEBgzN/VVwHWXwAYDILBgFtJA8DQXwDA6Aj4V0D1UvVVRsOtsLrX/aN0b++zYBx0d/m7ahVAv7UAoAr4t0A7hAxq/1RAK4Ng6FAByq0y+L+ummE34h+lG+P2bf7P75dq26ekVZRXQeCs878a7XXFvQJA93juoa+OoPDXYjjpFz0lJQ0lJWVo5ijoKtnt9noFwOV0JxYXlSXOfWHRlTGPTkFc7LstXEWsx+m5dLskXa31CgAFdMlO92q650Nku5vRHW8kUNtpvRN3t/A/AAAA//9WCtW5AAAABklEQVQDAM2W5FCaov7rAAAAAElFTkSuQmCC);
+}
 @media (pointer: fine) {
   html, body,
   a, button, select, summary, label,
   [data-act], [data-drag], [data-map-drag], [data-grip-stop],
   .cal-cell, .stop, .map-stop, .grip, .item-grip,
   .todo .box, .outfit, .stock-item, .placed-sticker,
-  .opt .choose, .leaflet-container { cursor: var(--cur-arrow-img) 10 11, auto; }
+  .opt .choose, .leaflet-container { cursor: var(--cur-img) 24 24, var(--cur-img-sm) 16 16, auto; }
   /* text entry keeps an I-beam so the caret stays findable */
   input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]):not([type=range]),
   textarea, [contenteditable="true"] { cursor: text; }
 }
 
-/* Touch pointer indicator — the same dashed arrow, shown at the fingertip
-   on touch devices (iPhone/iPad) since CSS cursors do not apply there.
-   Driven by initTouchPointer(); pointer-events:none so it never blocks taps. */
-.touch-arrow {
+/* Touch pointer indicator — the same "+", shown at the fingertip on touch
+   devices (iPhone/iPad) since CSS cursors do not apply there. Driven by
+   initTouchPointer(); pointer-events:none so it never blocks taps. The glyph
+   carries its own halo, so this needs only a soft shadow to lift it. */
+.touch-cursor {
   position: fixed; left: 0; top: 0; z-index: 2147483000;
-  width: 34px; height: 34px;
-  background: var(--cur-arrow-img) center/contain no-repeat;
-  filter: drop-shadow(0 0 1.5px rgba(244,242,236,.95)) drop-shadow(0 1px 3px rgba(35,20,12,.4));
+  width: 38px; height: 38px;
+  background: var(--cur-img) center/contain no-repeat;
+  filter: drop-shadow(0 1px 3px rgba(20, 23, 9, .3));
   pointer-events: none; opacity: 0; will-change: transform, opacity;
   transition: opacity .18s ease;
 }
-.touch-arrow.on { opacity: 1; }
+.touch-cursor.on { opacity: 1; }
 
 /* ============================================================
    SOCIAL IMPORT — the shared-post review sheet
@@ -5145,6 +5169,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       this.ensureMap(0);
       this.initIntro();
       this.initLedgerNav();
+      this._paintCursor();      // "+" cursor, drawn at the current --ink
       this.initTouchPointer();
       this.initShareTarget();   // ?title=&text=&url= from the PWA share sheet
       // crossing the mobile-map breakpoint (resizing an iPad window, rotating)
@@ -5204,7 +5229,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       this.render(); this.bumpModal(); this.touchMap();
     }
     /* Touch pointer indicator: iOS/iPadOS have no cursor, so show the same
-       dashed arrow at the fingertip — but only for taps and drags. When the
+       "+" at the fingertip — but only for taps and drags. When the
        browser claims the gesture as a scroll it fires pointercancel (and the
        page scrolls), so we hide instantly there; app drags capture the pointer
        (touch-action:none grips), so no cancel fires and the arrow follows the
@@ -5212,11 +5237,11 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
     initTouchPointer() {
       if (this._touchArrow) return;
       const el = document.createElement('div');
-      el.className = 'touch-arrow';
+      el.className = 'touch-cursor';
       el.setAttribute('aria-hidden', 'true');
       document.body.appendChild(el);
       this._touchArrow = el;
-      const SIZE = 34, TIPX = SIZE * 21 / 32, TIPY = SIZE * 20 / 32, LIFT = 8;
+      const SIZE = 38, TIPX = SIZE / 2, TIPY = SIZE / 2, LIFT = 8;   // hotspot = the crossing
       let raf = 0, x = 0, y = 0, hideT = 0, down = false;
       const place = () => { raf = 0; el.style.transform = `translate3d(${x - LIFT - TIPX}px, ${y - LIFT - TIPY}px, 0)`; };
       const show = (e) => {
@@ -5280,6 +5305,46 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
     }
     // Point the browser-chrome colour at whatever --shell currently resolves to,
     // so it tracks the active theme AND the active skin instead of two literals.
+    /* Repaint the "+" cursor from the live tokens.
+
+       A data-URI cursor is a frozen image — it cannot reference a custom
+       property — so the glyph is drawn here at the computed --ink and given
+       a --shell halo, and the result is written back onto :root as an inline
+       value (which outranks both baked fallbacks in styles.css). The halo is
+       what lets one glyph work on any background: in dark mode the map keeps
+       its light beige land, and a plain light "+" would disappear over it.
+
+       Two sizes, because `cursor` falls through its list when a UA refuses an
+       image and only 32x32 is universally rendered. The touch indicator picks
+       up the same --cur-img for free. */
+    _paintCursor() {
+      const cs = getComputedStyle(document.documentElement);
+      const ink = cs.getPropertyValue('--ink').trim() || '#141709';
+      const shell = cs.getPropertyValue('--shell').trim() || '#ffffff';
+      const draw = (S) => {
+        const c = document.createElement('canvas');
+        c.width = c.height = S;
+        const x = c.getContext('2d');
+        if (!x) return '';
+        const a = S * 0.375, w = S * 0.13, bow = S * 0.028;
+        x.translate(S / 2, S / 2);
+        x.rotate(-1.5 * Math.PI / 180);          // hand-placed, not machined
+        x.lineCap = 'round';
+        const arms = () => {
+          x.beginPath();
+          x.moveTo(-a, 0); x.quadraticCurveTo(0, -bow, a, 0);   // barely bowed, like a drawn stroke
+          x.moveTo(0, -a); x.quadraticCurveTo(bow, 0, 0, a);
+        };
+        x.strokeStyle = shell; x.lineWidth = w + S * 0.065; arms(); x.stroke();   // halo first
+        x.strokeStyle = ink; x.lineWidth = w; arms(); x.stroke();                 // glyph over it
+        return 'url(' + c.toDataURL('image/png') + ')';
+      };
+      try {
+        const big = draw(48), sm = draw(32);
+        if (big) document.documentElement.style.setProperty('--cur-img', big);
+        if (sm) document.documentElement.style.setProperty('--cur-img-sm', sm);
+      } catch (e) { /* no canvas — the baked PNGs in styles.css stand in */ }
+    }
     _syncThemeColor() {
       const themeMeta = document.querySelector('meta[name="theme-color"]');   // absent in standalone.html
       if (!themeMeta) return;
@@ -5292,6 +5357,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       else document.documentElement.removeAttribute('data-theme');
       this._syncThemeColor();
       try { localStorage.setItem('europe-trip-theme-v1', dark ? 'dark' : 'light'); } catch (e) {}
+      this._paintCursor();                                     // the "+" is drawn at --ink, so it must be redrawn
       if (this._introGlobeRefresh) this._introGlobeRefresh();   // globe strokes re-read --ink/--red
       this.updateTopActions();
     }
