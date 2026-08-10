@@ -72,6 +72,7 @@
      / pull all hit the same store. Each `create` returns the code id;
      `get` returns the stored JSON text; `put` overwrites it. */
   const SYNC_KEY  = 'europe-trip-sync-v1';            // local record of the link {id, rev, lastSyncedAt}
+  const ACCOM_SHUT_KEY = 'europe-trip-accom-shut-v1'; // which lodging options are collapsed, per trip+stop
   const APP_TAG   = 'europe-trip-planner';            // payload marker so we only adopt our own data
   const SYNC_POLL_MS  = 20000;                        // how often to pull while the tab is visible
   const CLOUD_PUSH_DEBOUNCE_MS = 900;                 // coalesce rapid edits into one upload
@@ -5515,6 +5516,38 @@
       </div>`;
     }
 
+    /* Which lodging options are collapsed, kept per trip AND per stop.
+
+       Lives in localStorage rather than in the trip data. It is a view
+       preference, not itinerary content, so putting it in the synced payload
+       would push a revision to every device each time a caret is clicked, and
+       would fight anyone reading the same trip elsewhere.
+
+       Keyed by trip as well as stop: without the trip in the key, stop 0 of
+       one trip would inherit stop 0 of another's collapsed rows.
+
+       The stored indices are positional, so removing an option would leave
+       every later index pointing at the wrong row. accom-remove drops the
+       stop's entry outright rather than trying to reindex. */
+    _shutKey(idx) { return `${this.data.active || '?'}:${idx}`; }
+    _loadShut(idx) {
+      if (!this._shutStore) {
+        try { this._shutStore = JSON.parse(localStorage.getItem(ACCOM_SHUT_KEY) || '{}') || {}; }
+        catch (e) { this._shutStore = {}; }
+      }
+      const saved = this._shutStore[this._shutKey(idx)];
+      return new Set(Array.isArray(saved) ? saved : []);
+    }
+    _saveShut(idx, set) {
+      if (idx == null) return;
+      if (!this._shutStore) this._shutStore = {};
+      const k = this._shutKey(idx);
+      // an empty set is the default — store nothing rather than an empty array
+      if (set && set.size) this._shutStore[k] = [...set].sort((a, b) => a - b);
+      else delete this._shutStore[k];
+      try { localStorage.setItem(ACCOM_SHUT_KEY, JSON.stringify(this._shutStore)); } catch (e) {}
+    }
+
     // Lodging options list for one stop — shared by the app's modal and the
     // web ledger's page 2. Handlers key off this.accomOpenIdx, which both keep.
     renderAccomBody(trip, idx) {
@@ -5522,9 +5555,15 @@
       if (!stop.accom) stop.accom = { options: [] };
       const accomList = stop.accom.options;
       const stampIdx = this._justChoseAccom; this._justChoseAccom = null;   // one-shot: stamp the badge only when just chosen
-      // collapse state is view-only (never saved), and belongs to one stop —
-      // reset it whenever a different stop's options are being shown
-      if (this._accomCollapsedStop !== idx) { this._accomCollapsedStop = idx; this._accomCollapsed = new Set(); }
+      // Reload the collapse state whenever a different trip or stop is shown.
+      // Comparing the full trip+stop key, not the stop index alone: switching
+      // trips can land on the same index and would otherwise keep the previous
+      // trip's collapsed rows.
+      if (this._accomShutKey !== this._shutKey(idx)) {
+        this._accomShutKey = this._shutKey(idx);
+        this._accomCollapsedStop = idx;
+        this._accomCollapsed = this._loadShut(idx);
+      }
       const collapsed = this._accomCollapsed || (this._accomCollapsed = new Set());
       const allCollapsed = accomList.length > 0 && accomList.every((_, oi) => collapsed.has(oi));
       const caret = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>`;
@@ -6033,11 +6072,18 @@
         case 'closet-paste': this.pasteImageFromClipboard('closet'); break;
         case 'outfit-delete': this.removeOutfitFromCloset(id); break;
         case 'accom-choose': this.chooseAccomOption(this.accomOpenIdx, i); break;
-        case 'accom-remove': if (this._accomCollapsed) this._accomCollapsed.clear(); this.removeAccomOption(this.accomOpenIdx, i); break;
+        // removing shifts every later option down one, so the saved indices no
+        // longer describe the same rows — drop them instead of reindexing
+        case 'accom-remove':
+          if (this._accomCollapsed) this._accomCollapsed.clear();
+          this._saveShut(this._accomCollapsedStop, null);
+          this.removeAccomOption(this.accomOpenIdx, i);
+          break;
         case 'accom-add': this.addAccomOption(this.accomOpenIdx); break;
         case 'accom-toggle': {
           const set = this._accomCollapsed || (this._accomCollapsed = new Set());
           if (set.has(i)) set.delete(i); else set.add(i);
+          this._saveShut(this._accomCollapsedStop, set);
           this.render();
           break;
         }
@@ -6047,6 +6093,7 @@
           const everyShut = list.length > 0 && list.every((_, oi) => set.has(oi));
           set.clear();
           if (!everyShut) list.forEach((_, oi) => set.add(oi));
+          this._saveShut(this._accomCollapsedStop, set);
           this.render();
           break;
         }
