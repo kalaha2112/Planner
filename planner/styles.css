@@ -930,7 +930,7 @@ a { color: inherit; }
 .accom-dialog { max-width: 640px; }
 .accom-city { font-family: var(--serif); font-size: 24px; font-weight: 700; letter-spacing: -.02em; color: var(--ink); line-height: 1; }
 .accom-sub { font-family: var(--script); font-style: italic; font-size: 13px; color: var(--green); margin-top: 5px; }
-.accom-body { padding: 18px 26px 26px; display: flex; flex-direction: column; gap: 14px; }
+.accom-body { padding: 18px 26px 26px; display: flex; flex-direction: column; gap: 10px; }
 .opt { background: var(--surface); border-radius: var(--r-card); padding: 17px 18px; display: flex; flex-direction: column; gap: 12px; position: relative; }
 .opt .top { display: flex; align-items: flex-start; gap: 10px; }
 .opt .choose { flex-shrink: 0; margin-top: 3px; width: 20px; height: 20px; border-radius: var(--r-check); border: 2px solid var(--dash); background: var(--surface); cursor: crosshair; display: flex; align-items: center; justify-content: center; padding: 0; }
