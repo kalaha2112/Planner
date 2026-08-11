@@ -1883,7 +1883,9 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
      and Route above / Packing below stay ordinary free-scroll sections. */
   .leaf-group {
     position: relative;
-    height: 200vh; height: 200dvh;   /* 1 screen to read + 1 screen of horizontal slide travel */
+    /* 1 screen to read + 1 screen of slide per gap between panels. Three panels
+       = two gaps, so 300vh. */
+    height: 300vh; height: 300dvh;
     background: var(--surface);
   }
   .leaf-sticky {
@@ -1894,13 +1896,26 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     background: var(--surface);
   }
   .leaf-head-shared {
-    position: relative; z-index: 7; flex: none;   /* top of the stage, above both panels */
+    position: relative; z-index: 7; flex: none;   /* top of the stage, above the panels */
     background: var(--surface);
     padding: 22px 54px 14px 42px;
+    /* Collapses away on the Packing panel — a city title and stop picker say
+       nothing about the suitcase. The height is an explicit pixel value
+       published by _watchLedgerSections, because height:auto -> 0 does not
+       animate; the strip below is flex:1 so it takes the freed space. */
+    height: var(--shared-head-h, auto);
+    overflow: hidden;
+    /* the collapse changes layout inside a sticky element mid-scroll; without
+       this the browser's scroll anchoring compensates and nudges scrollY */
+    overflow-anchor: none;
+    transition: height .26s ease, padding .26s ease, opacity .2s ease;
+  }
+  .leaf-sticky.on-pack .leaf-head-shared {
+    height: 0; padding-top: 0; padding-bottom: 0; opacity: 0; pointer-events: none;
   }
   .hstrip { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; }
   .htrack {
-    display: flex; width: 200%; height: 100%;
+    display: flex; width: 300%; height: 100%;
     transform: translateX(0);
     /* no CSS transition — the transform tracks the live scroll position each frame;
        a transition would make the slide lag behind the scroll */
@@ -1909,7 +1924,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   /* each panel is one screen wide; it scrolls its own vertical overflow so a tall
      section still reads fully */
   .leaf-group .ledger-leaf {
-    flex: 0 0 50%; width: 50%;
+    flex: 0 0 33.3333%; width: 33.3333%;
     min-height: 0; height: 100%;
     overflow-y: auto; overflow-x: hidden;
     scrollbar-width: thin;

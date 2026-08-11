@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-11T13:53:12.310Z
+  Built: 2026-08-11T14:14:47.432Z
 -->
 
 <html lang="en">
@@ -2661,7 +2661,9 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
      and Route above / Packing below stay ordinary free-scroll sections. */
   .leaf-group {
     position: relative;
-    height: 200vh; height: 200dvh;   /* 1 screen to read + 1 screen of horizontal slide travel */
+    /* 1 screen to read + 1 screen of slide per gap between panels. Three panels
+       = two gaps, so 300vh. */
+    height: 300vh; height: 300dvh;
     background: var(--surface);
   }
   .leaf-sticky {
@@ -2672,13 +2674,26 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     background: var(--surface);
   }
   .leaf-head-shared {
-    position: relative; z-index: 7; flex: none;   /* top of the stage, above both panels */
+    position: relative; z-index: 7; flex: none;   /* top of the stage, above the panels */
     background: var(--surface);
     padding: 22px 54px 14px 42px;
+    /* Collapses away on the Packing panel — a city title and stop picker say
+       nothing about the suitcase. The height is an explicit pixel value
+       published by _watchLedgerSections, because height:auto -> 0 does not
+       animate; the strip below is flex:1 so it takes the freed space. */
+    height: var(--shared-head-h, auto);
+    overflow: hidden;
+    /* the collapse changes layout inside a sticky element mid-scroll; without
+       this the browser's scroll anchoring compensates and nudges scrollY */
+    overflow-anchor: none;
+    transition: height .26s ease, padding .26s ease, opacity .2s ease;
+  }
+  .leaf-sticky.on-pack .leaf-head-shared {
+    height: 0; padding-top: 0; padding-bottom: 0; opacity: 0; pointer-events: none;
   }
   .hstrip { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; }
   .htrack {
-    display: flex; width: 200%; height: 100%;
+    display: flex; width: 300%; height: 100%;
     transform: translateX(0);
     /* no CSS transition — the transform tracks the live scroll position each frame;
        a transition would make the slide lag behind the scroll */
@@ -2687,7 +2702,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   /* each panel is one screen wide; it scrolls its own vertical overflow so a tall
      section still reads fully */
   .leaf-group .ledger-leaf {
-    flex: 0 0 50%; width: 50%;
+    flex: 0 0 33.3333%; width: 33.3333%;
     min-height: 0; height: 100%;
     overflow-y: auto; overflow-x: hidden;
     scrollbar-width: thin;
@@ -4462,6 +4477,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
   const APP_TAG   = 'europe-trip-planner';            // payload marker so we only adopt our own data
   const SYNC_POLL_MS  = 20000;                        // how often to pull while the tab is visible
   const CLOUD_PUSH_DEBOUNCE_MS = 900;                 // coalesce rapid edits into one upload
+  const PACK_SNAP_MS = 700;                           // slow glide onto Packing, so the suitcase is seen opening
 
   // Public web build — the installable PWA served by GitHub Pages from the
   // planner/ folder on the main branch (redeployed on every merge). The Sync
@@ -4989,7 +5005,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       // pure view state.
       this.magIdx = 0;              // 0 route · 1 itinerary · 2 transport&hotels · 3 packing&to-do
       this._magAnimating = false;
-      this.hPage = 0;               // itinerary(0) | transport&hotels(1) — the panel the horizontal slide is currently on
+      this.hPage = 0;               // itinerary(0) | transport&hotels(1) | packing(2) — the panel the slide is on
       // ---- app (≤700px): the phone twin of the ledger — an overview page with
       // entry cards that rise a sub-page up (Itinerary / Hotel / Transportation)
       // with a tab bar pinned on top. appStopIdx is the shared stop selection.
@@ -8979,8 +8995,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       <div class="ledger-stage">
         <div class="ledger-book${this.budgetOpen ? ' bill-open' : ''}" data-page="${page}">
           ${routeLeaf}
-          <div class="leaf-group"><div class="leaf-sticky">${sharedHead}<div class="hstrip"><div class="htrack">${daysLeaf}${planLeaf}</div></div></div></div>
-          ${packLeaf}
+          <div class="leaf-group"><div class="leaf-sticky">${sharedHead}<div class="hstrip"><div class="htrack">${daysLeaf}${planLeaf}${packLeaf}</div></div></div></div>
           <button class="ledger-edge prev" data-act="ledger-prev" title="Previous page" aria-label="Previous page">‹</button>
           <button class="ledger-edge next" data-act="ledger-next" title="Next page" aria-label="Next page">›</button>
           <nav class="ledger-tabs" aria-label="Pages">${tabs}</nav>
@@ -9000,17 +9015,28 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       const y = window.scrollY || 0;
       let top;
-      if (i === 1 || i === 2) {
+      if (i >= 1) {
         const group = this.root.querySelector('.leaf-group'); if (!group) return;
         const gTop = y + group.getBoundingClientRect().top;
-        const range = group.offsetHeight - window.innerHeight;   // the extra screen = the slide travel
-        top = gTop + (i === 2 ? range : 0);
+        const range = group.offsetHeight - window.innerHeight;   // the extra screens = the slide travel
+        top = gTop + range * ((i - 1) / 2);                      // 1 → none of it · 2 → half · 3 → all
       } else {
         const sec = this.root.querySelector('.ledger-leaf[data-leaf="' + i + '"]');
         if (!sec) return;
         top = y + sec.getBoundingClientRect().top;
       }
-      window.scrollTo({ top: Math.round(top), behavior: reduced ? 'auto' : 'smooth' });
+      top = Math.round(top);
+      if (reduced) { window.scrollTo(0, top); return; }
+      // Hand the move to _snapScroll rather than native smooth scrolling. Both
+      // write window.scrollY, and now that _snapVertical covers the whole stage
+      // (not just two narrow transition zones) every tab jump lands inside a
+      // snap-eligible range — so the two animators fought each other and the
+      // page stalled mid-slide, or overshot onto the wrong panel entirely.
+      // One animator, and _snapAnimating already tells the scroll listener not
+      // to schedule a competing snap.
+      const toPack = i === 3;
+      if (toPack && !this._packScrubActive) this._setPackAnim('open');
+      this._snapScroll(top, toPack ? PACK_SNAP_MS : 420);
     }
     // Scroll-driven: maps the live scroll position to the horizontal slide and the
     // active section. Called (rAF-coalesced) on every scroll — the slide is as smooth
@@ -9023,17 +9049,22 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       if (!group || !track) return;
       const vh = window.innerHeight;
       const r = group.getBoundingClientRect();
-      const range = group.offsetHeight - vh;                     // one screen of slide travel
-      let progress = range > 0 ? (-r.top) / range : 0;           // 0 itinerary … 1 transport
+      const range = group.offsetHeight - vh;                     // two screens = the two slides
+      let progress = range > 0 ? (-r.top) / range : 0;           // 0 itinerary … 1 packing
       progress = Math.max(0, Math.min(1, progress));
-      track.style.transform = 'translateX(' + (-progress * 50) + '%)';   // 50% of a 200%-wide track = one panel
-      this.hPage = progress >= 0.5 ? 1 : 0;
-      // active section: Route while the stage is still low, Packing once it's high,
-      // otherwise the stage half the slide is on
+      // a 300%-wide track travels 200% of the viewport to bring its last panel in
+      track.style.transform = 'translateX(' + (-progress * (200 / 3)).toFixed(4) + '%)';
+      const panel = progress * 2;                                // 0 itinerary · 1 transport · 2 packing
+      this.hPage = Math.round(panel);
+      // The shared city header sits above the track, so it would ride over the
+      // packing panel too — collapse it once packing is more than half in.
+      const sticky = this.root.querySelector('.leaf-sticky');
+      if (sticky) sticky.classList.toggle('on-pack', panel > 1.5);
+      // active section: Route while the stage is still low, otherwise whichever
+      // panel the slide has come to
       let cur;
       if (r.top >= vh * 0.5) cur = 0;
-      else if (r.bottom <= vh * 0.5) cur = 3;
-      else cur = progress >= 0.5 ? 2 : 1;
+      else cur = 1 + Math.max(0, Math.min(2, Math.round(panel)));
       if (cur !== this.magIdx) {
         this.magIdx = cur;
         this._syncLeafClasses();
@@ -9043,6 +9074,10 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
           const el = this.root.querySelector(cur === 0 ? '.leaf-route' : '.leaf-pack');
           if (el) this._playEnter(el.querySelector('.leaf-inner') || el);
         }
+        // Drive the case off the panel rather than leaving it to the
+        // IntersectionObserver: inside the clipped strip that fires late.
+        // Skipped when the GSAP scrubber owns the lid angle.
+        if (!this._packScrubActive) this._setPackAnim(cur === 3 ? 'open' : 'closed');
       }
     }
     _syncLeafClasses() {
@@ -9057,43 +9092,78 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
     _watchLedgerSections() {
       if (!this._webMag()) return;
       const sh = this.root.querySelector('.leaf-head-shared');
-      if (sh) document.documentElement.style.setProperty('--shared-head-h', sh.offsetHeight + 'px');
+      if (sh) {
+        // measure with the height rule off, or we just read back the pixel value
+        // published last time and it could never follow a resize
+        sh.style.height = 'auto';
+        const h = sh.offsetHeight;
+        sh.style.height = '';
+        document.documentElement.style.setProperty('--shared-head-h', h + 'px');
+      }
       this.magIdx = -1;          // force _onLedgerScroll to re-apply tab/map for the current section
       this._onLedgerScroll();
     }
-    // Snap the two VERTICAL transitions so they land decisively, while the middle
-    // horizontal slide (Itinerary↔Transport) stays free. The stage's scroll range:
-    //   0 … itin(gTop) … [ horizontal slide ] … transport(gTop+range) … packing …
-    // If the scroll rests inside Route↔Itinerary or Transport↔Packing, glide onto
-    // the section in the direction you were scrolling — so a flick down from Home
-    // lands on Itinerary, and past Transport lands on Packing.
+    /* Snap every transition, the horizontal ones included.
+
+       The slide used to be left free so you could rest at a halfway split with
+       two panels showing. With three panels that reads as being stuck between
+       pages, so the whole sequence now lands on a panel. The stage's scroll
+       range, in order:
+
+         0(route) … gTop(itinerary) … +range/2(transport) … +range(packing)
+
+       Resting between two of those glides onto whichever one you were heading
+       for, so a flick down from Route lands on Itinerary and then carries on
+       panel by panel. A real wheel or touch during the glide aborts it
+       (cancelSnap), so this still never fights the user. */
     _snapVertical() {
       if (!this._webMag() || !this._introParked || (this._anyModalOpen && this._anyModalOpen())) return;
       const group = this.root.querySelector('.leaf-group'); if (!group) return;
       const vh = window.innerHeight;
       const gTop = Math.round((window.scrollY || 0) + group.getBoundingClientRect().top);
       const range = group.offsetHeight - vh;
-      const itin = gTop, transport = gTop + range, packing = gTop + group.offsetHeight;
+      const stops = [0, gTop, gTop + range / 2, gTop + range];   // route · itinerary · transport · packing
       const y = window.scrollY || 0;
       const dir = this._scrollDir || 0;
       let target = null;
-      if (y > 2 && y < itin - 2) target = dir < 0 ? 0 : itin;                       // Route ↔ Itinerary
-      else if (y > transport + 2 && y < packing - 2) target = dir < 0 ? transport : packing;   // Transport ↔ Packing
-      if (target != null) this._snapScroll(target);
+      for (let i = 0; i < stops.length - 1; i++) {
+        if (y > stops[i] + 2 && y < stops[i + 1] - 2) { target = dir < 0 ? stops[i] : stops[i + 1]; break; }
+      }
+      if (target == null) return;
+      // Landing on Packing is slowed right down, and the case is told to open as
+      // the glide starts rather than on arrival — at snap speed the lid finished
+      // before the panel had, so it was never actually seen opening.
+      const toPack = Math.abs(target - stops[3]) < 2;
+      if (toPack && !this._packScrubActive) this._setPackAnim('open');
+      this._snapScroll(Math.round(target), toPack ? PACK_SNAP_MS : 240);
     }
     // short ease-out glide to `target`; aborts immediately if the user scrolls
-    _snapScroll(target) {
+    _snapScroll(target, ms) {
       const start = window.scrollY || 0, dist = target - start;
       if (Math.abs(dist) < 2) return;
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { window.scrollTo(0, target); return; }
-      const dur = 240, t0 = performance.now(), ease = (t) => 1 - Math.pow(1 - t, 3);
+      const dur = ms || 240, t0 = performance.now(), ease = (t) => 1 - Math.pow(1 - t, 3);
       this._snapAnimating = true; this._snapAbort = false;
+      const finish = (jump) => {
+        if (!this._snapAnimating) return;
+        this._snapAnimating = false;
+        clearTimeout(this._snapSafetyT);
+        if (jump && !this._snapAbort) window.scrollTo(0, target);
+      };
       const step = (now) => {
-        if (this._snapAbort) { this._snapAnimating = false; return; }
+        if (this._snapAbort) { finish(false); return; }
+        if (!this._snapAnimating) return;              // the safety net already landed it
         const t = Math.min(1, (now - t0) / dur);
         window.scrollTo(0, Math.round(start + dist * ease(t)));
-        if (t < 1) requestAnimationFrame(step); else this._snapAnimating = false;
+        if (t < 1) requestAnimationFrame(step); else finish(false);
       };
+      // rAF is not guaranteed to keep firing — a background tab, a low-power
+      // screen or a busy frame can starve it. Without a fallback the loop just
+      // stops, _snapAnimating stays true forever, and the stage is left stranded
+      // between two panels with every later snap suppressed by the guard that
+      // reads that flag. Land it outright if the glide has not finished in time.
+      clearTimeout(this._snapSafetyT);
+      this._snapSafetyT = setTimeout(() => finish(true), dur + 300);
       requestAnimationFrame(step);
     }
 
