@@ -516,6 +516,53 @@ a { color: inherit; }
 .todo input.txt { flex: 1; min-width: 0; font-family: var(--sans); font-size: 13px; font-weight: 500; color: var(--ink); border: none; background: transparent; padding: 2px 0; outline-offset: 2px; }
 .todo input.txt.done { color: var(--ink-mute); text-decoration: line-through; text-decoration-color: var(--green); animation: strikeThrough .3s cubic-bezier(0.16,1,0.3,1) both; }
 .todo .x { flex-shrink: 0; font-family: var(--sans); font-size: 12px; line-height: 1; color: var(--ink-faint); border: none; background: transparent; cursor: crosshair; padding: 4px; }
+
+/* ---- Bookings: the checklist the route derives -------------------------
+   Same row furniture as a to-do so the two read as one list, but the text is a
+   span rather than an input — these lines are computed from the trip and are
+   not editable here. Grouped under the city each item belongs to. */
+.bookings { margin-top: 14px; }
+.bk-group + .bk-group { margin-top: 11px; }
+.bk-city {
+  font-family: var(--sans); font-size: 9px; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-mute); padding: 2px 0 1px;
+}
+.bk-row { padding: 4px 0; }
+.bk-row .txt {
+  flex: 1; min-width: 0; font-family: var(--sans); font-size: 13px; font-weight: 500;
+  color: var(--ink); padding: 2px 0;
+}
+/* booked — struck through in the same green the to-do list uses for done */
+.bk-row .txt.done {
+  color: var(--ink-mute); text-decoration: line-through; text-decoration-color: var(--green);
+  animation: strikeThrough .3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ---- "Booked" toggles in the editors ----------------------------------- */
+.t-booked { display: flex; align-items: center; gap: 9px; }
+.t-booked .box {
+  flex-shrink: 0; width: 18px; height: 18px; border-radius: var(--r-check);
+  border: 2px solid var(--dash); background: var(--surface); cursor: crosshair;
+  display: flex; align-items: center; justify-content: center; padding: 0; color: #fff;
+}
+.t-booked .box.done { background: var(--green); border-color: var(--green); }
+.t-booked-lbl { font-family: var(--sans); font-size: 12px; font-weight: 600; color: var(--ink-soft); }
+.t-booked-lbl.done { color: var(--green); }
+/* the hotel row's version is a pill, since it sits beside the CHOSEN badge */
+/* BOOKED is the row's one badge — it inherits the look the CHOSEN chip had (the
+   green check button already says a row is chosen, so the chip was saying it
+   twice and crowding the hotel name). Unbooked it is a quiet outline prompt;
+   booked it becomes that soft green pill. */
+.opt-booked {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px;
+  font-family: var(--sans); font-size: 9px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--ink-mute);
+  background: transparent; border: 1px solid var(--dash); border-radius: var(--r-pill);
+  padding: 3px 9px; cursor: crosshair; transition: color .15s, background .15s, border-color .15s;
+}
+.opt-booked:hover { color: var(--ink); border-color: var(--ink-soft); }
+.opt-booked.done { color: var(--green); background: var(--green-bg); border-color: transparent; }
+.opt.shut .opt-booked { display: none; }
 .add-todo {
   font-family: var(--sans); font-size: 18px; font-weight: 800; line-height: 1;
   color: var(--ink); background: transparent; border: 1px dashed var(--dash);
@@ -1454,6 +1501,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 @media (prefers-reduced-motion: reduce) {
   .iti-right { animation: none; }
   .todo input.txt.done { animation: none; text-decoration-color: var(--green); }
+  .bk-row .txt.done { animation: none; text-decoration-color: var(--green); }
   .sync-dot.s-syncing { animation: none; opacity: 1; }
   .stop { transition: none; }
   .cal-cell { transition: none; }
@@ -2291,7 +2339,8 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 @keyframes pillSweep { from { clip-path: inset(0 100% 0 0 round 20px); } to { clip-path: inset(0 0 0 0 round 20px); } }
 
 /* hotels: passport-style CHOSEN stamp */
-.opt .badge.stamp-in { animation: stampIn .5s cubic-bezier(.5, 1.6, .5, 1) both; transform-origin: center; }
+.opt .badge.stamp-in,
+.opt-booked.stamp-in { animation: stampIn .5s cubic-bezier(.5, 1.6, .5, 1) both; transform-origin: center; }
 @keyframes stampIn {
   0%   { opacity: 0; transform: scale(1.5) rotate(-8deg); }
   55%  { opacity: 1; transform: scale(.92) rotate(2deg); }
@@ -2342,7 +2391,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .t-journey-veh { animation: none; left: 2%; transform: translateY(-50%); opacity: .9; }
   .leaf-entering .t-journey-line { animation: none; }
   .t-pill.just-switched { animation: none; }
-  .opt .badge.stamp-in { animation: none; }
+  .opt .badge.stamp-in, .opt-booked.stamp-in { animation: none; }
   /* the reorder still happens — only the turn is dropped */
   .opt.wheel-lead, .opt.wheel-step { animation: none; }
   .day-wx .ic { animation: none; }

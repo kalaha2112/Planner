@@ -185,8 +185,11 @@ alter publication supabase_realtime add table public.shared_state;
   It keeps the schedule chronological (reassigns existing times in order), reports how much shorter
   the walking route is, and is undoable (⌘/Ctrl-Z). Runs entirely in-browser — no API key.
 - **Accommodation modal** — compare lodging options per stop (name, link, price, distance,
-  features); mark one as chosen (feeds the lodging budget). A chosen option rises to the top of
-  the list, the list turning like the face of a wheel to get it there.
+  features); mark one as chosen (feeds the lodging budget), then **Booked** once it's reserved.
+  Both rise to the top of the list — booked above chosen — the list turning like the face of a
+  wheel to get them there.
+- **Bookings checklist** — every flight, train and chosen hotel the route implies, one line per
+  item per city, crossed out as each is booked. See [Bookings](#bookings).
 - **Prices in any currency** — type a hotel price or fare the way it's quoted (`1 euro`, `1.5 pl`,
   `9800 czk / 4 nights`) and the currency is read out of the text and converted to CAD live.
   See [Foreign-currency prices](#foreign-currency-prices).
@@ -198,6 +201,31 @@ alter publication supabase_realtime add table public.shared_state;
 - **Map** — Leaflet route with mode-colored legs and clickable stop markers (→ open itinerary).
 - **Persistence** — autosaves to `localStorage` (`europe-trip-state-v1`); **Export / Import** as
   JSON; **Reset** restores the default route.
+
+## Bookings
+
+Anything the route implies you have to reserve shows up as a line in **Bookings**, beside the
+pre-trip to-do list — one line per item per city:
+
+```
+PRAGUE
+ ☑ B̶o̶o̶k̶ ̶f̶l̶i̶g̶h̶t̶ ̶f̶r̶o̶m̶ ̶N̶e̶w̶ ̶Y̶o̶r̶k̶ ̶(̶J̶F̶K̶)̶
+ ☑ B̶o̶o̶k̶ ̶H̶o̶t̶e̶l̶ ̶J̶o̶s̶e̶f̶
+KRAKÓW
+ ☐ Book train from Prague
+ ☐ Book Hotel Stary
+```
+
+Each city gets the journey that reaches it plus every hotel chosen there. Hotels you're still
+comparing aren't listed — they're not yet anything to book.
+
+Tick it anywhere. A leg has a **Booked** box in its transport editor, a chosen hotel has a
+**BOOKED** badge on its row, and every checklist line has its own box; all three write the same
+flag, so ticking any one crosses the line out and moves the counter. Nothing is stored twice —
+the checklist is derived from the trip on every render, so renaming, reordering or deleting a
+stop can't leave a stale reminder behind.
+
+A booked hotel rises above a merely-chosen one, on the same wheel and with the same stamp.
 
 ## Foreign-currency prices
 

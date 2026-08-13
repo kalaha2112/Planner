@@ -4147,7 +4147,9 @@
     _reorderAccom(stopIdx, focus) {
       const opts = this.currentTrip().stops[stopIdx].accom.options;
       const before = opts.slice();
-      const sorted = [...before.filter(o => o.chosen), ...before.filter(o => !o.chosen)];
+      // booked > chosen > the rest, each group holding its relative order
+      const rank = (o) => o.booked ? 2 : o.chosen ? 1 : 0;
+      const sorted = [...before].sort((a, b) => rank(b) - rank(a));
       const moved = sorted.some((o, i) => o !== before[i]);
       opts.length = 0; opts.push(...sorted);
 
@@ -4163,7 +4165,7 @@
       // one-shots consumed by the next render: stamp the badge on the row that
       // was acted on, and spin the list only when the order actually changed
       this._justChoseAccom = focus ? sorted.indexOf(focus) : null;
-      this._wheelAccom = moved;
+      this._wheelAccom = moved && stopIdx === this.accomOpenIdx;
     }
 
     /* ============================================================
@@ -5628,6 +5630,63 @@
       </div>`;
     }
 
+    /* Every booking the route implies, derived rather than stored.
+       A saved copy would go stale the moment a stop is renamed, reordered or
+       deleted, and would push a sync revision on every edit; deriving means the
+       list is always exactly the trip's current shape. The tick is the single
+       `booked` flag on the leg or the hotel, so this checklist and the tick
+       boxes in the editors are two views of one value, not two records to
+       reconcile.
+       One line per bookable item per city: the journey that reaches the city,
+       then each hotel chosen there. Unchosen hotels are still being compared,
+       so they are not yet anything to book. */
+    bookingLines(trip) {
+      const stops = (trip && trip.stops) || [];
+      const modeWord = (m) => m === 'overnight-train' ? 'overnight train'
+        : (MODE_OPTIONS.find(o => o.value === m) || {}).label ? MODE_OPTIONS.find(o => o.value === m).label.toLowerCase() : 'travel';
+      const out = [];
+      stops.forEach((stop, idx) => {
+        const city = (stop.city || '').trim();
+        if (!city) return;                       // a blank stop has nothing to book yet
+        const rows = [];
+        const leg = this.legByIndex(idx);
+        if (leg) {
+          const from = (legEndpoints(trip, idx).from || '').trim();
+          rows.push({ kind: 'leg', legIdx: idx, booked: !!leg.booked,
+            label: `Book ${modeWord(leg.mode)}${from ? ' from ' + from : ''}` });
+        }
+        ((stop.accom && stop.accom.options) || []).forEach((o, oi) => {
+          if (!o.chosen) return;
+          rows.push({ kind: 'hotel', stopIdx: idx, optIdx: oi, booked: !!o.booked,
+            label: `Book ${(o.name || '').trim() || 'the chosen hotel'}` });
+        });
+        if (rows.length) out.push({ city, rows });
+      });
+      return out;
+    }
+
+    renderBookings(trip) {
+      const groups = this.bookingLines(trip);
+      if (!groups.length) return '';
+      const all = groups.reduce((n, g) => n + g.rows.length, 0);
+      const done = groups.reduce((n, g) => n + g.rows.filter(r => r.booked).length, 0);
+      const body = groups.map(g => `<div class="bk-group">
+          <div class="bk-city">${esc(g.city)}</div>
+          ${g.rows.map(r => `<div class="todo bk-row">
+            <button class="box${r.booked ? ' done' : ''}" data-act="booking-toggle"
+              data-kind="${r.kind}" data-leg="${r.legIdx == null ? '' : r.legIdx}"
+              data-stop="${r.stopIdx == null ? '' : r.stopIdx}" data-i="${r.optIdx == null ? '' : r.optIdx}"
+              aria-pressed="${r.booked}" aria-label="${escA(r.label)}${r.booked ? ' — booked' : ''}"
+              title="${r.booked ? 'Booked — click to un-book' : 'Mark as booked'}">${r.booked ? svg(I.check, { w: 11, h: 11, sw: 3.5 }) : ''}</button>
+            <span class="txt${r.booked ? ' done' : ''}">${esc(r.label)}</span>
+          </div>`).join('')}
+        </div>`).join('');
+      return `<div class="todos bookings pack-block">
+        <div class="hd"><div class="t">Bookings</div><div class="p">${done} / ${all}</div></div>
+        <div>${body}</div>
+      </div>`;
+    }
+
     renderTodos(meta) {
       const todos = meta.todos || [];
       const done = todos.filter(t => t.done).length;
@@ -5640,7 +5699,7 @@
         <div class="hd"><div class="t">Pre-trip to-do</div><div class="p">${done} / ${todos.length}</div></div>
         <div>${rows}</div>
         <button class="add-todo" data-act="add-todo" title="Add task" aria-label="Add task">+</button>
-      </div>`;
+      </div>${this.renderBookings(this.currentTrip())}`;
     }
 
     /* ---------- stop preview card (web route page) — fills the column slot
@@ -6049,6 +6108,7 @@
       const accomList = stop.accom.options;
       const stampIdx = this._justChoseAccom; this._justChoseAccom = null;   // one-shot: stamp the badge only when just chosen
       const spin = this._wheelAccom; this._wheelAccom = false;               // one-shot: revolve the list only on a reorder
+      const bookedIdx = this._justBookedAccom; this._justBookedAccom = null;  // one-shot: stamp BOOKED only when just booked
       // Reload the collapse state whenever a different trip or stop is shown.
       // Comparing the full trip+stop key, not the stop index alone: switching
       // trips can land on the same index and would otherwise keep the previous
@@ -6073,12 +6133,13 @@
           ? (isCad(oCcy) ? oAmt.toLocaleString('en-US') : `${oAmt.toLocaleString('en-US')} ${oCcy}`)
           : priceOnly(o.totalPrice);
         const chipCad = (oAmt && !isCad(oCcy)) ? `<em class="opt-price-cad">≈ ${esc(money(toCad(oAmt, oCcy)))}</em>` : '';
-        return `<div class="opt${o.chosen ? ' chosen' : ''}${isShut ? ' shut' : ''}${spin ? (oi === stampIdx ? ' wheel-lead' : ' wheel-step') : ''}" style="--wi:${oi}">
+        return `<div class="opt${o.chosen ? ' chosen' : ''}${o.booked ? ' booked' : ''}${isShut ? ' shut' : ''}${spin ? (oi === stampIdx ? ' wheel-lead' : ' wheel-step') : ''}" style="--wi:${oi}">
         <div class="top">
           <button class="choose" data-act="accom-choose" data-i="${oi}" title="${o.chosen ? 'Unchose this option' : 'Choose this option'}">${o.chosen ? svg(I.check, { w: 11, h: 11, sw: 3.5, stroke: '#fff' }) : ''}</button>
           <input class="name" value="${escA(o.name)}" data-ch="accom-name" data-i="${oi}" placeholder="Place name…">
           ${chip ? `<span class="opt-price">${esc(chip)}${chipCad}</span>` : ''}
-          ${o.chosen ? `<span class="badge${oi === stampIdx ? ' stamp-in' : ''}">Chosen</span>` : ''}
+          ${o.chosen ? `<button class="opt-booked${o.booked ? ' done' : ''}${oi === bookedIdx ? ' stamp-in' : ''}" data-act="accom-booked" data-i="${oi}"
+            aria-pressed="${!!o.booked}" title="${o.booked ? 'Booked — click to un-book' : 'Mark as booked'}">${o.booked ? svg(I.check, { w: 9, h: 9, sw: 3.5 }) + ' Booked' : 'Book?'}</button>` : ''}
           <button class="rm" data-act="accom-remove" data-i="${oi}" title="Remove option">${svg(I.trash, { w: 13, h: 13, sw: 2.4 })}</button>
           <button class="opt-caret" data-act="accom-toggle" data-i="${oi}" aria-expanded="${!isShut}" title="${isShut ? 'Expand' : 'Collapse'} this option">${caret}</button>
         </div>
@@ -6222,6 +6283,12 @@
                 </div>
                 ${costHint.text ? `<span class="cad-hint${costHint.warn ? ' cad-hint--warn' : ''}">${esc(costHint.text)}</span>` : ''}
               </div>
+            </div>
+            <div class="t-booked">
+              <button class="box${leg.booked ? ' done' : ''}" data-act="leg-booked" data-leg="${legIdx}"
+                aria-pressed="${!!leg.booked}" aria-label="Mark this leg booked"
+                title="${leg.booked ? 'Booked — click to un-book' : 'Mark as booked'}">${leg.booked ? svg(I.check, { w: 11, h: 11, sw: 3.5 }) : ''}</button>
+              <span class="t-booked-lbl${leg.booked ? ' done' : ''}">Booked</span>
             </div>
             ${isFlight ? `
             <div class="t-fld t-reward">
@@ -6550,6 +6617,31 @@
         case 'stop-delete': this.removeStop(i); break;
         case 'todo-toggle': { const td = this.data.meta.todos[i]; td.done = !td.done; this.bump(); break; }
         case 'todo-remove': this.removeTodo(i); break;
+        // the booked flag has three doors into it — the leg editor, the hotel
+        // row, and the derived Bookings checklist — all writing the same value
+        case 'leg-booked': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.booked = !leg.booked; this.bump(); break; }
+        case 'accom-booked': {
+          const stopIdx = this.accomOpenIdx;
+          const o = trip.stops[stopIdx].accom.options[i];
+          o.booked = !o.booked;
+          this._reorderAccom(stopIdx, o);
+          if (o.booked) this._justBookedAccom = this.currentTrip().stops[stopIdx].accom.options.indexOf(o);
+          this.bump(); break;
+        }
+        case 'booking-toggle': {
+          const d = t.dataset;
+          if (d.kind === 'leg') { const leg = this.legByIndex(Number(d.leg)); leg.booked = !leg.booked; }
+          else {
+            const stopIdx = Number(d.stop);
+            const o = trip.stops[stopIdx].accom.options[Number(d.i)];
+            if (o) {
+              o.booked = !o.booked;
+              this._reorderAccom(stopIdx, o);
+              if (o.booked && stopIdx === this.accomOpenIdx) this._justBookedAccom = trip.stops[stopIdx].accom.options.indexOf(o);
+            }
+          }
+          this.bump(); break;
+        }
         case 'add-todo': this.addTodo(); break;
         // packing checklist — every mutation pins the popover open (packOpen)
         // so it survives the re-render instead of relying on :hover coming back
