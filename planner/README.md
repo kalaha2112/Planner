@@ -189,6 +189,9 @@ alter publication supabase_realtime add table public.shared_state;
 - **Prices in any currency** — type a hotel price or fare the way it's quoted (`1 euro`, `1.5 pl`,
   `9800 czk / 4 nights`) and the currency is read out of the text and converted to CAD live.
   See [Foreign-currency prices](#foreign-currency-prices).
+- **Station pickers on rail legs** — set a leg to Train and it gains depart/arrive station fields
+  that suggest the actual stations of the two cities that leg connects.
+  See [Train stations](#train-stations).
 - **Budget modal** — flights, intercity transport, city transit (researched local-currency day
   passes → CAD), lodging, food, activities, buffer; editable assumptions; live total + per-person.
 - **Map** — Leaflet route with mode-colored legs and clickable stop markers (→ open itinerary).
@@ -241,6 +244,31 @@ Editing a rate re-converts everything that references it. The currency list offe
 is derived from that table, so adding a rate is enough to add the currency.
 
 Trips saved before this existed load as CAD, with totals unchanged.
+
+## Train stations
+
+A city is not a station. "Paris → Milan" leaves from one of seven Paris termini, and which one is
+on the ticket — so a leg set to **Train** or **Overnight train** grows two extra fields, *Depart*
+and *Arrive*, each labelled with the city it belongs to and each offering that city's stations:
+
+```
+DEPART · PRAGUE     Praha hlavní nádraží      ← list: hl.n., Holešovice, Masarykovo
+ARRIVE · KRAKÓW     Kraków Główny
+```
+
+The cities are read off the route, not stored on the leg, so renaming or reordering a stop
+re-aims both lists immediately. Direction follows the app's existing convention: a stop's leg is
+the one **departing** it, so the leg on Prague runs Prague → Kraków, and the last stop's leg
+arrives at your home label.
+
+The list **suggests, never restricts** — it's a `<datalist>`, so a station that isn't in the table
+can simply be typed, and nothing is auto-filled on your behalf. The empty field shows the city's
+main station as a placeholder so you can see what the list is offering.
+
+Coverage is the intercity stations of the cities in `CITY_STATIONS` (`app.js`) — Europe most
+thoroughly, plus major Japanese, Korean and North American ones — with the main station first,
+in the local spelling printed on boards and tickets. A city that isn't in the table still gets the
+two fields, just without suggestions. Adding a city is one line in that table.
 
 ## Importing shared posts
 

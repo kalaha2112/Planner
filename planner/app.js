@@ -701,6 +701,91 @@
   };
   const DEFAULT_PASS = { a: 10, c: 'USD' };
 
+  /* ---------- intercity rail stations, by city ----------
+     A city is not a station: "Paris → Milan" leaves from one of seven Paris
+     termini and the ticket names which. On a train leg the two station fields
+     offer the stations of the cities that leg actually connects, so the choice
+     is a pick rather than a recall.
+     Names are the local forms printed on tickets and boards, with the main
+     intercity station first — that ordering is what the field's placeholder
+     hints at. The list suggests but never restricts: it is a <datalist>, so a
+     station missing here can still just be typed. Keyed by normKey (accents
+     stripped, lowercased), same as the transit-pass table above. */
+  const CITY_STATIONS = {
+    'paris': ['Gare du Nord', 'Gare de Lyon', "Gare de l'Est", 'Gare Montparnasse', "Gare d'Austerlitz", 'Gare Saint-Lazare', 'Gare de Bercy'],
+    'london': ['St Pancras International', 'London Euston', "London King's Cross", 'London Paddington', 'London Victoria', 'London Waterloo', 'London Liverpool Street'],
+    'edinburgh': ['Edinburgh Waverley', 'Edinburgh Haymarket'],
+    'manchester': ['Manchester Piccadilly', 'Manchester Victoria'],
+    'dublin': ['Dublin Heuston', 'Dublin Connolly'],
+    'amsterdam': ['Amsterdam Centraal', 'Amsterdam Zuid', 'Amsterdam Sloterdijk'],
+    'brussels': ['Bruxelles-Midi / Brussel-Zuid', 'Bruxelles-Central', 'Bruxelles-Nord'],
+    'luxembourg': ['Luxembourg Gare Centrale'],
+    'lyon': ['Lyon Part-Dieu', 'Lyon Perrache'],
+    'marseille': ['Marseille Saint-Charles'],
+    'nice': ['Nice-Ville'],
+    'berlin': ['Berlin Hauptbahnhof', 'Berlin Ostbahnhof', 'Berlin Südkreuz', 'Berlin Gesundbrunnen', 'Berlin Spandau'],
+    'munich': ['München Hauptbahnhof', 'München Ost', 'München-Pasing'],
+    'frankfurt': ['Frankfurt (Main) Hauptbahnhof', 'Frankfurt (Main) Süd', 'Frankfurt Flughafen Fernbahnhof'],
+    'hamburg': ['Hamburg Hauptbahnhof', 'Hamburg-Altona', 'Hamburg Dammtor'],
+    'cologne': ['Köln Hauptbahnhof', 'Köln Messe/Deutz'],
+    'vienna': ['Wien Hauptbahnhof', 'Wien Meidling', 'Wien Westbahnhof'],
+    'salzburg': ['Salzburg Hauptbahnhof'],
+    'hallstatt': ['Hallstatt Bahnhof (ferry from the village)'],
+    'zurich': ['Zürich Hauptbahnhof', 'Zürich Flughafen'],
+    'geneva': ['Genève-Cornavin', 'Genève-Aéroport'],
+    'bern': ['Bern Hauptbahnhof'],
+    'lucerne': ['Luzern Bahnhof'],
+    'prague': ['Praha hlavní nádraží', 'Praha-Holešovice', 'Praha Masarykovo nádraží'],
+    'krakow': ['Kraków Główny'],
+    'warsaw': ['Warszawa Centralna', 'Warszawa Wschodnia', 'Warszawa Zachodnia'],
+    'budapest': ['Budapest-Keleti', 'Budapest-Nyugati', 'Budapest-Déli'],
+    'bratislava': ['Bratislava hlavná stanica', 'Bratislava-Petržalka'],
+    'ljubljana': ['Ljubljana železniška postaja'],
+    'zagreb': ['Zagreb Glavni kolodvor'],
+    'bucharest': ['București Nord'],
+    'sofia': ['Sofia Central'],
+    'istanbul': ['İstanbul (Söğütlüçeşme)', 'Halkalı'],
+    'athens': ['Athens Larissa Station'],
+    'milan': ['Milano Centrale', 'Milano Porta Garibaldi', 'Milano Rogoredo'],
+    'rome': ['Roma Termini', 'Roma Tiburtina', 'Roma Ostiense'],
+    'florence': ['Firenze Santa Maria Novella', 'Firenze Campo di Marte', 'Firenze Rifredi'],
+    'venice': ['Venezia Santa Lucia', 'Venezia Mestre'],
+    'naples': ['Napoli Centrale', 'Napoli Afragola'],
+    'madrid': ['Madrid Puerta de Atocha', 'Madrid Chamartín'],
+    'barcelona': ['Barcelona Sants', 'Barcelona Passeig de Gràcia', 'Barcelona França'],
+    'seville': ['Sevilla Santa Justa'],
+    'lisbon': ['Lisboa Santa Apolónia', 'Lisboa Oriente', 'Lisboa Rossio'],
+    'porto': ['Porto Campanhã', 'Porto São Bento'],
+    'copenhagen': ['København H', 'København Lufthavn (Kastrup)'],
+    'oslo': ['Oslo Sentralstasjon (Oslo S)', 'Nationaltheatret'],
+    'bergen': ['Bergen stasjon'],
+    'stockholm': ['Stockholm Centralstation', 'Stockholm Södra'],
+    'gothenburg': ['Göteborg Centralstation'],
+    'helsinki': ['Helsinki Central', 'Pasila'],
+    'tokyo': ['Tokyo Station', 'Shinagawa', 'Ueno', 'Shinjuku'],
+    'osaka': ['Shin-Ōsaka', 'Osaka Station', 'Namba'],
+    'kyoto': ['Kyoto Station'],
+    'seoul': ['Seoul Station', 'Yongsan'],
+    'bangkok': ['Krung Thep Aphiwat Central Terminal', 'Hua Lamphong'],
+    'new york': ['New York Penn Station', 'Grand Central Terminal', 'Moynihan Train Hall'],
+    'washington': ['Washington Union Station'],
+    'boston': ['Boston South Station', 'Boston Back Bay', 'Boston North Station'],
+    'chicago': ['Chicago Union Station'],
+    'toronto': ['Toronto Union Station'],
+    'montreal': ['Gare Centrale de Montréal'],
+    'vancouver': ['Pacific Central Station']
+  };
+  const stationsFor = (city) => CITY_STATIONS[normKey(city)] || [];
+  // Which cities a leg runs between. Leg 0 is the outbound from home; every
+  // other leg is stored on the stop it DEPARTS (stops[i].leg leaves stops[i]),
+  // so the arrival is the next stop along, or home for the last one.
+  const legEndpoints = (trip, legIdx) => {
+    const stops = (trip && trip.stops) || [];
+    if (legIdx === 0) return { from: (trip && trip.originLabel) || '', to: stops[0] ? stops[0].city : '' };
+    const to = stops[legIdx] ? stops[legIdx].city : ((trip && trip.homeLabel) || '');
+    return { from: stops[legIdx - 1] ? stops[legIdx - 1].city : '', to };
+  };
+
   const WEEK = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
   // where an imported activity came from — stamped on the item by the social
@@ -5907,7 +5992,26 @@
       const vehInner = isPlane
         ? `<img class="veh-dark" src="${MODE_IMG[leg.mode]}" data-mode="${escA(leg.mode)}" alt="" draggable="false"><img class="veh-light" src="${MODE_IMG_LIGHT[leg.mode]}" data-mode="${escA(leg.mode)}" alt="" draggable="false">`
         : `<img src="${MODE_IMG[leg.mode] || MODE_IMG.flight}" data-mode="${escA(leg.mode)}" alt="" draggable="false">`;
-      const idLabel = isFlight ? 'Flight No.' : leg.mode === 'train' ? 'Train No.' : 'Line';
+      // an overnight train is still a train — it used to fall through to "Line"
+      const idLabel = isFlight ? 'Flight No.' : (leg.mode === 'train' || leg.mode === 'overnight-train') ? 'Train No.' : 'Line';
+      // Station pickers, on rail legs only — the cities come from the route, so
+      // the list re-aims itself when a stop is renamed or reordered.
+      const isRail = leg.mode === 'train' || leg.mode === 'overnight-train';
+      const ends = legEndpoints(trip, legIdx);
+      const stationField = (which, city, val, chName) => {
+        const list = stationsFor(city);
+        const listId = `stn-${which}-${legIdx}`;
+        const label = city ? `${which === 'dep' ? 'Depart' : 'Arrive'} · ${city}` : `${which === 'dep' ? 'Depart' : 'Arrive'} station`;
+        return `<div class="t-fld">
+                <label>${esc(label)}</label>
+                <input class="t-line-inp" value="${escA(val || '')}"
+                  data-ch="${chName}" data-leg="${legIdx}"
+                  ${list.length ? `list="${listId}"` : ''}
+                  placeholder="${escA(list[0] || 'Station')}"
+                  autocomplete="off" spellcheck="false">
+                ${list.length ? `<datalist id="${listId}">${list.map(s => `<option value="${escA(s)}"></option>`).join('')}</datalist>` : ''}
+              </div>`;
+      };
       const costVal = escA(legCostText(leg));
       const rewardVal = escA(fmtCost(leg.miles ?? 0));
       // the field holds the text as typed ("1 euro"), so a half-typed currency is
@@ -5938,6 +6042,10 @@
                 <input class="t-line-inp t-transfer" type="number" min="0" value="${escA(leg.transfers ?? '')}" data-ch="transport-transfers" data-leg="${legIdx}" placeholder="0">
               </div>
             </div>
+            ${isRail ? `<div class="t-row-2 t-row-stations">
+              ${stationField('dep', ends.from, leg.depStation, 'transport-dep-station')}
+              ${stationField('arr', ends.to, leg.arrStation, 'transport-arr-station')}
+            </div>` : ''}
             <div class="t-row-2">
               <div class="t-fld">
                 <label>${esc(idLabel)}</label>
@@ -6402,6 +6510,8 @@
         // unrelated render
         case 'transport-cost': { const leg = this.legByIndex(Number(t.dataset.leg)); setLegCost(leg, v); this.bump(); break; }
         case 'transport-ccy': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.costCcy = normCcy(v); this.bump(); break; }
+        case 'transport-dep-station': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.depStation = v; this.bump(); break; }
+        case 'transport-arr-station': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.arrStation = v; this.bump(); break; }
         case 'transport-reward': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.miles = Number(v.replace(/,/g, '')) || 0; this.bump(); break; }
         case 'transport-depart': { this.legByIndex(Number(t.dataset.leg)).departure = v; this.scheduleSave(); break; }
         case 'transport-arrival': { this.legByIndex(Number(t.dataset.leg)).arrival = v; this.scheduleSave(); break; }

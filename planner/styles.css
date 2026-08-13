@@ -1039,6 +1039,11 @@ a { color: inherit; }
 .t-pill.active { color: var(--on-accent); }
 .t-row-3 { display: grid; grid-template-columns: 1fr 1fr 52px; gap: 20px; }
 .t-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+/* Station names are long ("Praha hlavní nádraží", "Bruxelles-Midi / Brussel-Zuid")
+   and the dialog is 380px, so half a row clips them mid-word. One per row buys
+   the full width; the row only exists on rail legs, so nothing else pays for it. */
+.t-row-stations { grid-template-columns: 1fr; gap: 18px; }
+.t-row-stations .t-line-inp { text-overflow: ellipsis; }
 .t-fld { display: flex; flex-direction: column; gap: 7px; }
 .t-fld label { font-family: var(--sans); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-mute); }
 .t-line-inp {
