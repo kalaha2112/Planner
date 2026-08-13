@@ -550,6 +550,132 @@
   // free-text price ("€420 / 4 nights") → the number in it, ignoring wording
   const parsePriceAmt = (s) => { const m = String(s == null ? '' : s).replace(/,/g, '').match(/\d+(\.\d+)?/); return m ? Number(m[0]) : 0; };
 
+  /* ---------- reading the currency out of what you typed ----------
+     You research a price as a phrase, not as a form: "1 euro", "1.5 pl",
+     "9800 czk / 4 nights", "€42". Rather than make you translate that into a
+     number plus a dropdown, the field reads the currency straight out of the
+     text and the dropdown becomes the fallback for a bare number.
+     Codes are matched exactly and by unique prefix (so "pl" reaches PLN without
+     PLN needing to be spelled out); this table only carries the names and
+     nicknames a code match would miss. */
+  const CCY_WORDS = {
+    CAD: ['canadian dollar', 'canadian dollars', 'loonie', 'loonies'],
+    USD: ['us dollar', 'us dollars', 'american dollar', 'american dollars', 'buck', 'bucks'],
+    EUR: ['euro', 'euros'],
+    GBP: ['pound', 'pounds', 'sterling', 'quid'],
+    CHF: ['swiss franc', 'swiss francs', 'franc', 'francs'],
+    JPY: ['yen'], CNY: ['yuan', 'renminbi', 'rmb'], KRW: ['won'],
+    HKD: ['hong kong dollar'], TWD: ['taiwan dollar', 'new taiwan dollar'], SGD: ['singapore dollar'],
+    AUD: ['australian dollar', 'australian dollars', 'aussie dollar'], NZD: ['new zealand dollar', 'kiwi dollar'],
+    MXN: ['mexican peso', 'mexican pesos'], BRL: ['real', 'reais', 'brazilian real'],
+    ARS: ['argentine peso', 'argentine pesos'], CLP: ['chilean peso', 'chilean pesos'],
+    PHP: ['philippine peso', 'philippine pesos', 'piso'],
+    PLN: ['zloty', 'zlotys', 'zloties', 'polish zloty'],
+    CZK: ['koruna', 'korunas', 'koruny', 'czech koruna'],
+    HUF: ['forint', 'forints'],
+    DKK: ['danish krone', 'danish kroner'], NOK: ['norwegian krone', 'norwegian kroner'],
+    SEK: ['swedish krona', 'swedish kronor'], ISK: ['icelandic krona', 'icelandic kronur'],
+    RON: ['leu', 'lei', 'romanian leu'], BGN: ['lev', 'leva', 'bulgarian lev'], HRK: ['kuna', 'kunas'],
+    TRY: ['lira', 'liras', 'turkish lira'], RUB: ['ruble', 'rubles', 'rouble', 'roubles'],
+    INR: ['rupee', 'rupees'], IDR: ['rupiah'], MYR: ['ringgit'], THB: ['baht'], VND: ['dong'],
+    ILS: ['shekel', 'shekels'], AED: ['dirham', 'dirhams'], SAR: ['riyal', 'riyals'], QAR: ['qatari riyal'],
+    ZAR: ['rand'], EGP: ['egyptian pound', 'egyptian pounds'], MAD: ['moroccan dirham', 'moroccan dirhams']
+  };
+  const CCY_WORD_ENTRIES = Object.entries(CCY_WORDS).filter(([c]) => FX_CAD[c] != null);
+  // symbol → every currency that uses it. Most are shared ($ across ten
+  // currencies, kr across the Nordics), which is why a symbol alone can't decide.
+  const SYMBOL_CCYS = Object.entries(CCY_SYMBOL).reduce((acc, [code, sym]) => {
+    if (FX_CAD[code] != null) (acc[sym.toLowerCase()] = acc[sym.toLowerCase()] || []).push(code);
+    return acc;
+  }, {});
+
+  // One token → a currency, or null when it names none. `current` breaks ties on
+  // a shared symbol: "$40" in a field already set to USD stays USD rather than
+  // being second-guessed. A tie it can't break is reported, never guessed.
+  const ccyFromToken = (raw, current) => {
+    const tok = String(raw || '').trim().toLowerCase().replace(/^[^\p{L}\p{Sc}]+|[^\p{L}\p{Sc}]+$/gu, '');
+    if (!tok) return null;
+    const up = tok.toUpperCase();
+    if (FX_CAD[up] != null) return { ccy: up };                       // "eur", "czk"
+    const bySym = SYMBOL_CCYS[tok];                                   // "€", "$", "kr"
+    if (bySym) {
+      if (bySym.length === 1) return { ccy: bySym[0] };
+      return bySym.includes(normCcy(current)) ? { ccy: normCcy(current) } : { ambiguous: bySym };
+    }
+    for (const [code, words] of CCY_WORD_ENTRIES) if (words.includes(tok)) return { ccy: code };
+    if (tok.length >= 2) {                                            // "pl" → PLN, "eu" → EUR
+      const hits = new Set();
+      for (const code of CURRENCIES) if (code.toLowerCase().startsWith(tok)) hits.add(code);
+      for (const [code, words] of CCY_WORD_ENTRIES) if (words.some(w => w.startsWith(tok))) hits.add(code);
+      const list = [...hits];
+      if (list.length === 1) return { ccy: list[0] };
+      if (list.length > 1) return { ambiguous: list };
+    }
+    return null;
+  };
+
+  /* Free text → { amount, ccy, fromText, ambiguous }.
+     A currency token has to *touch* its number (only spaces between), which is
+     what keeps "/ 4 nights" out of it. When several numbers appear, the one
+     carrying a currency wins — "2 nights at 100 eur" is 100 EUR, not 2 — and
+     otherwise the first number does, matching how the price field already read.
+     Thousands separators are stripped as before, so "1,5" is still 15, not 1.5. */
+  const parseMoney = (text, current) => {
+    const s = String(text == null ? '' : text);
+    const out = { amount: 0, ccy: normCcy(current), fromText: false, ambiguous: null };
+    const numRx = /\d[\d.,]*/g;
+    let m, first = null, tagged = null;
+    while ((m = numRx.exec(s))) {
+      const amt = Number(m[0].replace(/,/g, '').replace(/\.+$/, ''));
+      if (!isFinite(amt)) continue;
+      const end = m.index + m[0].length;
+      const aTok = (s.slice(end, end + 16).match(/^\s*([^\s\d]{1,14}?)(?=[\s\d]|$)/) || [])[1];
+      const bTok = (s.slice(Math.max(0, m.index - 16), m.index).match(/([^\s\d]{1,14}?)\s*$/) || [])[1];
+      let hit = aTok ? ccyFromToken(aTok, current) : null;
+      if (!hit) hit = bTok ? ccyFromToken(bTok, current) : null;
+      if (first == null) first = { amt, hit };
+      if (!tagged && hit && hit.ccy) tagged = { amt, hit };
+    }
+    const pick = tagged || first;
+    if (!pick) return out;
+    out.amount = pick.amt;
+    if (pick.hit && pick.hit.ccy) { out.ccy = pick.hit.ccy; out.fromText = true; }
+    else if (pick.hit && pick.hit.ambiguous) out.ambiguous = pick.hit.ambiguous;
+    return out;
+  };
+
+  // The picker beside a price field. When the text already names a currency it
+  // goes read-only and just reports what was read — two controls arguing over
+  // one value is worse than one control and an explanation.
+  const ccyPicker = (ch, attrs, ccy, fromText) => fromText
+    ? `<span class="ccy-sel ccy-sel--read" title="Read from what you typed — edit the text to change it">${esc(normCcy(ccy))}</span>`
+    : `<select class="ccy-sel" data-ch="${ch}" ${attrs} title="Currency for a bare number — or just type it (&quot;1 euro&quot;, &quot;1.5 pl&quot;)">${ccyOptions(ccy)}</select>`;
+
+  // A leg's fare as the field should show it: what was typed once it has been
+  // typed, otherwise the stored number (legs that predate free-text entry).
+  const legCostText = (leg) => {
+    if (leg && leg.costText != null) return String(leg.costText);
+    const n = Number(leg && leg.cost) || 0;
+    return n ? (n >= 1000 ? n.toLocaleString('en-US') : String(n)) : '';
+  };
+  // Applied wherever a fare is edited: text is kept verbatim, the number and the
+  // currency are derived. A currency named in the text wins over the picker;
+  // text that names none leaves the picker's choice alone.
+  const setLegCost = (leg, text) => {
+    leg.costText = text;
+    const pm = parseMoney(text, leg.costCcy);
+    leg.cost = pm.amount;
+    if (pm.fromText) leg.costCcy = pm.ccy;
+  };
+
+  // What to print under a price field: the conversion, or — when the text names
+  // something two currencies share — why it can't convert yet.
+  const moneyHint = (text, current) => {
+    const pm = parseMoney(text, current);
+    if (pm.ambiguous) return { text: `that symbol is ${pm.ambiguous.slice(0, 4).join(' / ')} — pick one`, warn: true };
+    return { text: cadHint(pm.amount, pm.ccy), warn: false };
+  };
+
   const CITY_PASS_LOCAL = {
     'new york': { a: 8.90, c: 'USD' }, 'jfk': { a: 8.90, c: 'USD' }, 'newark': { a: 8.90, c: 'USD' }, 'ewr': { a: 8.90, c: 'USD' },
     'los angeles': { a: 7, c: 'USD' }, 'san francisco': { a: 5, c: 'USD' }, 'chicago': { a: 5, c: 'USD' }, 'washington': { a: 13.50, c: 'USD' },
@@ -2947,15 +3073,17 @@
     // for a flight leg are edited on the Transport & Hotels page
     _legFields(leg, legIdx) {
       const opts = MODE_OPTIONS.map(o => `<option value="${o.value}"${o.value === leg.mode ? ' selected' : ''}>${o.label}</option>`).join('');
-      const ccy = normCcy(leg.costCcy);
-      const hint = cadHint(leg.cost, ccy);
+      const rawCost = legCostText(leg);
+      const pm = parseMoney(rawCost, leg.costCcy);
+      const ccy = pm.ccy;
+      const hint = moneyHint(rawCost, leg.costCcy).text;
       return `<div class="map-leg-row">
         <span class="mode-dot" style="background:${MODE_HEX[leg.mode] || '#7a7260'}"></span>
         <select data-ch="leg-mode" data-leg="${legIdx}">${opts}</select>
         <input class="dur" value="${escA(leg.duration)}" data-ch="leg-dur" data-leg="${legIdx}" placeholder="notes">
         ${SHOW_COSTS ? `<span class="cost-wrap" title="${escA(hint || 'Fare per person, in the currency you pick beside it')}">
-          <input class="cost" type="text" inputmode="numeric" value="${escA(leg.cost ?? 0)}" data-ch="leg-cost" data-leg="${legIdx}">
-          <select class="ccy-sel ccy-sel--leg" data-ch="leg-ccy" data-leg="${legIdx}" title="Currency this fare is quoted in — converted to CAD for the budget">${ccyOptions(ccy)}</select>
+          <input class="cost" type="text" value="${escA(rawCost)}" data-ch="leg-cost" data-leg="${legIdx}" placeholder="42 eur">
+          ${ccyPicker('leg-ccy', `data-leg="${legIdx}"`, ccy, pm.fromText)}
           <span class="unit">/pp</span></span>` : ''}
       </div>`;
     }
@@ -4126,12 +4254,15 @@
       const bud = meta.budget;
       // fares are entered in whatever currency the ticket was quoted in — convert
       // each leg to CAD before it joins the total
-      const flightCost = legs.reduce((s, l) => s + (l.mode === 'flight' ? toCad(l.cost, l.costCcy) : 0), 0) * travelers;
-      const intercityCost = legs.reduce((s, l) => s + (l.mode !== 'flight' ? toCad(l.cost, l.costCcy) : 0), 0) * travelers;
+      // same reading as the fare field itself, so a currency typed into the text
+      // is honoured here even if nothing re-synced the leg's picker
+      const legMoney = (l) => parseMoney(legCostText(l), l.costCcy);
+      const flightCost = legs.reduce((s, l) => { const m = legMoney(l); return s + (l.mode === 'flight' ? toCad(m.amount, m.ccy) : 0); }, 0) * travelers;
+      const intercityCost = legs.reduce((s, l) => { const m = legMoney(l); return s + (l.mode !== 'flight' ? toCad(m.amount, m.ccy) : 0); }, 0) * travelers;
       // name the foreign currencies folded into each line, so a total that looks
       // off can be traced back to the rate rather than to a typo
       const fxNote = (pick) => {
-        const cs = [...new Set(legs.filter(l => l && pick(l) && Number(l.cost) && !isCad(l.costCcy)).map(l => normCcy(l.costCcy)))];
+        const cs = [...new Set(legs.filter(l => l && pick(l)).map(l => legMoney(l)).filter(m => m.amount && !isCad(m.ccy)).map(m => m.ccy))];
         return cs.length ? ' · converted from ' + cs.join(', ') : '';
       };
       const flightFx = fxNote(l => l.mode === 'flight');
@@ -4153,10 +4284,13 @@
         // its own currency (one stop can mix a €-quoted hotel with a $-quoted
         // one), so convert per option rather than per stop.
         const chosenOpts = ((st.accom && st.accom.options) || []).filter(o => o.chosen);
+        // read the text the same way the field does, so a currency typed into it
+        // ("9800 czk") counts even when nothing has re-synced the picker — an
+        // imported trip or a cloud pull lands here without passing the handler
         const amt = chosenOpts.reduce((s, o) => {
-          const local = parsePriceAmt(o.totalPrice);
-          if (local && !isCad(o.priceCcy)) lodgingCcys.add(normCcy(o.priceCcy));
-          return s + toCad(local, o.priceCcy);
+          const pm = parseMoney(o.totalPrice, o.priceCcy);
+          if (pm.amount && !isCad(pm.ccy)) lodgingCcys.add(pm.ccy);
+          return s + toCad(pm.amount, pm.ccy);
         }, 0);
         if (amt > 0) { anyChosenPrice = true; lodgingFromHotels += amt; hotelNightsCovered += Number(st.nights) || 0; lodgingParts.push(`${st.city} $${Math.round(amt)}`); }
       });
@@ -5690,14 +5824,15 @@
 
       const opts = accomList.map((o, oi) => {
         const isShut = collapsed.has(oi);
-        // The price stays free text ("420 / 4 nights"); the currency beside it
-        // says what those digits are, and the CAD figure is derived from both.
-        const oCcy = normCcy(o.priceCcy);
-        const oAmt = parsePriceAmt(o.totalPrice);
-        const priceHint = cadHint(oAmt, oCcy);
-        const chipRaw = priceOnly(o.totalPrice);
-        const chip = chipRaw ? (isCad(oCcy) ? chipRaw : `${chipRaw} ${oCcy}`) : '';
-        const chipCad = (chip && !isCad(oCcy) && oAmt) ? `<em class="opt-price-cad">≈ ${esc(money(toCad(oAmt, oCcy)))}</em>` : '';
+        // The price stays free text ("9800 czk / 4 nights"); the currency is read
+        // out of it when named there, and the picker answers for a bare number.
+        const pm = parseMoney(o.totalPrice, o.priceCcy);
+        const oCcy = pm.ccy, oAmt = pm.amount;
+        const priceHint = moneyHint(o.totalPrice, o.priceCcy);
+        const chip = oAmt
+          ? (isCad(oCcy) ? oAmt.toLocaleString('en-US') : `${oAmt.toLocaleString('en-US')} ${oCcy}`)
+          : priceOnly(o.totalPrice);
+        const chipCad = (oAmt && !isCad(oCcy)) ? `<em class="opt-price-cad">≈ ${esc(money(toCad(oAmt, oCcy)))}</em>` : '';
         return `<div class="opt${o.chosen ? ' chosen' : ''}${isShut ? ' shut' : ''}">
         <div class="top">
           <button class="choose" data-act="accom-choose" data-i="${oi}" title="${o.chosen ? 'Unchose this option' : 'Choose this option'}">${o.chosen ? svg(I.check, { w: 11, h: 11, sw: 3.5, stroke: '#fff' }) : ''}</button>
@@ -5710,8 +5845,8 @@
         <div class="grid">
           <div class="fld fld--addr"><label>Address</label><div class="lk"><input value="${escA(o.address)}" data-ch="accom-address" data-i="${oi}" placeholder="Street, city — for the map & optimizer">${/\S/.test(o.address || '') ? `<a class="maps" href="https://maps.google.com/?q=${encodeURIComponent(o.address || '')}" target="_blank" rel="noopener" title="Open in Maps">↗</a>` : ''}</div></div>
           <div class="fld"><label>Total price</label>
-            <div class="lk"><input class="price" value="${escA(o.totalPrice)}" data-ch="accom-price" data-i="${oi}" placeholder="e.g. 420 / 4 nights"><select class="ccy-sel" data-ch="accom-ccy" data-i="${oi}" title="Currency this price is quoted in — converted to CAD for the budget">${ccyOptions(o.priceCcy)}</select></div>
-            ${priceHint ? `<span class="cad-hint">${esc(priceHint)}</span>` : ''}
+            <div class="lk"><input class="price" value="${escA(o.totalPrice)}" data-ch="accom-price" data-i="${oi}" placeholder="e.g. 9800 czk / 4 nights">${ccyPicker('accom-ccy', `data-i="${oi}"`, oCcy, pm.fromText)}</div>
+            ${priceHint.text ? `<span class="cad-hint${priceHint.warn ? ' cad-hint--warn' : ''}">${esc(priceHint.text)}</span>` : ''}
           </div>
           <div class="fld"><label>Distance</label><input value="${escA(o.distance)}" data-ch="accom-distance" data-i="${oi}" placeholder="e.g. 300m to centre"></div>
         </div>
@@ -5773,10 +5908,14 @@
         ? `<img class="veh-dark" src="${MODE_IMG[leg.mode]}" data-mode="${escA(leg.mode)}" alt="" draggable="false"><img class="veh-light" src="${MODE_IMG_LIGHT[leg.mode]}" data-mode="${escA(leg.mode)}" alt="" draggable="false">`
         : `<img src="${MODE_IMG[leg.mode] || MODE_IMG.flight}" data-mode="${escA(leg.mode)}" alt="" draggable="false">`;
       const idLabel = isFlight ? 'Flight No.' : leg.mode === 'train' ? 'Train No.' : 'Line';
-      const costVal = escA(fmtCost(leg.cost ?? 0));
+      const costVal = escA(legCostText(leg));
       const rewardVal = escA(fmtCost(leg.miles ?? 0));
-      const costCcy = normCcy(leg.costCcy);
-      const costHint = cadHint(leg.cost, costCcy);
+      // the field holds the text as typed ("1 euro"), so a half-typed currency is
+      // never rewritten under the caret; leg.cost stays the parsed number
+      const costRaw = legCostText(leg);
+      const costPm = parseMoney(costRaw, leg.costCcy);
+      const costCcy = costPm.ccy;
+      const costHint = moneyHint(costRaw, leg.costCcy);
       return `<div class="transport-body">
             <div class="t-modebar">
               <div class="t-pills">${pills}</div>
@@ -5807,11 +5946,11 @@
               <div class="t-fld">
                 <label>Cost / pp</label>
                 <div class="t-cost-row">
-                  <span class="t-unit">${esc(ccySym(costCcy))}</span>
-                  <input class="t-line-inp" inputmode="numeric" value="${costVal}" data-ch="transport-cost" data-leg="${legIdx}">
-                  <select class="ccy-sel" data-ch="transport-ccy" data-leg="${legIdx}" title="Currency this fare is quoted in — converted to CAD for the budget">${ccyOptions(costCcy)}</select>
+                  ${costPm.fromText ? '' : `<span class="t-unit">${esc(ccySym(costCcy))}</span>`}
+                  <input class="t-line-inp" value="${costVal}" data-ch="transport-cost" data-leg="${legIdx}" placeholder="42 eur">
+                  ${ccyPicker('transport-ccy', `data-leg="${legIdx}"`, costCcy, costPm.fromText)}
                 </div>
-                ${costHint ? `<span class="cad-hint">${esc(costHint)}</span>` : ''}
+                ${costHint.text ? `<span class="cad-hint${costHint.warn ? ' cad-hint--warn' : ''}">${esc(costHint.text)}</span>` : ''}
               </div>
             </div>
             ${isFlight ? `
@@ -6253,7 +6392,7 @@
         case 'home-label': trip.homeLabel = v; this.bump(); break;
         case 'leg-mode': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.mode = v; if (leg.mode === 'flight' && leg.miles == null) leg.miles = 0; this.bump(); break; }
         case 'leg-dur': this.legByIndex(Number(t.dataset.leg)).duration = v; this.bump(); break;
-        case 'leg-cost': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.cost = Number((v+'').replace(/,/g,'')) || 0; this.bump(); break; }
+        case 'leg-cost': { const leg = this.legByIndex(Number(t.dataset.leg)); setLegCost(leg, v + ''); this.bump(); break; }
         // switching currency re-labels and re-converts the fare; the amount the
         // user typed is deliberately left alone
         case 'leg-ccy': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.costCcy = normCcy(v); this.bump(); break; }
@@ -6261,7 +6400,7 @@
         // here is safe and keeps the budget/reward-points stats in sync the
         // moment either field is edited, instead of only after the next
         // unrelated render
-        case 'transport-cost': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.cost = Number(v.replace(/,/g, '')) || 0; this.bump(); break; }
+        case 'transport-cost': { const leg = this.legByIndex(Number(t.dataset.leg)); setLegCost(leg, v); this.bump(); break; }
         case 'transport-ccy': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.costCcy = normCcy(v); this.bump(); break; }
         case 'transport-reward': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.miles = Number(v.replace(/,/g, '')) || 0; this.bump(); break; }
         case 'transport-depart': { this.legByIndex(Number(t.dataset.leg)).departure = v; this.scheduleSave(); break; }
@@ -6298,7 +6437,8 @@
         // accommodation modal
         case 'accom-name': trip.stops[this.accomOpenIdx].accom.options[i].name = v; this.bump(); break;
         case 'accom-address': trip.stops[this.accomOpenIdx].accom.options[i].address = v; this.bump(); this.scheduleDayMap(); break;
-        case 'accom-price': trip.stops[this.accomOpenIdx].accom.options[i].totalPrice = v; this.bump(); break;
+        // the currency named in the text wins; a bare number leaves the picker's choice
+        case 'accom-price': { const o = trip.stops[this.accomOpenIdx].accom.options[i]; o.totalPrice = v; const pm = parseMoney(v, o.priceCcy); if (pm.fromText) o.priceCcy = pm.ccy; this.bump(); break; }
         case 'accom-ccy': trip.stops[this.accomOpenIdx].accom.options[i].priceCcy = normCcy(v); this.bump(); break;
         case 'accom-distance': trip.stops[this.accomOpenIdx].accom.options[i].distance = v; this.bump(); break;
         // budget modal

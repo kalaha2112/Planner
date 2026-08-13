@@ -979,11 +979,20 @@ a { color: inherit; }
 }
 .ccy-sel:hover, .ccy-sel:focus { color: var(--ink); }
 .ccy-sel option { color: var(--ink); background: var(--surface); }
+/* the text named the currency, so this reports rather than offers — no caret,
+   nothing to click, and it reads as a label instead of a dead control */
+.ccy-sel--read {
+  background-image: none; padding-right: 2px; cursor: default;
+  color: var(--ink-soft); align-self: center;
+}
 /* the derived line under a non-CAD field — never editable, so it never looks it */
 .cad-hint {
   font-family: var(--sans); font-size: 10px; letter-spacing: .01em;
   color: var(--ink-mute); font-variant-numeric: tabular-nums;
 }
+/* a shared symbol ("kr", "$") that the app refuses to guess at — the accent it
+   already uses for "needs your attention", not an error red */
+.cad-hint--warn { color: var(--red); }
 
 .accom-tools { display: flex; justify-content: flex-end; margin: 0 0 6px; }
 .accom-toggle-all {

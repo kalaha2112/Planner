@@ -186,8 +186,8 @@ alter publication supabase_realtime add table public.shared_state;
   the walking route is, and is undoable (⌘/Ctrl-Z). Runs entirely in-browser — no API key.
 - **Accommodation modal** — compare lodging options per stop (name, link, price, distance,
   features); mark one as chosen (feeds the lodging budget).
-- **Prices in any currency** — every hotel price and transport fare has a currency picker beside
-  it, so you enter what the booking site quotes (`9800 CZK`, `€42`) instead of converting by hand.
+- **Prices in any currency** — type a hotel price or fare the way it's quoted (`1 euro`, `1.5 pl`,
+  `9800 czk / 4 nights`) and the currency is read out of the text and converted to CAD live.
   See [Foreign-currency prices](#foreign-currency-prices).
 - **Budget modal** — flights, intercity transport, city transit (researched local-currency day
   passes → CAD), lodging, food, activities, buffer; editable assumptions; live total + per-person.
@@ -198,19 +198,38 @@ alter publication supabase_realtime add table public.shared_state;
 ## Foreign-currency prices
 
 Research arrives in the local currency — a Prague hotel quotes CZK, a Trenitalia fare quotes EUR —
-but every rollup in the app is CAD. So the two price fields that feed the budget each carry a
-currency alongside the amount:
+but every rollup in the app is CAD. So the two price fields that feed the budget read a currency
+as well as an amount:
 
 | Field | Where |
 |---|---|
 | Hotel **Total price** | Accommodation research, per option |
 | Transport **Cost / pp** | Transport modal, and the compact leg editor on each stop card |
 
-Type the amount exactly as quoted and pick the currency next to it. The amount is stored verbatim
-and never rewritten — only the conversion is derived — so the figure you researched is still the
-figure you see. Under a non-CAD field the app prints what it works out to
-(`≈ $608 CAD · 1 CZK = $0.062`); on a collapsed hotel row the price reads `9800 CZK ≈ $608`. A CAD
-price shows no conversion line at all, so nothing changes for prices already in dollars.
+**Just type it.** Both fields are free text and the currency is read straight out of what you
+wrote — `1 euro`, `1.5 pl`, `€42`, `500 yen`, `9800 czk / 4 nights`. Currency codes work exactly
+or by any unambiguous prefix (`pl` → PLN, `cz` → CZK), as do names and nicknames (`pounds`,
+`quid`, `zloty`, `forint`, `yen`) and symbols. Wording around the number is ignored, so
+`9800 czk / 4 nights` is 9800 CZK; when several numbers appear the one carrying a currency wins,
+so `2 nights at 100 eur` is 100 EUR, not 2.
+
+The dropdown beside the field answers for a **bare** number — type `420` and it's whatever the
+dropdown says. Once the text names a currency the dropdown stops being a control and just reports
+what was read, because two controls arguing over one value is worse than one control and an
+explanation.
+
+Nothing is ever guessed. A symbol several currencies share (`kr` across the Nordics, `$` across
+ten) resolves to the currency already selected if it's one of them; otherwise the field says
+`that symbol is DKK / NOK / SEK / ISK — pick one` and converts nothing until you do.
+
+What you typed is stored verbatim and never rewritten — only the amount and the conversion are
+derived — so the figure you researched is still the figure you see. Under a non-CAD field the app
+prints what it works out to (`≈ $608 CAD · 1 CZK = $0.062`); on a collapsed hotel row the price
+reads `9800 CZK ≈ $608`. A CAD price shows no conversion line at all, so nothing changes for
+prices already in dollars.
+
+One limit worth knowing: commas are read as thousands separators, as they always were, so `1,5`
+is 15 rather than 1.5 — write `1.5`.
 
 The **Budget** receipt converts each leg and each chosen hotel individually — one stop can mix a
 €-quoted hotel with a $-quoted one — and names the currencies it folded in on the affected lines
