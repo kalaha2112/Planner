@@ -2298,6 +2298,36 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   100% { opacity: 1; transform: scale(1) rotate(0); }
 }
 
+/* ---- choosing a hotel revolves the list ----------------------------------
+   The chosen option moves to the top, and the list turns to get it there like
+   the face of a wheel rather than jumping. The container carries the
+   perspective and each row hinges on its own top edge, so the rows read as
+   panels on one drum instead of tilting independently.
+   --wi is the row's index, staggering the settle down the list. */
+.accom-body.wheeling { perspective: 1200px; perspective-origin: 50% 0%; }
+.accom-body.wheeling .opt { transform-origin: 50% 0%; backface-visibility: hidden; }
+/* the row that was just chosen: comes up and over the top of the wheel */
+.opt.wheel-lead {
+  /* the book-flip curve the app uses elsewhere — an aggressive front-loaded
+     ease finishes the turn in the first few frames, which reads as a jump */
+  animation: wheelLead .72s cubic-bezier(.4, 0, .2, 1) both;
+  z-index: 2;
+}
+@keyframes wheelLead {
+  0%   { transform: rotateX(-78deg) translateY(30px); opacity: .15; }
+  58%  { transform: rotateX(7deg) translateY(0); opacity: 1; }
+  100% { transform: rotateX(0) translateY(0); opacity: 1; }
+}
+/* everything it displaced: a shorter turn of the same wheel, staggered */
+.opt.wheel-step {
+  animation: wheelStep .58s cubic-bezier(.4, 0, .2, 1) both;
+  animation-delay: calc(var(--wi, 0) * 55ms);
+}
+@keyframes wheelStep {
+  0%   { transform: rotateX(30deg) translateY(-16px); opacity: .5; }
+  100% { transform: rotateX(0) translateY(0); opacity: 1; }
+}
+
 /* itinerary: the day's weather glyph is subtly alive */
 .day-wx .ic { display: inline-block; transform-origin: center; animation: wxBreathe 4.6s ease-in-out infinite; }
 @keyframes wxBreathe { 0%, 100% { transform: rotate(-4deg) scale(1); } 50% { transform: rotate(4deg) scale(1.08); } }
@@ -2313,6 +2343,8 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .leaf-entering .t-journey-line { animation: none; }
   .t-pill.just-switched { animation: none; }
   .opt .badge.stamp-in { animation: none; }
+  /* the reorder still happens — only the turn is dropped */
+  .opt.wheel-lead, .opt.wheel-step { animation: none; }
   .day-wx .ic { animation: none; }
   .day-pin.pulse span { animation: none; }   /* keep the outline highlight, drop the bounce */
 }

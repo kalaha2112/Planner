@@ -4119,16 +4119,51 @@
     chooseAccomOption(stopIdx, optIdx) {
       const opts = this.currentTrip().stops[stopIdx].accom.options;
       const opt = opts[optIdx];
-      if (opt.chosen) { opt.chosen = false; this.bump(); return; }   // toggle off
-      opt.chosen = true;                                              // choose it
-      this._justChoseAccom = optIdx;                                  // trigger the CHOSEN stamp
-      // allow at most 2 chosen at once: if this makes a 3rd, drop the
-      // earliest other chosen option so the newest two stay selected
-      let others = opts.filter((x, i) => x.chosen && i !== optIdx).length;
-      for (let i = 0; i < opts.length && others > 1; i++) {
-        if (i !== optIdx && opts[i].chosen) { opts[i].chosen = false; others--; }
+      if (opt.chosen) {
+        opt.chosen = false;                                           // toggle off
+      } else {
+        opt.chosen = true;                                            // choose it
+        // allow at most 2 chosen at once: if this makes a 3rd, drop the
+        // earliest other chosen option so the newest two stay selected
+        let others = opts.filter((x, i) => x.chosen && i !== optIdx).length;
+        for (let i = 0; i < opts.length && others > 1; i++) {
+          if (i !== optIdx && opts[i].chosen) { opts[i].chosen = false; others--; }
+        }
       }
+      this._reorderAccom(stopIdx, opt);
       this.bump();
+    }
+
+    /* Chosen options ride at the top of the list. Applied on un-choosing too,
+       not just choosing — otherwise a row that has been deselected would keep
+       sitting above the ones that are actually chosen, and the order would stop
+       meaning anything. Both groups keep their relative order, so nothing else
+       shuffles.
+
+       The collapsed-row state is stored POSITIONALLY (see _shutKey below), so
+       moving a row without remapping those indices would silently fold the
+       wrong hotel. The map is built on object identity, which survives the
+       reorder; anything unmapped is dropped rather than guessed at. */
+    _reorderAccom(stopIdx, focus) {
+      const opts = this.currentTrip().stops[stopIdx].accom.options;
+      const before = opts.slice();
+      const sorted = [...before.filter(o => o.chosen), ...before.filter(o => !o.chosen)];
+      const moved = sorted.some((o, i) => o !== before[i]);
+      opts.length = 0; opts.push(...sorted);
+
+      if (this._accomCollapsed && this._accomCollapsedStop === stopIdx && this._accomCollapsed.size) {
+        const remapped = new Set();
+        this._accomCollapsed.forEach(oldIdx => {
+          const ni = sorted.indexOf(before[oldIdx]);
+          if (ni >= 0) remapped.add(ni);
+        });
+        this._accomCollapsed = remapped;
+        this._saveShut(stopIdx, remapped);
+      }
+      // one-shots consumed by the next render: stamp the badge on the row that
+      // was acted on, and spin the list only when the order actually changed
+      this._justChoseAccom = focus ? sorted.indexOf(focus) : null;
+      this._wheelAccom = moved;
     }
 
     /* ============================================================
@@ -6013,6 +6048,7 @@
       if (!stop.accom) stop.accom = { options: [] };
       const accomList = stop.accom.options;
       const stampIdx = this._justChoseAccom; this._justChoseAccom = null;   // one-shot: stamp the badge only when just chosen
+      const spin = this._wheelAccom; this._wheelAccom = false;               // one-shot: revolve the list only on a reorder
       // Reload the collapse state whenever a different trip or stop is shown.
       // Comparing the full trip+stop key, not the stop index alone: switching
       // trips can land on the same index and would otherwise keep the previous
@@ -6037,7 +6073,7 @@
           ? (isCad(oCcy) ? oAmt.toLocaleString('en-US') : `${oAmt.toLocaleString('en-US')} ${oCcy}`)
           : priceOnly(o.totalPrice);
         const chipCad = (oAmt && !isCad(oCcy)) ? `<em class="opt-price-cad">≈ ${esc(money(toCad(oAmt, oCcy)))}</em>` : '';
-        return `<div class="opt${o.chosen ? ' chosen' : ''}${isShut ? ' shut' : ''}">
+        return `<div class="opt${o.chosen ? ' chosen' : ''}${isShut ? ' shut' : ''}${spin ? (oi === stampIdx ? ' wheel-lead' : ' wheel-step') : ''}" style="--wi:${oi}">
         <div class="top">
           <button class="choose" data-act="accom-choose" data-i="${oi}" title="${o.chosen ? 'Unchose this option' : 'Choose this option'}">${o.chosen ? svg(I.check, { w: 11, h: 11, sw: 3.5, stroke: '#fff' }) : ''}</button>
           <input class="name" value="${escA(o.name)}" data-ch="accom-name" data-i="${oi}" placeholder="Place name…">
@@ -6056,7 +6092,7 @@
         </div>
       </div>`;
       }).join('');
-      return `<div class="accom-body">
+      return `<div class="accom-body${spin ? ' wheeling' : ''}">
         ${accomList.length > 1 ? `<div class="accom-tools">
           <button class="accom-toggle-all" data-act="accom-toggle-all">${allCollapsed ? 'Expand all' : 'Collapse all'}</button>
         </div>` : ''}

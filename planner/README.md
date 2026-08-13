@@ -185,7 +185,8 @@ alter publication supabase_realtime add table public.shared_state;
   It keeps the schedule chronological (reassigns existing times in order), reports how much shorter
   the walking route is, and is undoable (⌘/Ctrl-Z). Runs entirely in-browser — no API key.
 - **Accommodation modal** — compare lodging options per stop (name, link, price, distance,
-  features); mark one as chosen (feeds the lodging budget).
+  features); mark one as chosen (feeds the lodging budget). A chosen option rises to the top of
+  the list, the list turning like the face of a wheel to get it there.
 - **Prices in any currency** — type a hotel price or fare the way it's quoted (`1 euro`, `1.5 pl`,
   `9800 czk / 4 nights`) and the currency is read out of the text and converted to CAD live.
   See [Foreign-currency prices](#foreign-currency-prices).
