@@ -257,9 +257,17 @@ ARRIVE · KRAKÓW     Kraków Główny
 ```
 
 The cities are read off the route, not stored on the leg, so renaming or reordering a stop
-re-aims both lists immediately. Direction follows the app's existing convention: a stop's leg is
-the one **departing** it, so the leg on Prague runs Prague → Kraków, and the last stop's leg
-arrives at your home label.
+re-aims both lists immediately.
+
+**A stop's section is the journey that reaches it** — which is what "Getting there" means, and what
+the route map's stop card already showed. So *Depart* is the previous stop (the origin, for the
+first one) and *Arrive* is the stop itself. The last stop carries a second section, **Getting
+home**, for the leg back to your home label: that leg is stored on the last stop but reaches no
+stop, so no "Getting there" section would otherwise show it.
+
+Worth knowing if you read the source: a stop stores its own **departure** leg (`stops[i].leg`
+leaves `stops[i]` — the seed route settles it, since Paris is the last stop and `Paris.leg` is the
+9h45 Air France home). The leg *reaching* stop `i` is therefore `legByIndex(i)`, one earlier.
 
 The list **suggests, never restricts** — it's a `<datalist>`, so a station that isn't in the table
 can simply be typed, and nothing is auto-filled on your behalf. The empty field shows the city's
@@ -269,6 +277,10 @@ Coverage is the intercity stations of the cities in `CITY_STATIONS` (`app.js`) �
 thoroughly, plus major Japanese, Korean and North American ones — with the main station first,
 in the local spelling printed on boards and tickets. A city that isn't in the table still gets the
 two fields, just without suggestions. Adding a city is one line in that table.
+
+Origin and home are free-text labels that usually carry an airport code, so `Vancouver (YVR)` and
+`New York (JFK)` fall back to the name with the parenthetical dropped and still find their
+stations.
 
 ## Importing shared posts
 

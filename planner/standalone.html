@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-13T19:18:24.859Z
+  Built: 2026-08-13T19:34:33.075Z
 -->
 
 <html lang="en">
@@ -1822,6 +1822,14 @@ a { color: inherit; }
    the full width; the row only exists on rail legs, so nothing else pays for it. */
 .t-row-stations { grid-template-columns: 1fr; gap: 18px; }
 .t-row-stations .t-line-inp { text-overflow: ellipsis; }
+/* the journey home, appended to the last stop's section — a ruled break makes
+   it read as a second leg rather than more fields belonging to the first */
+.t-home-split { border-top: 1px solid var(--line); margin-top: 6px; }
+.t-home-hd {
+  font-family: var(--caps, var(--sans)); font-size: 11px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-soft);
+  padding: 18px 26px 0;
+}
 .t-fld { display: flex; flex-direction: column; gap: 7px; }
 .t-fld label { font-family: var(--sans); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-mute); }
 .t-line-inp {
@@ -5227,7 +5235,15 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
     'montreal': ['Gare Centrale de Montréal'],
     'vancouver': ['Pacific Central Station']
   };
-  const stationsFor = (city) => CITY_STATIONS[normKey(city)] || [];
+  // Origin and home are free-text labels and usually carry an airport code —
+  // "Vancouver (YVR)", "New York (JFK)" — so fall back to the name with any
+  // parenthetical dropped before giving up on a list.
+  const stationsFor = (city) => {
+    const direct = CITY_STATIONS[normKey(city)];
+    if (direct) return direct;
+    const bare = normKey(String(city == null ? '' : city).replace(/\([^)]*\)/g, ''));
+    return (bare && CITY_STATIONS[bare]) || [];
+  };
   // Which cities a leg runs between. Leg 0 is the outbound from home; every
   // other leg is stored on the stop it DEPARTS (stops[i].leg leaves stops[i]),
   // so the arrival is the next stop along, or home for the last one.
@@ -9279,7 +9295,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
           <div class="leaf-plan-cols">
             <div class="plan-col plan-transport">
               <div class="plan-col-hd">Getting there</div>
-              ${this.renderTransportBody(trip, pIdx)}
+              ${this.renderTransportSection(trip, pIdx)}
             </div>
             <div class="plan-col plan-hotels">
               <div class="plan-col-hd">Sleeping</div>
@@ -9585,7 +9601,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       <section class="app-leaf${page === 3 ? ' active' : ''}" data-leaf="3">
         <div class="app-sub-inner">
           ${subHd('Getting there')}
-          ${sel ? this.renderTransportBody(trip, sIdx) : emptyNote}
+          ${sel ? this.renderTransportSection(trip, sIdx) : emptyNote}
         </div>
       </section>`;
 
@@ -10421,14 +10437,23 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
     }
 
     // One leg's editor (mode pills + times + cost/miles) for the leg that
-    // reaches stop `idx` — shared by the app's modal and the ledger's page 2.
-    // `idx` is the STOP index (matches renderAccomBody's convention and the
-    // header's trip.stops[idx] lookup) — the leg belonging to that stop
-    // (its own departure leg, stored as stops[idx].leg) is legByIndex(idx+1).
-    // Using legByIndex(idx) directly here used to fetch the PREVIOUS stop's
-    // leg (off by one) for every field: depart/arrive/cost/mode/etc.
-    renderTransportBody(trip, idx) {
-      const legIdx = idx + 1;
+    // REACHES stop `idx` — which is what every caller heads "Getting there",
+    // and what the route map's stop card already draws.
+    //
+    // Two facts have to be held together here, and an earlier "off by one fix"
+    // dropped one of them. A stop stores its own DEPARTURE leg: stops[i].leg
+    // leaves stops[i]. The seed route settles it — Paris is the last stop and
+    // Paris.leg is the 9h45 Air France to Vancouver, i.e. the flight home, not
+    // anything arriving into Paris. So the leg reaching stop `idx` is the one
+    // before it: legByIndex(idx) — outboundLeg for the first stop, stops[i-1].leg
+    // after that. Using idx+1 showed the leg LEAVING the stop under an arriving
+    // header, which is what made "Depart · Prague / Arrive · Kraków" appear on
+    // the dialog titled "Getting there — Prague".
+    //
+    // `legIdxArg` overrides the lookup so the last stop can also render the
+    // journey home (leg index stops.length), which no stop reaches.
+    renderTransportBody(trip, idx, legIdxArg) {
+      const legIdx = legIdxArg != null ? legIdxArg : idx;
       const leg = this.legByIndex(legIdx);
       const isFlight = leg.mode === 'flight';
       const modeColor = MODE_HEX[leg.mode] || '#7a7260';
@@ -10524,6 +10549,20 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
           </div>`;
     }
 
+    // The transport editor as the pages actually want it: the leg reaching this
+    // stop, plus — on the last stop only — the leg home, which is stored on that
+    // stop but reaches nowhere, so no "Getting there" section would ever show it.
+    renderTransportSection(trip, idx) {
+      const stops = (trip && trip.stops) || [];
+      const body = this.renderTransportBody(trip, idx);
+      if (idx !== stops.length - 1 || !stops.length) return body;
+      const ends = legEndpoints(trip, stops.length);
+      return body + `<div class="t-home-split">
+          <div class="t-home-hd">Getting home${ends.to ? ` · ${esc(ends.to)}` : ''}</div>
+          ${this.renderTransportBody(trip, idx, stops.length)}
+        </div>`;
+    }
+
     renderTransportModal(trip) {
       if (this.transportOpenIdx == null || !trip.stops[this.transportOpenIdx]) return '';
       const idx = this.transportOpenIdx;
@@ -10537,7 +10576,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
             </div>
             <button class="modal-x" data-act="close-transport">✕</button>
           </div></div>
-          ${this.renderTransportBody(trip, idx)}
+          ${this.renderTransportSection(trip, idx)}
         </div>
       </div>`;
     }
