@@ -1044,14 +1044,6 @@ a { color: inherit; }
    the full width; the row only exists on rail legs, so nothing else pays for it. */
 .t-row-stations { grid-template-columns: 1fr; gap: 18px; }
 .t-row-stations .t-line-inp { text-overflow: ellipsis; }
-/* the journey home, appended to the last stop's section — a ruled break makes
-   it read as a second leg rather than more fields belonging to the first */
-.t-home-split { border-top: 1px solid var(--line); margin-top: 6px; }
-.t-home-hd {
-  font-family: var(--caps, var(--sans)); font-size: 11px; letter-spacing: .12em;
-  text-transform: uppercase; color: var(--ink-soft);
-  padding: 18px 26px 0;
-}
 .t-fld { display: flex; flex-direction: column; gap: 7px; }
 .t-fld label { font-family: var(--sans); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-mute); }
 .t-line-inp {

@@ -261,9 +261,12 @@ re-aims both lists immediately.
 
 **A stop's section is the journey that reaches it** — which is what "Getting there" means, and what
 the route map's stop card already showed. So *Depart* is the previous stop (the origin, for the
-first one) and *Arrive* is the stop itself. The last stop carries a second section, **Getting
-home**, for the leg back to your home label: that leg is stored on the last stop but reaches no
-stop, so no "Getting there" section would otherwise show it.
+first one) and *Arrive* is the stop itself.
+
+The leg **home** from the last stop has no section of its own, by design: every section belongs to
+the stop it reaches, and that leg reaches no stop. It still exists on the route and its fare still
+counts in the budget — it just isn't edited here. (On the seeded routes it's zero, because the
+return is on the same ticket as the outbound flight.)
 
 Worth knowing if you read the source: a stop stores its own **departure** leg (`stops[i].leg`
 leaves `stops[i]` — the seed route settles it, since Paris is the last stop and `Paris.leg` is the
@@ -273,14 +276,18 @@ The list **suggests, never restricts** — it's a `<datalist>`, so a station tha
 can simply be typed, and nothing is auto-filled on your behalf. The empty field shows the city's
 main station as a placeholder so you can see what the list is offering.
 
-Coverage is the intercity stations of the cities in `CITY_STATIONS` (`app.js`) — Europe most
-thoroughly, plus major Japanese, Korean and North American ones — with the main station first,
-in the local spelling printed on boards and tickets. A city that isn't in the table still gets the
-two fields, just without suggestions. Adding a city is one line in that table.
+Coverage is `CITY_STATIONS` (`app.js`): **146 of the 173 cities the app knows**, with the main
+station first and secondary termini after it (Berlin lists Hauptbahnhof through Lichtenberg, Zoo
+and Spandau), in the local spelling printed on boards and tickets. Adding a city is one line.
 
-Origin and home are free-text labels that usually carry an airport code, so `Vancouver (YVR)` and
-`New York (JFK)` fall back to the name with the parenthetical dropped and still find their
-stations.
+The 27 without a list mostly have no intercity passenger rail at all — Reykjavík, Dubrovnik,
+Valletta, Bali, Calgary — and the rest are left out rather than guessed, since an invented station
+name is worse than none. Those cities still get both fields; type your own.
+
+Lookups are forgiving. Accents don't matter (`Gdansk` finds `Gdańsk Główny`), local and alternate
+spellings alias to the same list (`Köln`→Cologne, `Milano`→Milan, `Firenze`→Florence), and origin
+and home labels carrying an airport code fall back to the bare name, so `Vancouver (YVR)` and
+`New York (JFK)` still resolve.
 
 ## Importing shared posts
 

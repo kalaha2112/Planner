@@ -723,7 +723,7 @@
     'lyon': ['Lyon Part-Dieu', 'Lyon Perrache'],
     'marseille': ['Marseille Saint-Charles'],
     'nice': ['Nice-Ville'],
-    'berlin': ['Berlin Hauptbahnhof', 'Berlin Ostbahnhof', 'Berlin Südkreuz', 'Berlin Gesundbrunnen', 'Berlin Spandau'],
+    'berlin': ['Berlin Hauptbahnhof', 'Berlin Ostbahnhof', 'Berlin Südkreuz', 'Berlin Gesundbrunnen', 'Berlin Lichtenberg', 'Berlin Zoologischer Garten', 'Berlin Spandau'],
     'munich': ['München Hauptbahnhof', 'München Ost', 'München-Pasing'],
     'frankfurt': ['Frankfurt (Main) Hauptbahnhof', 'Frankfurt (Main) Süd', 'Frankfurt Flughafen Fernbahnhof'],
     'hamburg': ['Hamburg Hauptbahnhof', 'Hamburg-Altona', 'Hamburg Dammtor'],
@@ -773,8 +773,111 @@
     'chicago': ['Chicago Union Station'],
     'toronto': ['Toronto Union Station'],
     'montreal': ['Gare Centrale de Montréal'],
-    'vancouver': ['Pacific Central Station']
+    'vancouver': ['Pacific Central Station'],
+    // Poland beyond the two headline cities
+    'gdansk': ['Gdańsk Główny', 'Gdańsk Wrzeszcz', 'Gdynia Główna'],
+    'wroclaw': ['Wrocław Główny'],
+    'poznan': ['Poznań Główny'],
+    'lodz': ['Łódź Fabryczna', 'Łódź Widzew'],
+    'lublin': ['Lublin Główny'],
+    // Britain & Ireland
+    'glasgow': ['Glasgow Central', 'Glasgow Queen Street'],
+    'birmingham': ['Birmingham New Street', 'Birmingham Moor Street'],
+    'bristol': ['Bristol Temple Meads'],
+    'liverpool': ['Liverpool Lime Street'],
+    // France & the Low Countries
+    'bordeaux': ['Bordeaux Saint-Jean'],
+    'antwerp': ['Antwerpen-Centraal', 'Antwerpen-Berchem'],
+    'rotterdam': ['Rotterdam Centraal'],
+    // Germany & Austria
+    'dusseldorf': ['Düsseldorf Hauptbahnhof', 'Düsseldorf Flughafen'],
+    'dresden': ['Dresden Hauptbahnhof', 'Dresden-Neustadt'],
+    'leipzig': ['Leipzig Hauptbahnhof'],
+    'stuttgart': ['Stuttgart Hauptbahnhof'],
+    'nuremberg': ['Nürnberg Hauptbahnhof'],
+    'bonn': ['Bonn Hauptbahnhof'],
+    'innsbruck': ['Innsbruck Hauptbahnhof'],
+    'graz': ['Graz Hauptbahnhof'],
+    'linz': ['Linz Hauptbahnhof'],
+    'brno': ['Brno hlavní nádraží'],
+    // Iberia, Italy
+    'bilbao': ['Bilbao-Abando'],
+    'valencia': ['València Joaquín Sorolla', 'València Nord'],
+    'bologna': ['Bologna Centrale'],
+    'turin': ['Torino Porta Nuova', 'Torino Porta Susa'],
+    'genoa': ['Genova Piazza Principe', 'Genova Brignole'],
+    'pisa': ['Pisa Centrale'],
+    'palermo': ['Palermo Centrale'],
+    'bari': ['Bari Centrale'],
+    'catania': ['Catania Centrale'],
+    // Nordics & Baltics
+    'malmo': ['Malmö Centralstation'],
+    'aarhus': ['Aarhus H'],
+    'trondheim': ['Trondheim S'],
+    'tallinn': ['Tallinn Balti jaam'],
+    'riga': ['Rīga Central Station'],
+    'vilnius': ['Vilnius Railway Station'],
+    'kaunas': ['Kaunas Railway Station'],
+    'kyiv': ['Kyiv-Pasazhyrskyi'],
+    'lviv': ['Lviv Railway Station'],
+    // Alps & Balkans
+    'bled': ['Lesce-Bled', 'Bled Jezero'],
+    'split': ['Split railway station'],
+    'sarajevo': ['Sarajevo Railway Station'],
+    'belgrade': ['Beograd Centar (Prokop)'],
+    'thessaloniki': ['Thessaloniki New Railway Station'],
+    // Asia
+    'busan': ['Busan Station'],
+    'beijing': ['Beijing South', 'Beijing West', 'Beijing Station'],
+    'shanghai': ['Shanghai Hongqiao', 'Shanghai Station'],
+    'hong kong': ['Hong Kong West Kowloon'],
+    'taipei': ['Taipei Main Station', 'Nangang'],
+    'hanoi': ['Hanoi (Ga Hà Nội)'],
+    'ho chi minh city': ['Saigon Railway Station'],
+    'da nang': ['Da Nang Railway Station'],
+    'kuala lumpur': ['KL Sentral'],
+    'singapore': ['Woodlands CIQ'],
+    'delhi': ['New Delhi Railway Station', 'Hazrat Nizamuddin'],
+    'mumbai': ['Chhatrapati Shivaji Terminus', 'Mumbai Central'],
+    // Rest of North America, Oceania, Africa
+    'los angeles': ['Los Angeles Union Station'],
+    'san francisco': ['San Francisco 4th & King', 'Emeryville (Amtrak)'],
+    'seattle': ['Seattle King Street Station'],
+    'miami': ['Miami Central (Brightline)'],
+    'sydney': ['Sydney Central'],
+    'melbourne': ['Southern Cross'],
+    'cairo': ['Ramses Station (Cairo)'],
+    'marrakech': ['Marrakech Railway Station'],
+    'cape town': ['Cape Town Station'],
+    'turku': ['Turku Central Station'],
+    'minsk': ['Minsk-Pasazhyrski'],
+    'odessa': ['Odesa-Holovna'],
+    'chisinau': ['Chișinău Railway Station'],
+    'skopje': ['Skopje Railway Station'],
+    'podgorica': ['Podgorica Railway Station'],
+    'tel aviv': ['Tel Aviv Savidor Center', 'Tel Aviv HaHagana'],
+    'jakarta': ['Gambir', 'Pasar Senen'],
+    'chiang mai': ['Chiang Mai Railway Station'],
+    'phnom penh': ['Phnom Penh Railway Station'],
+    'auckland': ['Auckland Strand Station'],
+    'buenos aires': ['Retiro']
+    // Deliberately absent: Reykjavík, Dubrovnik, Valletta, Bali/Denpasar and
+    // Calgary have no intercity passenger rail at all, and a few others are
+    // omitted rather than guessed. Those cities still get both fields — an
+    // invented station name would be worse than none, and you can type your own.
   };
+  /* The same city reached by another name — local spelling ("Köln", "Firenze"),
+     an alternate romanisation, or the airport code an origin/home label carries.
+     CITY_COORDS already keys several of these separately, so without the aliases
+     a route typed as "Köln" or "Milano" would silently offer no stations. */
+  Object.entries({
+    'koln': 'cologne', 'geneve': 'geneva', 'bruxelles': 'brussels', 'sevilla': 'seville',
+    'lisboa': 'lisbon', 'milano': 'milan', 'firenze': 'florence', 'napoli': 'naples',
+    'torino': 'turin', 'genova': 'genoa', 'goteborg': 'gothenburg', 'nurnberg': 'nuremberg',
+    'kiev': 'kyiv', 'ho chi minh': 'ho chi minh city', 'saigon': 'ho chi minh city',
+    'jfk': 'new york', 'newark': 'new york', 'ewr': 'new york',
+    'yvr': 'vancouver', 'cdg': 'paris', 'cph': 'copenhagen'
+  }).forEach(([alias, canon]) => { if (CITY_STATIONS[canon]) CITY_STATIONS[alias] = CITY_STATIONS[canon]; });
   // Origin and home are free-text labels and usually carry an airport code —
   // "Vancouver (YVR)", "New York (JFK)" — so fall back to the name with any
   // parenthetical dropped before giving up on a list.
@@ -832,7 +935,16 @@
   const escA = (s) => esc(s).replace(/"/g, '&quot;');
   const money = (n) => '$' + Math.round(n).toLocaleString();
   const RX_DIACRITICS = /[̀-ͯ]/g;
-  const normKey = (s) => (s || '').normalize('NFD').replace(RX_DIACRITICS, '').toLowerCase().trim();
+  /* NFD splits an accented letter into base + combining mark, which the regex
+     above then drops — but a handful of European letters are their own
+     codepoint with no base to fall back to (Polish ł, Nordic ø/æ, Croatian đ,
+     German ß), so they survive NFD unchanged and every table lookup keyed on
+     plain ASCII misses. "Wrocław" reached neither its coordinates nor its
+     transit pass for that reason. Fold those explicitly. */
+  const RX_LIGATURES = /[łøæœđðþß]/g;
+  const LIGATURE_FOLD = { 'ł': 'l', 'ø': 'o', 'æ': 'ae', 'œ': 'oe', 'đ': 'd', 'ð': 'd', 'þ': 'th', 'ß': 'ss' };
+  const normKey = (s) => (s || '').normalize('NFD').replace(RX_DIACRITICS, '').toLowerCase()
+    .replace(RX_LIGATURES, ch => LIGATURE_FOLD[ch] || ch).trim();
 
   class Planner {
     constructor(root) {
@@ -4835,7 +4947,7 @@
           <div class="leaf-plan-cols">
             <div class="plan-col plan-transport">
               <div class="plan-col-hd">Getting there</div>
-              ${this.renderTransportSection(trip, pIdx)}
+              ${this.renderTransportBody(trip, pIdx)}
             </div>
             <div class="plan-col plan-hotels">
               <div class="plan-col-hd">Sleeping</div>
@@ -5141,7 +5253,7 @@
       <section class="app-leaf${page === 3 ? ' active' : ''}" data-leaf="3">
         <div class="app-sub-inner">
           ${subHd('Getting there')}
-          ${sel ? this.renderTransportSection(trip, sIdx) : emptyNote}
+          ${sel ? this.renderTransportBody(trip, sIdx) : emptyNote}
         </div>
       </section>`;
 
@@ -5990,10 +6102,8 @@
     // header, which is what made "Depart · Prague / Arrive · Kraków" appear on
     // the dialog titled "Getting there — Prague".
     //
-    // `legIdxArg` overrides the lookup so the last stop can also render the
-    // journey home (leg index stops.length), which no stop reaches.
-    renderTransportBody(trip, idx, legIdxArg) {
-      const legIdx = legIdxArg != null ? legIdxArg : idx;
+    renderTransportBody(trip, idx) {
+      const legIdx = idx;
       const leg = this.legByIndex(legIdx);
       const isFlight = leg.mode === 'flight';
       const modeColor = MODE_HEX[leg.mode] || '#7a7260';
@@ -6089,20 +6199,6 @@
           </div>`;
     }
 
-    // The transport editor as the pages actually want it: the leg reaching this
-    // stop, plus — on the last stop only — the leg home, which is stored on that
-    // stop but reaches nowhere, so no "Getting there" section would ever show it.
-    renderTransportSection(trip, idx) {
-      const stops = (trip && trip.stops) || [];
-      const body = this.renderTransportBody(trip, idx);
-      if (idx !== stops.length - 1 || !stops.length) return body;
-      const ends = legEndpoints(trip, stops.length);
-      return body + `<div class="t-home-split">
-          <div class="t-home-hd">Getting home${ends.to ? ` · ${esc(ends.to)}` : ''}</div>
-          ${this.renderTransportBody(trip, idx, stops.length)}
-        </div>`;
-    }
-
     renderTransportModal(trip) {
       if (this.transportOpenIdx == null || !trip.stops[this.transportOpenIdx]) return '';
       const idx = this.transportOpenIdx;
@@ -6116,7 +6212,7 @@
             </div>
             <button class="modal-x" data-act="close-transport">✕</button>
           </div></div>
-          ${this.renderTransportSection(trip, idx)}
+          ${this.renderTransportBody(trip, idx)}
         </div>
       </div>`;
     }
