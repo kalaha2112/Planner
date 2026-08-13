@@ -2618,7 +2618,15 @@
           });
           if (!s.accom || typeof s.accom !== 'object' || !Array.isArray(s.accom.options)) s.accom = { options: [] };
           // lodging prices gained a currency; anything researched before it was CAD
-          s.accom.options.forEach(o => { if (o) o.priceCcy = normCcy(o.priceCcy); });
+          // "chosen" and "booked" were separate for one release; they are one
+          // state now. Keep anything marked either way rather than dropping a
+          // selection the traveller had already made.
+          s.accom.options.forEach(o => {
+            if (!o) return;
+            o.priceCcy = normCcy(o.priceCcy);
+            o.booked = !!(o.booked || o.chosen);
+            delete o.chosen;
+          });
         });
       });
       Object.values(d.trips || {}).forEach(trip => {
@@ -3301,7 +3309,7 @@
       let html = '';
       stops.forEach((stop, idx) => {
         const r = d ? d.stops[idx] : null;
-        const chosenNames = (stop.accom && stop.accom.options || []).filter(o => o.chosen && o.name && o.name.trim()).map(o => o.name.trim());
+        const chosenNames = (stop.accom && stop.accom.options || []).filter(o => o.booked && o.name && o.name.trim()).map(o => o.name.trim());
         const accomSet = chosenNames.length > 0;
         // each stop's own .leg is the leg that arrives at it (legByIndex(idx+1)
         // is the equivalent lookup) — index into the shifted `legs` array here
@@ -3875,7 +3883,7 @@
     // optimizer (route origin) so both hit the same _geoCache key. Prefers the
     // explicit address; falls back to the hotel name. Returns null if neither.
     hotelHQ(stop) {
-      const chosen = ((stop && stop.accom && stop.accom.options) || []).find(o => o.chosen);
+      const chosen = ((stop && stop.accom && stop.accom.options) || []).find(o => o.booked);
       if (!chosen) return null;
       const q = (chosen.address || '').trim() || (chosen.name || '').trim();
       if (!q) return null;
@@ -4114,21 +4122,25 @@
     }
     addDayItem(stop, dayIdx) { this.ensureItinerary(stop); stop.itinerary[dayIdx].items.push({ time: '', text: '' }); this.bump(); }
     removeDayItem(stop, dayIdx, itemIdx) { stop.itinerary[dayIdx].items.splice(itemIdx, 1); this.bump(); }
-    addAccomOption(stopIdx) { const s = this.currentTrip().stops[stopIdx]; if (!s.accom) s.accom = { options: [] }; s.accom.options.push({ id: Date.now(), name: '', address: '', totalPrice: '', priceCcy: 'CAD', distance: '', chosen: false }); this.bump(); }
+    addAccomOption(stopIdx) { const s = this.currentTrip().stops[stopIdx]; if (!s.accom) s.accom = { options: [] }; s.accom.options.push({ id: Date.now(), name: '', address: '', totalPrice: '', priceCcy: 'CAD', distance: '', booked: false }); this.bump(); }
     removeAccomOption(stopIdx, optIdx) { this.snapshot(); this.currentTrip().stops[stopIdx].accom.options.splice(optIdx, 1); this.bump(); }
-    chooseAccomOption(stopIdx, optIdx) {
+    /* Clicking an option books it — comparing and committing are one gesture,
+       not two flags to keep in step. Booking is what feeds the lodging budget,
+       what the Bookings checklist ticks off, and what lifts the row to the top. */
+    toggleAccomBooked(stopIdx, optIdx) {
       const opts = this.currentTrip().stops[stopIdx].accom.options;
       const opt = opts[optIdx];
-      if (opt.chosen) {
-        opt.chosen = false;                                           // toggle off
+      if (opt.booked) {
+        opt.booked = false;                                           // toggle off
       } else {
-        opt.chosen = true;                                            // choose it
-        // allow at most 2 chosen at once: if this makes a 3rd, drop the
-        // earliest other chosen option so the newest two stay selected
-        let others = opts.filter((x, i) => x.chosen && i !== optIdx).length;
+        opt.booked = true;
+        // at most 2 booked at once (a split stay): if this makes a 3rd, drop the
+        // earliest so the newest two stand
+        let others = opts.filter((x, i) => x.booked && i !== optIdx).length;
         for (let i = 0; i < opts.length && others > 1; i++) {
-          if (i !== optIdx && opts[i].chosen) { opts[i].chosen = false; others--; }
+          if (i !== optIdx && opts[i].booked) { opts[i].booked = false; others--; }
         }
+        this._justBookedAccom = optIdx;
       }
       this._reorderAccom(stopIdx, opt);
       this.bump();
@@ -4148,7 +4160,7 @@
       const opts = this.currentTrip().stops[stopIdx].accom.options;
       const before = opts.slice();
       // booked > chosen > the rest, each group holding its relative order
-      const rank = (o) => o.booked ? 2 : o.chosen ? 1 : 0;
+      const rank = (o) => o.booked ? 1 : 0;
       const sorted = [...before].sort((a, b) => rank(b) - rank(a));
       const moved = sorted.some((o, i) => o !== before[i]);
       opts.length = 0; opts.push(...sorted);
@@ -4165,6 +4177,7 @@
       // one-shots consumed by the next render: stamp the badge on the row that
       // was acted on, and spin the list only when the order actually changed
       this._justChoseAccom = focus ? sorted.indexOf(focus) : null;
+      if (this._justBookedAccom != null && focus) this._justBookedAccom = sorted.indexOf(focus);
       this._wheelAccom = moved && stopIdx === this.accomOpenIdx;
     }
 
@@ -4525,7 +4538,7 @@
         // but count the stop's nights as covered only once. Each option carries
         // its own currency (one stop can mix a €-quoted hotel with a $-quoted
         // one), so convert per option rather than per stop.
-        const chosenOpts = ((st.accom && st.accom.options) || []).filter(o => o.chosen);
+        const chosenOpts = ((st.accom && st.accom.options) || []).filter(o => o.booked);
         // read the text the same way the field does, so a currency typed into it
         // ("9800 czk") counts even when nothing has re-synced the picker — an
         // imported trip or a cloud pull lands here without passing the handler
@@ -5541,7 +5554,7 @@
         const right = idx % 2 === 0;
         const dim = this._dragStopIdx === idx ? .38 : 1;
         const r = d ? d.stops[idx] : null;
-        const chosenNames = (stop.accom && stop.accom.options || []).filter(o => o.chosen && o.name && o.name.trim()).map(o => o.name.trim());
+        const chosenNames = (stop.accom && stop.accom.options || []).filter(o => o.booked && o.name && o.name.trim()).map(o => o.name.trim());
         const accomSet = chosenNames.length > 0;
 
         // Card position as % of canvas
@@ -5655,11 +5668,20 @@
           rows.push({ kind: 'leg', legIdx: idx, booked: !!leg.booked,
             label: `Book ${modeWord(leg.mode)}${from ? ' from ' + from : ''}` });
         }
-        ((stop.accom && stop.accom.options) || []).forEach((o, oi) => {
-          if (!o.chosen) return;
-          rows.push({ kind: 'hotel', stopIdx: idx, optIdx: oi, booked: !!o.booked,
-            label: `Book ${(o.name || '').trim() || 'the chosen hotel'}` });
-        });
+        // The hotel line has to exist BEFORE anything is booked — that is the
+        // reminder. Once an option in this city is booked the line names it and
+        // is struck; until then it is a single open "Book a hotel", whichever
+        // options are still being compared.
+        const opts = (stop.accom && stop.accom.options) || [];
+        const bookedHere = opts.map((o, oi) => ({ o, oi })).filter(x => x.o.booked);
+        if (bookedHere.length) {
+          bookedHere.forEach(({ o, oi }) => rows.push({
+            kind: 'hotel', stopIdx: idx, optIdx: oi, booked: true,
+            label: `Book ${(o.name || '').trim() || 'hotel'}` }));
+        } else {
+          rows.push({ kind: 'hotel', stopIdx: idx, optIdx: null, booked: false,
+            label: 'Book a hotel' });
+        }
         if (rows.length) out.push({ city, rows });
       });
       return out;
@@ -5672,14 +5694,16 @@
       const done = groups.reduce((n, g) => n + g.rows.filter(r => r.booked).length, 0);
       const body = groups.map(g => `<div class="bk-group">
           <div class="bk-city">${esc(g.city)}</div>
-          ${g.rows.map(r => `<div class="todo bk-row">
-            <button class="box${r.booked ? ' done' : ''}" data-act="booking-toggle"
+          ${g.rows.map(r => {
+            const noTarget = r.kind === 'hotel' && r.optIdx == null;
+            return `<div class="todo bk-row">
+            <button class="box${r.booked ? ' done' : ''}${noTarget ? ' idle' : ''}" ${noTarget ? 'disabled' : `data-act="booking-toggle"
               data-kind="${r.kind}" data-leg="${r.legIdx == null ? '' : r.legIdx}"
-              data-stop="${r.stopIdx == null ? '' : r.stopIdx}" data-i="${r.optIdx == null ? '' : r.optIdx}"
+              data-stop="${r.stopIdx == null ? '' : r.stopIdx}" data-i="${r.optIdx == null ? '' : r.optIdx}"`}
               aria-pressed="${r.booked}" aria-label="${escA(r.label)}${r.booked ? ' — booked' : ''}"
-              title="${r.booked ? 'Booked — click to un-book' : 'Mark as booked'}">${r.booked ? svg(I.check, { w: 11, h: 11, sw: 3.5 }) : ''}</button>
+              title="${noTarget ? 'Pick a hotel in this city, then tick it there' : r.booked ? 'Booked — click to un-book' : 'Mark as booked'}">${r.booked ? svg(I.check, { w: 11, h: 11, sw: 3.5 }) : ''}</button>
             <span class="txt${r.booked ? ' done' : ''}">${esc(r.label)}</span>
-          </div>`).join('')}
+          </div>`; }).join('')}
         </div>`).join('');
       return `<div class="todos bookings pack-block">
         <div class="hd"><div class="t">Bookings</div><div class="p">${done} / ${all}</div></div>
@@ -5729,7 +5753,7 @@
       const r = d ? d.stops[idx] : null;
       const leg = stop.leg || {};
       const modeLbl = (MODE_OPTIONS.find(o => o.value === leg.mode) || {}).label || '';
-      const chosen = (stop.accom && stop.accom.options || []).filter(o => o.chosen && o.name && o.name.trim()).map(o => o.name.trim());
+      const chosen = (stop.accom && stop.accom.options || []).filter(o => o.booked && o.name && o.name.trim()).map(o => o.name.trim());
       return `<div class="ss-card">
         <div class="ss-top">
           <span class="ss-num">${idx + 1}</span>
@@ -6133,13 +6157,12 @@
           ? (isCad(oCcy) ? oAmt.toLocaleString('en-US') : `${oAmt.toLocaleString('en-US')} ${oCcy}`)
           : priceOnly(o.totalPrice);
         const chipCad = (oAmt && !isCad(oCcy)) ? `<em class="opt-price-cad">≈ ${esc(money(toCad(oAmt, oCcy)))}</em>` : '';
-        return `<div class="opt${o.chosen ? ' chosen' : ''}${o.booked ? ' booked' : ''}${isShut ? ' shut' : ''}${spin ? (oi === stampIdx ? ' wheel-lead' : ' wheel-step') : ''}" style="--wi:${oi}">
+        return `<div class="opt${o.booked ? ' chosen booked' : ''}${isShut ? ' shut' : ''}${spin ? (oi === stampIdx ? ' wheel-lead' : ' wheel-step') : ''}" style="--wi:${oi}">
         <div class="top">
-          <button class="choose" data-act="accom-choose" data-i="${oi}" title="${o.chosen ? 'Unchose this option' : 'Choose this option'}">${o.chosen ? svg(I.check, { w: 11, h: 11, sw: 3.5, stroke: '#fff' }) : ''}</button>
+          <button class="choose" data-act="accom-book" data-i="${oi}" title="${o.booked ? 'Booked — click to un-book' : 'Mark as booked'}">${o.booked ? svg(I.check, { w: 11, h: 11, sw: 3.5, stroke: '#fff' }) : ''}</button>
           <input class="name" value="${escA(o.name)}" data-ch="accom-name" data-i="${oi}" placeholder="Place name…">
           ${chip ? `<span class="opt-price">${esc(chip)}${chipCad}</span>` : ''}
-          ${o.chosen ? `<button class="opt-booked${o.booked ? ' done' : ''}${oi === bookedIdx ? ' stamp-in' : ''}" data-act="accom-booked" data-i="${oi}"
-            aria-pressed="${!!o.booked}" title="${o.booked ? 'Booked — click to un-book' : 'Mark as booked'}">${o.booked ? svg(I.check, { w: 9, h: 9, sw: 3.5 }) + ' Booked' : 'Book?'}</button>` : ''}
+          ${o.booked ? `<span class="badge${oi === bookedIdx ? ' stamp-in' : ''}">Booked</span>` : ''}
           <button class="rm" data-act="accom-remove" data-i="${oi}" title="Remove option">${svg(I.trash, { w: 13, h: 13, sw: 2.4 })}</button>
           <button class="opt-caret" data-act="accom-toggle" data-i="${oi}" aria-expanded="${!isShut}" title="${isShut ? 'Expand' : 'Collapse'} this option">${caret}</button>
         </div>
@@ -6620,14 +6643,6 @@
         // the booked flag has three doors into it — the leg editor, the hotel
         // row, and the derived Bookings checklist — all writing the same value
         case 'leg-booked': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.booked = !leg.booked; this.bump(); break; }
-        case 'accom-booked': {
-          const stopIdx = this.accomOpenIdx;
-          const o = trip.stops[stopIdx].accom.options[i];
-          o.booked = !o.booked;
-          this._reorderAccom(stopIdx, o);
-          if (o.booked) this._justBookedAccom = this.currentTrip().stops[stopIdx].accom.options.indexOf(o);
-          this.bump(); break;
-        }
         case 'booking-toggle': {
           const d = t.dataset;
           if (d.kind === 'leg') { const leg = this.legByIndex(Number(d.leg)); leg.booked = !leg.booked; }
@@ -6705,7 +6720,7 @@
         case 'closet-add': this.modalEl.querySelector('.closet-file').click(); break;
         case 'closet-paste': this.pasteImageFromClipboard('closet'); break;
         case 'outfit-delete': this.removeOutfitFromCloset(id); break;
-        case 'accom-choose': this.chooseAccomOption(this.accomOpenIdx, i); break;
+        case 'accom-book': this.toggleAccomBooked(this.accomOpenIdx, i); break;
         // removing shifts every later option down one, so the saved indices no
         // longer describe the same rows — drop them instead of reindexing
         case 'accom-remove':

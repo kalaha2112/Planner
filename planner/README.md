@@ -185,9 +185,8 @@ alter publication supabase_realtime add table public.shared_state;
   It keeps the schedule chronological (reassigns existing times in order), reports how much shorter
   the walking route is, and is undoable (⌘/Ctrl-Z). Runs entirely in-browser — no API key.
 - **Accommodation modal** — compare lodging options per stop (name, link, price, distance,
-  features); mark one as chosen (feeds the lodging budget), then **Booked** once it's reserved.
-  Both rise to the top of the list — booked above chosen — the list turning like the face of a
-  wheel to get them there.
+  features); clicking one books it, which feeds the lodging budget, lifts it to the top of the
+  list on a turning wheel, and crosses its line off the Bookings checklist.
 - **Bookings checklist** — every flight, train and chosen hotel the route implies, one line per
   item per city, crossed out as each is booked. See [Bookings](#bookings).
 - **Prices in any currency** — type a hotel price or fare the way it's quoted (`1 euro`, `1.5 pl`,
@@ -216,16 +215,17 @@ KRAKÓW
  ☐ Book Hotel Stary
 ```
 
-Each city gets the journey that reaches it plus every hotel chosen there. Hotels you're still
-comparing aren't listed — they're not yet anything to book.
+Each city gets the journey that reaches it and its hotel. The hotel line reads **Book a hotel**
+until something is booked there, then names it and strikes through — the options you're still
+comparing don't each become a line.
 
-Tick it anywhere. A leg has a **Booked** box in its transport editor, a chosen hotel has a
-**BOOKED** badge on its row, and every checklist line has its own box; all three write the same
-flag, so ticking any one crosses the line out and moves the counter. Nothing is stored twice —
-the checklist is derived from the trip on every render, so renaming, reordering or deleting a
-stop can't leave a stale reminder behind.
+Tick it anywhere. A leg has a **Booked** box in its transport editor; a hotel is booked by
+clicking it in the accommodation list, which stamps a **BOOKED** badge on the row and lifts it to
+the top on the wheel. Every checklist line has its own box too. They all write one flag, so
+ticking any of them crosses the line out and moves the counter.
 
-A booked hotel rises above a merely-chosen one, on the same wheel and with the same stamp.
+The checklist is derived from the trip on every render rather than stored, so renaming,
+reordering or deleting a stop can't leave a stale reminder behind.
 
 ## Foreign-currency prices
 

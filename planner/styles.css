@@ -531,6 +531,9 @@ a { color: inherit; }
 .bk-row .txt {
   flex: 1; min-width: 0; font-family: var(--sans); font-size: 13px; font-weight: 500;
   color: var(--ink); padding: 2px 0;
+  /* hotel names arrive as typed and can be one long token — wrap inside a word
+     rather than letting it overflow the column */
+  overflow-wrap: anywhere; line-height: 1.35;
 }
 /* booked — struck through in the same green the to-do list uses for done */
 .bk-row .txt.done {
@@ -549,20 +552,9 @@ a { color: inherit; }
 .t-booked-lbl { font-family: var(--sans); font-size: 12px; font-weight: 600; color: var(--ink-soft); }
 .t-booked-lbl.done { color: var(--green); }
 /* the hotel row's version is a pill, since it sits beside the CHOSEN badge */
-/* BOOKED is the row's one badge — it inherits the look the CHOSEN chip had (the
-   green check button already says a row is chosen, so the chip was saying it
-   twice and crowding the hotel name). Unbooked it is a quiet outline prompt;
-   booked it becomes that soft green pill. */
-.opt-booked {
-  flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px;
-  font-family: var(--sans); font-size: 9px; font-weight: 700; letter-spacing: .06em;
-  text-transform: uppercase; color: var(--ink-mute);
-  background: transparent; border: 1px solid var(--dash); border-radius: var(--r-pill);
-  padding: 3px 9px; cursor: crosshair; transition: color .15s, background .15s, border-color .15s;
-}
-.opt-booked:hover { color: var(--ink); border-color: var(--ink-soft); }
-.opt-booked.done { color: var(--green); background: var(--green-bg); border-color: transparent; }
-.opt.shut .opt-booked { display: none; }
+/* a checklist line with no hotel behind it yet — the box shows the shape of the
+   task without pretending to be a control */
+.bk-row .box.idle { cursor: default; opacity: .55; }
 .add-todo {
   font-family: var(--sans); font-size: 18px; font-weight: 800; line-height: 1;
   color: var(--ink); background: transparent; border: 1px dashed var(--dash);
@@ -2115,7 +2107,18 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .pk-wrap { flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; }
   /* margin-right pulls the pre-trip to-do further left (off the right edge);
      the 22px flex gap before it keeps it clear of the suitcase */
-  .pack-side { flex: 0 1 280px; min-width: 180px; align-self: center; overflow-y: auto; padding: 4px 4px 10px 0; margin-right: 76px; }
+  /* The to-do + Bookings column. Bookings grows with the route — a five-city
+     trip is ~10 lines, and hotel names run long ("NYX Hotel Prague by Leonardo
+     Hotels") — so a fixed 280px wrapped every other line and clipped the worst
+     of them. It now scales with the viewport between a floor that still fits a
+     typical line and a ceiling that stops it eating the sheet on a wide screen,
+     and the margin that holds it off the right edge shrinks with it rather than
+     staying at 76px while the column starves. */
+  .pack-side {
+    flex: 0 1 clamp(240px, 27vw, 440px); min-width: 232px;
+    align-self: center; overflow-y: auto;
+    padding: 4px 4px 10px 0; margin-right: clamp(14px, 4vw, 76px);
+  }
   .pack-side .todos { background: none; border: none; border-radius: 0; padding: 0; }
   /* mirror the pre-trip to-do: a 76px left margin pulls the category checklist
      off the left edge; the 22px flex gap after it keeps it clear of the suitcase */
@@ -2131,7 +2134,9 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .pk-wrap { flex: 0 1 auto; }
   .pk-panel { order: 0; flex: 0 1 auto; width: 100%; max-width: 460px; min-width: 0;
               max-height: 42%; align-self: center; justify-content: flex-start; }
-  .pack-side { min-width: 158px; }
+  /* the case has dropped to its own row here, so the column can take a bigger
+     share of the width than it could beside it */
+  .pack-side { flex: 0 1 clamp(220px, 34vw, 360px); min-width: 208px; margin-right: clamp(10px, 2.5vw, 40px); }
 }
 
 /* ============================================================
@@ -2339,8 +2344,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 @keyframes pillSweep { from { clip-path: inset(0 100% 0 0 round 20px); } to { clip-path: inset(0 0 0 0 round 20px); } }
 
 /* hotels: passport-style CHOSEN stamp */
-.opt .badge.stamp-in,
-.opt-booked.stamp-in { animation: stampIn .5s cubic-bezier(.5, 1.6, .5, 1) both; transform-origin: center; }
+.opt .badge.stamp-in { animation: stampIn .5s cubic-bezier(.5, 1.6, .5, 1) both; transform-origin: center; }
 @keyframes stampIn {
   0%   { opacity: 0; transform: scale(1.5) rotate(-8deg); }
   55%  { opacity: 1; transform: scale(.92) rotate(2deg); }
@@ -2391,7 +2395,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .t-journey-veh { animation: none; left: 2%; transform: translateY(-50%); opacity: .9; }
   .leaf-entering .t-journey-line { animation: none; }
   .t-pill.just-switched { animation: none; }
-  .opt .badge.stamp-in, .opt-booked.stamp-in { animation: none; }
+  .opt .badge.stamp-in { animation: none; }
   /* the reorder still happens — only the turn is dropped */
   .opt.wheel-lead, .opt.wheel-step { animation: none; }
   .day-wx .ic { animation: none; }
