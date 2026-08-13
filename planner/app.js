@@ -285,12 +285,12 @@
         label: 'Central Europe',
         depart: '2026-09-14', returnDate: '2026-09-30', travelers: 2,
         originLabel: 'New York (JFK)',
-        outboundLeg: { mode: 'flight', duration: '8h20m nonstop · Delta', cost: 70 },
+        outboundLeg: { mode: 'flight', duration: '8h20m nonstop · Delta', cost: 70, costCcy: 'CAD' },
         stops: [
-          { city: 'Prague', nights: 4, note: '', leg: { mode: 'train', duration: '~6h direct', cost: 35 } },
-          { city: 'Kraków', nights: 4, note: '', leg: { mode: 'overnight-train', duration: '~9h sleeper · saves a hotel night', cost: 80 } },
-          { city: 'Budapest', nights: 4, note: '', leg: { mode: 'flight', duration: '~2h15m AF · same ticket as flight home', cost: 0, miles: 0 } },
-          { city: 'Paris', nights: 2, note: '', leg: { mode: 'flight', duration: '9h45m nonstop · Air France', cost: 0, miles: 0 } }
+          { city: 'Prague', nights: 4, note: '', leg: { mode: 'train', duration: '~6h direct', cost: 35, costCcy: 'CAD' } },
+          { city: 'Kraków', nights: 4, note: '', leg: { mode: 'overnight-train', duration: '~9h sleeper · saves a hotel night', cost: 80, costCcy: 'CAD' } },
+          { city: 'Budapest', nights: 4, note: '', leg: { mode: 'flight', duration: '~2h15m AF · same ticket as flight home', cost: 0, costCcy: 'CAD', miles: 0 } },
+          { city: 'Paris', nights: 2, note: '', leg: { mode: 'flight', duration: '9h45m nonstop · Air France', cost: 0, costCcy: 'CAD', miles: 0 } }
         ],
         homeLabel: 'Vancouver (YVR)',
         packing: {
@@ -303,13 +303,13 @@
         label: 'Scandinavia',
         depart: '2026-09-14', returnDate: '2026-09-30', travelers: 2,
         originLabel: 'New York (JFK)',
-        outboundLeg: { mode: 'flight', duration: '8h nonstop · Delta', cost: 70 },
+        outboundLeg: { mode: 'flight', duration: '8h nonstop · Delta', cost: 70, costCcy: 'CAD' },
         stops: [
-          { city: 'Copenhagen', nights: 2, note: '', leg: { mode: 'flight', duration: '~1h30m · SAS / Norwegian', cost: 0 } },
-          { city: 'Bergen', nights: 3, note: '', leg: { mode: 'train', duration: '~6h45m · Bergen Railway (scenic)', cost: 90 } },
-          { city: 'Oslo', nights: 4, note: '', leg: { mode: 'train', duration: '~5-6h', cost: 80 } },
-          { city: 'Stockholm', nights: 4, note: '', leg: { mode: 'flight', duration: '~2h40m AF · same ticket as flight home', cost: 0, miles: 0 } },
-          { city: 'Paris', nights: 2, note: '', leg: { mode: 'flight', duration: '9h45m nonstop · Air France', cost: 0, miles: 0 } }
+          { city: 'Copenhagen', nights: 2, note: '', leg: { mode: 'flight', duration: '~1h30m · SAS / Norwegian', cost: 0, costCcy: 'CAD' } },
+          { city: 'Bergen', nights: 3, note: '', leg: { mode: 'train', duration: '~6h45m · Bergen Railway (scenic)', cost: 90, costCcy: 'CAD' } },
+          { city: 'Oslo', nights: 4, note: '', leg: { mode: 'train', duration: '~5-6h', cost: 80, costCcy: 'CAD' } },
+          { city: 'Stockholm', nights: 4, note: '', leg: { mode: 'flight', duration: '~2h40m AF · same ticket as flight home', cost: 0, costCcy: 'CAD', miles: 0 } },
+          { city: 'Paris', nights: 2, note: '', leg: { mode: 'flight', duration: '9h45m nonstop · Air France', cost: 0, costCcy: 'CAD', miles: 0 } }
         ],
         homeLabel: 'Vancouver (YVR)'
       }
@@ -508,6 +508,48 @@
     AED: 0.37, SAR: 0.37, QAR: 0.38, ILS: 0.37,
     AUD: 0.90, NZD: 0.83, MXN: 0.072, BRL: 0.25, ARS: 0.0014, CLP: 0.0014, ZAR: 0.075, EGP: 0.028, MAD: 0.14
   };
+
+  /* ---------- currency entry (hotel prices + transport fares) ----------
+     Prices are researched in whatever the booking site quotes — €, ¥, £ — but
+     every rollup in the app (budget receipt, stats) is CAD. So a price field is
+     really two values: the amount as typed, plus the currency it was typed in.
+     The amount is stored verbatim and never rewritten; only the conversion is
+     derived, so changing the rate table below re-converts everything and the
+     numbers you entered stay exactly as you entered them.
+     The picker list is derived from FX_CAD — adding a rate there is enough to
+     offer the currency here — with the ones you actually book in pulled to the
+     front and the rest alphabetical. */
+  const CCY_LEAD = ['CAD', 'USD', 'EUR', 'GBP', 'CHF', 'JPY', 'KRW', 'AUD', 'MXN'];
+  const CURRENCIES = [
+    ...CCY_LEAD.filter(c => FX_CAD[c] != null),
+    ...Object.keys(FX_CAD).filter(c => !CCY_LEAD.includes(c)).sort()
+  ];
+  const CCY_SYMBOL = {
+    CAD: '$', USD: '$', AUD: '$', NZD: '$', SGD: '$', HKD: '$', TWD: '$', MXN: '$', BRL: 'R$', ARS: '$', CLP: '$',
+    EUR: '€', GBP: '£', CHF: 'Fr', JPY: '¥', CNY: '¥', KRW: '₩', RUB: '₽', INR: '₹', THB: '฿', VND: '₫',
+    PHP: '₱', TRY: '₺', ILS: '₪', PLN: 'zł', CZK: 'Kč', HUF: 'Ft', DKK: 'kr', NOK: 'kr', SEK: 'kr', ISK: 'kr',
+    RON: 'lei', BGN: 'лв', HRK: 'kn', IDR: 'Rp', MYR: 'RM', ZAR: 'R', EGP: 'E£', MAD: 'DH',
+    AED: 'د.إ', SAR: '﷼', QAR: '﷼'
+  };
+  const normCcy = (c) => { const k = String(c || 'CAD').toUpperCase(); return FX_CAD[k] != null ? k : 'CAD'; };
+  const isCad = (c) => normCcy(c) === 'CAD';
+  const ccySym = (c) => CCY_SYMBOL[normCcy(c)] || normCcy(c);
+  const fxRate = (c) => FX_CAD[normCcy(c)] || 1;
+  const toCad = (amt, c) => (Number(amt) || 0) * fxRate(c);
+  const ccyOptions = (sel) => {
+    const cur = normCcy(sel);
+    return CURRENCIES.map(c => `<option value="${c}"${c === cur ? ' selected' : ''}>${c}</option>`).join('');
+  };
+  // "≈ $612 CAD · 1 EUR = $1.48" — the hint under a non-CAD price field. Returns
+  // '' for CAD (nothing to convert) and for a blank/zero amount (nothing to say).
+  const cadHint = (amt, c) => {
+    const n = Number(amt) || 0;
+    if (isCad(c) || !n) return '';
+    return `≈ ${money(toCad(n, c))} CAD · 1 ${normCcy(c)} = $${fxRate(c).toFixed(fxRate(c) < 0.01 ? 5 : fxRate(c) < 1 ? 3 : 2)}`;
+  };
+  // free-text price ("€420 / 4 nights") → the number in it, ignoring wording
+  const parsePriceAmt = (s) => { const m = String(s == null ? '' : s).replace(/,/g, '').match(/\d+(\.\d+)?/); return m ? Number(m[0]) : 0; };
+
   const CITY_PASS_LOCAL = {
     'new york': { a: 8.90, c: 'USD' }, 'jfk': { a: 8.90, c: 'USD' }, 'newark': { a: 8.90, c: 'USD' }, 'ewr': { a: 8.90, c: 'USD' },
     'los angeles': { a: 7, c: 'USD' }, 'san francisco': { a: 5, c: 'USD' }, 'chicago': { a: 5, c: 'USD' }, 'washington': { a: 13.50, c: 'USD' },
@@ -2193,6 +2235,8 @@
             if (l.miles === 25000) l.miles = 0;   // clear the untouched seed default
           }
           if (l.mode === 'flight' && l.miles == null) l.miles = 0;
+          // fares gained a currency; everything entered before it was CAD
+          l.costCcy = normCcy(l.costCcy);
         });
       });
       if (d.meta && d.meta.title == null) d.meta.title = '';
@@ -2242,6 +2286,8 @@
             });
           });
           if (!s.accom || typeof s.accom !== 'object' || !Array.isArray(s.accom.options)) s.accom = { options: [] };
+          // lodging prices gained a currency; anything researched before it was CAD
+          s.accom.options.forEach(o => { if (o) o.priceCcy = normCcy(o.priceCcy); });
         });
       });
       Object.values(d.trips || {}).forEach(trip => {
@@ -2901,13 +2947,16 @@
     // for a flight leg are edited on the Transport & Hotels page
     _legFields(leg, legIdx) {
       const opts = MODE_OPTIONS.map(o => `<option value="${o.value}"${o.value === leg.mode ? ' selected' : ''}>${o.label}</option>`).join('');
+      const ccy = normCcy(leg.costCcy);
+      const hint = cadHint(leg.cost, ccy);
       return `<div class="map-leg-row">
         <span class="mode-dot" style="background:${MODE_HEX[leg.mode] || '#7a7260'}"></span>
         <select data-ch="leg-mode" data-leg="${legIdx}">${opts}</select>
         <input class="dur" value="${escA(leg.duration)}" data-ch="leg-dur" data-leg="${legIdx}" placeholder="notes">
-        ${SHOW_COSTS ? `<span class="cost-wrap">
+        ${SHOW_COSTS ? `<span class="cost-wrap" title="${escA(hint || 'Fare per person, in the currency you pick beside it')}">
           <input class="cost" type="text" inputmode="numeric" value="${escA(leg.cost ?? 0)}" data-ch="leg-cost" data-leg="${legIdx}">
-          <span class="unit">$/pp</span></span>` : ''}
+          <select class="ccy-sel ccy-sel--leg" data-ch="leg-ccy" data-leg="${legIdx}" title="Currency this fare is quoted in — converted to CAD for the budget">${ccyOptions(ccy)}</select>
+          <span class="unit">/pp</span></span>` : ''}
       </div>`;
     }
 
@@ -3633,7 +3682,7 @@
 
     /* ---------- mutators: stops / trips / todos ---------- */
     insertStop(idx) {
-      this.currentTrip().stops.splice(idx, 0, { city: '', nights: 2, note: '', leg: { mode: 'train', duration: '', cost: 0 } });
+      this.currentTrip().stops.splice(idx, 0, { city: '', nights: 2, note: '', leg: { mode: 'train', duration: '', cost: 0, costCcy: 'CAD' } });
       if (this._webMag()) {
         // web ledger: the new stop is entered in the column's card slot — the
         // floating map card must NOT claim edit mode (it would steal focus)
@@ -3671,8 +3720,8 @@
       const n = Object.keys(this.data.trips).length + 1;
       this.data.trips[key] = {
         label: 'Trip ' + n, depart: '', returnDate: '', travelers: this.data.meta.travelers || 2,
-        originLabel: '', outboundLeg: { mode: 'flight', duration: '', cost: 0 },
-        stops: [{ city: '', nights: 0, note: '', leg: { mode: 'flight', duration: '', cost: 0 } }], homeLabel: '', closet: []
+        originLabel: '', outboundLeg: { mode: 'flight', duration: '', cost: 0, costCcy: 'CAD' },
+        stops: [{ city: '', nights: 0, note: '', leg: { mode: 'flight', duration: '', cost: 0, costCcy: 'CAD' } }], homeLabel: '', closet: []
       };
       this.tripKeys();   // self-heals data.tripOrder to include the new trip (appended at the end)
       this.data.active = key; this.bump();
@@ -3732,7 +3781,7 @@
     }
     addDayItem(stop, dayIdx) { this.ensureItinerary(stop); stop.itinerary[dayIdx].items.push({ time: '', text: '' }); this.bump(); }
     removeDayItem(stop, dayIdx, itemIdx) { stop.itinerary[dayIdx].items.splice(itemIdx, 1); this.bump(); }
-    addAccomOption(stopIdx) { const s = this.currentTrip().stops[stopIdx]; if (!s.accom) s.accom = { options: [] }; s.accom.options.push({ id: Date.now(), name: '', address: '', totalPrice: '', distance: '', chosen: false }); this.bump(); }
+    addAccomOption(stopIdx) { const s = this.currentTrip().stops[stopIdx]; if (!s.accom) s.accom = { options: [] }; s.accom.options.push({ id: Date.now(), name: '', address: '', totalPrice: '', priceCcy: 'CAD', distance: '', chosen: false }); this.bump(); }
     removeAccomOption(stopIdx, optIdx) { this.snapshot(); this.currentTrip().stops[stopIdx].accom.options.splice(optIdx, 1); this.bump(); }
     chooseAccomOption(stopIdx, optIdx) {
       const opts = this.currentTrip().stops[stopIdx].accom.options;
@@ -4075,8 +4124,18 @@
       const meta = this.data.meta;
       const legs = [trip.outboundLeg, ...trip.stops.map(s => s.leg)];
       const bud = meta.budget;
-      const flightCost = legs.reduce((s, l) => s + (l.mode === 'flight' ? (Number(l.cost) || 0) : 0), 0) * travelers;
-      const intercityCost = legs.reduce((s, l) => s + (l.mode !== 'flight' ? (Number(l.cost) || 0) : 0), 0) * travelers;
+      // fares are entered in whatever currency the ticket was quoted in — convert
+      // each leg to CAD before it joins the total
+      const flightCost = legs.reduce((s, l) => s + (l.mode === 'flight' ? toCad(l.cost, l.costCcy) : 0), 0) * travelers;
+      const intercityCost = legs.reduce((s, l) => s + (l.mode !== 'flight' ? toCad(l.cost, l.costCcy) : 0), 0) * travelers;
+      // name the foreign currencies folded into each line, so a total that looks
+      // off can be traced back to the rate rather than to a typo
+      const fxNote = (pick) => {
+        const cs = [...new Set(legs.filter(l => l && pick(l) && Number(l.cost) && !isCad(l.costCcy)).map(l => normCcy(l.costCcy)))];
+        return cs.length ? ' · converted from ' + cs.join(', ') : '';
+      };
+      const flightFx = fxNote(l => l.mode === 'flight');
+      const intercityFx = fxNote(l => l.mode !== 'flight');
       const cityPassLines = trip.stops.map(st => {
         const p = CITY_PASS_LOCAL[normKey(st.city)] || DEFAULT_PASS;
         const known = !!CITY_PASS_LOCAL[normKey(st.city)];
@@ -4087,18 +4146,24 @@
       const cityPassAuto = cityPassLines.reduce((s, c) => s + c.total, 0);
       const cityPassTotal = bud.cityPassOverride != null ? Number(bud.cityPassOverride) : cityPassAuto;
       const cityPassDetail = cityPassLines.map(c => `${c.city} ${c.localAmt} ${c.ccy}·$${c.rateCad.toFixed(0)}/day×${c.nights}${c.known ? '' : ' (est.)'}`).join(' · ');
-      const parseAmt = s => { const m = (s || '').replace(/,/g, '').match(/\d+(\.\d+)?/); return m ? Number(m[0]) : 0; };
-      let lodgingFromHotels = 0, hotelNightsCovered = 0, anyChosenPrice = false; const lodgingParts = [];
+      let lodgingFromHotels = 0, hotelNightsCovered = 0, anyChosenPrice = false; const lodgingParts = []; const lodgingCcys = new Set();
       trip.stops.forEach(st => {
         // up to 2 hotels can be chosen per stop — sum both toward lodging,
-        // but count the stop's nights as covered only once
+        // but count the stop's nights as covered only once. Each option carries
+        // its own currency (one stop can mix a €-quoted hotel with a $-quoted
+        // one), so convert per option rather than per stop.
         const chosenOpts = ((st.accom && st.accom.options) || []).filter(o => o.chosen);
-        const amt = chosenOpts.reduce((s, o) => s + parseAmt(o.totalPrice), 0);
+        const amt = chosenOpts.reduce((s, o) => {
+          const local = parsePriceAmt(o.totalPrice);
+          if (local && !isCad(o.priceCcy)) lodgingCcys.add(normCcy(o.priceCcy));
+          return s + toCad(local, o.priceCcy);
+        }, 0);
         if (amt > 0) { anyChosenPrice = true; lodgingFromHotels += amt; hotelNightsCovered += Number(st.nights) || 0; lodgingParts.push(`${st.city} $${Math.round(amt)}`); }
       });
       const nightsUncovered = Math.max(0, nights - hotelNightsCovered);
       const lodgingTotal = lodgingFromHotels;
-      const lodgingDetail = anyChosenPrice ? ('from chosen hotels · ' + lodgingParts.join(' · ') + (nightsUncovered > 0 ? ' · ' + nightsUncovered + 'n not yet chosen' : '')) : 'choose hotels in the stop cards to populate';
+      const lodgingFx = lodgingCcys.size ? ' · converted from ' + [...lodgingCcys].join(', ') : '';
+      const lodgingDetail = anyChosenPrice ? ('from chosen hotels · ' + lodgingParts.join(' · ') + (nightsUncovered > 0 ? ' · ' + nightsUncovered + 'n not yet chosen' : '') + lodgingFx) : 'choose hotels in the stop cards to populate';
       const foodTotal = (Number(bud.foodPerDayPP) || 0) * nights * travelers;
       let loggedActivities = 0;
       trip.stops.forEach(s => (Array.isArray(s.itinerary) ? s.itinerary : []).forEach(day => (day && Array.isArray(day.items) ? day.items : []).forEach(it => { const v = parseFloat(String(it.cost == null ? '' : it.cost).replace(/[^0-9.]/g, '')); if (!isNaN(v)) loggedActivities += v; })));
@@ -4106,8 +4171,8 @@
       const grandTotal = flightCost + intercityCost + cityPassTotal + lodgingTotal + foodTotal + loggedActivities + otherTotal;
       const perPerson = travelers > 0 ? Math.round(grandTotal / travelers) : grandTotal;
       const lines = [
-        { label: 'Flights', mult: 'from route legs (excl. Flying Blue)', total: money(flightCost) },
-        { label: 'Intercity transport', mult: 'trains & buses from route legs', total: money(intercityCost) },
+        { label: 'Flights', mult: 'from route legs (excl. Flying Blue)' + flightFx, total: money(flightCost) },
+        { label: 'Intercity transport', mult: 'trains & buses from route legs' + intercityFx, total: money(intercityCost) },
         { label: 'City public transport', mult: cityPassDetail || 'city pass × nights × travelers', total: money(cityPassTotal), override: money(cityPassTotal), isOverride: true },
         { label: 'Lodging', mult: lodgingDetail, total: money(lodgingTotal) },
         { label: 'Food', key: 'foodPerDayPP', unit: '$/day/pp', mult: '× ' + nights + ' × ' + travelers, value: bud.foodPerDayPP, total: money(foodTotal) },
@@ -5625,18 +5690,29 @@
 
       const opts = accomList.map((o, oi) => {
         const isShut = collapsed.has(oi);
+        // The price stays free text ("420 / 4 nights"); the currency beside it
+        // says what those digits are, and the CAD figure is derived from both.
+        const oCcy = normCcy(o.priceCcy);
+        const oAmt = parsePriceAmt(o.totalPrice);
+        const priceHint = cadHint(oAmt, oCcy);
+        const chipRaw = priceOnly(o.totalPrice);
+        const chip = chipRaw ? (isCad(oCcy) ? chipRaw : `${chipRaw} ${oCcy}`) : '';
+        const chipCad = (chip && !isCad(oCcy) && oAmt) ? `<em class="opt-price-cad">≈ ${esc(money(toCad(oAmt, oCcy)))}</em>` : '';
         return `<div class="opt${o.chosen ? ' chosen' : ''}${isShut ? ' shut' : ''}">
         <div class="top">
           <button class="choose" data-act="accom-choose" data-i="${oi}" title="${o.chosen ? 'Unchose this option' : 'Choose this option'}">${o.chosen ? svg(I.check, { w: 11, h: 11, sw: 3.5, stroke: '#fff' }) : ''}</button>
           <input class="name" value="${escA(o.name)}" data-ch="accom-name" data-i="${oi}" placeholder="Place name…">
-          ${priceOnly(o.totalPrice) ? `<span class="opt-price">${esc(priceOnly(o.totalPrice))}</span>` : ''}
+          ${chip ? `<span class="opt-price">${esc(chip)}${chipCad}</span>` : ''}
           ${o.chosen ? `<span class="badge${oi === stampIdx ? ' stamp-in' : ''}">Chosen</span>` : ''}
           <button class="rm" data-act="accom-remove" data-i="${oi}" title="Remove option">${svg(I.trash, { w: 13, h: 13, sw: 2.4 })}</button>
           <button class="opt-caret" data-act="accom-toggle" data-i="${oi}" aria-expanded="${!isShut}" title="${isShut ? 'Expand' : 'Collapse'} this option">${caret}</button>
         </div>
         <div class="grid">
           <div class="fld fld--addr"><label>Address</label><div class="lk"><input value="${escA(o.address)}" data-ch="accom-address" data-i="${oi}" placeholder="Street, city — for the map & optimizer">${/\S/.test(o.address || '') ? `<a class="maps" href="https://maps.google.com/?q=${encodeURIComponent(o.address || '')}" target="_blank" rel="noopener" title="Open in Maps">↗</a>` : ''}</div></div>
-          <div class="fld"><label>Total price</label><input class="price" value="${escA(o.totalPrice)}" data-ch="accom-price" data-i="${oi}" placeholder="e.g. $420 / 4 nights"></div>
+          <div class="fld"><label>Total price</label>
+            <div class="lk"><input class="price" value="${escA(o.totalPrice)}" data-ch="accom-price" data-i="${oi}" placeholder="e.g. 420 / 4 nights"><select class="ccy-sel" data-ch="accom-ccy" data-i="${oi}" title="Currency this price is quoted in — converted to CAD for the budget">${ccyOptions(o.priceCcy)}</select></div>
+            ${priceHint ? `<span class="cad-hint">${esc(priceHint)}</span>` : ''}
+          </div>
           <div class="fld"><label>Distance</label><input value="${escA(o.distance)}" data-ch="accom-distance" data-i="${oi}" placeholder="e.g. 300m to centre"></div>
         </div>
       </div>`;
@@ -5699,6 +5775,8 @@
       const idLabel = isFlight ? 'Flight No.' : leg.mode === 'train' ? 'Train No.' : 'Line';
       const costVal = escA(fmtCost(leg.cost ?? 0));
       const rewardVal = escA(fmtCost(leg.miles ?? 0));
+      const costCcy = normCcy(leg.costCcy);
+      const costHint = cadHint(leg.cost, costCcy);
       return `<div class="transport-body">
             <div class="t-modebar">
               <div class="t-pills">${pills}</div>
@@ -5729,9 +5807,11 @@
               <div class="t-fld">
                 <label>Cost / pp</label>
                 <div class="t-cost-row">
-                  <span class="t-unit">$</span>
+                  <span class="t-unit">${esc(ccySym(costCcy))}</span>
                   <input class="t-line-inp" inputmode="numeric" value="${costVal}" data-ch="transport-cost" data-leg="${legIdx}">
+                  <select class="ccy-sel" data-ch="transport-ccy" data-leg="${legIdx}" title="Currency this fare is quoted in — converted to CAD for the budget">${ccyOptions(costCcy)}</select>
                 </div>
+                ${costHint ? `<span class="cad-hint">${esc(costHint)}</span>` : ''}
               </div>
             </div>
             ${isFlight ? `
@@ -5790,7 +5870,7 @@
               <div class="budget-body">
                 ${lines}
                 <div class="btotal"><div class="l">Total</div><div class="v">${esc(money(budget.grandTotal))}</div></div>
-                <p class="budget-note">All figures in CAD. Flights &amp; intercity transport are pulled from your route legs; city public transport uses researched local-currency day passes converted to CAD. Edit any rate to refine — it updates live.</p>
+                <p class="budget-note">All figures in CAD. Flights &amp; intercity transport are pulled from your route legs and lodging from your chosen hotels — each converted from the currency you entered it in; city public transport uses researched local-currency day passes converted to CAD. Edit any rate to refine — it updates live.</p>
                 <div class="receipt-barcode" aria-hidden="true"></div>
                 <div class="receipt-barcode-num">№ ${String(Math.abs(Math.round(budget.grandTotal * 100))).padStart(12, '0')}</div>
               </div>
@@ -6174,11 +6254,15 @@
         case 'leg-mode': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.mode = v; if (leg.mode === 'flight' && leg.miles == null) leg.miles = 0; this.bump(); break; }
         case 'leg-dur': this.legByIndex(Number(t.dataset.leg)).duration = v; this.bump(); break;
         case 'leg-cost': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.cost = Number((v+'').replace(/,/g,'')) || 0; this.bump(); break; }
+        // switching currency re-labels and re-converts the fare; the amount the
+        // user typed is deliberately left alone
+        case 'leg-ccy': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.costCcy = normCcy(v); this.bump(); break; }
         // 'change' fires once on blur (not per keystroke), so a full bump()
         // here is safe and keeps the budget/reward-points stats in sync the
         // moment either field is edited, instead of only after the next
         // unrelated render
         case 'transport-cost': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.cost = Number(v.replace(/,/g, '')) || 0; this.bump(); break; }
+        case 'transport-ccy': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.costCcy = normCcy(v); this.bump(); break; }
         case 'transport-reward': { const leg = this.legByIndex(Number(t.dataset.leg)); leg.miles = Number(v.replace(/,/g, '')) || 0; this.bump(); break; }
         case 'transport-depart': { this.legByIndex(Number(t.dataset.leg)).departure = v; this.scheduleSave(); break; }
         case 'transport-arrival': { this.legByIndex(Number(t.dataset.leg)).arrival = v; this.scheduleSave(); break; }
@@ -6215,6 +6299,7 @@
         case 'accom-name': trip.stops[this.accomOpenIdx].accom.options[i].name = v; this.bump(); break;
         case 'accom-address': trip.stops[this.accomOpenIdx].accom.options[i].address = v; this.bump(); this.scheduleDayMap(); break;
         case 'accom-price': trip.stops[this.accomOpenIdx].accom.options[i].totalPrice = v; this.bump(); break;
+        case 'accom-ccy': trip.stops[this.accomOpenIdx].accom.options[i].priceCcy = normCcy(v); this.bump(); break;
         case 'accom-distance': trip.stops[this.accomOpenIdx].accom.options[i].distance = v; this.bump(); break;
         // budget modal
         case 'budget-edit': meta.budget[t.dataset.key] = Math.max(0, Number((v+'').replace(/,/g,'')) || 0); this.bump(); break;

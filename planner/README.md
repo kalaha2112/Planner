@@ -186,11 +186,42 @@ alter publication supabase_realtime add table public.shared_state;
   the walking route is, and is undoable (⌘/Ctrl-Z). Runs entirely in-browser — no API key.
 - **Accommodation modal** — compare lodging options per stop (name, link, price, distance,
   features); mark one as chosen (feeds the lodging budget).
+- **Prices in any currency** — every hotel price and transport fare has a currency picker beside
+  it, so you enter what the booking site quotes (`9800 CZK`, `€42`) instead of converting by hand.
+  See [Foreign-currency prices](#foreign-currency-prices).
 - **Budget modal** — flights, intercity transport, city transit (researched local-currency day
   passes → CAD), lodging, food, activities, buffer; editable assumptions; live total + per-person.
 - **Map** — Leaflet route with mode-colored legs and clickable stop markers (→ open itinerary).
 - **Persistence** — autosaves to `localStorage` (`europe-trip-state-v1`); **Export / Import** as
   JSON; **Reset** restores the default route.
+
+## Foreign-currency prices
+
+Research arrives in the local currency — a Prague hotel quotes CZK, a Trenitalia fare quotes EUR —
+but every rollup in the app is CAD. So the two price fields that feed the budget each carry a
+currency alongside the amount:
+
+| Field | Where |
+|---|---|
+| Hotel **Total price** | Accommodation research, per option |
+| Transport **Cost / pp** | Transport modal, and the compact leg editor on each stop card |
+
+Type the amount exactly as quoted and pick the currency next to it. The amount is stored verbatim
+and never rewritten — only the conversion is derived — so the figure you researched is still the
+figure you see. Under a non-CAD field the app prints what it works out to
+(`≈ $608 CAD · 1 CZK = $0.062`); on a collapsed hotel row the price reads `9800 CZK ≈ $608`. A CAD
+price shows no conversion line at all, so nothing changes for prices already in dollars.
+
+The **Budget** receipt converts each leg and each chosen hotel individually — one stop can mix a
+€-quoted hotel with a $-quoted one — and names the currencies it folded in on the affected lines
+(`trains & buses from route legs · converted from EUR`).
+
+Rates live in the `FX_CAD` table in `app.js` (the same table the city-transit day passes already
+used) and are static — they're travel-planning estimates, not live FX, and no network call is made.
+Editing a rate re-converts everything that references it. The currency list offered in the pickers
+is derived from that table, so adding a rate is enough to add the currency.
+
+Trips saved before this existed load as CAD, with totals unchanged.
 
 ## Importing shared posts
 
