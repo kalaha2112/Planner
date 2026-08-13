@@ -4970,7 +4970,6 @@
         <div class="leaf-inner">
           <header class="leaf-head">
             <div class="leaf-head-main">
-              <div class="eyebrow">Packing &amp; To-do</div>
               <div class="leaf-title">The Suitcase</div>
               <div class="leaf-sub">${pkTotals.t ? pkTotals.d + ' of ' + pkTotals.t + ' packed' : 'Hover an object to start its list'}</div>
             </div>
