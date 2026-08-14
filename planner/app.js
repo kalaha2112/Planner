@@ -5233,12 +5233,23 @@
       const sIdx = this.appStopIdx;
       const sel = trip.stops[sIdx] || null;
       const range = (sel && d) ? d.stops[sIdx] : null;
-      const stopPills = () => trip.stops.map((s, i) =>
-        `<button class="app-pill${i === sIdx ? ' on' : ''}" data-act="app-stop" data-i="${i}">${esc(s.city || 'Stop ' + (i + 1))}</button>`).join('');
+      /* The city IS the heading, not a band of pills beneath one. Five cities as
+         pills sat flush to the right edge at 412px and wrapped on anything
+         narrower, and they wore the same accent as the active tab — so the page
+         had two rows of identical-looking pills and no way to tell app-level
+         navigation from city selection. A <select> styled as the title carries
+         the same choice in the space the title already occupied, can't spill,
+         and gets the native picker on a phone for free. Styled like .ccy-sel:
+         bare text with a small caret, not a form control. */
+      const cityPicker = () => {
+        if (!trip.stops.length) return `<div class="app-page-title">No stops yet</div>`;
+        const opts = trip.stops.map((s, i) =>
+          `<option value="${i}"${i === sIdx ? ' selected' : ''}>${esc(s.city || 'Stop ' + (i + 1))}</option>`).join('');
+        return `<select class="app-page-title app-city-sel" data-ch="app-stop" aria-label="Choose city">${opts}</select>`;
+      };
       const subHd = (eyebrow) => `<header class="app-page-hd">
-          <div class="app-page-title">${sel ? esc(sel.city || 'Stop') : 'No stops yet'}</div>
+          ${cityPicker()}
           <div class="app-page-sub">${range ? esc(fmt(range.start) + ' → ' + fmt(range.end)) + ' · ' : ''}${sel ? nightsLbl(sel) : ''}</div>
-          ${trip.stops.length ? `<div class="app-pills">${stopPills()}</div>` : ''}
         </header>`;
       const emptyNote = `<p class="empty-note" style="margin:18px 4px">Add a stop on the overview first.</p>`;
 
@@ -5705,6 +5716,15 @@
         <div class="hd"><div class="t">Bookings</div><div class="p">${done} / ${all}</div></div>
         <div>${body}</div>
       </div>`;
+    }
+
+    /* Switching the city clears the selections that belonged to the old one —
+       shared by the heading's picker and by anything else that jumps stop. */
+    setAppStop(i) {
+      if (this.appStopIdx === i || i == null || isNaN(i)) return;
+      this.appStopIdx = i;
+      this.activeDay = null; this._optimizeNote = null; this._selectedItem = null;
+      this.render();
     }
 
     renderTodos(meta) {
@@ -6667,7 +6687,7 @@
           break;
         }
         case 'app-goto': this.appGoto(i); break;
-        case 'app-stop': if (this.appStopIdx !== i) { this.appStopIdx = i; this.activeDay = null; this._optimizeNote = null; this._selectedItem = null; this.render(); } break;
+        case 'app-stop': this.setAppStop(i); break;
         case 'ledger-goto': this.magGoto(i); break;
         case 'ledger-prev': if (this.magIdx > 0) this.magGoto(this.magIdx - 1); else if (this._introReturn) this._introReturn(); break;
         case 'ledger-next': this.magGoto(this.magIdx + 1); break;
@@ -6757,6 +6777,7 @@
       const i = t.dataset.i != null ? Number(t.dataset.i) : null;
       const trip = this.currentTrip(); const meta = this.data.meta;
       switch (ch) {
+        case 'app-stop': this.setAppStop(Number(v)); break;
         case 'tab-rename': this.data.trips[t.dataset.key].label = v; this.bump(); break;
         case 'depart': trip.depart = v; this.bump(); break;
         case 'return': trip.returnDate = v; this.bump(); break;

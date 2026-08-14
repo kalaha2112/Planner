@@ -1061,7 +1061,28 @@ a { color: inherit; }
 .opt .fld .lk a { color: var(--gold); font-family: var(--sans); font-size: 12px; font-weight: 800; text-decoration: none; flex-shrink: 0; }
 /* phone/app: stack the fields one per row so nothing is cramped or clipped —
    every field (address included) gets the full card width */
-@media (max-width: 700px) { .opt .grid { grid-template-columns: 1fr; } }
+@media (max-width: 700px) {
+  .opt .grid { grid-template-columns: 1fr; }
+  /* an <input> clips rather than ellipsises unless told otherwise, which is why
+     "Up Hotel Budapest" rendered as "Up Hotel Budapes" */
+  .opt .name { text-overflow: ellipsis; }
+  /* and the price must not take width from the name to do it */
+  .opt-price { flex-shrink: 0; }
+  /* the last thing on this page shaped like a pill is the active tab */
+  .accom-toggle-all { background: transparent; padding: 4px 2px; }
+
+  /* Three nested paddings sized for a desktop pane (.app-sub-inner 14 +
+     .accom-body 26 + .opt 18) ate 78px a side on a 412px phone, leaving the
+     hotel name 155px of 412 — that, more than the font size, is why names
+     truncated. Trimming the two inner ones gives the name ~200px and costs
+     nothing but whitespace. */
+  .accom-body { padding: 8px 12px 18px; }
+  .opt { padding: 13px 12px; }
+  .opt .top { gap: 8px; }
+  /* and the bands above the list stop being so airy */
+  .app-page-hd { margin-bottom: 10px; }
+  .accom-tools { margin-bottom: 2px; }
+}
 
 /* ---- Transport modal ---- */
 .transport-dialog { max-width: 380px; }
@@ -1217,13 +1238,20 @@ a { color: inherit; }
   .app-page-hd { margin-bottom: 16px; }
   .app-page-title { font-family: var(--serif); font-weight: 700; font-size: 27px; line-height: 1.04; margin: 3px 0 4px; color: var(--ink); }
   .app-page-sub { font-family: var(--sans); font-size: 12px; color: var(--ink-soft); }
-  .app-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 11px; }
-  .app-pill {
-    padding: 5px 12px; border: none; border-radius: 999px;
-    background: var(--surface); color: var(--ink-soft);
-    font-family: var(--sans); font-size: 12px; font-weight: 600; cursor: crosshair;
+  /* the heading is the city picker — a select wearing the title's type, with a
+     caret sized to it, so it reads as a heading you can tap rather than a form
+     control sitting under one */
+  .app-city-sel {
+    appearance: none; -webkit-appearance: none;
+    max-width: 100%; border: none; background-color: transparent;
+    padding: 0 26px 0 0; cursor: crosshair; outline-offset: 3px;
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+                      linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-size: 7px 7px, 7px 7px;
+    background-position: right 9px center, right 2px center;
+    background-repeat: no-repeat;
   }
-  .app-pill.on { background: var(--brown); color: var(--on-brown); }
+  .app-city-sel option { font-family: var(--sans); font-size: 15px; color: var(--ink); background: var(--surface); }
 
   /* ---- scroll reveal (app version): content blocks lift into place as they
      enter the viewport — both when scrolling DOWN to them and when scrolling
@@ -3190,9 +3218,14 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
   backdrop-filter: blur(var(--card-blur)) saturate(1.3);
   -webkit-backdrop-filter: blur(var(--card-blur)) saturate(1.3);
 }
+/* One accent, one meaning: the filled gradient marks which PAGE you are on.
+   .app-pill.on used to share it, so the active tab and the active city pill were
+   pixel-identical and neither read as more important than the other. The city
+   pills are gone now (the heading picks the city); .t-pill.active stays because
+   a mode pill paints its own mode colour inline over this and only inherits the
+   lift. */
 .tab-active,
 .app-tab.on,
-.app-pill.on,
 .t-pill.active,
 .sync-btn.primary,
 .imp-apply {
