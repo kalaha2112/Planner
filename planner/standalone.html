@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-14T15:19:00.479Z
+  Built: 2026-08-14T19:40:33.115Z
 -->
 
 <html lang="en">
@@ -795,34 +795,34 @@ svg.leaflet-image-layer.leaflet-interactive path {
   --surface: #FFFFFF;   /* card surface */
 
   /* ---- retained functional accents ---- */
-  --gold: #8C6D1F;   /* dark gold: miles / award / itinerary / links */
-  --gold-soft: #F4EDDC;   /* itinerary button surface */
-  --gold-border: #DCC894;
-  --gold-hover: #EBE0C4;
-  --green: #8C6D1F;   /* dark gold: saved, train, booked */
+  --gold: #A8861F;   /* yellow gold: miles / award / itinerary / links */
+  --gold-soft: #F7F1DC;   /* itinerary button surface */
+  --gold-border: #E2CF95;
+  --gold-hover: #F0E6C6;
+  --green: #A8861F;   /* yellow gold: saved, train, booked */
   /* Dates keep their own hue — --date for the sub-lines, --green-dark and
      --mc-dates for the range on the overview and the map cards. They are the one
      thing deliberately left green while everything else went dark gold. */
   --date: #6FA800;   /* date sub-lines ("Sep 24 → Sep 28 · 4 nights") */
   --green-dark: #4E7700;   /* the date range's dash + year */
-  --green-bg: #F2EBD8;
+  --green-bg: #F6EFD4;
 
   /* ---- hairlines / borders — a two-tier weight ladder ---- */
   --line: #141709;   /* STRONG: container frames + title rules */
   --line-soft: #DFE5CC;   /* QUIET: internal row dividers + input underlines */
   --line-2: #EFF3E2;   /* subtle FILL only (hover/active/code bg) — not a line */
-  --line-3: #8C6D1F;   /* spine / secondary rules */
+  --line-3: #A8861F;   /* spine / secondary rules */
   --dash: #A8B287;   /* dashed outlines */
 
   /* ---- calendar / closet warm fills ---- */
-  --stay-fill: #F6EBD2;   /* calendar cell FILL (kept) */
+  --stay-fill: #F9EFCF;   /* calendar cell FILL (kept) */
   --stay-line: #141709;   /* calendar cell border (line) */
   --map-bg: #E9EFD8;
 
   /* ---- themed literals (light values; see [data-theme="dark"] below) ---- */
   --on-brown: #F2F7E2;                    /* text/icons on --brown surfaces */
   --hover-soft: #FAFCF3;                 /* accom-btn hover + add-outfit bg */
-  --cal-hover: #EDDFB8;                 /* cal-cell hover + drag-target */
+  --cal-hover: #F0E3B4;                 /* cal-cell hover + drag-target */
   --rm-hover: #FFE6DC;                 /* .opt .rm:hover */
   --chip-glass: rgba(255,255,255,.80);   /* outfit/stock delete chips */
   --card-glass: rgba(255,255,255,.72);    /* .mc-front / .mc-back faces */
@@ -846,10 +846,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
   --mode-flight:    #91040C;
   /* shades of the one dark gold, so the modes stay tellable apart on the map
      and in the leg pills without reintroducing a second hue */
-  --mode-train: #8C6D1F;
-  --mode-bus: #B8912F;
-  --mode-overnight: #5E4914;
-  --mode-award: #A07B23;
+  --mode-train: #A8861F;
+  --mode-bus: #D0A93A;
+  --mode-overnight: #7A6116;
+  --mode-award: #C09A2E;
 
   /* ---- text/icons on an ACCENT fill (--red / --brown / --green) ----
      Separate from --on-brown: that one flips with the theme (black pills go
@@ -893,7 +893,13 @@ svg.leaflet-image-layer.leaflet-interactive path {
   /* ---- surface treatment knobs, read by the SURFACE TREATMENT block ---- */
   --border-w:  1px;      /* frame weight on cards / modals */
   --card-blur: 16px;      /* frosted-glass strength on translucent faces */
-  --grad-accent: linear-gradient(135deg, #A8843A, #6B5115);   /* gradient fill for primary actions ("none" = flat) */
+  --grad-accent: linear-gradient(135deg, #D9B441, #A8861F);   /* gradient fill for primary actions ("none" = flat) */
+  /* Label colour for anything wearing --grad-accent. Once the gold went light
+     and yellow, the near-white --on-brown that the active tab inherited fell to
+     2:1 against the gradient's light end — legible in dark mode, where the label
+     is already dark ink, and washed out in light. Dark ink suits both, because
+     the gradient itself is the same in both themes. */
+  --on-grad: #2A2205;
 }
 
 /* ============================================================
@@ -917,19 +923,19 @@ svg.leaflet-image-layer.leaflet-interactive path {
   --shell: #0E1109;   /* warm near-black, not pure black */
   --surface: #171B10;
 
-  --gold: #C9A227;   /* dark gold, lifted just enough for the dark page */
-  --gold-soft: #2E2712;
-  --gold-border: #5A4A1C;
-  --gold-hover: #3E3316;
-  --green: #C9A227;
+  --gold: #E3C04A;   /* yellow gold, lifted for the dark page */
+  --gold-soft: #332C13;
+  --gold-border: #665420;
+  --gold-hover: #453917;
+  --green: #E3C04A;
   --date: #A8E82C;   /* dates stay green */
   --green-dark: #7FB81C;
-  --green-bg: #2E2712;
+  --green-bg: #332C13;
 
   --line: #EFF6DF;   /* pure-white hairlines mirror the black ones */
   --line-soft: #333A24;   /* QUIET divider: dim warm grey, not white */
   --line-2: #1E2416;   /* subtle fill only — stays a fill */
-  --line-3: #C9A227;
+  --line-3: #E3C04A;
   --dash: #5C6845;
 
   --stay-fill: #33280C;
@@ -967,10 +973,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
   --paper-faint: #6B7654;
   --paper-line: #3A4229;
   --mode-flight:    #C93A41;
-  --mode-train: #C9A227;
-  --mode-bus: #E0BE55;
-  --mode-overnight: #96762A;
-  --mode-award: #D4AF37;
+  --mode-train: #E3C04A;
+  --mode-bus: #F0D477;
+  --mode-overnight: #B0902E;
+  --mode-award: #EBCB5C;
 }
 /* route-modal OSM tiles: soft-invert to a dark basemap. :not(.daymap) because
    the day-plan map also carries .map and has its own theme treatment below. */
@@ -4016,7 +4022,10 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
 .imp-apply {
   background: var(--grad-accent);
   box-shadow: var(--shadow-pop);
+  color: var(--on-grad);
 }
+/* a mode pill paints its own colour and its own label inline, so it keeps them */
+.t-pill.active { color: var(--on-accent); }
 /* borderless panels lift on light instead of being outlined */
 .summary,
 .todos,
