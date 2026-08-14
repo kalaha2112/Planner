@@ -530,6 +530,47 @@ a { color: inherit; }
 .todo input.txt.done { color: var(--ink-mute); text-decoration: line-through; text-decoration-color: var(--green); animation: strikeThrough .3s cubic-bezier(0.16,1,0.3,1) both; }
 .todo .x { flex-shrink: 0; font-family: var(--sans); font-size: 12px; line-height: 1; color: var(--ink-faint); border: none; background: transparent; cursor: crosshair; padding: 4px; }
 
+/* ---- Archive: hotels kept for a return visit ---------------------------
+   Sits under the option list, shut by default and absent when the city has
+   nothing shelved. Quieter than the list above it in every respect — this is a
+   place to look things up from, not the thing you are working in. */
+.accom-arch { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+.arch-hd {
+  display: flex; align-items: center; gap: 7px; width: 100%;
+  border: none; background: transparent; padding: 5px 2px; cursor: crosshair;
+  font-family: var(--sans); font-size: 10px; font-weight: 700; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--ink-mute);
+}
+.arch-hd:hover { color: var(--ink); }
+.arch-caret { display: flex; transition: transform .2s ease; transform: rotate(-90deg); }
+.accom-arch.open .arch-caret { transform: rotate(0deg); }
+.arch-n {
+  margin-left: auto; font-size: 10px; font-weight: 700; letter-spacing: 0;
+  color: var(--gold); background: var(--green-bg); border-radius: var(--r-pill); padding: 1px 7px;
+}
+.arch-list { display: flex; flex-direction: column; gap: 2px; padding: 2px 0 4px; }
+.arch-row { display: flex; align-items: center; gap: 8px; padding: 4px 2px; }
+.arch-name {
+  flex: 1; min-width: 0; font-family: var(--sans); font-size: 12.5px; font-weight: 500;
+  color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.arch-price { flex-shrink: 0; font-family: var(--sans); font-size: 11px; font-weight: 600; color: var(--ink-mute); font-variant-numeric: tabular-nums; }
+.arch-add {
+  flex-shrink: 0; width: 22px; height: 22px; border-radius: var(--r-xs);
+  border: 1px solid var(--dash); background: transparent; color: var(--ink-soft);
+  font-family: var(--sans); font-size: 14px; line-height: 1; cursor: crosshair;
+  display: flex; align-items: center; justify-content: center;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.arch-add:hover { color: var(--gold); border-color: var(--gold); background: var(--gold-soft); }
+.arch-x {
+  flex-shrink: 0; border: none; background: transparent; color: var(--ink-faint);
+  font-family: var(--sans); font-size: 11px; line-height: 1; padding: 4px; cursor: crosshair;
+}
+.arch-x:hover { color: var(--red); }
+/* set aside, next to throw away — same shape so the pair reads as one choice */
+.opt .rm.arch:hover { color: var(--gold); background: var(--gold-soft); }
+
 /* ---- Bookings: the checklist the route derives -------------------------
    Same row furniture as a to-do so the two read as one list, but the text is a
    span rather than an input — these lines are computed from the trip and are

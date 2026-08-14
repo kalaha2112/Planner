@@ -186,7 +186,9 @@ alter publication supabase_realtime add table public.shared_state;
   the walking route is, and is undoable (⌘/Ctrl-Z). Runs entirely in-browser — no API key.
 - **Accommodation modal** — compare lodging options per stop (name, link, price, distance,
   features); clicking one books it, which feeds the lodging budget, lifts it to the top of the
-  list on a turning wheel, and crosses its line off the Bookings checklist.
+  list on a turning wheel, and crosses its line off the Bookings checklist. The options you
+  didn't take move to the city's **Archive**, ready for a return trip.
+  See [The hotel archive](#the-hotel-archive).
 - **Bookings checklist** — every flight, train and chosen hotel the route implies, one line per
   item per city, crossed out as each is booked. See [Bookings](#bookings).
 - **Prices in any currency** — type a hotel price or fare the way it's quoted (`1 euro`, `1.5 pl`,
@@ -200,6 +202,37 @@ alter publication supabase_realtime add table public.shared_state;
 - **Map** — Leaflet route with mode-colored legs and clickable stop markers (→ open itinerary).
 - **Persistence** — autosaves to `localStorage` (`europe-trip-state-v1`); **Export / Import** as
   JSON; **Reset** restores the default route.
+
+## The hotel archive
+
+Researching a city produces more options than you book, and that research is worth keeping — you
+may well be back. Booking a hotel for the first time in a stop moves the rest to that city's
+**Archive**, a shut-by-default shelf under the option list:
+
+```
+ARCHIVE · BUDAPEST                    3
+ +  Ikonik Parlament            969
+ +  K+K Hotel Opera             975
+ +  voco Budapest D8      9,800 CZK
+```
+
+Each entry keeps its price, currency, address and distance. **+** puts it back on the current
+stop; **✕** forgets it. There's also an archive button on any unbooked option, for pruning a
+candidate before you've decided anything.
+
+The shelf is keyed by **city**, not by trip or stop, and lives outside the trips — so a stop you
+delete, or a whole trip you delete, doesn't take it with it. Plan Budapest again next year and
+last year's shortlist is waiting under the same heading. City matching ignores case and accents,
+and re-archiving a name you already have replaces it rather than stacking duplicates.
+
+Two deliberate limits. Only the **first** booking in a stop sweeps the list: once something is
+booked, adding more is you comparing or switching, and clearing the list out from under that
+would fight you. And un-booking doesn't drag anything back — the shelf is right there with a
+**+** on each row, which is a choice rather than a second surprise. The whole sweep undoes in one
+⌘/Ctrl-Z.
+
+Any number of hotels can be booked in one city, for a split stay or while you switch; each booked
+one counts toward the lodging budget.
 
 ## Bookings
 

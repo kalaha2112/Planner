@@ -277,6 +277,7 @@
       ]
     },
     stickerStock: [],
+    accomArchive: {},
     placedStickers: [],
     active: 'centralEurope',
     tripOrder: ['centralEurope', 'scandinavia'],
@@ -2633,6 +2634,15 @@
         if (Array.isArray(trip.stops)) trip.stops = trip.stops.filter(s => s.city && s.city.trim());
       });
       if (!Array.isArray(d.stickerStock)) d.stickerStock = [];
+      /* Hotels you researched but did not book, kept by CITY so a later trip
+         back to the same place can pull them up again. Deliberately top-level
+         rather than on the stop: the stop, and the whole trip, may be gone by
+         the time you return. */
+      if (!d.accomArchive || typeof d.accomArchive !== 'object' || Array.isArray(d.accomArchive)) d.accomArchive = {};
+      Object.keys(d.accomArchive).forEach(k => {
+        if (!Array.isArray(d.accomArchive[k])) { delete d.accomArchive[k]; return; }
+        d.accomArchive[k].forEach(o => { if (o) { o.priceCcy = normCcy(o.priceCcy); delete o.booked; } });
+      });
       if (!Array.isArray(d.placedStickers)) d.placedStickers = [];
       d.placedStickers.forEach(ps => {
         if (!ps.target) ps.target = 'page';
@@ -4123,24 +4133,97 @@
     addDayItem(stop, dayIdx) { this.ensureItinerary(stop); stop.itinerary[dayIdx].items.push({ time: '', text: '' }); this.bump(); }
     removeDayItem(stop, dayIdx, itemIdx) { stop.itinerary[dayIdx].items.splice(itemIdx, 1); this.bump(); }
     addAccomOption(stopIdx) { const s = this.currentTrip().stops[stopIdx]; if (!s.accom) s.accom = { options: [] }; s.accom.options.push({ id: Date.now(), name: '', address: '', totalPrice: '', priceCcy: 'CAD', distance: '', booked: false }); this.bump(); }
+    /* Archiving is a move, not a delete: the option leaves this stop's list and
+       joins the city's shelf, keeping its price, address and distance. Booked is
+       dropped on the way in — a shelved hotel is a candidate again, not a
+       reservation. Same-named entries for a city collapse to one, so archiving
+       twice does not build up duplicates. */
+    archiveAccomOption(stopIdx, optIdx) {
+      this.snapshot();
+      if (this._shelveOption(stopIdx, optIdx)) this.bump();
+    }
+
+    // the move itself, without the undo checkpoint — booking shelves several at
+    // once and that should undo as one step, not one per hotel
+    _shelveOption(stopIdx, optIdx) {
+      const stop = this.currentTrip().stops[stopIdx];
+      const opts = (stop.accom && stop.accom.options) || [];
+      const o = opts[optIdx];
+      if (!o) return false;
+      const key = normKey(stop.city);
+      if (!key) return false;
+      const shelf = (this.data.accomArchive[key] = this.data.accomArchive[key] || []);
+      const name = (o.name || '').trim();
+      const dup = shelf.findIndex(x => (x.name || '').trim().toLowerCase() === name.toLowerCase() && name);
+      const entry = { id: 'ar' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+        name: o.name || '', address: o.address || '', totalPrice: o.totalPrice || '',
+        priceCcy: normCcy(o.priceCcy), distance: o.distance || '',
+        city: (stop.city || '').trim(), archivedAt: Date.now() };
+      if (dup >= 0) shelf[dup] = entry; else shelf.push(entry);
+      opts.splice(optIdx, 1);
+      return true;
+    }
+
+    /* Back onto the current stop's list, off the shelf. */
+    restoreAccomOption(stopIdx, archIdx) {
+      const stop = this.currentTrip().stops[stopIdx];
+      const key = normKey(stop.city);
+      const shelf = this.data.accomArchive[key] || [];
+      const a = shelf[archIdx];
+      if (!a) return;
+      this.snapshot();
+      if (!stop.accom || !Array.isArray(stop.accom.options)) stop.accom = { options: [] };
+      stop.accom.options.push({ id: Date.now(), name: a.name, address: a.address,
+        totalPrice: a.totalPrice, priceCcy: normCcy(a.priceCcy), distance: a.distance, booked: false });
+      shelf.splice(archIdx, 1);
+      if (!shelf.length) delete this.data.accomArchive[key];
+      this.bump();
+    }
+
+    discardArchivedOption(stopIdx, archIdx) {
+      const key = normKey(this.currentTrip().stops[stopIdx].city);
+      const shelf = this.data.accomArchive[key] || [];
+      if (!shelf[archIdx]) return;
+      this.snapshot();
+      shelf.splice(archIdx, 1);
+      if (!shelf.length) delete this.data.accomArchive[key];
+      this.bump();
+    }
+
+    archivedFor(city) { return (this.data.accomArchive || {})[normKey(city)] || []; }
+
     removeAccomOption(stopIdx, optIdx) { this.snapshot(); this.currentTrip().stops[stopIdx].accom.options.splice(optIdx, 1); this.bump(); }
     /* Clicking an option books it — comparing and committing are one gesture,
        not two flags to keep in step. Booking is what feeds the lodging budget,
        what the Bookings checklist ticks off, and what lifts the row to the top. */
     toggleAccomBooked(stopIdx, optIdx) {
-      const opts = this.currentTrip().stops[stopIdx].accom.options;
+      const stop = this.currentTrip().stops[stopIdx];
+      const opts = (stop && stop.accom && stop.accom.options) || [];
       const opt = opts[optIdx];
+      if (!opt) return;                    // a stale index from an older render
       if (opt.booked) {
         opt.booked = false;                                           // toggle off
       } else {
+        /* Any number can be booked. A split stay is two or three hotels in one
+           city, and while you are switching you may want the old one still
+           marked until the new one is confirmed — an arbitrary cap of two just
+           un-booked something behind your back. */
+        const wasFirst = !opts.some((x, i) => x.booked && i !== optIdx);
         opt.booked = true;
-        // at most 2 booked at once (a split stay): if this makes a 3rd, drop the
-        // earliest so the newest two stand
-        let others = opts.filter((x, i) => x.booked && i !== optIdx).length;
-        for (let i = 0; i < opts.length && others > 1; i++) {
-          if (i !== optIdx && opts[i].booked) { opts[i].booked = false; others--; }
-        }
         this._justBookedAccom = optIdx;
+        /* The first booking for a stop settles the question, so the options you
+           did not take stop cluttering the list — they move to the city's
+           archive, where a later trip back here can pull them out again.
+           Only the first, though: once something is booked, adding more is you
+           deliberately comparing or switching, and sweeping the list out from
+           under that would fight you. Nothing is destroyed either way, and the
+           sweep undoes as one step. */
+        if (wasFirst) {
+          this.snapshot();
+          for (let i = opts.length - 1; i >= 0; i--) if (!opts[i].booked) this._shelveOption(stopIdx, i);
+          if (this._accomCollapsed) this._accomCollapsed.clear();
+          this._saveShut(this._accomCollapsedStop, null);
+        }
       }
       this._reorderAccom(stopIdx, opt);
       this.bump();
@@ -6179,6 +6262,7 @@
           <input class="name" value="${escA(o.name)}" data-ch="accom-name" data-i="${oi}" placeholder="Place name…">
           ${chip ? `<span class="opt-price">${esc(chip)}${chipCad}</span>` : ''}
           ${o.booked ? `<span class="badge${oi === bookedIdx ? ' stamp-in' : ''}">Booked</span>` : ''}
+          ${!o.booked ? `<button class="rm arch" data-act="accom-archive" data-i="${oi}" title="Archive for ${escA((stop.city || 'this city').trim())} — keep it for a future trip">${svg(I.inbox, { w: 13, h: 13, sw: 2.2 })}</button>` : ''}
           <button class="rm" data-act="accom-remove" data-i="${oi}" title="Remove option">${svg(I.trash, { w: 13, h: 13, sw: 2.4 })}</button>
           <button class="opt-caret" data-act="accom-toggle" data-i="${oi}" aria-expanded="${!isShut}" title="${isShut ? 'Expand' : 'Collapse'} this option">${caret}</button>
         </div>
@@ -6199,6 +6283,38 @@
         ${stop.accom.options.length === 0 ? `<p class="empty-note" style="margin:4px 0">No options yet — add one below to start researching.</p>` : ''}
         ${opts}
         <button class="add-option" data-act="accom-add" style="width:100%">+</button>
+        ${this.renderAccomArchive(stop)}
+      </div>`;
+    }
+
+    /* The city's shelf. Collapsed by default so it never competes with the list
+       you are actually working in, and absent entirely when the city has nothing
+       archived — which is most cities, most of the time. */
+    renderAccomArchive(stop) {
+      const shelf = this.archivedFor(stop.city);
+      if (!shelf.length) return '';
+      const open = this._archiveOpen === normKey(stop.city);
+      const city = (stop.city || '').trim();
+      const caret = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>`;
+      const rows = shelf.map((a, ai) => {
+        const pm = parseMoney(a.totalPrice, a.priceCcy);
+        const price = pm.amount
+          ? (isCad(pm.ccy) ? pm.amount.toLocaleString('en-US') : `${pm.amount.toLocaleString('en-US')} ${pm.ccy}`)
+          : '';
+        return `<div class="arch-row">
+          <button class="arch-add" data-act="accom-unarchive" data-i="${ai}" title="Add back to ${escA(city)}">+</button>
+          <span class="arch-name">${esc((a.name || '').trim() || 'Unnamed')}</span>
+          ${price ? `<span class="arch-price">${esc(price)}</span>` : ''}
+          <button class="arch-x" data-act="accom-archive-remove" data-i="${ai}" title="Forget this one">✕</button>
+        </div>`;
+      }).join('');
+      return `<div class="accom-arch${open ? ' open' : ''}">
+        <button class="arch-hd" data-act="accom-archive-toggle" aria-expanded="${open}">
+          <span class="arch-caret">${caret}</span>
+          <span>Archive${city ? ' · ' + esc(city) : ''}</span>
+          <span class="arch-n">${shelf.length}</span>
+        </button>
+        ${open ? `<div class="arch-list">${rows}</div>` : ''}
       </div>`;
     }
 
@@ -6745,6 +6861,20 @@
           this.removeAccomOption(this.accomOpenIdx, i);
           break;
         case 'accom-add': this.addAccomOption(this.accomOpenIdx); break;
+        // archiving reorders what is left, and the collapsed set is positional —
+        // same reason accom-remove drops it wholesale rather than reindexing
+        case 'accom-archive':
+          if (this._accomCollapsed) this._accomCollapsed.clear();
+          this._saveShut(this._accomCollapsedStop, null);
+          this.archiveAccomOption(this.accomOpenIdx, i);
+          break;
+        case 'accom-unarchive': this.restoreAccomOption(this.accomOpenIdx, i); break;
+        case 'accom-archive-remove': this.discardArchivedOption(this.accomOpenIdx, i); break;
+        case 'accom-archive-toggle': {
+          const k = normKey(trip.stops[this.accomOpenIdx].city);
+          this._archiveOpen = this._archiveOpen === k ? null : k;
+          this.bump(); break;
+        }
         case 'accom-toggle': {
           const set = this._accomCollapsed || (this._accomCollapsed = new Set());
           if (set.has(i)) set.delete(i); else set.add(i);
