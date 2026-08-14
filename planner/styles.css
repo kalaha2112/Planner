@@ -17,30 +17,34 @@
   --surface: #FFFFFF;   /* card surface */
 
   /* ---- retained functional accents ---- */
-  --gold: #FFA800;   /* miles / award / itinerary / links */
-  --gold-soft: #FFF3DA;   /* itinerary button surface */
-  --gold-border: #FFDFA4;
-  --gold-hover: #FFEAC2;
-  --green: #6FA800;   /* sub-dates, saved, train, chosen */
-  --green-dark: #4E7700;   /* overnight train */
-  --green-bg: #EDF7D6;
+  --gold: #8C6D1F;   /* dark gold: miles / award / itinerary / links */
+  --gold-soft: #F4EDDC;   /* itinerary button surface */
+  --gold-border: #DCC894;
+  --gold-hover: #EBE0C4;
+  --green: #8C6D1F;   /* dark gold: saved, train, booked */
+  /* Dates keep their own hue — --date for the sub-lines, --green-dark and
+     --mc-dates for the range on the overview and the map cards. They are the one
+     thing deliberately left green while everything else went dark gold. */
+  --date: #6FA800;   /* date sub-lines ("Sep 24 → Sep 28 · 4 nights") */
+  --green-dark: #4E7700;   /* the date range's dash + year */
+  --green-bg: #F2EBD8;
 
   /* ---- hairlines / borders — a two-tier weight ladder ---- */
   --line: #141709;   /* STRONG: container frames + title rules */
   --line-soft: #DFE5CC;   /* QUIET: internal row dividers + input underlines */
   --line-2: #EFF3E2;   /* subtle FILL only (hover/active/code bg) — not a line */
-  --line-3: #6FA800;   /* spine / secondary rules */
+  --line-3: #8C6D1F;   /* spine / secondary rules */
   --dash: #A8B287;   /* dashed outlines */
 
   /* ---- calendar / closet warm fills ---- */
-  --stay-fill: #FFE9CC;   /* calendar cell FILL (kept) */
+  --stay-fill: #F6EBD2;   /* calendar cell FILL (kept) */
   --stay-line: #141709;   /* calendar cell border (line) */
   --map-bg: #E9EFD8;
 
   /* ---- themed literals (light values; see [data-theme="dark"] below) ---- */
   --on-brown: #F2F7E2;                    /* text/icons on --brown surfaces */
   --hover-soft: #FAFCF3;                 /* accom-btn hover + add-outfit bg */
-  --cal-hover: #FFDCAE;                 /* cal-cell hover + drag-target */
+  --cal-hover: #EDDFB8;                 /* cal-cell hover + drag-target */
   --rm-hover: #FFE6DC;                 /* .opt .rm:hover */
   --chip-glass: rgba(255,255,255,.80);   /* outfit/stock delete chips */
   --card-glass: rgba(255,255,255,.72);    /* .mc-front / .mc-back faces */
@@ -62,10 +66,12 @@
   /* ---- transport modes — read by app.js (MODE_HEX) so route pips, legs and
      map dashes recolour with the skin instead of being frozen in JS ---- */
   --mode-flight:    #91040C;
-  --mode-train: #6FA800;
-  --mode-bus: #FFA800;
-  --mode-overnight: #4E7700;
-  --mode-award: #C87A00;
+  /* shades of the one dark gold, so the modes stay tellable apart on the map
+     and in the leg pills without reintroducing a second hue */
+  --mode-train: #8C6D1F;
+  --mode-bus: #B8912F;
+  --mode-overnight: #5E4914;
+  --mode-award: #A07B23;
 
   /* ---- text/icons on an ACCENT fill (--red / --brown / --green) ----
      Separate from --on-brown: that one flips with the theme (black pills go
@@ -109,7 +115,7 @@
   /* ---- surface treatment knobs, read by the SURFACE TREATMENT block ---- */
   --border-w:  1px;      /* frame weight on cards / modals */
   --card-blur: 16px;      /* frosted-glass strength on translucent faces */
-  --grad-accent: linear-gradient(135deg, var(--gold), var(--red));   /* gradient fill for primary actions ("none" = flat) */
+  --grad-accent: linear-gradient(135deg, #A8843A, #6B5115);   /* gradient fill for primary actions ("none" = flat) */
 }
 
 /* ============================================================
@@ -133,18 +139,19 @@
   --shell: #0E1109;   /* warm near-black, not pure black */
   --surface: #171B10;
 
-  --gold: #FFBE3D;   /* brightened from #C8901F */
-  --gold-soft: #33280C;
-  --gold-border: #5C4A14;
-  --gold-hover: #43340F;
-  --green: #A8E82C;   /* brightened from #5E8475 */
-  --green-dark: #7FB81C;   /* brightened from #46604F */
-  --green-bg: #23300E;
+  --gold: #C9A227;   /* dark gold, lifted just enough for the dark page */
+  --gold-soft: #2E2712;
+  --gold-border: #5A4A1C;
+  --gold-hover: #3E3316;
+  --green: #C9A227;
+  --date: #A8E82C;   /* dates stay green */
+  --green-dark: #7FB81C;
+  --green-bg: #2E2712;
 
   --line: #EFF6DF;   /* pure-white hairlines mirror the black ones */
   --line-soft: #333A24;   /* QUIET divider: dim warm grey, not white */
   --line-2: #1E2416;   /* subtle fill only — stays a fill */
-  --line-3: #A8E82C;
+  --line-3: #C9A227;
   --dash: #5C6845;
 
   --stay-fill: #33280C;
@@ -182,10 +189,10 @@
   --paper-faint: #6B7654;
   --paper-line: #3A4229;
   --mode-flight:    #C93A41;
-  --mode-train: #A8E82C;
-  --mode-bus: #FFBE3D;
-  --mode-overnight: #7FB81C;
-  --mode-award: #FFBE3D;
+  --mode-train: #C9A227;
+  --mode-bus: #E0BE55;
+  --mode-overnight: #96762A;
+  --mode-award: #D4AF37;
 }
 /* route-modal OSM tiles: soft-invert to a dark basemap. :not(.daymap) because
    the day-plan map also carries .map and has its own theme treatment below. */
@@ -419,7 +426,7 @@ a { color: inherit; }
 .nights input::-webkit-inner-spin-button,
 .nights input::-webkit-outer-spin-button { display: none; }
 .nights span { font-family: var(--sans); font-size: 10px; color: var(--ink-mute); }
-.stop .subdate { font-family: var(--script); font-style: italic; font-weight: 300; font-size: 14px; color: var(--green); margin: 1px 0 6px; }
+.stop .subdate { font-family: var(--script); font-style: italic; font-weight: 300; font-size: 14px; color: var(--date); margin: 1px 0 6px; }
 .accom-btn {
   display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
   border: none; background: transparent; border-radius: var(--r-xs);
@@ -625,7 +632,7 @@ a { color: inherit; }
   to   { opacity: 1; transform: translateX(0); }
 }
 .iti-city { font-family: var(--serif); font-size: 29px; font-weight: 700; letter-spacing: -.01em; color: var(--ink); border: none; background: transparent; padding: 0; width: 100%; }
-.iti-sub { font-family: var(--script); font-style: italic; font-size: 14px; color: var(--green); margin-top: 4px; }
+.iti-sub { font-family: var(--script); font-style: italic; font-size: 14px; color: var(--date); margin-top: 4px; }
 
 .cal { margin-top: 18px; }
 .cal-month { margin-bottom: 6px; }
@@ -968,7 +975,7 @@ a { color: inherit; }
 /* ---- Accommodation modal ---- */
 .accom-dialog { max-width: 640px; }
 .accom-city { font-family: var(--serif); font-size: 24px; font-weight: 700; letter-spacing: -.02em; color: var(--ink); line-height: 1; }
-.accom-sub { font-family: var(--script); font-style: italic; font-size: 13px; color: var(--green); margin-top: 5px; }
+.accom-sub { font-family: var(--script); font-style: italic; font-size: 13px; color: var(--date); margin-top: 5px; }
 .accom-body { padding: 18px 26px 26px; display: flex; flex-direction: column; gap: 10px; }
 .opt { background: var(--surface); border-radius: var(--r-card); padding: 17px 18px; display: flex; flex-direction: column; gap: 12px; position: relative; }
 .opt .top { display: flex; align-items: flex-start; gap: 10px; }
@@ -1618,7 +1625,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    colors (no rule = attribute wins); dark theme lifts them to the bright set */
 [data-theme="dark"] .leg-flight          { stroke: var(--red); }
 [data-theme="dark"] .leg-train           { stroke: var(--green); }
-[data-theme="dark"] .leg-overnight-train { stroke: var(--green-dark); }
+[data-theme="dark"] .leg-overnight-train { stroke: var(--mode-overnight); }
 [data-theme="dark"] .leg-flying-blue     { stroke: var(--gold); }
 [data-theme="dark"] .leg-bus             { stroke: var(--mode-bus); }
 
@@ -2041,7 +2048,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   }
   .leaf-group .leaf-inner { min-height: 100%; }   /* fill the panel when content is short */
   .leaf-title { font-family: var(--serif); font-size: 34px; font-weight: 700; letter-spacing: -.015em; line-height: 1; color: var(--ink); }
-  .leaf-sub { font-family: var(--script); font-style: italic; font-size: 14px; color: var(--green); margin-top: 6px; min-height: 17px; }
+  .leaf-sub { font-family: var(--script); font-style: italic; font-size: 14px; color: var(--date); margin-top: 6px; min-height: 17px; }
   .leaf-pills { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; max-width: 46%; padding-bottom: 2px; }
   .leaf-pill {
     font-family: var(--sans); font-size: 12px; font-weight: 500;
