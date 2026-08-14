@@ -215,9 +215,9 @@ KRAKÓW
  ☐ Book Hotel Stary
 ```
 
-Each city gets the journey that reaches it and its hotel. The hotel line reads **Book a hotel**
-until something is booked there, then names it and strikes through — the options you're still
-comparing don't each become a line.
+Each city gets the journey that reaches it and one hotel line. The hotel line always reads
+**Book a hotel** and strikes through once something is booked there — naming the hotel would only
+repeat what the Sleeping list already shows, and a split stay would read as two identical lines.
 
 Tick it anywhere. A leg has a **Booked** box in its transport editor; a hotel is booked by
 clicking it in the accommodation list, which stamps a **BOOKED** badge on the row and lifts it to

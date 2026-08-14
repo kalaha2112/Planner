@@ -5668,20 +5668,16 @@
           rows.push({ kind: 'leg', legIdx: idx, booked: !!leg.booked,
             label: `Book ${modeWord(leg.mode)}${from ? ' from ' + from : ''}` });
         }
-        // The hotel line has to exist BEFORE anything is booked — that is the
-        // reminder. Once an option in this city is booked the line names it and
-        // is struck; until then it is a single open "Book a hotel", whichever
-        // options are still being compared.
+        // One hotel line per city, and it always reads the same. The task is
+        // "somewhere to sleep here", which doesn't change once you know where —
+        // naming the hotel would only repeat what the Sleeping list already
+        // shows, and would turn a split stay into two identical-looking lines.
+        // It exists before anything is booked, because that is the reminder.
         const opts = (stop.accom && stop.accom.options) || [];
-        const bookedHere = opts.map((o, oi) => ({ o, oi })).filter(x => x.o.booked);
-        if (bookedHere.length) {
-          bookedHere.forEach(({ o, oi }) => rows.push({
-            kind: 'hotel', stopIdx: idx, optIdx: oi, booked: true,
-            label: `Book ${(o.name || '').trim() || 'hotel'}` }));
-        } else {
-          rows.push({ kind: 'hotel', stopIdx: idx, optIdx: null, booked: false,
-            label: 'Book a hotel' });
-        }
+        const firstBooked = opts.findIndex(o => o.booked);
+        rows.push({ kind: 'hotel', stopIdx: idx,
+          optIdx: firstBooked >= 0 ? firstBooked : null,
+          booked: firstBooked >= 0, label: 'Book a hotel' });
         if (rows.length) out.push({ city, rows });
       });
       return out;
