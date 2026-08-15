@@ -530,6 +530,14 @@ a { color: inherit; }
 .todo input.txt.done { color: var(--ink-mute); text-decoration: line-through; text-decoration-color: var(--green); animation: strikeThrough .3s cubic-bezier(0.16,1,0.3,1) both; }
 .todo .x { flex-shrink: 0; font-family: var(--sans); font-size: 12px; line-height: 1; color: var(--ink-faint); border: none; background: transparent; cursor: crosshair; padding: 4px; }
 
+/* the import sheet's explanation when only a URL arrived — a note, not an error:
+   nothing went wrong, there was simply nothing to read */
+.imp-tip {
+  font-family: var(--sans); font-size: 12px; line-height: 1.5; color: var(--ink-soft);
+  background: var(--gold-soft); border-radius: var(--r-sm);
+  padding: 10px 12px; margin: 0 0 12px;
+}
+
 /* ---- Archive: hotels kept for a return visit ---------------------------
    Sits under the option list, shut by default and absent when the city has
    nothing shelved. Quieter than the list above it in every respect — this is a

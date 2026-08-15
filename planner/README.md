@@ -394,7 +394,11 @@ Two deliberate limits:
 - **Only `$` amounts become a cost.** The Activities budget line is plain dollars, so `¥1200` or
   `€18` is kept as a note rather than silently distorting the total.
 - **Images aren't read** — no OCR. A share that's only a link yields one row (the post itself) so
-  you can keep it as a to-check reminder; paste the caption for a full read.
+  you can keep it as a to-check reminder, and the sheet says as much: a URL carries no text, and
+  the places live in the caption. **Open the post, copy the caption, paste that.** There is no way
+  around this without an API key — Instagram's public oEmbed was retired in 2020 and the
+  platforms block cross-origin reads of their pages, so the app only ever sees what the share
+  sheet or your clipboard hands it.
 
 Imported rows carry a small **RedNote / TikTok / Instagram** chip linking back to the post.
 

@@ -6645,7 +6645,19 @@
           </div>`
           : `<p class="imp-empty">Add a city to your route first — then these can land on one of its days.</p>`;
 
+        /* A bare link yields exactly one row — the post itself — because nothing
+           was fetched: the platforms block cross-origin reads of their pages, so
+           the app only ever sees the text the share sheet or clipboard handed
+           over, and a URL is not text about places. Say so, and say what does
+           work, instead of leaving a lone "link only" row looking like a
+           failure the traveller can do nothing about. */
+        const linkOnly = res.activities.length === 1
+          && (res.activities[0].signals || []).length === 1
+          && (res.activities[0].signals || [])[0] === 'link';
         found = `<div class="imp-found">
+          ${linkOnly ? `<p class="imp-tip">Only the link came through, and a link carries no text to read —
+            the places live in the post's caption. Open it, copy the caption, and paste that here to pull
+            them out. The row below keeps the link either way, as a reminder.</p>` : ''}
           <div class="imp-found-hd">
             <span class="imp-src imp-src--${escA(res.source)}">${esc(res.sourceLabel)}</span>
             <span class="imp-count">${res.activities.length} found</span>

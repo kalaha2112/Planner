@@ -358,7 +358,17 @@
       if (score < threshold || name.length < 2 || name.length > 140) {
         // not an activity — but a stray line right under one is often its note
         const prev = last();
-        if (prev && !prev.note && !nameRun && name.length >= 4 && name.length <= 90 && score >= 1) prev.note = name;
+        if (prev) {
+          /* A continuation line carries the detail: "$28 pastrami on rye" or
+             "shows at 8pm". extractMoney and leadingTime already stripped those
+             off `rest` above, so without this they were removed from the text and
+             then thrown away — the price visibly vanished rather than landing in
+             the cost field the budget reads. */
+          if (m && m.cost && !prev.cost) prev.cost = m.cost;
+          if (t && !prev.time) prev.time = t.time;
+          if (!prev.address && looksLikeAddress(name)) prev.address = name;
+          else if (!prev.note && !nameRun && name.length >= 4 && name.length <= 90 && score >= 1) prev.note = name;
+        }
         continue;
       }
 
@@ -366,13 +376,21 @@
       // Worth doing beyond tidiness: with no address, the day map geocodes the
       // activity text, and a sentence of advice never resolves to a pin.
       const aside = splitTrailingNote(name);
-      let note = '';
-      if (aside) { name = aside.name; note = aside.note; }
+      let note = '', address = '';
+      if (aside) {
+        name = aside.name;
+        // "Joe's Pizza — 7 Carmine St, New York": the tail is an address, and it
+        // is worth more as one. In `note` it is prose; in `address` it becomes a
+        // map pin and a stop the day optimizer can order.
+        if (looksLikeAddress(aside.note)) address = aside.note;
+        else note = aside.note;
+      }
 
       // an inline address ("Blue Bottle, 1-4-8 Hirano, Koto City")
-      let address = '';
-      const split = splitInlineAddress(name);
-      if (split) { name = split.name; address = split.address; }
+      if (!address) {
+        const split = splitInlineAddress(name);
+        if (split) { name = split.name; address = split.address; }
+      }
 
       const act = push({
         id: 'sa' + activities.length + '-' + Math.random().toString(36).slice(2, 7),
@@ -423,9 +441,12 @@
       const m = line.match(a.rx);
       if (m && tidy(m[1])) return { key: a.key, value: tidy(m[1]).replace(RX_TRAIL_PUNCT, '') };
     }
-    // "📍 Kiyomizu-dera, 1-294 Kiyomizu" — a pin line with no label
+    // "📍 Kiyomizu-dera, 1-294 Kiyomizu" — a pin line with no label.
+    // But "📍3. Katz's Delicatessen, 205 E Houston St" is the third ITEM, not the
+    // second item's address: a numbered or bulleted pin opens a new entry, and
+    // treating it as an attribute silently dropped the place.
     const pin = line.match(/^\s*📍\s*(.+)$/);
-    if (pin && /\d/.test(pin[1]) && /[,，]/.test(pin[1])) return { key: 'address', value: tidy(pin[1]) };
+    if (pin && !RX_MARKER.test(pin[1]) && /\d/.test(pin[1]) && /[,，]/.test(pin[1])) return { key: 'address', value: tidy(pin[1]) };
     return null;
   }
 
@@ -445,6 +466,19 @@
      carries a street number (or a CJK administrative suffix) and the first
      does not. */
   const RX_ADDR_TAIL = /[市区區町丁目路街道県縣府省郡村시구로]/;
+  /* Does this read as a street address rather than a remark? A house number
+     followed by a street-ish word, or a CJK administrative suffix. Kept tight on
+     purpose: "go before 12pm" and "$5 a slice" have digits too, and neither is
+     somewhere you can stand. */
+  const RX_STREET = /\b\d{1,5}[a-z]?\s+[\w'.-]+(?:\s+[\w'.-]+)*\s*(?:st|street|rd|road|ave|avenue|blvd|boulevard|ln|lane|dr|drive|way|pl|place|sq|square|ct|court|hwy|pkwy|terrace|walk)\b/i;
+  function looksLikeAddress(s) {
+    const v = String(s || '').trim();
+    if (!v || v.length > 90) return false;
+    if (RX_ADDR_TAIL.test(v)) return true;
+    if (RX_STREET.test(v)) return true;
+    // "205 E Houston St, New York" — number-led with a comma-separated locality
+    return /^\d{1,5}[a-z]?\s+\S/i.test(v) && /[,，]/.test(v);
+  }
   function splitInlineAddress(s) {
     const parts = s.split(/\s*[,，]\s*/).filter(Boolean);
     if (parts.length < 2 || /\d/.test(parts[0])) return null;
