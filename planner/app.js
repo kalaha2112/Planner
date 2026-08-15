@@ -73,6 +73,7 @@
      `get` returns the stored JSON text; `put` overwrites it. */
   const SYNC_KEY  = 'europe-trip-sync-v1';            // local record of the link {id, rev, lastSyncedAt}
   const ACCOM_SHUT_KEY = 'europe-trip-accom-shut-v1'; // which lodging options are collapsed, per trip+stop
+  const CLOSET_SHUT_KEY = 'europe-trip-closet-shut-v1'; // is the outfit closet folded, per trip
   const APP_TAG   = 'europe-trip-planner';            // payload marker so we only adopt our own data
   const SYNC_POLL_MS  = 20000;                        // how often to pull while the tab is visible
   const CLOUD_PUSH_DEBOUNCE_MS = 900;                 // coalesce rapid edits into one upload
@@ -4467,6 +4468,24 @@
 
     /* ---------- outfit closet ---------- */
     ensureCloset() { const t = this.currentTrip(); if (!Array.isArray(t.closet)) t.closet = []; return t.closet; }
+    /* Folded or not, per trip — one trip's wardrobe being out of the way says
+       nothing about the next one's. Kept in localStorage beside the lodging
+       collapse state rather than in the trip itself: it is how you are looking
+       at the trip, not part of it, and it must not sync to another device. */
+    closetShut() {
+      if (!this._closetShutStore) {
+        try { this._closetShutStore = JSON.parse(localStorage.getItem(CLOSET_SHUT_KEY) || '{}') || {}; }
+        catch (e) { this._closetShutStore = {}; }
+      }
+      return !!this._closetShutStore[this.data.active || '?'];
+    }
+    toggleCloset() {
+      const shut = !this.closetShut();
+      const k = this.data.active || '?';
+      if (shut) this._closetShutStore[k] = 1; else delete this._closetShutStore[k];
+      try { localStorage.setItem(CLOSET_SHUT_KEY, JSON.stringify(this._closetShutStore)); } catch (e) {}
+      this.bumpModal();
+    }
     dayOutfits(stop, dayIdx) { this.ensureItinerary(stop); const d = stop.itinerary[dayIdx] || (stop.itinerary[dayIdx] = { items: [], outfits: [] }); if (!Array.isArray(d.outfits)) d.outfits = []; return d.outfits; }
     toggleOutfitOnDay(id, stopIdx, dayIdx) { const arr = this.dayOutfits(this.currentTrip().stops[stopIdx], dayIdx); const i = arr.findIndex(e => e.id === id); if (i >= 0) arr.splice(i, 1); this.bump(); }
     removeOutfitFromCloset(id) {
@@ -6127,6 +6146,12 @@
       const range = d ? d.stops[sIdx] : null;
       const calStart = range ? range.start : new Date();
       const closet = this.ensureCloset();
+      // The closet is a strip of outfit thumbnails between the calendar and the
+      // day planner. Once it has a few outfits it is the tallest thing on the
+      // left column and pushes the day out of reach — so it folds, and the fold
+      // is remembered across reloads like the hotel rows are.
+      const closetShut = this.closetShut();
+      const caret = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`;
       const cal = this.buildCalendar(calStart, nightsN, stop.itinerary, activeDay, closet);
       const dayDate = (i) => { if (!range) return ''; const dt = new Date(range.start); dt.setDate(dt.getDate() + i); return fmt(dt); };
 
@@ -6218,8 +6243,14 @@
       return `<div class="iti-body">
         <div class="iti-left">
           <div class="cal">${cal}</div>
-          <div class="closet">
-            <div class="hd"><div class="t">Closet</div><span class="hint">add an outfit, then drag it onto any date</span></div>
+          <div class="closet${closetShut ? ' shut' : ''}">
+            <button class="hd" data-act="closet-toggle" aria-expanded="${!closetShut}" title="${closetShut ? 'Show the closet' : 'Hide the closet'}">
+              <span class="t">Closet</span>
+              ${closetShut
+                ? `<span class="hint">${closet.length ? closet.length + (closet.length === 1 ? ' outfit' : ' outfits') : 'empty'}</span>`
+                : `<span class="hint">add an outfit, then drag it onto any date</span>`}
+              <span class="closet-caret">${caret}</span>
+            </button>
             <div class="strip">${stripCells}
               <div class="add-outfit" data-act="closet-add" data-drop="closet-zone" tabindex="0" title="Paste, drop, or tap to add an outfit">
                 ${svg(I.plus, { w: 16, h: 16, sw: 2.2, stroke: 'currentColor' })}<span>Add</span></div>
@@ -6996,6 +7027,7 @@
         case 'optimize-dismiss': this._optimizeNote = null; this.bumpModal(); break;
         case 'add-item': this.addDayItem(trip.stops[this.openStopIdx], this.activeDay); break;
         case 'item-remove': this.removeDayItem(trip.stops[this.openStopIdx], this.activeDay, i); break;
+        case 'closet-toggle': this.toggleCloset(); break;
         case 'closet-add': this.modalEl.querySelector('.closet-file').click(); break;
         case 'closet-paste': this.pasteImageFromClipboard('closet'); break;
         case 'outfit-delete': this.removeOutfitFromCloset(id); break;

@@ -972,9 +972,25 @@ a { color: inherit; }
 
 /* closet strip (in itinerary header) */
 .closet { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
-.closet .hd { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+/* the header is the fold control — the whole row, not just the caret, so it is a
+   comfortable tap target on a phone as well as a click target on the web */
+.closet .hd {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 9px;
+  width: 100%; padding: 2px 0; border: none; background: none;
+  text-align: left; cursor: crosshair; color: inherit;
+}
 .closet .hd .t { font-family: var(--sans); font-size: 12px; font-weight: 700; color: var(--ink); }
-.closet .hd .hint { font-family: var(--sans); font-size: 11px; color: var(--ink-mute); }
+.closet .hd .hint { font-family: var(--sans); font-size: 11px; color: var(--ink-mute); min-width: 0; }
+.closet-caret {
+  margin-left: auto; flex-shrink: 0; display: flex; align-items: center;
+  color: var(--ink-mute); transition: transform .2s ease, color .15s ease;
+}
+.closet .hd:hover .closet-caret { color: var(--ink); }
+/* folded: the caret points right and the strip goes, leaving one line that still
+   says how many outfits are in there */
+.closet.shut .closet-caret { transform: rotate(-90deg); }
+.closet.shut .hd { margin-bottom: 0; }
+.closet.shut .strip { display: none; }
 .closet .strip { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start; }
 .outfit {
   position: relative; width: 52px; height: 62px; border-radius: var(--r-btn);
