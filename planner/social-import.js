@@ -23,7 +23,10 @@
      dayCount,                       // distinct "Day N" headers seen
      activities: [{
        id, use, day,                 // day: 0-based, or null
-       time, text, address, note, cost, signals[]
+       time, text, address, note, cost, costCcy, signals[]
+       //  cost   — the amount, as written, with separators stripped
+       //  costCcy— ISO code it was written in, or '' when the text names
+       //           none (a bare number, or a "$" a dozen currencies share)
      }]
    }
    ============================================================ */
@@ -154,7 +157,16 @@
     if (hit) return hit.source;
     const t = clean(text);
     const marked = SOURCES.find(s => s.marks.some(rx => rx.test(t)));
-    return marked ? marked.id : 'note';
+    if (marked) return marked.id;
+    /* A note body pasted without its share wrapper carries no host and no
+       小红书 mark, so it used to land as a generic "Shared note". But the
+       labelled-attribute layout below — two or more of 地址／营业时间／人均／门票
+       in a CJK body — is RedNote's note format and nothing else's. */
+    if (RX_HANZI.test(t)) {
+      const keys = [/地[址点點]\s*[:：]/, /营业时间|營業時間|开放时间|開放時間/, /人均|均价|均價/, /[门門]票|价格|價格/];
+      if (keys.filter(rx => rx.test(t)).length >= 2) return 'rednote';
+    }
+    return 'note';
   }
 
   /* ---------- time ----------
@@ -194,19 +206,65 @@
   const pad = (n) => String(n).padStart(2, '0');
 
   /* ---------- money ----------
-     `cost` feeds the planner's Activities budget line, which is plain
-     dollars — so only a $ (or bare) amount lands there. Anything in a
-     foreign currency is kept as a note instead of silently distorting
-     the budget. */
-  function extractMoney(line) {
-    let m = line.match(/([$])\s?(\d[\d,]*(?:\.\d{1,2})?)/);
-    if (m) return { cost: m[2].replace(/,/g, ''), label: m[0], rest: line.replace(m[0], ' ') };
-    m = line.match(/([¥￥€£₩฿])\s?(\d[\d,]*(?:\.\d{1,2})?)/);
-    if (m) return { cost: '', label: m[1] + m[2], rest: line.replace(m[0], ' ') };
-    m = line.match(/(?:人均|均价|均價)\s*[¥￥$]?\s*(\d[\d,]*)/);
-    if (m) return { cost: '', label: '人均 ' + m[1], rest: line.replace(m[0], ' ') };
-    m = line.match(/\b(\d[\d,]*(?:\.\d{1,2})?)\s*(元|円|圓|yen|rmb|eur|euros?|gbp|krw|usd|dollars?)\b/i);
-    if (m) return { cost: /usd|dollars?/i.test(m[2]) ? m[1].replace(/,/g, '') : '', label: m[0], rest: line.replace(m[0], ' ') };
+     A price is two values: the amount, and the currency it was written in. Both
+     travel to the planner, which converts to CAD with the same rate table hotel
+     prices and rail fares already use — so ¥3800 counts as ¥3800, not $3800 and
+     not zero.
+
+     `ccy` is an ISO code, or '' when the text names no currency: a bare number,
+     or a plain "$", which a dozen currencies share. The planner reads '' as its
+     own default, which is what a bare amount has always meant. */
+  const MONEY_SYM = { '€': 'EUR', '£': 'GBP', '₩': 'KRW', '฿': 'THB', '₹': 'INR', '₫': 'VND', '₺': 'TRY', '₽': 'RUB' };
+  /* number + unit. Longest first so 日元 wins over 元 and "euros" over "eur";
+     without that, "3800日元" matched nothing at all and the price vanished. */
+  const MONEY_UNITS = [
+    ['人民币', 'CNY'], ['人民幣', 'CNY'], ['日元', 'JPY'], ['日圓', 'JPY'], ['美元', 'USD'], ['欧元', 'EUR'], ['歐元', 'EUR'],
+    ['英镑', 'GBP'], ['英鎊', 'GBP'], ['韩元', 'KRW'], ['韓元', 'KRW'], ['港币', 'HKD'], ['港幣', 'HKD'], ['台币', 'TWD'], ['泰铢', 'THB'],
+    ['元', 'CNY'], ['圆', 'CNY'], ['圓', 'CNY'], ['円', 'JPY'], ['원', 'KRW'],
+    ['euros', 'EUR'], ['euro', 'EUR'], ['eur', 'EUR'], ['yen', 'JPY'], ['jpy', 'JPY'], ['rmb', 'CNY'], ['cny', 'CNY'],
+    ['pounds', 'GBP'], ['pound', 'GBP'], ['gbp', 'GBP'], ['krw', 'KRW'], ['won', 'KRW'],
+    ['usd', 'USD'], ['dollars', 'USD'], ['dollar', 'USD'], ['baht', 'THB'], ['thb', 'THB'],
+    ['chf', 'CHF'], ['czk', 'CZK'], ['pln', 'PLN'], ['huf', 'HUF'], ['dkk', 'DKK'], ['nok', 'NOK'], ['sek', 'SEK']
+  ];
+  const MONEY_UNIT_CCY = MONEY_UNITS.reduce((a, u) => { a[u[0].toLowerCase()] = u[1]; return a; }, {});
+  const RX_MONEY_UNIT = new RegExp('(\\d[\\d,]*(?:\\.\\d{1,2})?)\\s*(' + MONEY_UNITS.map(u => u[0]).join('|') + ')(?![a-z])', 'i');
+  const RX_MONEY_SYM = /([$€£₩฿¥￥₹₫₺₽])\s?(\d[\d,]*(?:\.\d{1,2})?)/;
+  const RX_MONEY_PP = /(?:人均|均价|均價)\s*([¥￥$€£₩฿]?)\s*(\d[\d,]*(?:\.\d{1,2})?)/;
+
+  const RX_KANA = /[぀-ヿ]/;
+  const RX_HANZI = /[一-鿿]/;
+  /* ¥ is JPY in a Japanese post and CNY in a Chinese one, and the glyph alone
+     cannot tell you which — a wrong call is a 20× error. Decide it once per post
+     from the script the post is written in, and when neither script shows, leave
+     it unresolved: the amount stays in the note, as it did before. */
+  function yenHint(text) {
+    const s = String(text || '');
+    if (RX_KANA.test(s) || /日元|日圓|円/.test(s)) return 'JPY';
+    if (RX_HANZI.test(s)) return 'CNY';
+    return '';
+  }
+  // → { ccy, ok }. ok:false means "a currency is named but we can't name it" —
+  // the caller keeps the amount as prose rather than misfiling it.
+  function symCcy(sym, hint) {
+    if (!sym || sym === '$') return { ccy: '', ok: true };
+    if (sym === '¥' || sym === '￥') return hint ? { ccy: hint, ok: true } : { ccy: '', ok: false };
+    return { ccy: MONEY_SYM[sym] || '', ok: true };
+  }
+
+  function extractMoney(line, hint) {
+    // "人均¥300" — the price line RedNote uses most. First, so the 人均 label survives.
+    let m = line.match(RX_MONEY_PP);
+    if (m) {
+      const s = symCcy(m[1], hint);
+      return { cost: s.ok ? m[2].replace(/,/g, '') : '', ccy: s.ccy, label: '人均 ' + m[1] + m[2], rest: line.replace(m[0], ' ') };
+    }
+    m = line.match(RX_MONEY_SYM);
+    if (m) {
+      const s = symCcy(m[1], hint);
+      return { cost: s.ok ? m[2].replace(/,/g, '') : '', ccy: s.ccy, label: m[0], rest: line.replace(m[0], ' ') };
+    }
+    m = line.match(RX_MONEY_UNIT);
+    if (m) return { cost: m[1].replace(/,/g, ''), ccy: MONEY_UNIT_CCY[m[2].toLowerCase()] || '', label: m[0], rest: line.replace(m[0], ' ') };
     return null;
   }
 
@@ -277,6 +335,7 @@
     const tags = [];
     body = body.replace(RX_HASHTAG, (_, t) => { tags.push(t); return ' '; });
 
+    const yenGuess = yenHint(text);
     const rawLines = body.split('\n').map(l => l.replace(/\s+$/, ''));
     const activities = [];
     const days = new Set();
@@ -314,7 +373,7 @@
       if (attr) {
         const target = last();
         if (target) {
-          applyAttr(target, attr);
+          applyAttr(target, attr, yenGuess);
           continue;
         }
         // an address with nothing above it still describes a place
@@ -336,7 +395,7 @@
 
       const t = leadingTime(rest);
       if (t) rest = t.rest;
-      const m = extractMoney(rest);
+      const m = extractMoney(rest, yenGuess);
       if (m) rest = m.rest;
 
       let name = tidy(rest).replace(RX_TRAIL_PUNCT, '');
@@ -364,7 +423,7 @@
              off `rest` above, so without this they were removed from the text and
              then thrown away — the price visibly vanished rather than landing in
              the cost field the budget reads. */
-          if (m && m.cost && !prev.cost) prev.cost = m.cost;
+          if (m && m.cost && !prev.cost) { prev.cost = m.cost; prev.costCcy = m.ccy; }
           if (t && !prev.time) prev.time = t.time;
           if (!prev.address && looksLikeAddress(name)) prev.address = name;
           else if (!prev.note && !nameRun && name.length >= 4 && name.length <= 90 && score >= 1) prev.note = name;
@@ -401,6 +460,7 @@
         address,
         note: m && !m.cost ? joinNote(note, m.label) : note,
         cost: m && m.cost ? m.cost : '',
+        costCcy: m && m.cost ? m.ccy : '',
         signals
       });
       if (!title) title = act.text;
@@ -418,7 +478,7 @@
       const fallback = tidy(title) || firstMeaningfulLine(rawLines) || (SOURCE_LABEL[source] + ' post');
       trimmed.push({
         id: 'sa-link', use: true, day: null, time: '',
-        text: fallback.slice(0, 120), address: '', note: '', cost: '',
+        text: fallback.slice(0, 120), address: '', note: '', cost: '', costCcy: '',
         signals: ['link']
       });
     }
@@ -450,11 +510,11 @@
     return null;
   }
 
-  function applyAttr(act, attr) {
+  function applyAttr(act, attr, hint) {
     if (attr.key === 'address') { act.address = act.address || attr.value; return; }
     if (attr.key === 'price') {
-      const m = extractMoney(attr.value);
-      if (m && m.cost) act.cost = act.cost || m.cost;
+      const m = extractMoney(attr.value, hint);
+      if (m && m.cost) { if (!act.cost) { act.cost = m.cost; act.costCcy = m.ccy; } }
       else act.note = joinNote(act.note, m ? m.label : attr.value);
       return;
     }

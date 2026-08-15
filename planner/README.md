@@ -270,8 +270,9 @@ as well as an amount:
 |---|---|
 | Hotel **Total price** | Accommodation research, per option |
 | Transport **Cost / pp** | Transport modal, and the compact leg editor on each stop card |
+| Activity **cost** | The `$` field on each row of the daily plan |
 
-**Just type it.** Both fields are free text and the currency is read straight out of what you
+**Just type it.** All three are free text and the currency is read straight out of what you
 wrote — `1 euro`, `1.5 pl`, `€42`, `500 yen`, `9800 czk / 4 nights`. Currency codes work exactly
 or by any unambiguous prefix (`pl` → PLN, `cz` → CZK), as do names and nicknames (`pounds`,
 `quid`, `zloty`, `forint`, `yen`) and symbols. Wording around the number is ignored, so
@@ -379,7 +380,7 @@ posts people save for travel are almost always structured lists.
 | `地址：…` / `Address: …`, or `Name, 12 Some St, City` | the activity's address (→ map pin, Google Maps link) |
 | `9:00`, `12:30`, `上午9点`, `7pm` at the start of a line | the activity's time |
 | `营业时间：8:00-19:00`, `推荐理由：…`, a trailing ` — go early` | the activity's note |
-| `$15` | the activity's cost |
+| `$15`, `€15`, `3800日元`, `人均¥300`, `12000 krw` | the activity's cost **and the currency it was written in** |
 | `Day 2`, `第三天`, `2日目` | which day each activity lands on |
 | `#kyoto`, city names in the text | the stay it's aimed at, when it matches one of your stops |
 
@@ -389,10 +390,14 @@ tick per row, a city + day target, and a "keep the post's N days" option — and
 itinerary until you press **Add**. A re-import won't duplicate a place already on that day, and
 ⌘/Ctrl-Z undoes the whole batch.
 
-Two deliberate limits:
+Prices keep their currency and convert like every other price in the app: a RedNote `3800日元`
+lands as `3800 JPY` and counts as ≈ $35 in the Activities line, not $3800 and not zero. One glyph
+is still refused rather than guessed — a bare `¥` is JPY in a Japanese post and CNY in a Chinese
+one, so it's resolved from the script the post is written in, and when neither shows, the amount
+stays in the note as before.
 
-- **Only `$` amounts become a cost.** The Activities budget line is plain dollars, so `¥1200` or
-  `€18` is kept as a note rather than silently distorting the total.
+The remaining limit:
+
 - **Images aren't read** — no OCR. A share that's only a link yields one row (the post itself) so
   you can keep it as a to-check reminder, and the sheet says as much: a URL carries no text, and
   the places live in the caption. **Open the post, copy the caption, paste that.** There is no way

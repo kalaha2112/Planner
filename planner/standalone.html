@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-15T18:21:03.319Z
+  Built: 2026-08-15T19:13:27.372Z
 -->
 
 <html lang="en">
@@ -1536,9 +1536,16 @@ a { color: inherit; }
 .item .field > svg { color: var(--ink-mute); }   /* icons use currentColor -> theme-aware */
 .item .field input { font-family: var(--sans); font-size: 12px; color: var(--ink-soft); border: none; background: transparent; padding: 2px 0; flex: 1; min-width: 0; outline-offset: 2px; }
 .item .maps { flex-shrink: 0; display: flex; align-items: center; color: var(--gold); text-decoration: none; font-family: var(--sans); font-size: 11px; font-weight: 700; }
-.item .cost-field { flex: 0 1 72px; display: flex; align-items: center; gap: 3px; }
+/* wide enough for a five-figure amount *and* the currency beside it — at 72px
+   the picker ate the number and "3800" rendered as "380(" */
+.item .cost-field { flex: 0 1 112px; display: flex; align-items: center; gap: 3px; }
 .item .cost-field .d { font-family: var(--sans); font-size: 10px; font-weight: 500; color: var(--ink-mute); flex-shrink: 0; }
 .item .cost-field input { font-family: var(--sans); font-size: 10.5px; color: var(--ink-soft); border: none; background: transparent; padding: 2px 0; width: 100%; min-width: 0; font-variant-numeric: tabular-nums; }
+/* the currency picker rides in the same slot as the amount, so it has to be
+   smaller than the one beside a hotel price — the row is a meta line, not a field */
+.item .cost-field .ccy-sel { font-size: 9.5px; padding: 0 10px 0 0; }
+.item .cost-field .ccy-sel--read { padding-right: 0; }
+.item .meta .cad-hint { flex: 0 0 auto; font-size: 9.5px; }
 .item .x { font-family: var(--sans); font-size: 13px; line-height: 1; color: var(--ink-faint); border: none; background: transparent; cursor: crosshair; padding: 5px; flex-shrink: 0; }
 .add-item, .add-option {
   font-family: var(--sans); font-size: 18px; font-weight: 800; line-height: 1;
@@ -4157,7 +4164,10 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
      dayCount,                       // distinct "Day N" headers seen
      activities: [{
        id, use, day,                 // day: 0-based, or null
-       time, text, address, note, cost, signals[]
+       time, text, address, note, cost, costCcy, signals[]
+       //  cost   — the amount, as written, with separators stripped
+       //  costCcy— ISO code it was written in, or '' when the text names
+       //           none (a bare number, or a "$" a dozen currencies share)
      }]
    }
    ============================================================ */
@@ -4288,7 +4298,16 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
     if (hit) return hit.source;
     const t = clean(text);
     const marked = SOURCES.find(s => s.marks.some(rx => rx.test(t)));
-    return marked ? marked.id : 'note';
+    if (marked) return marked.id;
+    /* A note body pasted without its share wrapper carries no host and no
+       小红书 mark, so it used to land as a generic "Shared note". But the
+       labelled-attribute layout below — two or more of 地址／营业时间／人均／门票
+       in a CJK body — is RedNote's note format and nothing else's. */
+    if (RX_HANZI.test(t)) {
+      const keys = [/地[址点點]\s*[:：]/, /营业时间|營業時間|开放时间|開放時間/, /人均|均价|均價/, /[门門]票|价格|價格/];
+      if (keys.filter(rx => rx.test(t)).length >= 2) return 'rednote';
+    }
+    return 'note';
   }
 
   /* ---------- time ----------
@@ -4328,19 +4347,65 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
   const pad = (n) => String(n).padStart(2, '0');
 
   /* ---------- money ----------
-     `cost` feeds the planner's Activities budget line, which is plain
-     dollars — so only a $ (or bare) amount lands there. Anything in a
-     foreign currency is kept as a note instead of silently distorting
-     the budget. */
-  function extractMoney(line) {
-    let m = line.match(/([$])\s?(\d[\d,]*(?:\.\d{1,2})?)/);
-    if (m) return { cost: m[2].replace(/,/g, ''), label: m[0], rest: line.replace(m[0], ' ') };
-    m = line.match(/([¥￥€£₩฿])\s?(\d[\d,]*(?:\.\d{1,2})?)/);
-    if (m) return { cost: '', label: m[1] + m[2], rest: line.replace(m[0], ' ') };
-    m = line.match(/(?:人均|均价|均價)\s*[¥￥$]?\s*(\d[\d,]*)/);
-    if (m) return { cost: '', label: '人均 ' + m[1], rest: line.replace(m[0], ' ') };
-    m = line.match(/\b(\d[\d,]*(?:\.\d{1,2})?)\s*(元|円|圓|yen|rmb|eur|euros?|gbp|krw|usd|dollars?)\b/i);
-    if (m) return { cost: /usd|dollars?/i.test(m[2]) ? m[1].replace(/,/g, '') : '', label: m[0], rest: line.replace(m[0], ' ') };
+     A price is two values: the amount, and the currency it was written in. Both
+     travel to the planner, which converts to CAD with the same rate table hotel
+     prices and rail fares already use — so ¥3800 counts as ¥3800, not $3800 and
+     not zero.
+
+     `ccy` is an ISO code, or '' when the text names no currency: a bare number,
+     or a plain "$", which a dozen currencies share. The planner reads '' as its
+     own default, which is what a bare amount has always meant. */
+  const MONEY_SYM = { '€': 'EUR', '£': 'GBP', '₩': 'KRW', '฿': 'THB', '₹': 'INR', '₫': 'VND', '₺': 'TRY', '₽': 'RUB' };
+  /* number + unit. Longest first so 日元 wins over 元 and "euros" over "eur";
+     without that, "3800日元" matched nothing at all and the price vanished. */
+  const MONEY_UNITS = [
+    ['人民币', 'CNY'], ['人民幣', 'CNY'], ['日元', 'JPY'], ['日圓', 'JPY'], ['美元', 'USD'], ['欧元', 'EUR'], ['歐元', 'EUR'],
+    ['英镑', 'GBP'], ['英鎊', 'GBP'], ['韩元', 'KRW'], ['韓元', 'KRW'], ['港币', 'HKD'], ['港幣', 'HKD'], ['台币', 'TWD'], ['泰铢', 'THB'],
+    ['元', 'CNY'], ['圆', 'CNY'], ['圓', 'CNY'], ['円', 'JPY'], ['원', 'KRW'],
+    ['euros', 'EUR'], ['euro', 'EUR'], ['eur', 'EUR'], ['yen', 'JPY'], ['jpy', 'JPY'], ['rmb', 'CNY'], ['cny', 'CNY'],
+    ['pounds', 'GBP'], ['pound', 'GBP'], ['gbp', 'GBP'], ['krw', 'KRW'], ['won', 'KRW'],
+    ['usd', 'USD'], ['dollars', 'USD'], ['dollar', 'USD'], ['baht', 'THB'], ['thb', 'THB'],
+    ['chf', 'CHF'], ['czk', 'CZK'], ['pln', 'PLN'], ['huf', 'HUF'], ['dkk', 'DKK'], ['nok', 'NOK'], ['sek', 'SEK']
+  ];
+  const MONEY_UNIT_CCY = MONEY_UNITS.reduce((a, u) => { a[u[0].toLowerCase()] = u[1]; return a; }, {});
+  const RX_MONEY_UNIT = new RegExp('(\\d[\\d,]*(?:\\.\\d{1,2})?)\\s*(' + MONEY_UNITS.map(u => u[0]).join('|') + ')(?![a-z])', 'i');
+  const RX_MONEY_SYM = /([$€£₩฿¥￥₹₫₺₽])\s?(\d[\d,]*(?:\.\d{1,2})?)/;
+  const RX_MONEY_PP = /(?:人均|均价|均價)\s*([¥￥$€£₩฿]?)\s*(\d[\d,]*(?:\.\d{1,2})?)/;
+
+  const RX_KANA = /[぀-ヿ]/;
+  const RX_HANZI = /[一-鿿]/;
+  /* ¥ is JPY in a Japanese post and CNY in a Chinese one, and the glyph alone
+     cannot tell you which — a wrong call is a 20× error. Decide it once per post
+     from the script the post is written in, and when neither script shows, leave
+     it unresolved: the amount stays in the note, as it did before. */
+  function yenHint(text) {
+    const s = String(text || '');
+    if (RX_KANA.test(s) || /日元|日圓|円/.test(s)) return 'JPY';
+    if (RX_HANZI.test(s)) return 'CNY';
+    return '';
+  }
+  // → { ccy, ok }. ok:false means "a currency is named but we can't name it" —
+  // the caller keeps the amount as prose rather than misfiling it.
+  function symCcy(sym, hint) {
+    if (!sym || sym === '$') return { ccy: '', ok: true };
+    if (sym === '¥' || sym === '￥') return hint ? { ccy: hint, ok: true } : { ccy: '', ok: false };
+    return { ccy: MONEY_SYM[sym] || '', ok: true };
+  }
+
+  function extractMoney(line, hint) {
+    // "人均¥300" — the price line RedNote uses most. First, so the 人均 label survives.
+    let m = line.match(RX_MONEY_PP);
+    if (m) {
+      const s = symCcy(m[1], hint);
+      return { cost: s.ok ? m[2].replace(/,/g, '') : '', ccy: s.ccy, label: '人均 ' + m[1] + m[2], rest: line.replace(m[0], ' ') };
+    }
+    m = line.match(RX_MONEY_SYM);
+    if (m) {
+      const s = symCcy(m[1], hint);
+      return { cost: s.ok ? m[2].replace(/,/g, '') : '', ccy: s.ccy, label: m[0], rest: line.replace(m[0], ' ') };
+    }
+    m = line.match(RX_MONEY_UNIT);
+    if (m) return { cost: m[1].replace(/,/g, ''), ccy: MONEY_UNIT_CCY[m[2].toLowerCase()] || '', label: m[0], rest: line.replace(m[0], ' ') };
     return null;
   }
 
@@ -4411,6 +4476,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
     const tags = [];
     body = body.replace(RX_HASHTAG, (_, t) => { tags.push(t); return ' '; });
 
+    const yenGuess = yenHint(text);
     const rawLines = body.split('\n').map(l => l.replace(/\s+$/, ''));
     const activities = [];
     const days = new Set();
@@ -4448,7 +4514,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       if (attr) {
         const target = last();
         if (target) {
-          applyAttr(target, attr);
+          applyAttr(target, attr, yenGuess);
           continue;
         }
         // an address with nothing above it still describes a place
@@ -4470,7 +4536,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
 
       const t = leadingTime(rest);
       if (t) rest = t.rest;
-      const m = extractMoney(rest);
+      const m = extractMoney(rest, yenGuess);
       if (m) rest = m.rest;
 
       let name = tidy(rest).replace(RX_TRAIL_PUNCT, '');
@@ -4498,7 +4564,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
              off `rest` above, so without this they were removed from the text and
              then thrown away — the price visibly vanished rather than landing in
              the cost field the budget reads. */
-          if (m && m.cost && !prev.cost) prev.cost = m.cost;
+          if (m && m.cost && !prev.cost) { prev.cost = m.cost; prev.costCcy = m.ccy; }
           if (t && !prev.time) prev.time = t.time;
           if (!prev.address && looksLikeAddress(name)) prev.address = name;
           else if (!prev.note && !nameRun && name.length >= 4 && name.length <= 90 && score >= 1) prev.note = name;
@@ -4535,6 +4601,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
         address,
         note: m && !m.cost ? joinNote(note, m.label) : note,
         cost: m && m.cost ? m.cost : '',
+        costCcy: m && m.cost ? m.ccy : '',
         signals
       });
       if (!title) title = act.text;
@@ -4552,7 +4619,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       const fallback = tidy(title) || firstMeaningfulLine(rawLines) || (SOURCE_LABEL[source] + ' post');
       trimmed.push({
         id: 'sa-link', use: true, day: null, time: '',
-        text: fallback.slice(0, 120), address: '', note: '', cost: '',
+        text: fallback.slice(0, 120), address: '', note: '', cost: '', costCcy: '',
         signals: ['link']
       });
     }
@@ -4584,11 +4651,11 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
     return null;
   }
 
-  function applyAttr(act, attr) {
+  function applyAttr(act, attr, hint) {
     if (attr.key === 'address') { act.address = act.address || attr.value; return; }
     if (attr.key === 'price') {
-      const m = extractMoney(attr.value);
-      if (m && m.cost) act.cost = act.cost || m.cost;
+      const m = extractMoney(attr.value, hint);
+      if (m && m.cost) { if (!act.cost) { act.cost = m.cost; act.costCcy = m.ccy; } }
       else act.note = joinNote(act.note, m ? m.label : attr.value);
       return;
     }
@@ -9111,6 +9178,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
           address: (a.address || '').trim(),
           note: (a.note || '').trim(),
           cost: (a.cost || '').trim(),
+          costCcy: normCcy(a.costCcy),
           src,
           srcUrl: res.url || ''
         });
@@ -9340,7 +9408,16 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       const lodgingDetail = anyChosenPrice ? ('from chosen hotels · ' + lodgingParts.join(' · ') + (nightsUncovered > 0 ? ' · ' + nightsUncovered + 'n not yet chosen' : '') + lodgingFx) : 'choose hotels in the stop cards to populate';
       const foodTotal = (Number(bud.foodPerDayPP) || 0) * nights * travelers;
       let loggedActivities = 0;
-      trip.stops.forEach(s => (Array.isArray(s.itinerary) ? s.itinerary : []).forEach(day => (day && Array.isArray(day.items) ? day.items : []).forEach(it => { const v = parseFloat(String(it.cost == null ? '' : it.cost).replace(/[^0-9.]/g, '')); if (!isNaN(v)) loggedActivities += v; })));
+      // read the cost the same way the field does, so "3800 jpy" — typed, or
+      // imported from a post — converts rather than counting as 3800 dollars
+      const actCcys = new Set();
+      trip.stops.forEach(s => (Array.isArray(s.itinerary) ? s.itinerary : []).forEach(day => (day && Array.isArray(day.items) ? day.items : []).forEach(it => {
+        const pm = parseMoney(it.cost, it.costCcy);
+        if (!pm.amount) return;
+        if (!isCad(pm.ccy)) actCcys.add(pm.ccy);
+        loggedActivities += toCad(pm.amount, pm.ccy);
+      })));
+      const actFx = actCcys.size ? ' · converted from ' + [...actCcys].join(', ') : '';
       const otherTotal = Number(bud.otherTotal) || 0;
       const grandTotal = flightCost + intercityCost + cityPassTotal + lodgingTotal + foodTotal + loggedActivities + otherTotal;
       const perPerson = travelers > 0 ? Math.round(grandTotal / travelers) : grandTotal;
@@ -9350,7 +9427,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
         { label: 'City public transport', mult: cityPassDetail || 'city pass × nights × travelers', total: money(cityPassTotal), override: money(cityPassTotal), isOverride: true },
         { label: 'Lodging', mult: lodgingDetail, total: money(lodgingTotal) },
         { label: 'Food', key: 'foodPerDayPP', unit: '$/day/pp', mult: '× ' + nights + ' × ' + travelers, value: bud.foodPerDayPP, total: money(foodTotal) },
-        { label: 'Activities', mult: loggedActivities > 0 ? 'linked from daily plan costs' : 'add costs in the daily plan to populate', total: money(loggedActivities) },
+        { label: 'Activities', mult: loggedActivities > 0 ? 'linked from daily plan costs' + actFx : 'add costs in the daily plan to populate', total: money(loggedActivities) },
         { label: 'Other / buffer', key: 'otherTotal', unit: '$ total', mult: 'one-off', value: bud.otherTotal, total: money(otherTotal) }
       ];
       return { grandTotal, perPerson, lines };
@@ -10803,6 +10880,14 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
           const geoCity = geoQuery.includes(',') ? '' : (stop.city || '');
           const placed = !!(geoQuery && (this._geoCache.get(normKey(geoQuery) + '|' + normKey(geoCity)) || this._geoCache.get(normKey(geoQuery) + '|')));
           const hasAddr = /\S/.test(geoQuery);
+          // a cost is free text with a currency beside it, exactly like a hotel
+          // price — so an imported "3800 JPY" converts instead of counting as $3800
+          const cpm = parseMoney(it.cost, it.costCcy);
+          // the full hint ("≈ $35 CAD · 1 JPY = $0.00910") belongs under a price
+          // field; an activity row is a meta line, so it gets the conversion only
+          const costHint = cpm.ambiguous
+            ? { text: `${cpm.ambiguous.slice(0, 3).join('/')}?`, warn: true }
+            : { text: (cpm.amount && !isCad(cpm.ccy)) ? '≈ ' + money(toCad(cpm.amount, cpm.ccy)) : '', warn: false };
           return `<div class="item${ii === selIdx ? ' selected' : ''}${ii === flashIdx ? ' flash' : ''}" data-idx="${ii}" data-id="${this._rowKey(it)}">
           <span class="item-num${placed ? ' placed' : (hasAddr ? '' : ' empty')}" title="${placed ? 'Mapped' : hasAddr ? 'Locating…' : 'Type a place name to map this'}">${ii + 1}</span>
           <span class="item-grip" data-drag="activity" data-i="${ii}" title="Drag onto another day">
@@ -10818,7 +10903,8 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
               <div class="field field--time">${svg(I.clock, { w: 11, h: 11, stroke: 'currentColor' })}<input value="${escA(it.time)}" data-ch="item-time" data-i="${ii}" placeholder="Time"></div>
               <div class="field">${svg(I.pin, { w: 11, h: 11, stroke: 'currentColor' })}<input value="${escA(it.address)}" data-ch="item-address" data-i="${ii}" placeholder="Address">${hasAddr ? `<a class="maps" href="https://maps.google.com/?q=${encodeURIComponent(it.address || '')}" target="_blank" rel="noopener" title="Open in Maps">↗</a>` : ''}</div>
               <div class="field">${svg(I.msg, { w: 11, h: 11, stroke: 'currentColor' })}<input value="${escA(it.note)}" data-ch="item-note" data-i="${ii}" placeholder="Note"></div>
-              <div class="cost-field"><span class="d">$</span><input value="${escA(it.cost)}" data-ch="item-cost" data-i="${ii}" inputmode="numeric"></div>
+              <div class="cost-field"><span class="d">${esc(ccySym(cpm.ccy))}</span><input value="${escA(it.cost)}" data-ch="item-cost" data-i="${ii}" inputmode="decimal" title="Type the currency if it isn't dollars — &quot;15 eur&quot;, &quot;3800 jpy&quot;">${ccyPicker('item-ccy', `data-i="${ii}"`, cpm.ccy, cpm.fromText)}</div>
+              ${costHint.text ? `<span class="cad-hint${costHint.warn ? ' cad-hint--warn' : ''}" title="${escA(cadHint(cpm.amount, cpm.ccy))}">${esc(costHint.text)}</span>` : ''}
               ${it.src ? (it.srcUrl
                 ? `<a class="item-src src--${escA(it.src)}" href="${escA(it.srcUrl)}" target="_blank" rel="noopener noreferrer" title="Open the post this came from">${esc(SRC_LABEL[it.src] || it.src)} ↗</a>`
                 : `<span class="item-src src--${escA(it.src)}">${esc(SRC_LABEL[it.src] || it.src)}</span>`) : ''}
@@ -11299,7 +11385,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
               <div class="imp-meta">
                 <span class="imp-fld imp-fld--time">${svg(I.clock, { w: 11, h: 11 })}<input value="${escA(a.time)}" data-ch="import-time" data-id="${escA(a.id)}" placeholder="09:00"></span>
                 <span class="imp-fld">${svg(I.pin, { w: 11, h: 11 })}<input value="${escA(a.address)}" data-ch="import-address" data-id="${escA(a.id)}" placeholder="Address (optional)"></span>
-                ${a.cost ? `<span class="imp-cost">$${esc(a.cost)}</span>` : ''}
+                ${a.cost ? `<span class="imp-cost" title="${escA(isCad(a.costCcy) ? '' : cadHint(parseMoney(a.cost, a.costCcy).amount, a.costCcy))}">${esc(ccySym(a.costCcy))}${esc(a.cost)}</span>` : ''}
                 ${dayChip}
               </div>
               ${a.note ? `<div class="imp-note">${esc(a.note)}</div>` : ''}
@@ -11684,7 +11770,10 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
         case 'item-text': trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i].text = v; this.bumpModal(); this.scheduleSave(); break;
         case 'item-address': trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i].address = v; this.bumpModal(); this.scheduleSave(); break;
         case 'item-note': trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i].note = v; this.bumpModal(); this.scheduleSave(); break;
-        case 'item-cost': trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i].cost = v; this.bumpModal(); this.scheduleSave(); break;
+        // same contract as a hotel price: the text is kept verbatim, a currency
+        // named inside it wins, and a bare number leaves the picker's choice alone
+        case 'item-cost': { const it = trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i]; it.cost = v; const pm = parseMoney(v, it.costCcy); if (pm.fromText) it.costCcy = pm.ccy; this.bumpModal(); this.scheduleSave(); break; }
+        case 'item-ccy': trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i].costCcy = normCcy(v); this.bumpModal(); this.scheduleSave(); break;
         case 'closet-file': { const f = e.target.files && e.target.files[0]; if (f) this.addClosetSticker(f); e.target.value = ''; break; }
         case 'sticker-file': { const files = e.target.files; if (files && files.length) this.addToStickerStock(files); e.target.value = ''; break; }
         // accommodation modal

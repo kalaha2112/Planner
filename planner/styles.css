@@ -758,9 +758,16 @@ a { color: inherit; }
 .item .field > svg { color: var(--ink-mute); }   /* icons use currentColor -> theme-aware */
 .item .field input { font-family: var(--sans); font-size: 12px; color: var(--ink-soft); border: none; background: transparent; padding: 2px 0; flex: 1; min-width: 0; outline-offset: 2px; }
 .item .maps { flex-shrink: 0; display: flex; align-items: center; color: var(--gold); text-decoration: none; font-family: var(--sans); font-size: 11px; font-weight: 700; }
-.item .cost-field { flex: 0 1 72px; display: flex; align-items: center; gap: 3px; }
+/* wide enough for a five-figure amount *and* the currency beside it — at 72px
+   the picker ate the number and "3800" rendered as "380(" */
+.item .cost-field { flex: 0 1 112px; display: flex; align-items: center; gap: 3px; }
 .item .cost-field .d { font-family: var(--sans); font-size: 10px; font-weight: 500; color: var(--ink-mute); flex-shrink: 0; }
 .item .cost-field input { font-family: var(--sans); font-size: 10.5px; color: var(--ink-soft); border: none; background: transparent; padding: 2px 0; width: 100%; min-width: 0; font-variant-numeric: tabular-nums; }
+/* the currency picker rides in the same slot as the amount, so it has to be
+   smaller than the one beside a hotel price — the row is a meta line, not a field */
+.item .cost-field .ccy-sel { font-size: 9.5px; padding: 0 10px 0 0; }
+.item .cost-field .ccy-sel--read { padding-right: 0; }
+.item .meta .cad-hint { flex: 0 0 auto; font-size: 9.5px; }
 .item .x { font-family: var(--sans); font-size: 13px; line-height: 1; color: var(--ink-faint); border: none; background: transparent; cursor: crosshair; padding: 5px; flex-shrink: 0; }
 .add-item, .add-option {
   font-family: var(--sans); font-size: 18px; font-weight: 800; line-height: 1;

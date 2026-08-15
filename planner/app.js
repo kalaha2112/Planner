@@ -4440,6 +4440,7 @@
           address: (a.address || '').trim(),
           note: (a.note || '').trim(),
           cost: (a.cost || '').trim(),
+          costCcy: normCcy(a.costCcy),
           src,
           srcUrl: res.url || ''
         });
@@ -4669,7 +4670,16 @@
       const lodgingDetail = anyChosenPrice ? ('from chosen hotels · ' + lodgingParts.join(' · ') + (nightsUncovered > 0 ? ' · ' + nightsUncovered + 'n not yet chosen' : '') + lodgingFx) : 'choose hotels in the stop cards to populate';
       const foodTotal = (Number(bud.foodPerDayPP) || 0) * nights * travelers;
       let loggedActivities = 0;
-      trip.stops.forEach(s => (Array.isArray(s.itinerary) ? s.itinerary : []).forEach(day => (day && Array.isArray(day.items) ? day.items : []).forEach(it => { const v = parseFloat(String(it.cost == null ? '' : it.cost).replace(/[^0-9.]/g, '')); if (!isNaN(v)) loggedActivities += v; })));
+      // read the cost the same way the field does, so "3800 jpy" — typed, or
+      // imported from a post — converts rather than counting as 3800 dollars
+      const actCcys = new Set();
+      trip.stops.forEach(s => (Array.isArray(s.itinerary) ? s.itinerary : []).forEach(day => (day && Array.isArray(day.items) ? day.items : []).forEach(it => {
+        const pm = parseMoney(it.cost, it.costCcy);
+        if (!pm.amount) return;
+        if (!isCad(pm.ccy)) actCcys.add(pm.ccy);
+        loggedActivities += toCad(pm.amount, pm.ccy);
+      })));
+      const actFx = actCcys.size ? ' · converted from ' + [...actCcys].join(', ') : '';
       const otherTotal = Number(bud.otherTotal) || 0;
       const grandTotal = flightCost + intercityCost + cityPassTotal + lodgingTotal + foodTotal + loggedActivities + otherTotal;
       const perPerson = travelers > 0 ? Math.round(grandTotal / travelers) : grandTotal;
@@ -4679,7 +4689,7 @@
         { label: 'City public transport', mult: cityPassDetail || 'city pass × nights × travelers', total: money(cityPassTotal), override: money(cityPassTotal), isOverride: true },
         { label: 'Lodging', mult: lodgingDetail, total: money(lodgingTotal) },
         { label: 'Food', key: 'foodPerDayPP', unit: '$/day/pp', mult: '× ' + nights + ' × ' + travelers, value: bud.foodPerDayPP, total: money(foodTotal) },
-        { label: 'Activities', mult: loggedActivities > 0 ? 'linked from daily plan costs' : 'add costs in the daily plan to populate', total: money(loggedActivities) },
+        { label: 'Activities', mult: loggedActivities > 0 ? 'linked from daily plan costs' + actFx : 'add costs in the daily plan to populate', total: money(loggedActivities) },
         { label: 'Other / buffer', key: 'otherTotal', unit: '$ total', mult: 'one-off', value: bud.otherTotal, total: money(otherTotal) }
       ];
       return { grandTotal, perPerson, lines };
@@ -6132,6 +6142,14 @@
           const geoCity = geoQuery.includes(',') ? '' : (stop.city || '');
           const placed = !!(geoQuery && (this._geoCache.get(normKey(geoQuery) + '|' + normKey(geoCity)) || this._geoCache.get(normKey(geoQuery) + '|')));
           const hasAddr = /\S/.test(geoQuery);
+          // a cost is free text with a currency beside it, exactly like a hotel
+          // price — so an imported "3800 JPY" converts instead of counting as $3800
+          const cpm = parseMoney(it.cost, it.costCcy);
+          // the full hint ("≈ $35 CAD · 1 JPY = $0.00910") belongs under a price
+          // field; an activity row is a meta line, so it gets the conversion only
+          const costHint = cpm.ambiguous
+            ? { text: `${cpm.ambiguous.slice(0, 3).join('/')}?`, warn: true }
+            : { text: (cpm.amount && !isCad(cpm.ccy)) ? '≈ ' + money(toCad(cpm.amount, cpm.ccy)) : '', warn: false };
           return `<div class="item${ii === selIdx ? ' selected' : ''}${ii === flashIdx ? ' flash' : ''}" data-idx="${ii}" data-id="${this._rowKey(it)}">
           <span class="item-num${placed ? ' placed' : (hasAddr ? '' : ' empty')}" title="${placed ? 'Mapped' : hasAddr ? 'Locating…' : 'Type a place name to map this'}">${ii + 1}</span>
           <span class="item-grip" data-drag="activity" data-i="${ii}" title="Drag onto another day">
@@ -6147,7 +6165,8 @@
               <div class="field field--time">${svg(I.clock, { w: 11, h: 11, stroke: 'currentColor' })}<input value="${escA(it.time)}" data-ch="item-time" data-i="${ii}" placeholder="Time"></div>
               <div class="field">${svg(I.pin, { w: 11, h: 11, stroke: 'currentColor' })}<input value="${escA(it.address)}" data-ch="item-address" data-i="${ii}" placeholder="Address">${hasAddr ? `<a class="maps" href="https://maps.google.com/?q=${encodeURIComponent(it.address || '')}" target="_blank" rel="noopener" title="Open in Maps">↗</a>` : ''}</div>
               <div class="field">${svg(I.msg, { w: 11, h: 11, stroke: 'currentColor' })}<input value="${escA(it.note)}" data-ch="item-note" data-i="${ii}" placeholder="Note"></div>
-              <div class="cost-field"><span class="d">$</span><input value="${escA(it.cost)}" data-ch="item-cost" data-i="${ii}" inputmode="numeric"></div>
+              <div class="cost-field"><span class="d">${esc(ccySym(cpm.ccy))}</span><input value="${escA(it.cost)}" data-ch="item-cost" data-i="${ii}" inputmode="decimal" title="Type the currency if it isn't dollars — &quot;15 eur&quot;, &quot;3800 jpy&quot;">${ccyPicker('item-ccy', `data-i="${ii}"`, cpm.ccy, cpm.fromText)}</div>
+              ${costHint.text ? `<span class="cad-hint${costHint.warn ? ' cad-hint--warn' : ''}" title="${escA(cadHint(cpm.amount, cpm.ccy))}">${esc(costHint.text)}</span>` : ''}
               ${it.src ? (it.srcUrl
                 ? `<a class="item-src src--${escA(it.src)}" href="${escA(it.srcUrl)}" target="_blank" rel="noopener noreferrer" title="Open the post this came from">${esc(SRC_LABEL[it.src] || it.src)} ↗</a>`
                 : `<span class="item-src src--${escA(it.src)}">${esc(SRC_LABEL[it.src] || it.src)}</span>`) : ''}
@@ -6628,7 +6647,7 @@
               <div class="imp-meta">
                 <span class="imp-fld imp-fld--time">${svg(I.clock, { w: 11, h: 11 })}<input value="${escA(a.time)}" data-ch="import-time" data-id="${escA(a.id)}" placeholder="09:00"></span>
                 <span class="imp-fld">${svg(I.pin, { w: 11, h: 11 })}<input value="${escA(a.address)}" data-ch="import-address" data-id="${escA(a.id)}" placeholder="Address (optional)"></span>
-                ${a.cost ? `<span class="imp-cost">$${esc(a.cost)}</span>` : ''}
+                ${a.cost ? `<span class="imp-cost" title="${escA(isCad(a.costCcy) ? '' : cadHint(parseMoney(a.cost, a.costCcy).amount, a.costCcy))}">${esc(ccySym(a.costCcy))}${esc(a.cost)}</span>` : ''}
                 ${dayChip}
               </div>
               ${a.note ? `<div class="imp-note">${esc(a.note)}</div>` : ''}
@@ -7013,7 +7032,10 @@
         case 'item-text': trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i].text = v; this.bumpModal(); this.scheduleSave(); break;
         case 'item-address': trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i].address = v; this.bumpModal(); this.scheduleSave(); break;
         case 'item-note': trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i].note = v; this.bumpModal(); this.scheduleSave(); break;
-        case 'item-cost': trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i].cost = v; this.bumpModal(); this.scheduleSave(); break;
+        // same contract as a hotel price: the text is kept verbatim, a currency
+        // named inside it wins, and a bare number leaves the picker's choice alone
+        case 'item-cost': { const it = trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i]; it.cost = v; const pm = parseMoney(v, it.costCcy); if (pm.fromText) it.costCcy = pm.ccy; this.bumpModal(); this.scheduleSave(); break; }
+        case 'item-ccy': trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i].costCcy = normCcy(v); this.bumpModal(); this.scheduleSave(); break;
         case 'closet-file': { const f = e.target.files && e.target.files[0]; if (f) this.addClosetSticker(f); e.target.value = ''; break; }
         case 'sticker-file': { const files = e.target.files; if (files && files.length) this.addToStickerStock(files); e.target.value = ''; break; }
         // accommodation modal
