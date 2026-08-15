@@ -142,23 +142,29 @@
   --brown: #EFF6DF;   /* black pills/buttons go white… */
   --on-brown: #12180A;   /* …with dark text on them */
   --red:        #C93A41;   /* dark red, lifted just enough for the dark page */
-  --shell: #0E1109;   /* warm near-black, not pure black */
-  --surface: #171B10;
+  /* The dark neutrals are tinted toward the gold the rest of the skin runs on,
+     not the green they used to carry — same lightness, hue moved from ~90° to
+     ~42°, so a card reads as warm near-black rather than olive. */
+  --shell: #110E08;   /* near-black, not pure black */
+  --surface: #1D1910;
 
   --gold: #E3C04A;   /* yellow gold, lifted for the dark page */
   --gold-soft: #332C13;
   --gold-border: #665420;
   --gold-hover: #453917;
   --green: #E3C04A;
-  --date: #A8E82C;   /* dates stay green */
-  --green-dark: #7FB81C;
+  /* Dates stay green — the one hue held back from the gold reskin — but a
+     deeper, denser green than the neon it was: it reads as bold ink on the dark
+     page instead of glowing off it. */
+  --date: #7CB518;
+  --green-dark: #6C9F13;
   --green-bg: #332C13;
 
   --line: #EFF6DF;   /* pure-white hairlines mirror the black ones */
-  --line-soft: #333A24;   /* QUIET divider: dim warm grey, not white */
-  --line-2: #1E2416;   /* subtle fill only — stays a fill */
+  --line-soft: #3A3320;   /* QUIET divider: dim warm grey, not white */
+  --line-2: #241F12;   /* subtle fill only — stays a fill */
   --line-3: #E3C04A;
-  --dash: #5C6845;
+  --dash: #675B39;   /* dashed outlines + checkbox rings, warmed to match */
 
   --stay-fill: #33280C;
   --stay-line: #EFF6DF;
@@ -167,18 +173,20 @@
      match the app palette, so the reskin deliberately does not touch it ---- */
   --map-bg: #1E1B18;
 
-  --hover-soft: #1D2215;
+  --hover-soft: #241F13;
   --cal-hover: #3E3413;
   --rm-hover: #3A2113;
-  --chip-glass: rgba(23,27,16,.84);
-  --card-glass: rgba(23,27,16,.70);
-  --ep-glass: rgba(14,17,9,.88);
+  /* the translucent card faces — same gold-tinted neutral, carried through so a
+     half-transparent card doesn't go green over the page */
+  --chip-glass: rgba(29,25,16,.84);
+  --card-glass: rgba(29,25,16,.70);
+  --ep-glass: rgba(17,14,8,.88);
   --map-sea: #121210;   /* stop map: ocean = dark page bg, so it blends (no box) */
   --map-land: #ECE7DC;   /* stop map: beige land (app version; web mutes it — see media query) */
   --map-land-line: #7C7059;   /* stop map: sepia borders (app); web darkens them — see media query */
   --map-route: #8A5A2C;   /* stop map: brown route — reads on the beige land and dark ocean */
   --map-label: #4A4234;   /* .map-city-label — dark, readable on the beige land */
-  --mc-dates: #A8E82C;
+  --mc-dates: #7CB518;
   --mini-sea: #14120F;
   --mini-land: #201D19;
   --mini-border: #4B453C;
@@ -753,6 +761,46 @@ a { color: inherit; }
 }
 .item .mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
 .item .text { font-family: var(--sans); font-size: 14px; color: var(--ink); border: none; background: transparent; padding: 4px 0; width: 100%; outline-offset: 2px; }
+/* the note lives beside the NAME, not down in the meta line: it belongs to the
+   place, and a one-line input three fields deep meant long notes were typed blind */
+.item .name-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.item .name-row .text { flex: 1; min-width: 0; }
+.note-btn {
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; padding: 0; border-radius: var(--r-sm);
+  border: 1px solid transparent; background: transparent;
+  color: var(--ink-faint); cursor: crosshair;
+  transition: color .15s ease, background .15s ease, border-color .15s ease;
+}
+.note-btn:hover { color: var(--ink-soft); background: var(--hover-soft); border-color: var(--line-soft); }
+/* a note exists — the icon carries the accent so a row's notes are visible
+   without opening anything */
+.note-btn.on { color: var(--gold); border-color: var(--gold-border); background: var(--gold-soft); }
+.note-btn.on:hover { background: var(--gold-hover); }
+
+/* ---- the note sheet ---- */
+.overlay:has(.note-dialog) { align-items: center; padding: 24px 20px; }
+.note-dialog { max-width: 520px; }
+.note-title {
+  font-family: var(--serif); font-size: 22px; font-weight: 700;
+  letter-spacing: -.01em; color: var(--ink); line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.note-body { padding: 20px 30px 24px; }
+.note-area {
+  width: 100%; resize: vertical; min-height: 150px;
+  font-family: var(--sans); font-size: 14px; line-height: 1.55; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--r-sm);
+  padding: 12px 14px; outline-offset: 2px;
+}
+.note-area::placeholder { color: var(--ink-faint); }
+.note-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
+.note-hint { font-family: var(--sans); font-size: 11px; color: var(--ink-mute); }
+.note-done {
+  font-family: var(--sans); font-size: 13px; font-weight: 600;
+  padding: 9px 20px; border: none; border-radius: var(--r-btn);
+  background: var(--grad-accent); color: var(--on-grad); cursor: crosshair;
+}
 .item .meta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .item .field { flex: 1; display: flex; align-items: center; gap: 5px; min-width: 120px; }
 .item .field > svg { color: var(--ink-mute); }   /* icons use currentColor -> theme-aware */
@@ -2119,7 +2167,19 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .leaf-group .leaf-inner { min-height: 100%; }   /* fill the panel when content is short */
   .leaf-title { font-family: var(--serif); font-size: 34px; font-weight: 700; letter-spacing: -.015em; line-height: 1; color: var(--ink); }
   .leaf-sub { font-family: var(--script); font-style: italic; font-size: 14px; color: var(--date); margin-top: 6px; min-height: 17px; }
-  .leaf-pills { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; max-width: 46%; padding-bottom: 2px; }
+  /* A five-city route needs ~400px of pills, and 46% of an iPad is ~380 — so the
+     row wrapped onto a second line and pushed the header into the fixed action
+     cluster above it. One line that scrolls beats two lines that grow the page:
+     the header keeps a fixed height at every width, and the overflowing cities
+     are a swipe away rather than a layout shift. */
+  .leaf-pills {
+    display: flex; gap: 6px; flex-wrap: nowrap; justify-content: flex-end;
+    max-width: 52%; padding-bottom: 2px;
+    overflow-x: auto; overflow-y: hidden;
+    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
+  .leaf-pills::-webkit-scrollbar { display: none; }
+  .leaf-pills .leaf-pill { flex: 0 0 auto; }
   .leaf-pill {
     font-family: var(--sans); font-size: 12px; font-weight: 500;
     color: var(--ink); background: var(--surface);
@@ -2231,9 +2291,13 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 
 }
 
-/* narrow ledger (e.g. iPad portrait): the carry-on takes the full main column
-   and its checklist drops BELOW it, so the sheet is never squeezed */
-@media (min-width: 701px) and (max-width: 900px) {
+/* Narrow ledger — iPad, in both orientations. Three columns beside the carry-on
+   only work on a desktop-width page: at 1024 the sheet was left with 279px of a
+   1024px viewport, so the art shrank until the chips piled on top of each other
+   and their leader lines crossed. The ceiling is 1200 (was 900, which caught the
+   small iPad but missed the 1024 portrait and the 1180 landscape) — above it the
+   sheet gets 515px+ and the desktop arrangement holds up. */
+@media (min-width: 701px) and (max-width: 1200px) {
   .pack-cols { gap: 16px; padding: 0 50px 16px 16px; }
   .pk-main { flex-direction: column; gap: 14px; justify-content: center; }
   .pk-wrap { flex: 0 1 auto; }

@@ -2504,7 +2504,8 @@
         this.renderStickerPanel() +
         this.renderBudgetModal(budget, travelers, nights) +
         this.renderSyncModal() +
-        this.renderImportModal();
+        this.renderImportModal() +
+        this.renderNoteModal();
       this.mountDayMap();
       this.updateTopActions();   // sticker toggle / sync-modal actions change cluster state
     }
@@ -4754,11 +4755,13 @@
         ? this.renderStickerPanel() +                          // leaves carry itinerary/accom/transport
           this.renderBudgetModal(budget, travelers, nights) +  // the bill prints over the panel area
           this.renderSyncModal() +
-          this.renderImportModal()
+          this.renderImportModal() +
+          this.renderNoteModal()
         : this.renderStickerPanel() +                          // app leaves carry itinerary/accom/transport
           this.renderBudgetModal(budget, travelers, nights) +
           this.renderSyncModal() +
-          this.renderImportModal();
+          this.renderImportModal() +
+          this.renderNoteModal();
 
       // re-attach persistent aside map node
       const holder = this.root.querySelector('#map-holder');
@@ -6160,11 +6163,15 @@
             </svg>
           </span>
           <div class="mid">
-            <input class="text" value="${escA(it.text)}" data-ch="item-text" data-i="${ii}" placeholder="">
+            <div class="name-row">
+              <input class="text" value="${escA(it.text)}" data-ch="item-text" data-i="${ii}" placeholder="">
+              <button class="note-btn${/\S/.test(it.note || '') ? ' on' : ''}" data-act="item-note-open" data-i="${ii}"
+                title="${/\S/.test(it.note || '') ? escA(String(it.note).slice(0, 120)) : 'Add a note'}"
+                aria-label="${/\S/.test(it.note || '') ? 'Edit note' : 'Add a note'}">${svg(I.msg, { w: 13, h: 13, stroke: 'currentColor' })}</button>
+            </div>
             <div class="meta">
               <div class="field field--time">${svg(I.clock, { w: 11, h: 11, stroke: 'currentColor' })}<input value="${escA(it.time)}" data-ch="item-time" data-i="${ii}" placeholder="Time"></div>
               <div class="field">${svg(I.pin, { w: 11, h: 11, stroke: 'currentColor' })}<input value="${escA(it.address)}" data-ch="item-address" data-i="${ii}" placeholder="Address">${hasAddr ? `<a class="maps" href="https://maps.google.com/?q=${encodeURIComponent(it.address || '')}" target="_blank" rel="noopener" title="Open in Maps">↗</a>` : ''}</div>
-              <div class="field">${svg(I.msg, { w: 11, h: 11, stroke: 'currentColor' })}<input value="${escA(it.note)}" data-ch="item-note" data-i="${ii}" placeholder="Note"></div>
               <div class="cost-field"><span class="d">${esc(ccySym(cpm.ccy))}</span><input value="${escA(it.cost)}" data-ch="item-cost" data-i="${ii}" inputmode="decimal" title="Type the currency if it isn't dollars — &quot;15 eur&quot;, &quot;3800 jpy&quot;">${ccyPicker('item-ccy', `data-i="${ii}"`, cpm.ccy, cpm.fromText)}</div>
               ${costHint.text ? `<span class="cad-hint${costHint.warn ? ' cad-hint--warn' : ''}" title="${escA(cadHint(cpm.amount, cpm.ccy))}">${esc(costHint.text)}</span>` : ''}
               ${it.src ? (it.srcUrl
@@ -6580,6 +6587,56 @@
       </div>`;
     }
 
+    /* An activity's note used to be a one-line input squeezed between the
+       address and the price, so anything longer than a few words was typed
+       blind. It is a sheet now: the icon sits beside the name, and tapping it
+       opens the note full-size with room to write and read.
+       _noteEdit pins the stop and day it was opened from, not just the row
+       index — a re-render can land while the sheet is open. */
+    renderNoteModal() {
+      const ne = this._noteEdit;
+      if (!ne) return '';
+      const it = this.noteEditItem();
+      if (!it) return '';
+      const name = (it.text || '').trim();
+      return `<div class="overlay" data-act="overlay-note">
+        <div class="dialog note-dialog" data-stop>
+          <div class="head"><div class="row">
+            <div style="flex:1; min-width:0">
+              <div class="eyebrow">Note</div>
+              <div class="note-title">${esc(name || 'This activity')}</div>
+            </div>
+            <button class="modal-x" data-act="close-note" title="Done">✕</button>
+          </div></div>
+          <div class="note-body">
+            <textarea class="note-area" data-ch="note-text" rows="8"
+              placeholder="Anything worth remembering — booking reference, what to order, which entrance, why it made the list…">${esc(it.note || '')}</textarea>
+            <div class="note-foot">
+              <span class="note-hint">Saves as you type · Esc closes</span>
+              <button class="note-done" data-act="close-note">Done</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }
+    // The item _noteEdit points at, or null if the trip changed under it.
+    noteEditItem() {
+      const ne = this._noteEdit;
+      if (!ne) return null;
+      const stop = (this.currentTrip().stops || [])[ne.stop];
+      const day = stop && Array.isArray(stop.itinerary) ? stop.itinerary[ne.day] : null;
+      const items = day && Array.isArray(day.items) ? day.items : null;
+      return (items && items[ne.i]) || null;
+    }
+    openNote(i) {
+      if (this.openStopIdx == null || this.activeDay == null) return;
+      this._noteEdit = { stop: this.openStopIdx, day: this.activeDay, i };
+      this.bumpModal();
+      const ta = this.modalEl.querySelector('.note-area');
+      if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+    }
+    closeNote() { this._noteEdit = null; this.bumpModal(); }
+
     renderSyncModal() {
       if (!this.syncOpen) return '';
       const linked = this.isLinked();
@@ -6752,6 +6809,17 @@
       const m = this.modalEl;
       m.addEventListener('click', (e) => this.onClick(e));
       m.addEventListener('change', (e) => this.onChange(e));
+      /* The note sheet is the one field you can sit in for a paragraph, so it
+         saves on every keystroke rather than on blur — a closed tab or a tapped
+         overlay must not lose what was typed. Writes straight to the item and
+         schedules the save; no re-render, or the caret would jump. */
+      m.addEventListener('input', (e) => {
+        if (!e.target || e.target.dataset.ch !== 'note-text') return;
+        const it = this.noteEditItem();
+        if (!it) return;
+        it.note = e.target.value;
+        this.scheduleSave();
+      });
       m.addEventListener('dragstart', (e) => this.onDragStart(e));
       m.addEventListener('dragover', (e) => this.onDragOver(e));
       m.addEventListener('drop', (e) => this.onDrop(e));
@@ -6777,6 +6845,7 @@
       });
     }
     onEscape() {
+      if (this._noteEdit) { this.closeNote(); return; }   // the topmost sheet closes first
       if (this.importOpen) { this.closeImport(); return; }
       if (this.syncOpen) { this.syncOpen = false; this.bumpModal(); return; }
       // ledger leaves aren't dismissable — openStopIdx/accomOpenIdx are the
@@ -6894,6 +6963,9 @@
         case 'close-budget': this.budgetOpen = false; this.bumpModal(); break;
         case 'overlay-budget': if (e.target === t) { this.budgetOpen = false; this.bumpModal(); } break;
         case 'open-sync': this.syncOpen = true; this.bumpModal(); break;
+        case 'item-note-open': this.openNote(i); break;
+        case 'close-note': this.closeNote(); break;
+        case 'overlay-note': if (e.target === t) this.closeNote(); break;
         case 'close-sync': this.syncOpen = false; this.bumpModal(); break;
         case 'overlay-sync': if (e.target === t) { this.syncOpen = false; this.bumpModal(); } break;
         case 'sync-now': this.syncNow(); break;
@@ -7031,7 +7103,9 @@
         case 'item-time': trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i].time = v; this.bumpModal(); this.scheduleSave(); break;
         case 'item-text': trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i].text = v; this.bumpModal(); this.scheduleSave(); break;
         case 'item-address': trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i].address = v; this.bumpModal(); this.scheduleSave(); break;
-        case 'item-note': trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i].note = v; this.bumpModal(); this.scheduleSave(); break;
+        // the note is edited in its own sheet now — the input listener above
+        // writes each keystroke; this fires on blur and is the belt to that brace
+        case 'note-text': { const it = this.noteEditItem(); if (it) { it.note = v; this.scheduleSave(); } break; }
         // same contract as a hotel price: the text is kept verbatim, a currency
         // named inside it wins, and a bare number leaves the picker's choice alone
         case 'item-cost': { const it = trip.stops[this.openStopIdx].itinerary[this.activeDay].items[i]; it.cost = v; const pm = parseMoney(v, it.costCcy); if (pm.fromText) it.costCcy = pm.ccy; this.bumpModal(); this.scheduleSave(); break; }
