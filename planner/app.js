@@ -4584,6 +4584,37 @@
       this.bump();
     }
 
+    /* Identity that survives a re-render: the tag, the leaf index, and the
+       classes that describe what a node IS — not the ones describing what it is
+       momentarily doing (active, revealing, mid-animation), which differ either
+       side of the swap. */
+    _scrollKey(el) {
+      const raw = (typeof el.className === 'string' ? el.className : '').trim().split(/\s+/);
+      const stable = raw.filter(c => c && !/^(active|reveal|rev-in|leaf-entering|wheeling|printing|shut|open|on|chosen|booked|just-switched|stamp-in|wheel-lead|wheel-step)$/.test(c));
+      return el.tagName + '@' + (el.dataset && el.dataset.leaf != null ? el.dataset.leaf : '') + '.' + stable.slice(0, 3).join('.');
+    }
+    _captureScrolls() {
+      const out = [];
+      this.root.querySelectorAll('*').forEach(el => {
+        if (el.scrollTop > 0 || el.scrollLeft > 0) out.push([this._scrollKey(el), el.scrollTop, el.scrollLeft]);
+      });
+      return out.length ? out : null;
+    }
+    _restoreScrolls(mem) {
+      if (!mem) return;
+      const byKey = new Map();
+      this.root.querySelectorAll('*').forEach(el => {
+        const k = this._scrollKey(el);
+        if (!byKey.has(k)) byKey.set(k, el);          // first match wins, as on capture
+      });
+      mem.forEach(([k, top, left]) => {
+        const el = byKey.get(k);
+        if (!el) return;
+        if (top) el.scrollTop = top;                   // the browser clamps to the new height
+        if (left) el.scrollLeft = left;
+      });
+    }
+
     /* ---------- export / import ---------- */
     /* ---------- budget computation ---------- */
     computeBudget(trip, travelers, nights) {
@@ -4700,6 +4731,14 @@
       const html = web
         ? this.renderLedger(trip, meta, travelers, d, fmt, nights, budget, milesNeeded)
         : this.renderAppBook(trip, meta, travelers, d, fmt, nights, budget, milesNeeded);
+      /* Every render replaces the whole tree, so any scrolled container is
+         destroyed and rebuilt at the top — which is why adding an activity from
+         the bottom of a long day threw you back to the header. Remember where
+         each scroller was and put it back. Explicit navigation (switching page
+         or city) opts out via _resetScroll: arriving somewhere new should start
+         at the top. */
+      const scrollMem = this._resetScroll ? null : this._captureScrolls();
+      this._resetScroll = false;
       this.root.innerHTML = html;
       this.modalEl.innerHTML = web
         ? this.renderStickerPanel() +                          // leaves carry itinerary/accom/transport
@@ -4755,6 +4794,10 @@
       this._mountOverviewObjects();
       this._mountPackCases();
       this._initMotion();
+      // last, once every other DOM mutation in this render is done — restoring
+      // earlier gets undone by the browser's scroll anchoring as the map nodes
+      // are re-attached and the observers re-armed
+      this._restoreScrolls(scrollMem);
     }
 
     /* ============================================================
@@ -5805,6 +5848,7 @@
        shared by the heading's picker and by anything else that jumps stop. */
     setAppStop(i) {
       if (this.appStopIdx === i || i == null || isNaN(i)) return;
+      this._resetScroll = true;                        // a different city starts at the top
       this.appStopIdx = i;
       this.activeDay = null; this._optimizeNote = null; this._selectedItem = null;
       this.render();

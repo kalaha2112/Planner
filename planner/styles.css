@@ -1272,6 +1272,9 @@ a { color: inherit; }
   .app-leaf {
     position: fixed; inset: 0; z-index: 50;
     background: var(--shell); overflow-y: auto; -webkit-overflow-scrolling: touch;
+    /* the app restores this scroller's position itself after a re-render;
+       anchoring would second-guess that and shift it again */
+    overflow-anchor: none;
     opacity: 0; transform: translateY(100%); pointer-events: none; visibility: hidden;
     transition: transform .5s cubic-bezier(.22, .61, .36, 1), opacity .38s ease, visibility 0s .5s;
   }
