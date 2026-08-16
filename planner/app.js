@@ -74,6 +74,40 @@
   const SYNC_KEY  = 'europe-trip-sync-v1';            // local record of the link {id, rev, lastSyncedAt}
   const ACCOM_SHUT_KEY = 'europe-trip-accom-shut-v1'; // which lodging options are collapsed, per trip+stop
   const CLOSET_SHUT_KEY = 'europe-trip-closet-shut-v1'; // is the outfit closet folded, per trip
+  const READONLY_KEY = 'europe-trip-readonly-v1';       // view-only lock, per device
+
+  /* ---------- view-only lock ----------
+     A planned trip gets read far more often than it gets edited — on a phone,
+     in a station, one thumb — and every field in this app is live. The lock
+     turns the whole thing into a document: nothing types, nothing drags,
+     nothing deletes.
+
+     Two layers hold it, because one is not enough. The DOM pass below marks
+     fields readonly/disabled so the keyboard never opens and the affordances
+     read as inert; these two sets are the backstop, so a handler reached some
+     other way (a stale listener, a synthetic event) still refuses. Listing what
+     is ALLOWED rather than what is blocked is deliberate: a new mutating action
+     added later is locked by default, and forgetting to add a new *navigation*
+     action is a visible annoyance rather than a silent data change. */
+  const VIEW_ONLY_ACTS = new Set([
+    // moving around
+    'app-goto', 'app-stop', 'ledger-goto', 'ledger-prev', 'ledger-next',
+    'ledger-stop-plan', 'ledger-stop-days', 'stop-select', 'stop-iti', 'stop-accom',
+    'stop-transport', 'cal-day', 'tab-select', 'trip-stack-toggle', 'open-web',
+    // folding and opening — reading aids, they change no trip data
+    'accom-toggle', 'accom-toggle-all', 'accom-archive-toggle', 'closet-toggle',
+    'item-note-open', 'open-budget', 'pk-close', 'optimize-dismiss',
+    'toggle-stickers', 'close-stickers',
+    // closing whatever is open
+    'close-budget', 'overlay-budget', 'close-note', 'overlay-note',
+    'close-iti', 'overlay-iti', 'close-accom', 'overlay-accom',
+    'close-transport', 'overlay-transport', 'close-import', 'overlay-import',
+    // the chrome itself, the lock included — you must always be able to unlock
+    'toggle-lock', 'toggle-theme', 'open-sync', 'close-sync', 'overlay-sync', 'sync-now'
+  ]);
+  // …and the same for field commits. `app-stop` is the phone's city heading —
+  // a select that navigates. `sync-code-in` pairs a device; it is not trip data.
+  const VIEW_ONLY_CH = new Set(['app-stop', 'sync-code-in']);
   const APP_TAG   = 'europe-trip-planner';            // payload marker so we only adopt our own data
   const SYNC_POLL_MS  = 20000;                        // how often to pull while the tab is visible
   const CLOUD_PUSH_DEBOUNCE_MS = 900;                 // coalesce rapid edits into one upload
@@ -1219,6 +1253,10 @@
       ta.innerHTML = `
         <button class="tool-btn" data-act="undo" title="Undo (⌘Z)" aria-label="Undo" disabled>${svg(I.undo)}</button>
         <button class="tool-btn sync-toggle-btn" data-act="open-sync" title="Sync across devices" aria-label="Sync across devices"><span class="sync-dot s-off"></span>${svg(I.sync)}</button>
+        <button class="tool-btn lock-toggle-btn" data-act="toggle-lock" role="switch" aria-pressed="false" aria-label="Read-only mode" title="Lock the trip: read-only, nothing can be changed">
+          <svg class="ic-unlocked" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="11" width="17" height="10" rx="2.2"/><path d="M7.5 11V7a4.5 4.5 0 0 1 8.8-1.3"/></svg>
+          <svg class="ic-locked" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="11" width="17" height="10" rx="2.2"/><path d="M7.5 11V7a4.5 4.5 0 0 1 9 0v4"/></svg>
+        </button>
         <button class="tool-btn sticker-toggle-btn" data-act="toggle-stickers" title="Memories" aria-label="Memories">${svg(I.sticker)}</button>
         <button class="theme-btn" data-act="toggle-theme" aria-label="Toggle dark mode" title="Toggle dark mode">
           <svg class="ic-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
@@ -1268,7 +1306,8 @@
     updateTopActions() {
       const ta = this.topActionsEl; if (!ta) return;
       const undoBtn = ta.querySelector('[data-act="undo"]');
-      if (undoBtn) undoBtn.disabled = !this._history.length;
+      // nothing to undo, or nothing may be undone — the lock covers undo too
+      if (undoBtn) undoBtn.disabled = !this._history.length || this.readOnly();
       const syncBtn = ta.querySelector('.sync-toggle-btn');
       if (syncBtn) {
         syncBtn.classList.toggle('active', this.isLinked());
@@ -2508,6 +2547,7 @@
         this.renderImportModal() +
         this.renderNoteModal();
       this.mountDayMap();
+      this.applyLock();
       this.updateTopActions();   // sticker toggle / sync-modal actions change cluster state
     }
     // attach the persistent day-map node into the freshly-rendered markup and
@@ -4466,6 +4506,60 @@
       this.scheduleSave();
     }
 
+    /* ---------- view-only lock ---------- */
+    readOnly() {
+      if (this._readOnly == null) {
+        try { this._readOnly = localStorage.getItem(READONLY_KEY) === '1'; } catch (e) { this._readOnly = false; }
+      }
+      return this._readOnly;
+    }
+    toggleReadOnly() {
+      this._readOnly = !this.readOnly();
+      try { localStorage.setItem(READONLY_KEY, this._readOnly ? '1' : '0'); } catch (e) {}
+      // a field could be focused with the keyboard up when the lock goes on
+      if (this._readOnly && document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      this.render();
+    }
+    // A blocked tap does nothing, which reads as a broken app unless something
+    // says why. Flash the lock itself — the answer and the fix are the same button.
+    nudgeLock() {
+      const btn = this.topActionsEl && this.topActionsEl.querySelector('.lock-toggle-btn');
+      if (!btn) return;
+      btn.classList.remove('nudge');
+      void btn.offsetWidth;            // restart the animation on a repeat tap
+      btn.classList.add('nudge');
+    }
+    /* Mark every field inert after a render. `readonly` rather than `disabled`
+       on text inputs on purpose: a disabled field is skipped by the screen
+       reader and greys its text out, while readonly still reads and selects —
+       the point is a document you can consult, not a form that looks broken.
+       Selects and checkboxes have no readonly, so those take disabled. */
+    applyLock() {
+      const on = this.readOnly();
+      document.documentElement.classList.toggle('view-locked', on);
+      [this.root, this.modalEl, this._introEl].forEach(scope => {
+        if (!scope) return;
+        scope.querySelectorAll('input, textarea').forEach(el => {
+          if (el.type === 'checkbox' || el.type === 'radio' || el.type === 'file') el.disabled = on;
+          else el.readOnly = on;
+        });
+        scope.querySelectorAll('select').forEach(el => {
+          // the phone's city heading is navigation wearing a select — it stays live
+          el.disabled = on && el.dataset.ch !== 'app-stop';
+        });
+        scope.querySelectorAll('[contenteditable]').forEach(el => el.setAttribute('contenteditable', String(!on)));
+        scope.querySelectorAll('[draggable="true"]').forEach(el => { if (on) el.setAttribute('draggable', 'false'); });
+      });
+      const btn = this.topActionsEl && this.topActionsEl.querySelector('.lock-toggle-btn');
+      if (btn) {
+        btn.classList.toggle('active', on);
+        btn.setAttribute('aria-pressed', String(on));
+        btn.title = on ? 'Locked — tap to edit again' : 'Lock the trip: read-only, nothing can be changed';
+        // the lock is the phone app's control; the web ledger is a desk, not a pocket
+        btn.style.display = this._webMag() ? 'none' : '';
+      }
+    }
+
     /* ---------- outfit closet ---------- */
     ensureCloset() { const t = this.currentTrip(); if (!Array.isArray(t.closet)) t.closet = []; return t.closet; }
     /* Folded or not, per trip — one trip's wardrobe being out of the way says
@@ -4829,6 +4923,7 @@
       // last, once every other DOM mutation in this render is done — restoring
       // earlier gets undone by the browser's scroll anchoring as the map nodes
       // are re-attached and the observers re-armed
+      this.applyLock();          // fields go inert before anything can be typed into them
       this._restoreScrolls(scrollMem);
     }
 
@@ -6872,7 +6967,7 @@
       r.addEventListener('focusout', () => { r.querySelectorAll('[data-drag-restore="1"]').forEach(el => { el.setAttribute('draggable', 'true'); delete el.dataset.dragRestore; }); });
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') this.onEscape();
-        if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); this.undo(); }
+        if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); if (this.readOnly()) this.nudgeLock(); else this.undo(); }
       });
     }
     onEscape() {
@@ -6914,11 +7009,13 @@
       }
       const t = e.target.closest('[data-act]'); if (!t) return;
       const act = t.dataset.act;
+      if (this.readOnly && this.readOnly() && !VIEW_ONLY_ACTS.has(act)) { this.nudgeLock(); return; }
       const i = t.dataset.i != null ? Number(t.dataset.i) : null;
       const key = t.dataset.key; const id = t.dataset.id;
       const trip = this.currentTrip();
       switch (act) {
         case 'undo': this.undo(); break;
+        case 'toggle-lock': this.toggleReadOnly(); break;
         case 'toggle-theme': this.toggleTheme(); break;
         case 'add-trip': this.addTrip(); break;
         // touch has no hover, so the TRIP label toggles the deck open there.
@@ -7083,6 +7180,9 @@
     onChange(e) {
       const t = e.target.closest('[data-ch]'); if (!t) return;
       const ch = t.dataset.ch; const v = t.value;
+      // a commit that slipped past the readonly attributes — put the field back
+      // to what the trip actually says rather than letting the edit through
+      if (this.readOnly() && !VIEW_ONLY_CH.has(ch)) { this.nudgeLock(); this.render(); return; }
       const i = t.dataset.i != null ? Number(t.dataset.i) : null;
       const trip = this.currentTrip(); const meta = this.data.meta;
       switch (ch) {
@@ -7158,6 +7258,9 @@
     }
 
     onDragStart(e) {
+      // draggable="false" already stops the native drag; this covers the pointer
+      // paths (outfits, activity rows) that start a drag without the HTML5 API
+      if (this.readOnly()) { e.preventDefault && e.preventDefault(); return; }
       const t = e.target.closest('[data-drag]'); if (!t) return;
       const kind = t.dataset.drag;
       try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', t.dataset.key || t.dataset.id || t.dataset.i || ''); } catch (_) {}
@@ -7256,6 +7359,7 @@
       return null;
     }
     onDrop(e) {
+      if (this.readOnly()) { e.preventDefault(); return; }
       if (this._stockStickerDrag) {
         e.preventDefault();
         this.placeStockAtPoint(this._stockStickerDrag, e.clientX, e.clientY, e.target);
@@ -7316,6 +7420,7 @@
       }
     }
     onPaste(e) {
+      if (this.readOnly()) return;   // pasting an image or a post is an edit
       // the import box is a drop-off, not a text editor: a paste replaces what's
       // in it and extracts straight away
       const impBox = e.target.closest('.imp-paste');
@@ -7608,6 +7713,7 @@
       this.bump();
     }
     onPointerDown(e) {
+      if (this.readOnly()) return;   // no drags start while locked
       // activity move across days (touch-friendly; native HTML5 DnD never fires from touch on iOS Safari)
       const actGrip = e.target.closest('.item-grip[data-drag="activity"]');
       if (actGrip) { e.preventDefault(); this._startActivityDrag(e, actGrip); return; }

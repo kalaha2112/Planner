@@ -2980,6 +2980,53 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 [data-theme="dark"] .theme-btn .ic-moon { display: none; }   /* dark: show sun  */
 [data-theme="dark"] .theme-btn .ic-sun  { display: block; }
 
+/* ---- view-only lock ----
+   A switch in the top cluster, beside sync. Open padlock = editable; closed and
+   accented = the trip is a document. The accent is the same one the app uses
+   for "this is on", so the state is legible without reading the icon. */
+.lock-toggle-btn .ic-locked { display: none; }
+/* overrides the shared .tool-btn.active fill: locked is a mode you are IN, not a
+   panel that is open, so it wears the accent rather than the neutral chip */
+.lock-toggle-btn.active { color: var(--gold); background: var(--gold-soft); }
+.lock-toggle-btn.active .ic-locked { display: block; }
+.lock-toggle-btn.active .ic-unlocked { display: none; }
+/* a blocked tap answers with the button that blocked it */
+@keyframes lockNudge {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-3px) scale(1.08); }
+  50% { transform: translateX(3px) scale(1.08); }
+  80% { transform: translateX(-2px); }
+}
+.lock-toggle-btn.nudge { animation: lockNudge .32s ease; }
+@media (prefers-reduced-motion: reduce) { .lock-toggle-btn.nudge { animation: none; } }
+
+/* Locked: a readonly field should not look like a field you failed to type in.
+   Drop the focus affordances and the hover states on everything that edits, and
+   hide the controls whose only purpose is to add or remove. */
+.view-locked input, .view-locked textarea, .view-locked select { cursor: default; }
+.view-locked input:focus-visible, .view-locked textarea:focus-visible { outline: none; }
+.view-locked select:disabled { opacity: 1; color: var(--ink-soft); }
+.view-locked .item .x,
+.view-locked .opt .rm,
+.view-locked .todo .x,
+.view-locked .outfit .del,
+.view-locked .add-outfit,
+.view-locked .add-todo,
+.view-locked .add-item,
+.view-locked .accom-add,
+.view-locked .map-add-btn,
+.view-locked .item-grip,
+.view-locked [data-act="add-stop"],
+.view-locked [data-act="insert-stop"],
+.view-locked [data-act="add-pack"],
+.view-locked [data-act="add-trip"],
+.view-locked [data-act="optimize-day"],
+.view-locked [data-act="open-import"] { display: none; }
+/* the note stays readable — it just cannot be written to, and says so instead of
+   promising to save what you type */
+.view-locked .note-hint { font-size: 0; }
+.view-locked .note-hint::before { content: 'Read-only — unlock to edit'; font-size: 11px; }
+
 /* trip-tab row pinned to the bottom of the intro; scrolls left/right (never
    wraps) so trips overflow to the right. Sits above the transparent globe. */
 .intro-tabs {
