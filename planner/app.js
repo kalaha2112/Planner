@@ -6912,7 +6912,7 @@
             <button class="modal-x" data-act="close-note" title="Done">✕</button>
           </div></div>
           <div class="note-body">
-            <textarea class="note-area" data-ch="note-text" rows="6"
+            <textarea class="note-area" data-ch="note-text" rows="5"
               placeholder="Anything worth remembering — booking reference, what to order, which entrance, why it made the list…">${esc(it.note || '')}</textarea>
             ${this.renderNoteRefs(it)}
             <div class="note-foot">

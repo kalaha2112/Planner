@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-19T19:10:12.899Z
+  Built: 2026-08-19T20:45:02.329Z
 -->
 
 <html lang="en">
@@ -1595,8 +1595,14 @@ a { color: inherit; }
   overflow-wrap: anywhere;
 }
 .note-body { padding: 20px 30px 24px; }
+/* Five lines and no more — a note is a reminder, not a document, and the room
+   it used to take belongs to the pictures below it. Height is derived from the
+   font (em, not px) so the taller mobile type gets five lines too, and longer
+   text scrolls inside rather than pushing the sheet down the screen. */
 .note-area {
-  width: 100%; resize: vertical; min-height: 150px;
+  --note-lines: 5;
+  width: 100%; resize: none; overflow-y: auto;
+  height: calc(var(--note-lines) * 1.55em + 26px);   /* lines + 12px padding × 2 + 1px border × 2 */
   font-family: var(--sans); font-size: 14px; line-height: 1.55; color: var(--ink);
   background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--r-sm);
   padding: 12px 14px; outline-offset: 2px;
@@ -1610,6 +1616,9 @@ a { color: inherit; }
    the screenshot of the menu, the photo of the room; tap one to blow it up in
    place rather than sending it off to a lightbox. */
 .note-refs { margin-top: 16px; border-top: 1px solid var(--line-soft); padding-top: 12px; }
+/* tiles big enough to recognise a menu or a room from — this half of the sheet
+   is the half you look at */
+.note-refs { --ref-tile: 116px; }
 .note-refs-hd { display: flex; align-items: baseline; gap: 8px; margin-bottom: 9px; }
 .note-refs-hd .lbl {
   font-family: var(--sans); font-size: 9.5px; font-weight: 600;
@@ -1618,14 +1627,14 @@ a { color: inherit; }
 .note-refs-hd .hint { font-family: var(--sans); font-size: 10.5px; color: var(--ink-faint); }
 .note-ref-grid { display: flex; flex-wrap: wrap; gap: 8px; }
 .note-ref {
-  position: relative; flex: 0 0 auto; width: 84px; height: 84px;
+  position: relative; flex: 0 0 auto; width: var(--ref-tile); height: var(--ref-tile);
   border: 1px solid var(--line-soft); border-radius: var(--r-sm);
   overflow: hidden; background: var(--hover-soft); cursor: crosshair;
 }
 .note-ref img { display: block; width: 100%; height: 100%; object-fit: cover; }
 /* enlarged: the tile takes the row to itself and the picture is shown whole */
 .note-ref.open { flex: 1 0 100%; width: 100%; height: auto; }
-.note-ref.open img { height: auto; max-height: 52vh; object-fit: contain; background: var(--surface); }
+.note-ref.open img { height: auto; max-height: 62vh; object-fit: contain; background: var(--surface); }
 .note-ref .del {
   position: absolute; top: 5px; right: 5px; width: 20px; height: 20px;
   display: flex; align-items: center; justify-content: center;
@@ -1635,7 +1644,7 @@ a { color: inherit; }
 }
 .note-ref:hover .del, .note-ref.open .del { opacity: 1; }
 .note-ref-add {
-  flex: 0 0 auto; width: 84px; height: 84px;
+  flex: 0 0 auto; width: var(--ref-tile); height: var(--ref-tile);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
   border: 1px dashed var(--dash); border-radius: var(--r-sm); background: transparent;
   font-family: var(--sans); font-size: 10px; letter-spacing: .04em;
@@ -4153,7 +4162,7 @@ html { -webkit-tap-highlight-color: transparent; }
   .note-dialog { max-width: none; }
   .note-body { padding: 16px 18px 18px; }
   .note-dialog .head { padding: 18px 18px 14px; }
-  .note-area { min-height: 116px; font-size: 15px; }   /* 16px-ish: iOS won't zoom in */
+  .note-area { font-size: 15px; }   /* 16px-ish: iOS won't zoom in; the height follows the em */
   .sticker-panel { top: max(88px, calc(env(safe-area-inset-top) + 72px)); }
 }
 
@@ -11943,7 +11952,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
             <button class="modal-x" data-act="close-note" title="Done">✕</button>
           </div></div>
           <div class="note-body">
-            <textarea class="note-area" data-ch="note-text" rows="6"
+            <textarea class="note-area" data-ch="note-text" rows="5"
               placeholder="Anything worth remembering — booking reference, what to order, which entrance, why it made the list…">${esc(it.note || '')}</textarea>
             ${this.renderNoteRefs(it)}
             <div class="note-foot">
