@@ -1079,9 +1079,14 @@ a { color: inherit; }
 .day-pin.active span { width: 32px; height: 32px; outline: 2.5px solid var(--ink); outline-offset: 1px; }
 [data-theme="dark"] .day-pin.active span { outline-color: #fff; }
 
-/* stack the map above the activity list when the day column gets narrow */
+/* stack the map above the activity list when the day column gets narrow.
+   align-items switches axis with the direction: on the desktop row it keeps the
+   map from stretching to the list's height, but stacked it would size both to
+   their content — which left the folded list shrink-wrapped and hugging the
+   left edge while the map above it ran the full width. Stretch, so the list and
+   the map share one pair of margins. */
 @media (max-width: 900px) {
-  .day-cols { flex-direction: column-reverse; }
+  .day-cols { flex-direction: column-reverse; align-items: stretch; }
   .day-aside { position: static; flex-basis: auto; width: 100%; }
   .daymap { height: 260px; }
 }
