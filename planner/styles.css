@@ -777,6 +777,12 @@ a { color: inherit; }
 }
 .note-btn { position: relative; }
 .note-btn:hover { color: var(--ink-soft); background: var(--hover-soft); border-color: var(--line-soft); }
+/* In light, --ink-faint is a pale wash on white and reads as "quiet". Its dark
+   counterpart is a near-black olive on a near-black page, which reads as
+   nothing at all — so every small row control steps up a rung in dark. */
+[data-theme="dark"] .note-btn,
+[data-theme="dark"] .pin-btn,
+[data-theme="dark"] .day-fold { color: var(--ink-soft); }
 /* how many pictures are behind the note, without opening it */
 .note-btn .pics {
   position: absolute; top: -2px; right: -2px; min-width: 12px; height: 12px; padding: 0 2px;
@@ -802,6 +808,10 @@ a { color: inherit; }
 .pin-btn:hover { color: var(--ink-soft); background: var(--hover-soft); border-color: var(--line-soft); }
 .pin-btn.on { color: var(--red); border-color: rgba(145, 4, 12, .30); background: rgba(145, 4, 12, .08); }
 .pin-btn.on:hover { background: rgba(145, 4, 12, .14); }
+/* dark runs a lifted red (--red is #C93A41 there); the light tints below it are
+   black over a black page, so the pinned state gets its own pair */
+[data-theme="dark"] .pin-btn.on { border-color: rgba(201, 58, 65, .55); background: rgba(201, 58, 65, .18); }
+[data-theme="dark"] .pin-btn.on:hover { background: rgba(201, 58, 65, .30); }
 .pin-btn.on svg { fill: currentColor; }   /* solid head — a set pin reads at a glance */
 .pin-btn svg { display: block; }
 /* the row's number carries the same mark, so a pinned slot is visible while
@@ -994,18 +1004,26 @@ a { color: inherit; }
 }
 .daymap-cap { font-family: var(--sans); font-size: 10.5px; color: var(--ink-mute); line-height: 1.4; padding: 0 1px; }
 
-/* The hop between two activities, threaded under the number badges: a dotted
-   tick on the same 11px centre line as the numbers, then the distance. Empty
-   whenever an end of the hop has no coordinates yet, and empty collapses. */
+/* The hop between two activities, written into the rule that separates them:
+   a short lead-in, the distance, then the line running out to the edge —
+   — 710 m ————————. The row above drops its own border (.no-rule, set in
+   _paintDayLegs) so there is one line here, not two. Empty legs collapse;
+   ::before/::after are generated content, so :empty still matches. */
 .item-leg {
-  display: flex; align-items: center; gap: 7px; padding: 3px 0 3px 10px;   /* the tick lands on the number badges' centre line */
+  display: flex; align-items: center; gap: 8px; padding: 6px 0; margin: 0 -12px;
   font-family: var(--sans); font-size: 9px; font-weight: 500;
   letter-spacing: .09em; text-transform: uppercase;
-  color: var(--ink-faint); font-variant-numeric: tabular-nums;
+  color: var(--ink-mute); font-variant-numeric: tabular-nums;
 }
+/* dark's --ink-mute is a dim olive that all but disappears at 9px on the near-
+   black page — the label steps up a rung so it stays readable */
+[data-theme="dark"] .item-leg { color: var(--ink-soft); }
 .item-leg:empty { display: none; }
-.item-leg .tick { width: 1px; height: 11px; border-left: 1px dotted var(--ink-faint); opacity: .8; }
-.item-leg .d { line-height: 1; }
+.item-leg::before, .item-leg::after { content: ''; border-top: 1px solid var(--line); align-self: center; }
+.item-leg::before { flex: 0 0 18px; }
+.item-leg::after { flex: 1 1 auto; }
+.item-leg .d { line-height: 1; white-space: nowrap; }
+.item.no-rule { border-bottom-color: transparent; }
 
 /* activity number badge (matches its map pin) */
 .item-num {
@@ -1052,6 +1070,7 @@ a { color: inherit; }
 
 /* click-a-pin highlight on the matching activity row */
 .item.selected { background: rgba(145,4,12,.07); border-radius: 6px; outline: 1.5px solid rgba(145,4,12,.22); }
+[data-theme="dark"] .item.selected { background: rgba(201,58,65,.14); outline-color: rgba(201,58,65,.40); }
 .item.flash { animation: itemFlash 1.3s ease; }
 @keyframes itemFlash { 0% { background: rgba(145,4,12,.14); } 100% { background: transparent; } }
 
@@ -2692,6 +2711,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 
 /* itinerary: row ↔ pin hover link (row highlight + pin bounce) */
 .item.hl { background: rgba(145, 4, 12, .06); border-radius: 6px; outline: 1.5px solid rgba(145, 4, 12, .20); }
+[data-theme="dark"] .item.hl { background: rgba(201,58,65,.12); outline-color: rgba(201,58,65,.36); }
 .day-pin.pulse { z-index: 600; }
 .day-pin.pulse span { outline: 2.5px solid var(--red); outline-offset: 1px; animation: pinPulse .9s ease-in-out infinite; }
 @keyframes pinPulse { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-3px) scale(1.14); } }
@@ -3529,15 +3549,14 @@ html { -webkit-tap-highlight-color: transparent; }
 }
 .import-btn:hover { background: var(--line-2); color: var(--ink); }
 
-/* fold the day down to its running order — quieter than the two pill buttons
-   on the right, because it changes what you see, not what the trip holds */
+/* fold the day down to its running order — a bare chevron next to the date,
+   because it changes what you see, not what the trip holds */
 .day-fold {
-  flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px;
-  font-family: var(--sans); font-size: 10.5px; font-weight: 600;
-  letter-spacing: .05em; text-transform: uppercase;
-  color: var(--ink-mute); background: transparent; border: none;
-  padding: 4px 6px; margin-left: 2px; border-radius: var(--r-xs);
-  cursor: crosshair; transition: color .15s ease, background .15s ease;
+  flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; padding: 0; margin-left: -3px;
+  color: var(--ink-faint); background: transparent; border: none;
+  border-radius: var(--r-xs); cursor: crosshair;
+  transition: color .15s ease, background .15s ease;
 }
 .day-fold:hover { color: var(--ink); background: var(--line-2); }
 .day-fold svg { display: block; transition: transform .22s cubic-bezier(.22,.61,.36,1); }
@@ -3547,7 +3566,7 @@ html { -webkit-tap-highlight-color: transparent; }
 .day-main.folded .item { padding-top: 7px; padding-bottom: 7px; }
 .day-main.folded .item .meta { display: none; }
 .day-main.folded .item .mid { gap: 0; }
-.day-main.folded .item-leg { padding-top: 1px; padding-bottom: 1px; }
+.day-main.folded .item-leg { padding-top: 3px; padding-bottom: 3px; }
 
 /* the Google Maps arrow rides beside the name now: same gold, a slightly bigger
    tap target, and it stays put when the name is long */

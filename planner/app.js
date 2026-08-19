@@ -3958,8 +3958,12 @@
         }
         if (!from && hotel) { from = hotel; fromName = (hq && hq.name) || 'your hotel'; }
         const label = (from && to) ? this.legLabel(this.haversine(from, to)) : '';
-        el.innerHTML = label ? '<span class="tick"></span><span class="d">' + esc(label) + '</span>' : '';
+        el.innerHTML = label ? '<span class="d">' + esc(label) + '</span>' : '';
         el.title = label ? label + ' from ' + fromName + ', as the crow flies' : '';
+        // the thread IS the rule between the two rows — the row above drops its
+        // own, so the day carries one line, not two a few pixels apart
+        const above = el.previousElementSibling;
+        if (above && above.classList.contains('item')) above.classList.toggle('no-rule', !!label);
       });
     }
     scrollToItem(ii) {
@@ -6495,7 +6499,8 @@
               <div class="day-head">
                 <div class="day-title">Day ${activeDay + 1}${dayDate(activeDay) ? ' · ' + esc(dayDate(activeDay)) : ''}</div>${wxChip}
                 ${itemList.length ? `<button class="day-fold${folded ? ' shut' : ''}" data-act="day-fold" aria-expanded="${folded ? 'false' : 'true'}"
-                  title="${folded ? 'Show each activity\'s time, address and cost' : 'Fold every activity down to its name'}">${svg(I.chev, { w: 12, h: 12, sw: 2 })}<span>${folded ? 'Expand' : 'Collapse'}</span></button>` : ''}
+                  aria-label="${folded ? 'Expand the activities' : 'Collapse the activities'}"
+                  title="${folded ? 'Show each activity\'s time, address and cost' : 'Fold every activity down to its name'}">${svg(I.chev, { w: 13, h: 13, sw: 2 })}</button>` : ''}
                 <div class="day-head-acts">
                 <button class="import-btn" data-act="open-import" data-stop="${sIdx}" data-day="${activeDay}" title="Add places from a shared RedNote / TikTok / Instagram post">${svg(I.inbox, { w: 13, h: 13, sw: 1.7 })}<span>Import post</span></button>
                 <button class="optimize-btn" data-act="optimize-day" ${placedCount < 2 ? 'disabled' : ''} title="${placedCount < 2 ? 'Add an address to at least 2 activities first' : 'Reorder the day around your hotel and any pinned stops'}">${svg(I.spark, { w: 13, h: 13, sw: 1.6 })}<span>Optimize route</span></button>
