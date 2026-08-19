@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-19T17:00:54.220Z
+  Built: 2026-08-19T17:55:44.989Z
 -->
 
 <html lang="en">
@@ -1995,6 +1995,14 @@ a { color: inherit; }
   .accom-body { padding: 8px 12px 18px; }
   .opt { padding: 13px 12px; }
   .opt .top { gap: 8px; }
+  /* Dark: a collapsed option is one line, and a --surface plate around one line
+     is more box than content — it becomes a hairline-separated list instead.
+     Expanded, the card earns its keep: it holds a header and three fields
+     together and marks where one option ends and the next begins.
+     Light keeps its card throughout — there --shell and --surface are both
+     white, so the plate was never visible and there is nothing to remove. */
+  [data-theme="dark"] .opt.shut { background: transparent; border-radius: 0; padding: 13px 2px; }
+  [data-theme="dark"] .opt.shut + .opt.shut { border-top: 1px solid var(--line-soft); }
   /* and the bands above the list stop being so airy */
   .app-page-hd { margin-bottom: 10px; }
   .accom-tools { margin-bottom: 2px; }
@@ -2053,7 +2061,10 @@ a { color: inherit; }
   .page { padding: 16px 12px 60px; }
   .iti-dialog { height: calc(100vh - 64px); }
   .iti-body { flex-direction: column; overflow-y: auto; }
-  .iti-left { width: 100%; border-right: none; border-bottom: 1px solid var(--line); overflow-y: visible; }
+  /* no rule under the closet: stacked, .iti-left's bottom border reads as a line
+     drawn under the outfit strip rather than as the column divider it is on wide
+     screens, and the day block below is already distinct without it */
+  .iti-left { width: 100%; border-right: none; overflow-y: visible; }
   .iti-right { overflow-y: visible; padding: 20px 18px 28px; animation: none; }
 }
 
@@ -2063,7 +2074,7 @@ a { color: inherit; }
    and the outfits in them — get the full page width. */
 @media (min-width: 701px) and (max-width: 950px) {
   .iti-body { flex-direction: column; overflow-y: auto; }
-  .iti-left { flex: 0 0 auto; width: 100%; padding: 0 4px 20px; border-right: none; border-bottom: 1px solid var(--line); overflow-y: visible; }
+  .iti-left { flex: 0 0 auto; width: 100%; padding: 0 4px 20px; border-right: none; overflow-y: visible; }
   .iti-right { flex: 0 0 auto; overflow-y: visible; }
   .leaf-days .iti-left { padding: 0 4px 20px; }
 }
@@ -9471,7 +9482,10 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
          parked over the field you are filling in is just clutter. You lock
          before you set off, and unlock from the same two screens. */
       const homeScreen = !this._introParked || this.appPage === 0;
-      btn.style.display = (this._webMag() || this._anyModalOpen() || !homeScreen) ? 'none' : '';
+      // _anyModalOpen covers the bill/sync/import/memories; the note sheet is its
+      // own state and would otherwise leave the lock sitting over an open sheet
+      const modal = this._anyModalOpen() || !!this._noteEdit;
+      btn.style.display = (this._webMag() || modal || !homeScreen) ? 'none' : '';
     }
 
     /* ---------- outfit closet ---------- */

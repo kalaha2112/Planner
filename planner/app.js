@@ -4568,7 +4568,10 @@
          parked over the field you are filling in is just clutter. You lock
          before you set off, and unlock from the same two screens. */
       const homeScreen = !this._introParked || this.appPage === 0;
-      btn.style.display = (this._webMag() || this._anyModalOpen() || !homeScreen) ? 'none' : '';
+      // _anyModalOpen covers the bill/sync/import/memories; the note sheet is its
+      // own state and would otherwise leave the lock sitting over an open sheet
+      const modal = this._anyModalOpen() || !!this._noteEdit;
+      btn.style.display = (this._webMag() || modal || !homeScreen) ? 'none' : '';
     }
 
     /* ---------- outfit closet ---------- */

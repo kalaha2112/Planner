@@ -1217,6 +1217,14 @@ a { color: inherit; }
   .accom-body { padding: 8px 12px 18px; }
   .opt { padding: 13px 12px; }
   .opt .top { gap: 8px; }
+  /* Dark: a collapsed option is one line, and a --surface plate around one line
+     is more box than content — it becomes a hairline-separated list instead.
+     Expanded, the card earns its keep: it holds a header and three fields
+     together and marks where one option ends and the next begins.
+     Light keeps its card throughout — there --shell and --surface are both
+     white, so the plate was never visible and there is nothing to remove. */
+  [data-theme="dark"] .opt.shut { background: transparent; border-radius: 0; padding: 13px 2px; }
+  [data-theme="dark"] .opt.shut + .opt.shut { border-top: 1px solid var(--line-soft); }
   /* and the bands above the list stop being so airy */
   .app-page-hd { margin-bottom: 10px; }
   .accom-tools { margin-bottom: 2px; }
@@ -1275,7 +1283,10 @@ a { color: inherit; }
   .page { padding: 16px 12px 60px; }
   .iti-dialog { height: calc(100vh - 64px); }
   .iti-body { flex-direction: column; overflow-y: auto; }
-  .iti-left { width: 100%; border-right: none; border-bottom: 1px solid var(--line); overflow-y: visible; }
+  /* no rule under the closet: stacked, .iti-left's bottom border reads as a line
+     drawn under the outfit strip rather than as the column divider it is on wide
+     screens, and the day block below is already distinct without it */
+  .iti-left { width: 100%; border-right: none; overflow-y: visible; }
   .iti-right { overflow-y: visible; padding: 20px 18px 28px; animation: none; }
 }
 
@@ -1285,7 +1296,7 @@ a { color: inherit; }
    and the outfits in them — get the full page width. */
 @media (min-width: 701px) and (max-width: 950px) {
   .iti-body { flex-direction: column; overflow-y: auto; }
-  .iti-left { flex: 0 0 auto; width: 100%; padding: 0 4px 20px; border-right: none; border-bottom: 1px solid var(--line); overflow-y: visible; }
+  .iti-left { flex: 0 0 auto; width: 100%; padding: 0 4px 20px; border-right: none; overflow-y: visible; }
   .iti-right { flex: 0 0 auto; overflow-y: visible; }
   .leaf-days .iti-left { padding: 0 4px 20px; }
 }
