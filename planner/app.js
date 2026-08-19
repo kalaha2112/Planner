@@ -1321,6 +1321,7 @@
       if (memBtn) memBtn.classList.toggle('active', this.stickerPanelOpen);
       const themeBtn = ta.querySelector('[data-act="toggle-theme"]');
       if (themeBtn) themeBtn.setAttribute('aria-pressed', String(document.documentElement.getAttribute('data-theme') === 'dark'));
+      this.paintLockBtn();   // parking the intro / opening a panel changes where it shows
     }
 
     initIntro() {
@@ -4550,14 +4551,24 @@
         scope.querySelectorAll('[contenteditable]').forEach(el => el.setAttribute('contenteditable', String(!on)));
         scope.querySelectorAll('[draggable="true"]').forEach(el => { if (on) el.setAttribute('draggable', 'false'); });
       });
+      this.paintLockBtn();
+    }
+    // the switch's own state and whether it is on screen at all — separate from
+    // the field sweep, because the pages it shows on change without a re-render
+    paintLockBtn() {
       const btn = this.topActionsEl && this.topActionsEl.querySelector('.lock-toggle-btn');
-      if (btn) {
-        btn.classList.toggle('active', on);
-        btn.setAttribute('aria-pressed', String(on));
-        btn.title = on ? 'Locked — tap to edit again' : 'Lock the trip: read-only, nothing can be changed';
-        // the lock is the phone app's control; the web ledger is a desk, not a pocket
-        btn.style.display = this._webMag() ? 'none' : '';
-      }
+      if (!btn) return;
+      const on = this.readOnly();
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-pressed', String(on));
+      btn.title = on ? 'Locked — tap to edit again' : 'Lock the trip: read-only, nothing can be changed';
+      /* The lock is the phone app's control — the web ledger is a desk, not a
+         pocket — and within the app it belongs to the pages you arrive on: the
+         intro and the overview. The sub-pages are where you work, and a switch
+         parked over the field you are filling in is just clutter. You lock
+         before you set off, and unlock from the same two screens. */
+      const homeScreen = !this._introParked || this.appPage === 0;
+      btn.style.display = (this._webMag() || this._anyModalOpen() || !homeScreen) ? 'none' : '';
     }
 
     /* ---------- outfit closet ---------- */
@@ -5609,6 +5620,7 @@
         el.classList.toggle('active', Number(el.dataset.leaf) === this.appPage));
       rootEl.querySelectorAll('.app-tab').forEach(el =>
         el.classList.toggle('on', Number(el.dataset.i) === this.appPage));
+      this.paintLockBtn();   // page flips don't re-render, and the lock is page-scoped
     }
     _afterAppFlip() {
       // the overview map lives in normal flow underneath and never unmounts;

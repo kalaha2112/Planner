@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-15T23:54:15.992Z
+  Built: 2026-08-19T17:00:54.220Z
 -->
 
 <html lang="en">
@@ -1882,8 +1882,13 @@ a { color: inherit; }
 .accom-sub { font-family: var(--script); font-style: italic; font-size: 13px; color: var(--date); margin-top: 5px; }
 .accom-body { padding: 18px 26px 26px; display: flex; flex-direction: column; gap: 10px; }
 .opt { background: var(--surface); border-radius: var(--r-card); padding: 17px 18px; display: flex; flex-direction: column; gap: 12px; position: relative; }
-.opt .top { display: flex; align-items: flex-start; gap: 10px; }
-.opt .choose { flex-shrink: 0; margin-top: 3px; width: 20px; height: 20px; border-radius: var(--r-check); border: 2px solid var(--dash); background: var(--surface); cursor: crosshair; display: flex; align-items: center; justify-content: center; padding: 0; }
+/* Everything on this row is a single line — the name is an <input> and cannot
+   wrap — so flex-start left five items of five different heights each sitting on
+   its own axis: the price rode 7px above the trash, the name 4.5px above it, the
+   checkbox 1px below. Centring puts them on one line, and the 3px nudge that
+   used to fake it for the checkbox goes with it. */
+.opt .top { display: flex; align-items: center; gap: 10px; }
+.opt .choose { flex-shrink: 0; width: 20px; height: 20px; border-radius: var(--r-check); border: 2px solid var(--dash); background: var(--surface); cursor: crosshair; display: flex; align-items: center; justify-content: center; padding: 0; }
 .opt.chosen .choose { border-color: var(--green); background: var(--green); }
 .opt .name { font-family: var(--sans); font-size: 16px; font-weight: 700; color: var(--ink); border: none; background: transparent; padding: 0; flex: 1; min-width: 0; outline-offset: 2px; }
 .opt .badge { font-family: var(--sans); font-size: 9px; font-weight: 700; color: var(--green); background: var(--green-bg); border-radius: var(--r-pill); padding: 3px 9px; letter-spacing: .06em; text-transform: uppercase; flex-shrink: 0; }
@@ -2075,9 +2080,13 @@ a { color: inherit; }
      it must be restated here — critically .date-seg needs position:relative so
      the touch overlay input (.date-native, absolute/inset:0 in the hover:none
      block) stays confined to the date text instead of covering the whole page. */
+  /* The fixed chrome owns the top band — undo/memory/theme on the right, the
+     lock on the left. The date range used to share that band and now clears it:
+     the alternative was shrinking the type or letting it run under a button,
+     and the dates are the headline of this page. */
   .app-ov .meta-range {
     display: flex; align-items: baseline; flex-wrap: wrap; gap: 0;
-    margin: 2px 4px 12px; padding: 2px 0;
+    margin: 40px 4px 12px; padding: 2px 0;
     font-family: var(--serif); font-size: 20px; font-weight: 600; letter-spacing: -.01em;
     color: var(--green-dark);
   }
@@ -3735,6 +3744,14 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 /* the (intro-only) sync button lives at the TOP-LEFT instead of in the cluster;
    pulling it out of the flex flow leaves undo/memory/theme grouped top-right */
 .top-actions .sync-toggle-btn {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(14px, env(safe-area-inset-left));
+}
+/* The lock takes the same top-left slot the sync button uses — on the phone,
+   where the lock lives, sync is hidden (see below), so the slot is free and the
+   two never meet. Out of the flex flow, so undo/memory/theme stay grouped right. */
+.top-actions .lock-toggle-btn {
   position: fixed;
   top: max(12px, env(safe-area-inset-top));
   left: max(14px, env(safe-area-inset-left));
@@ -6207,6 +6224,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       if (memBtn) memBtn.classList.toggle('active', this.stickerPanelOpen);
       const themeBtn = ta.querySelector('[data-act="toggle-theme"]');
       if (themeBtn) themeBtn.setAttribute('aria-pressed', String(document.documentElement.getAttribute('data-theme') === 'dark'));
+      this.paintLockBtn();   // parking the intro / opening a panel changes where it shows
     }
 
     initIntro() {
@@ -9436,14 +9454,24 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
         scope.querySelectorAll('[contenteditable]').forEach(el => el.setAttribute('contenteditable', String(!on)));
         scope.querySelectorAll('[draggable="true"]').forEach(el => { if (on) el.setAttribute('draggable', 'false'); });
       });
+      this.paintLockBtn();
+    }
+    // the switch's own state and whether it is on screen at all — separate from
+    // the field sweep, because the pages it shows on change without a re-render
+    paintLockBtn() {
       const btn = this.topActionsEl && this.topActionsEl.querySelector('.lock-toggle-btn');
-      if (btn) {
-        btn.classList.toggle('active', on);
-        btn.setAttribute('aria-pressed', String(on));
-        btn.title = on ? 'Locked — tap to edit again' : 'Lock the trip: read-only, nothing can be changed';
-        // the lock is the phone app's control; the web ledger is a desk, not a pocket
-        btn.style.display = this._webMag() ? 'none' : '';
-      }
+      if (!btn) return;
+      const on = this.readOnly();
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-pressed', String(on));
+      btn.title = on ? 'Locked — tap to edit again' : 'Lock the trip: read-only, nothing can be changed';
+      /* The lock is the phone app's control — the web ledger is a desk, not a
+         pocket — and within the app it belongs to the pages you arrive on: the
+         intro and the overview. The sub-pages are where you work, and a switch
+         parked over the field you are filling in is just clutter. You lock
+         before you set off, and unlock from the same two screens. */
+      const homeScreen = !this._introParked || this.appPage === 0;
+      btn.style.display = (this._webMag() || this._anyModalOpen() || !homeScreen) ? 'none' : '';
     }
 
     /* ---------- outfit closet ---------- */
@@ -10495,6 +10523,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
         el.classList.toggle('active', Number(el.dataset.leaf) === this.appPage));
       rootEl.querySelectorAll('.app-tab').forEach(el =>
         el.classList.toggle('on', Number(el.dataset.i) === this.appPage));
+      this.paintLockBtn();   // page flips don't re-render, and the lock is page-scoped
     }
     _afterAppFlip() {
       // the overview map lives in normal flow underneath and never unmounts;
