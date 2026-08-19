@@ -746,6 +746,9 @@ a { color: inherit; }
 .item-grip svg { display: block; }
 /* pointer-drag feedback when moving an activity onto another day */
 .item.drag-source, .cal-cell.drag-source { opacity: .4; }
+/* …and when moving it up or down its own day: the line marks the slot it lands in */
+.item.drop-before { box-shadow: inset 0 2px 0 0 var(--red); }
+.item.drop-after { box-shadow: inset 0 -2px 0 0 var(--red); }
 .cal-cell.drag-target { outline: 3px solid var(--red); outline-offset: -2px; background: var(--cal-hover); }
 /* let the touch pointer-drag run on outfits without the page scrolling it away.
    Touch-only — the web's native mouse drag is unaffected. */
@@ -772,11 +775,38 @@ a { color: inherit; }
   color: var(--ink-faint); cursor: crosshair;
   transition: color .15s ease, background .15s ease, border-color .15s ease;
 }
+.note-btn { position: relative; }
 .note-btn:hover { color: var(--ink-soft); background: var(--hover-soft); border-color: var(--line-soft); }
+/* how many pictures are behind the note, without opening it */
+.note-btn .pics {
+  position: absolute; top: -2px; right: -2px; min-width: 12px; height: 12px; padding: 0 2px;
+  border-radius: 6px; background: var(--red); color: var(--on-accent);
+  font-family: var(--sans); font-size: 8px; font-weight: 700; line-height: 12px;
+  text-align: center; font-variant-numeric: tabular-nums;
+}
 /* a note exists — the icon carries the accent so a row's notes are visible
    without opening anything */
 .note-btn.on { color: var(--gold); border-color: var(--gold-border); background: var(--gold-soft); }
 .note-btn.on:hover { background: var(--gold-hover); }
+
+/* ---- pin: hold an activity at its slot in the day ----
+   Same 24px square as the note button it sits beside. Red when set, because a
+   pin is an active constraint — it is what "Optimize route" plans around. */
+.pin-btn {
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; padding: 0; border-radius: var(--r-sm);
+  border: 1px solid transparent; background: transparent;
+  color: var(--ink-faint); cursor: crosshair;
+  transition: color .15s ease, background .15s ease, border-color .15s ease;
+}
+.pin-btn:hover { color: var(--ink-soft); background: var(--hover-soft); border-color: var(--line-soft); }
+.pin-btn.on { color: var(--red); border-color: rgba(145, 4, 12, .30); background: rgba(145, 4, 12, .08); }
+.pin-btn.on:hover { background: rgba(145, 4, 12, .14); }
+.pin-btn.on svg { fill: currentColor; }   /* solid head — a set pin reads at a glance */
+.pin-btn svg { display: block; }
+/* the row's number carries the same mark, so a pinned slot is visible while
+   scanning the left rail rather than only at the button */
+.item.pinned .item-num { box-shadow: 0 0 0 1.5px var(--surface), 0 0 0 3px var(--red); }
 
 /* ---- the note sheet ---- */
 .overlay:has(.note-dialog) { align-items: center; padding: 24px 20px; }
@@ -796,6 +826,46 @@ a { color: inherit; }
 .note-area::placeholder { color: var(--ink-faint); }
 .note-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
 .note-hint { font-family: var(--sans); font-size: 11px; color: var(--ink-mute); }
+
+/* ---- reference pictures under the typed note ----
+   A note is either something you write or something you saw. The strip holds
+   the screenshot of the menu, the photo of the room; tap one to blow it up in
+   place rather than sending it off to a lightbox. */
+.note-refs { margin-top: 16px; border-top: 1px solid var(--line-soft); padding-top: 12px; }
+.note-refs-hd { display: flex; align-items: baseline; gap: 8px; margin-bottom: 9px; }
+.note-refs-hd .lbl {
+  font-family: var(--sans); font-size: 9.5px; font-weight: 600;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink-mute);
+}
+.note-refs-hd .hint { font-family: var(--sans); font-size: 10.5px; color: var(--ink-faint); }
+.note-ref-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.note-ref {
+  position: relative; flex: 0 0 auto; width: 84px; height: 84px;
+  border: 1px solid var(--line-soft); border-radius: var(--r-sm);
+  overflow: hidden; background: var(--hover-soft); cursor: crosshair;
+}
+.note-ref img { display: block; width: 100%; height: 100%; object-fit: cover; }
+/* enlarged: the tile takes the row to itself and the picture is shown whole */
+.note-ref.open { flex: 1 0 100%; width: 100%; height: auto; }
+.note-ref.open img { height: auto; max-height: 52vh; object-fit: contain; background: var(--surface); }
+.note-ref .del {
+  position: absolute; top: 5px; right: 5px; width: 20px; height: 20px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 50%; background: rgba(0, 0, 0, .55); color: #fff;
+  font-size: 10px; line-height: 1; cursor: crosshair;
+  opacity: 0; transition: opacity .15s ease;
+}
+.note-ref:hover .del, .note-ref.open .del { opacity: 1; }
+.note-ref-add {
+  flex: 0 0 auto; width: 84px; height: 84px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+  border: 1px dashed var(--dash); border-radius: var(--r-sm); background: transparent;
+  font-family: var(--sans); font-size: 10px; letter-spacing: .04em;
+  color: var(--ink-mute); cursor: crosshair;
+  transition: background .15s ease, color .15s ease;
+}
+.note-ref-add:hover { background: var(--hover-soft); color: var(--ink); }
+.note-ref-add svg { display: block; }
 .note-done {
   font-family: var(--sans); font-size: 13px; font-weight: 600;
   padding: 9px 20px; border: none; border-radius: var(--r-btn);
@@ -824,8 +894,10 @@ a { color: inherit; }
 }
 
 /* ---- day-plan route optimizer ---- */
-.day-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-.day-head .day-title { margin-bottom: 0; }
+/* wraps rather than squeezes: with a weather chip, a fold and two pills on it,
+   a narrow itinerary column would otherwise crush the date onto three lines */
+.day-head { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; row-gap: 9px; margin-bottom: 16px; }
+.day-head .day-title { margin-bottom: 0; flex: 0 0 auto; white-space: nowrap; }
 /* weather chip on the day header — forecast (or typical, muted) for the date */
 .day-wx { display: inline-flex; align-items: baseline; gap: 5px; flex-shrink: 0;
   font-family: var(--sans); font-size: 12px; line-height: 1; color: var(--ink); }
@@ -913,6 +985,19 @@ a { color: inherit; }
 }
 .daymap-cap { font-family: var(--sans); font-size: 10.5px; color: var(--ink-mute); line-height: 1.4; padding: 0 1px; }
 
+/* The hop between two activities, threaded under the number badges: a dotted
+   tick on the same 11px centre line as the numbers, then the distance. Empty
+   whenever an end of the hop has no coordinates yet, and empty collapses. */
+.item-leg {
+  display: flex; align-items: center; gap: 7px; padding: 3px 0 3px 10px;   /* the tick lands on the number badges' centre line */
+  font-family: var(--sans); font-size: 9px; font-weight: 500;
+  letter-spacing: .09em; text-transform: uppercase;
+  color: var(--ink-faint); font-variant-numeric: tabular-nums;
+}
+.item-leg:empty { display: none; }
+.item-leg .tick { width: 1px; height: 11px; border-left: 1px dotted var(--ink-faint); opacity: .8; }
+.item-leg .d { line-height: 1; }
+
 /* activity number badge (matches its map pin) */
 .item-num {
   flex-shrink: 0; width: 22px; height: 22px; margin-top: 1px;
@@ -945,6 +1030,9 @@ a { color: inherit; }
   transform: rotate(45deg);
   display: block;
 }
+
+/* a pinned activity's map pin wears the same ring as its row number */
+.day-pin.pinned span { box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--red); }
 
 /* chosen-hotel "home base" pin — white teardrop with a bed glyph, distinct
    from the numbered red activity pins; icon is counter-rotated to sit upright */
@@ -3034,6 +3122,8 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .view-locked input, .view-locked textarea, .view-locked select { cursor: default; }
 .view-locked input:focus-visible, .view-locked textarea:focus-visible { outline: none; }
 .view-locked select:disabled { opacity: 1; color: var(--ink-soft); }
+.view-locked .note-ref-add,
+.view-locked .note-ref .del,
 .view-locked .item .x,
 .view-locked .opt .rm,
 .view-locked .todo .x,
@@ -3413,12 +3503,13 @@ html { -webkit-tap-highlight-color: transparent; }
 .imp-apply:hover:not(:disabled) { background: color-mix(in oklch, var(--red) 88%, #000); }
 .imp-apply:disabled { opacity: .45; cursor: not-allowed; }
 
-/* day-header entry point, paired with "Optimize route".
-   Both buttons carry margin-left:auto, and flexbox splits the free space
-   between the two auto margins — which drifts them apart. Only the first
-   of the pair pushes; the second pulls back against the .day-head gap so
-   the two sit tight together as one cluster at the right. */
-.day-head .import-btn + .optimize-btn { margin-left: -6px; }   /* 12px row gap − 6px */
+/* "Import post" and "Optimize route" are one cluster at the right of the day
+   header. Wrapping them in their own flex box (rather than giving each an auto
+   margin, which splits the free space between them and drifts them apart) also
+   keeps them together when a narrow column wraps the header: they take a second
+   line as a pair instead of the second one dropping under the first. */
+.day-head-acts { margin-left: auto; display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.day-head-acts .import-btn, .day-head-acts .optimize-btn { margin-left: 0; }
 .import-btn {
   margin-left: auto; flex-shrink: 0;
   display: inline-flex; align-items: center; gap: 6px;
@@ -3428,6 +3519,31 @@ html { -webkit-tap-highlight-color: transparent; }
   padding: 6px 13px 6px 11px; cursor: crosshair; transition: background .15s, color .15s;
 }
 .import-btn:hover { background: var(--line-2); color: var(--ink); }
+
+/* fold the day down to its running order — quieter than the two pill buttons
+   on the right, because it changes what you see, not what the trip holds */
+.day-fold {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--sans); font-size: 10.5px; font-weight: 600;
+  letter-spacing: .05em; text-transform: uppercase;
+  color: var(--ink-mute); background: transparent; border: none;
+  padding: 4px 6px; margin-left: 2px; border-radius: var(--r-xs);
+  cursor: crosshair; transition: color .15s ease, background .15s ease;
+}
+.day-fold:hover { color: var(--ink); background: var(--line-2); }
+.day-fold svg { display: block; transition: transform .22s cubic-bezier(.22,.61,.36,1); }
+.day-fold.shut svg { transform: rotate(-90deg); }
+
+/* folded: number, name, the map arrow and the row's own controls — nothing else */
+.day-main.folded .item { padding-top: 7px; padding-bottom: 7px; }
+.day-main.folded .item .meta { display: none; }
+.day-main.folded .item .mid { gap: 0; }
+.day-main.folded .item-leg { padding-top: 1px; padding-bottom: 1px; }
+
+/* the Google Maps arrow rides beside the name now: same gold, a slightly bigger
+   tap target, and it stays put when the name is long */
+.item .name-row .maps { font-size: 12px; padding: 0 3px; line-height: 1; text-decoration: none; }
+.item .name-row .maps:hover { color: var(--red); }
 
 /* provenance chip on an imported activity row */
 .item-src {
@@ -3513,6 +3629,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
   .placed-sticker__delete { display: flex; }
   .placed-sticker__resize { display: block; }
   .stock-item .stock-item__del { display: flex; }
+  .note-ref .del { opacity: 1; }
   /* affordances stay visible without hover */
   .grip, .item-grip, .trash, .add-stop, .ledger-edge { opacity: 1; }
 }
