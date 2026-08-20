@@ -76,6 +76,7 @@
   const CLOSET_SHUT_KEY = 'europe-trip-closet-shut-v1'; // is the outfit closet folded, per trip
   const READONLY_KEY = 'europe-trip-readonly-v1';       // view-only lock, per device
   const DAYFOLD_KEY = 'europe-trip-day-folded-v1';      // are the day's rows folded to their names, per device
+  const BOOKINGS_SHUT_KEY = 'europe-trip-bookings-shut-v1';   // is the app's Bookings list folded, per device
 
   /* ---------- view-only lock ----------
      A planned trip gets read far more often than it gets edited — on a phone,
@@ -96,7 +97,7 @@
     'ledger-stop-plan', 'ledger-stop-days', 'stop-select', 'stop-iti', 'stop-accom',
     'stop-transport', 'cal-day', 'tab-select', 'trip-stack-toggle', 'open-web',
     // folding and opening — reading aids, they change no trip data
-    'accom-toggle', 'accom-toggle-all', 'accom-archive-toggle', 'closet-toggle', 'day-fold',
+    'accom-toggle', 'accom-toggle-all', 'accom-archive-toggle', 'closet-toggle', 'day-fold', 'bookings-toggle',
     'item-note-open', 'note-pic-open', 'open-budget', 'pk-close', 'optimize-dismiss',
     'toggle-stickers', 'close-stickers',
     // closing whatever is open
@@ -4738,6 +4739,22 @@
       }
       return this._dayShut;
     }
+    /* The app stacks Bookings under the packing sheet and the pre-trip list, and
+       the list grows with the route — two lines a city, hotel names and all — so
+       a five-stop trip buries the bottom of the page. There it folds to its own
+       header, which still carries the count. The web page shows it beside the
+       suitcase with room to spare, so it stays open there. */
+    bookingsShut() {
+      if (this._bkShut == null) {
+        try { this._bkShut = localStorage.getItem(BOOKINGS_SHUT_KEY) === '1'; } catch (e) { this._bkShut = false; }
+      }
+      return this._bkShut;
+    }
+    toggleBookings() {
+      this._bkShut = !this.bookingsShut();
+      try { localStorage.setItem(BOOKINGS_SHUT_KEY, this._bkShut ? '1' : '0'); } catch (e) {}
+      this.render();
+    }
     toggleDayRows() {
       this._dayShut = !this.dayRowsShut();
       try { localStorage.setItem(DAYFOLD_KEY, this._dayShut ? '1' : '0'); } catch (e) {}
@@ -6123,9 +6140,17 @@
             <span class="txt${r.booked ? ' done' : ''}">${esc(r.label)}</span>
           </div>`; }).join('')}
         </div>`).join('');
-      return `<div class="todos bookings pack-block">
-        <div class="hd"><div class="t">Bookings</div><div class="p">${done} / ${all}</div></div>
-        <div>${body}</div>
+      const foldable = !this._webMag();
+      const shut = foldable && this.bookingsShut();
+      const caret = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`;
+      const head = foldable
+        ? `<button class="hd" data-act="bookings-toggle" aria-expanded="${shut ? 'false' : 'true'}"
+            title="${shut ? 'Show what is left to book' : 'Fold the bookings away'}"
+            aria-label="${shut ? 'Show the bookings' : 'Fold the bookings'}"><div class="t">Bookings</div><div class="p">${done} / ${all}</div><span class="bk-caret">${caret}</span></button>`
+        : `<div class="hd"><div class="t">Bookings</div><div class="p">${done} / ${all}</div></div>`;
+      return `<div class="todos bookings pack-block${shut ? ' shut' : ''}">
+        ${head}
+        <div class="bk-body">${body}</div>
       </div>`;
     }
 
@@ -7378,6 +7403,7 @@
         case 'item-pin': this.toggleItemPin(i); break;
         case 'closet-toggle': this.toggleCloset(); break;
         case 'day-fold': this.toggleDayRows(); break;
+        case 'bookings-toggle': this.toggleBookings(); break;
         case 'closet-add': this.modalEl.querySelector('.closet-file').click(); break;
         case 'closet-paste': this.pasteImageFromClipboard('closet'); break;
         case 'outfit-delete': this.removeOutfitFromCloset(id); break;
