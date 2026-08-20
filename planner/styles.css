@@ -3367,12 +3367,24 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 
 @media (max-width: 700px) {
   /* app version: narrative block on top, globe fully beneath it (no overlap).
-     justify-content:flex-end anchors the globe (+ its fixed 3vh gap) to a
-     constant position near the bottom of the screen — a longer narrative
-     only grows UPWARD into the empty space above, it never pushes the globe
-     down or changes the text-globe gap. Bottom padding on .intro-inner
-     reserves room so the globe never sits under the .intro-tabs row. */
-  .intro-inner { display: flex; flex-direction: column; justify-content: flex-end; padding: 7vh 7vw 100px; }
+     The pair is centred as one, in a box padded equally top and bottom, so its
+     middle IS the middle of the screen: with the headline blank the globe sits
+     dead centre, and each line written above it pushes the globe down by half
+     that line. The 100px bottom reserve keeps the globe off the .intro-tabs
+     row; the top matches it so the centre does not drift. */
+  .intro-inner { display: flex; flex-direction: column; justify-content: center; padding: 100px 7vw; }
+  /* A blank headline should not reserve a line of its own — that would hold the
+     globe a half-line low. It keeps a tap strip, though: padding cancelled by an
+     equal negative margin costs no height, and without it, clearing the headline
+     would leave nothing to tap to write a new one. Focus restores the line so
+     there is a caret to type against. */
+  .intro-empty .intro-text {
+    line-height: 0; padding: 18px 0; margin: -18px 0;
+    z-index: 4;   /* over the globe (a flex item at 3): the strip overlaps its top edge */
+  }
+  .intro-empty .intro-text:focus { line-height: 1.22; padding: 0; margin: 0; }
+  .intro-empty .intro-globe { margin-top: 0; }
+  .intro-empty:has(.intro-text:focus) .intro-globe { margin-top: 3vh; }
   .intro-text  { order: 1; position: relative; z-index: 2; max-width: none; font-size: clamp(24px, 7.2vw, 42px); max-height: 56vh; }
   .intro-globe {
     order: 2; position: static; float: none; shape-outside: none;

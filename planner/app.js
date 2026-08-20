@@ -1347,8 +1347,10 @@
 
       const textEl = overlay.querySelector('.intro-text');
       textEl.textContent = (this.data.meta.introText != null ? this.data.meta.introText : DEFAULT_INTRO_TEXT);
+      this._syncIntroEmpty();
       textEl.addEventListener('input', () => {
         this.data.meta.introText = textEl.innerText.replace(/\s+$/,'');
+        this._syncIntroEmpty();
         this.scheduleSave();
       });
 
@@ -1555,6 +1557,16 @@
       this._introReturn = () => { target = 0; kick(); };
     }
     skipIntro() { if (this._introSkip) this._introSkip(); }
+    /* Whether the headline is blank decides where the globe sits on the app: with
+       nothing written the globe takes the middle of the screen, and every line of
+       headline pushes it down by half that line, the pair staying centred as one.
+       CSS does the moving; this only says which of the two states we are in. */
+    _syncIntroEmpty() {
+      const overlay = this._introEl;
+      const textEl = overlay && overlay.querySelector('.intro-text');
+      if (!textEl) return;
+      overlay.classList.toggle('intro-empty', !/\S/.test(textEl.innerText || ''));
+    }
 
     // Transparent wireframe globe (orthographic): graticule + continent outlines
     // + every stop as a red dot, consecutive stops linked by dashed route lines.
