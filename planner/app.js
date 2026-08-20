@@ -5426,20 +5426,14 @@
         <span class="leaf-folio">03 · 04</span>
       </section>`;
 
-      // ---- page 4 · packing blueprint + the pre-trip to-do list ----
-      const pkTotals = PACK_SLOTS.reduce((a, s) => {
-        const L = (trip.packing || {})[s.k] || [];
-        a.d += L.filter(x => x.done).length; a.t += L.length; return a;
-      }, { d: 0, t: 0 });
+      /* ---- page 4 · packing blueprint + the pre-trip to-do list ----
+         No header: the page tab already reads PACKING and the sheet is a
+         drawing of a suitcase, so a title over it said nothing the page was not
+         already saying — and it pushed the whole spread below centre. Without
+         it the columns fill the leaf and their own centring does the rest. */
       const packLeaf = `
       <section class="ledger-leaf leaf-pack${state(3)}" data-leaf="3">
         <div class="leaf-inner">
-          <header class="leaf-head">
-            <div class="leaf-head-main">
-              <div class="leaf-title">The Suitcase</div>
-              <div class="leaf-sub">${pkTotals.t ? pkTotals.d + ' of ' + pkTotals.t + ' packed' : 'Hover an object to start its list'}</div>
-            </div>
-          </header>
           <div class="pack-cols">
             <div class="pk-main">
               <div class="pk-wrap">${this.renderPackBody(trip)}</div>
