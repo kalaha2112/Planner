@@ -692,18 +692,27 @@ a { color: inherit; }
   display: flex;
   flex: 1;
   overflow: hidden;
+  /* One gutter either side of the activity list, so it sits centred between the
+     calendar and the day map instead of being shoved against the map. The left
+     one is split across two boxes — the calendar column's own right inset plus
+     .iti-right's padding — so the padding below subtracts the inset rather than
+     repeating a number that would then have to be kept in step by hand. */
+  --iti-inset: 28px;
+  --day-gutter: 38px;
 }
 .iti-left {
   flex: 0 0 40%;
   width: auto;
   overflow-y: auto;
-  padding: 0 28px 28px;
-  border-right: 1px solid var(--line);
+  padding: 0 var(--iti-inset) 28px;
+  /* no divider: the calendar and the day already read as separate columns from
+     the space between them, and the rule cut the leaf in half */
 }
 .iti-right {
   flex: 1;
   overflow-y: auto;
   padding: 24px 30px 32px;
+  padding-left: calc(var(--day-gutter) - var(--iti-inset));
   animation: slideRight .24s cubic-bezier(0.16,1,0.3,1) both;
 }
 @keyframes slideRight {
@@ -964,7 +973,7 @@ a { color: inherit; }
 .optimize-note .on-x { flex-shrink: 0; border: none; background: transparent; color: var(--ink-mute); cursor: crosshair; font-size: 12px; line-height: 1; padding: 2px; }
 
 /* ---- per-day focused map (inside the day column of the itinerary modal) ---- */
-.day-cols { display: flex; gap: 22px; align-items: flex-start; }
+.day-cols { display: flex; gap: var(--day-gutter, 22px); align-items: flex-start; }
 .day-main { flex: 1; min-width: 0; }
 /* The map takes a share of the row rather than a fixed 260px, so it grows with
    the window instead of staying a narrow portrait sliver while the activity
@@ -1112,7 +1121,9 @@ a { color: inherit; }
    left edge while the map above it ran the full width. Stretch, so the list and
    the map share one pair of margins. */
 @media (max-width: 900px) {
-  .day-cols { flex-direction: column-reverse; align-items: stretch; }
+  /* stacked, the gutter is vertical air between the map and the list, and the
+     side-by-side value is too much of it — keep the spacing it always had */
+  .day-cols { flex-direction: column-reverse; align-items: stretch; gap: 22px; }
   .day-aside { position: static; flex-basis: auto; width: 100%; }
   .daymap { height: 260px; }
 }
