@@ -966,7 +966,17 @@ a { color: inherit; }
 /* ---- per-day focused map (inside the day column of the itinerary modal) ---- */
 .day-cols { display: flex; gap: 22px; align-items: flex-start; }
 .day-main { flex: 1; min-width: 0; }
-.day-aside { flex: 0 0 260px; position: sticky; top: 4px; display: flex; flex-direction: column; gap: 7px; }
+/* The map takes a share of the row rather than a fixed 260px, so it grows with
+   the window instead of staying a narrow portrait sliver while the activity
+   list — which only ever needs enough room for a title and one line of meta —
+   soaked up every extra pixel. .day-main is flex:1, so whatever is given here
+   comes straight off the list. Clamped at both ends: never so narrow that the
+   map is useless, never so wide that the activities start wrapping badly.
+   The floor is the old fixed 260px on purpose: below roughly 1180px the row is
+   too tight to give the map more without squeezing the list into something
+   unusable, so those widths keep exactly the proportions they have today and
+   only wider windows spend their extra room on the map. */
+.day-aside { flex: 0 0 clamp(260px, 44%, 420px); position: sticky; top: 4px; display: flex; flex-direction: column; gap: 7px; }
 .daymap { height: 340px; }
 /* Grainy high-contrast B&W satellite look, themed:
    · LIGHT theme — the exact INVERSE: white ground, black streets (the base
