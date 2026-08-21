@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-21T20:07:50.546Z
+  Built: 2026-08-21T20:11:30.310Z
 -->
 
 <html lang="en">
@@ -1837,6 +1837,16 @@ a { color: inherit; }
 .item-leg::after { flex: 1 1 auto; }
 .item-leg .d { line-height: 1; white-space: nowrap; }
 .item.no-rule { border-bottom-color: transparent; }
+/* Both rules between activities — the row divider and the leg's own line — were
+   drawn in --line, which the tokens reserve for "container frames + title
+   rules". Light gets away with it, but dark's --line is a near-white hairline,
+   so on the near-black page the dividers read louder than the activities they
+   separate. --line-soft is the token for exactly this ("QUIET: internal row
+   dividers"); dark is where the difference between the two actually bites. */
+[data-theme="dark"] .item { border-bottom-color: var(--line-soft); }
+[data-theme="dark"] .item-leg::before,
+[data-theme="dark"] .item-leg::after { border-top-color: var(--line-soft); }
+[data-theme="dark"] .item.no-rule { border-bottom-color: transparent; }
 
 /* activity number badge (matches its map pin) */
 .item-num {
