@@ -49,7 +49,7 @@
   --chip-glass: rgba(255,255,255,.80);   /* outfit/stock delete chips */
   --card-glass: rgba(255,255,255,.72);    /* .mc-front / .mc-back faces */
   --ep-glass: rgba(255,255,255,.88);   /* .map-ep chips */
-  --map-sea: #FFFFFF;                 /* stop map: ocean = web background, so it blends */
+  --map-sea: var(--shell);            /* stop map: ocean IS the page bg, so it blends */
   --map-land: #141709;                 /* stop map: black land */
   --map-land-line: #FFFFFF;                 /* stop map: white country borders */
   --map-route:     #91040C;   /* the legs between stops, matching the pins */
@@ -181,7 +181,7 @@
   --chip-glass: rgba(29,25,16,.84);
   --card-glass: rgba(29,25,16,.70);
   --ep-glass: rgba(17,14,8,.88);
-  --map-sea: #121210;   /* stop map: ocean = dark page bg, so it blends (no box) */
+  --map-sea: var(--shell);   /* stop map: ocean IS the page bg, so it blends (no box) */
   --map-land: #ECE7DC;   /* stop map: beige land (app version; web mutes it — see media query) */
   --map-land-line: #7C7059;   /* stop map: sepia borders (app); web darkens them — see media query */
   --map-route: #8A5A2C;   /* stop map: brown route — reads on the beige land and dark ocean */
@@ -3628,8 +3628,8 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
 
 /* ============================================================
    SURFACE TREATMENT — the part of the look that isn't expressible
-   as a token: the aurora backdrop, frosted glass and the gradient
-   fills on primary actions. Everything else rides the tokens above.
+   as a token: frosted glass and the gradient fills on primary
+   actions. Everything else rides the tokens above.
 
    Placed near the END of the sheet on purpose. These selectors are
    plain class selectors, so they only beat the component rules they
@@ -3638,15 +3638,14 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
    and the gradients and halos would silently stop applying.
    ============================================================ */
 
-/* the aurora wash is a dark-mode device — in light mode it would tint the page,
-   and light mode is meant to be plain white */
-[data-theme="dark"] body {
-  background-image:
-    radial-gradient(60vw 50vh at 12% -8%,  color-mix(in oklch, var(--brown) 24%, transparent), transparent 70%),
-    radial-gradient(55vw 45vh at 92% 8%,   color-mix(in oklch, var(--red)   20%, transparent), transparent 70%);
-  background-attachment: fixed;
-  background-repeat: no-repeat;
-}
+/* The dark page is a FLAT near-black, the same one the stop map's ocean is
+   painted in, so the map sits on the page with no seam at any edge.
+   There used to be an aurora wash here — two fixed radial gradients, brown at
+   the top left and red at the top right. Both were anchored above the fold
+   (-8% and 8%), so the strip between the top of the screen and the map was the
+   one place it really showed: on the phone that strip read as a warm haze
+   against the map's flat black directly below it, and on the web ledger it was
+   invisible anyway. It bought a tint where it was least wanted. */
 .mc-front,
 .mc-back,
 .map-ep {
