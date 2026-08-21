@@ -2023,8 +2023,19 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .main-pins-overlay.pins-drop .map-pin-outer:nth-child(5) .map-pin-main { animation-delay: 440ms; }
 .main-pins-overlay.pins-drop .map-pin-outer:nth-child(6) .map-pin-main { animation-delay: 550ms; }
 .main-pins-overlay.pins-drop .map-pin-outer:nth-child(n+7) .map-pin-main { animation-delay: 660ms; }
+
+/* App layout (.pins-solo, set by _observePins): each pin waits on its own and
+   drops the moment it scrolls into view, so the scroll is the stagger and the
+   nth-child ladder above is not used — the container never carries pins-wait
+   or pins-drop in this mode. Same keyframes, no delay. */
+.main-pins-overlay.pins-solo .map-pin-outer.pin-wait .map-pin-main { opacity: 0; }
+.main-pins-overlay.pins-solo .map-pin-outer.pin-drop .map-pin-main {
+  transform-origin: center bottom;
+  animation: pinDrop .8s both;
+}
 @media (prefers-reduced-motion: reduce) {
-  .main-pins-overlay.pins-drop .map-pin-main { animation: none; }
+  .main-pins-overlay.pins-drop .map-pin-main,
+  .main-pins-overlay.pins-solo .map-pin-outer.pin-drop .map-pin-main { animation: none; }
 }
 
 /* ============================================================
