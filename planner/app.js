@@ -2270,8 +2270,22 @@
         const fr = this._foldActive && this._foldFrame;
         const w = (fr ? fr.w : wrap.clientWidth) || 1;
         const h = (fr ? fr.h : wrap.clientHeight) || w;
-        renderer.setSize(w, h, false);
+        // The camera aspect is what keeps the geometry honest — NDC spans the
+        // canvas's CSS box however big the drawing buffer is — and it is free,
+        // so it tracks the box exactly, every frame.
         camera.aspect = w / h; camera.updateProjectionMatrix();
+        // setSize is NOT free: it reallocates the drawing buffer. The fold
+        // resizes the box on every frame of the travel, and reallocating that
+        // often is enough to make the motion judder. The buffer only decides
+        // resolution, so let it lag by a few pixels while the plate is moving
+        // and settle exactly the moment it stops.
+        const bw = Math.max(1, Math.round(w)), bh = Math.max(1, Math.round(h));
+        const coarse = this._foldMoving && this._foldActive;
+        if ((bw !== g3.bufW || bh !== g3.bufH) &&
+            (!coarse || Math.abs(bw - g3.bufW) > 8 || Math.abs(bh - g3.bufH) > 8)) {
+          g3.bufW = bw; g3.bufH = bh;
+          renderer.setSize(bw, bh, false);
+        }
       };
       g3.resize = resize;
       resize();
@@ -2379,6 +2393,7 @@
         if (!r.width) return;
         this._foldSrc = { l: r.left, t: r.top, w: r.width, h: r.height };
         this._foldPrevStyle = canvas.getAttribute('style') || '';
+        this._foldBorder = null;        // re-read the map's border for this run
         document.body.appendChild(canvas);
         Object.assign(canvas.style, { position: 'fixed', zIndex: '1600', pointerEvents: 'none' });
         this._foldActive = true;
@@ -2439,20 +2454,27 @@
       // the canvas half way there. So the sphere unrolls into a whole-world
       // map first, THEN that map zooms into the stop map's own view, and only
       // once the two are registered does it dissolve.
-      //   fold     0.00 – 0.42   sphere → flat, IN PLACE where the globe is
-      //   travel   0.28 – 0.86   the globe's slot → the map's rect
-      //   zoom     0.50 – 0.92   world plate → the map's live view
+      //   fold     0.00 – 0.50   sphere → flat, IN PLACE where the globe is
+      //   travel   0.18 – 0.88   the globe's slot → the map's rect
+      //   zoom     0.30 – 0.92   world plate → the map's live view
       //   dissolve 0.92 – 1.00   crossfade, with the registration held exact
-      // The fold leads the travel deliberately. Moving both together sent the
-      // sphere down after a map that is still below the viewport, so it
-      // unrolled off-screen; unrolling first means the one thing this is all
-      // for — a globe becoming a map — happens where it can be watched.
+      // The fold still leads: moving both together sent the sphere down after a
+      // map that is still below the viewport, so it unrolled off-screen, and
+      // unrolling first means the one thing this is all for — a globe becoming
+      // a map — happens where it can be watched.
+      //
+      // But the stages OVERLAP, and that part is not cosmetic. Each one is
+      // smoothstepped, so it leaves and arrives at zero velocity; run them end
+      // to end and the fold coasts to a halt before the zoom has begun, which
+      // reads as the motion stalling and picking up again. The zoom is already
+      // at speed by the time the fold winds down, so nothing ever idles.
       const ease = (t) => t * t * (3 - 2 * t);
       const stage = (a, b) => ease(Math.max(0, Math.min(1, (p - a) / (b - a))));
-      const travel = stage(.28, .86);
-      this._foldZoom = stage(.50, .92);
+      const travel = stage(.18, .88);
+      this._foldZoom = stage(.30, .92);
+      this._foldMoving = travel < 1;                  // resize() leans on this
 
-      g3.uFold.value = stage(0, .42);
+      g3.uFold.value = stage(0, .50);
       const fl = src.l + (to.left - src.l) * travel;
       const ft = src.t + (to.top - src.t) * travel;
       const fw = Math.max(40, src.w + (to.width - src.w) * travel);
@@ -2505,13 +2527,19 @@
             // measured from inside the border, which the app's map has and the
             // web ledger's doesn't. So: unrounded project(), Leaflet's own
             // origin and pane offset, then the border.
-            const cs = getComputedStyle(el);
+            // border read once per fold, not per frame — getComputedStyle in
+            // the render loop forces a style recalc every time
+            if (!this._foldBorder) {
+              const cs = getComputedStyle(el);
+              this._foldBorder = [parseFloat(cs.borderLeftWidth) || 0, parseFloat(cs.borderTopWidth) || 0];
+            }
+            const bd = this._foldBorder;
             const c = map.getCenter();
             const pc = map.project(c);                      // unrounded
             const po = map.getPixelOrigin();
             const pane = map.containerPointToLayerPoint([0, 0]);   // = -panePos
-            const vx = mr.left + (parseFloat(cs.borderLeftWidth) || 0) + (pc.x - po.x - pane.x);
-            const vy = mr.top + (parseFloat(cs.borderTopWidth) || 0) + (pc.y - po.y - pane.y);
+            const vx = mr.left + bd[0] + (pc.x - po.x - pane.x);
+            const vy = mr.top + bd[1] + (pc.y - po.y - pane.y);
             const mc = g3.merc(c.lat, c.lng);
             cx = mc[0]; cy = mc[1];
             const s1 = worldPx * worldPerPx;
