@@ -238,6 +238,52 @@ a { color: inherit; }
 :focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
 .tab-active input:focus-visible { outline: none; }
 
+/* ============================================================
+   FIELD INPUTS — the Minimalism input: no box, one quiet hairline
+   under the value, and the focus state written INTO that hairline
+   rather than drawn as a ring around a field that has no edges.
+
+   The underlines all sat on --line, the token reserved for
+   "container frames + title rules"; a field rule is not a frame, and
+   in dark --line is a near-white hairline, so a form read as a stack
+   of bright rules. They are on --line-soft now, at their own call
+   sites, and this block gives the whole set one behaviour.
+
+   Grouped by selector rather than a shared class because these are
+   spread across five components and adding a class would mean
+   touching the markup of each for a purely visual change.
+   ============================================================ */
+.meta-field input,
+.leg .dur,
+.opt .fld input,
+.t-line-inp,
+.t-cost-row,
+.ss-nights input,
+.map-leg-row .dur {
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+/* Focus doubles the rule to 2px via a shadow rather than a thicker
+   border, so nothing reflows as you tab through a form. */
+.meta-field input:focus,
+.leg .dur:focus,
+.opt .fld input:focus,
+.t-line-inp:focus,
+.t-cost-row:focus-within,
+.ss-nights input:focus,
+.map-leg-row .dur:focus {
+  border-bottom-color: var(--ink);
+  box-shadow: 0 1px 0 0 var(--ink);
+}
+/* ...and that rule IS the focus indicator, so the ring comes off —
+   but only for these, and only once the rule above has replaced it.
+   Everything else on the page keeps :focus-visible. */
+.meta-field input:focus-visible,
+.leg .dur:focus-visible,
+.opt .fld input:focus-visible,
+.t-line-inp:focus-visible,
+.ss-nights input:focus-visible,
+.map-leg-row .dur:focus-visible { outline: none; }
+
 
 /* ============================================================
    PAGE SHELL
@@ -628,15 +674,43 @@ a { color: inherit; }
 }
 
 /* ---- "Booked" toggles in the editors ----------------------------------- */
-.t-booked { display: flex; align-items: center; gap: 9px; }
+.t-booked { display: flex; align-items: center; gap: 11px; }
+/* The Minimalism switch: a hairline track with a knob whose POSITION is the
+   state. It replaces a square checkbox that filled green when ticked — the
+   colour was doing the work, and here the travel of the dot does it instead,
+   so the control reads at a glance without a hue.
+   Still the same <button aria-pressed>, still the same .done contract; only
+   the drawing changed. The checklists (.todo .box, packing) deliberately stay
+   checkboxes: a task is ticked off, a setting is switched. */
 .t-booked .box {
-  flex-shrink: 0; width: 18px; height: 18px; border-radius: var(--r-check);
-  border: 2px solid var(--dash); background: var(--surface); cursor: crosshair;
-  display: flex; align-items: center; justify-content: center; padding: 0; color: #fff;
+  flex-shrink: 0; position: relative;
+  width: 34px; height: 14px; padding: 0;
+  border: none; border-radius: 0; background: transparent;
+  cursor: crosshair;
 }
-.t-booked .box.done { background: var(--green); border-color: var(--green); }
+/* the track */
+.t-booked .box::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 50%;
+  height: 2px; margin-top: -1px; border-radius: 2px;
+  background: var(--line-soft);
+}
+/* the knob — left when off, right when on */
+.t-booked .box::after {
+  content: ''; position: absolute; top: 50%; left: 0;
+  width: 14px; height: 14px; margin-top: -7px; border-radius: 50%;
+  background: var(--surface); border: 1.5px solid var(--ink-faint);
+  box-sizing: border-box;
+  transition: left .22s cubic-bezier(.16, 1, .3, 1), background .18s ease, border-color .18s ease;
+}
+.t-booked .box.done::after {
+  left: calc(100% - 14px);
+  background: var(--ink); border-color: var(--ink);
+}
+@media (prefers-reduced-motion: reduce) { .t-booked .box::after { transition: none; } }
 .t-booked-lbl { font-family: var(--sans); font-size: 12px; font-weight: 600; color: var(--ink-soft); }
-.t-booked-lbl.done { color: var(--green); }
+/* the switch carries the state now, so the label only firms up rather than
+   turning green */
+.t-booked-lbl.done { color: var(--ink); }
 /* the hotel row's version is a pill, since it sits beside the CHOSEN badge */
 /* a checklist line with no hotel behind it yet — the box shows the shape of the
    task without pretending to be a control */
@@ -1362,7 +1436,7 @@ a { color: inherit; }
 .opt .fld .lk { display: flex; align-items: center; gap: 5px; }
 /* width:100% + box-sizing keeps every input inside its grid cell — without it
    the input renders at its intrinsic ~20ch width and spills out of the card */
-.opt .fld input { font-family: var(--sans); font-size: 12px; color: var(--ink); border: none; border-bottom: 1px solid var(--line); background: transparent; padding: 3px 0; outline-offset: 2px; min-width: 0; width: 100%; }
+.opt .fld input { font-family: var(--sans); font-size: 12px; color: var(--ink); border: none; border-bottom: 1px solid var(--line-soft); background: transparent; padding: 3px 0; outline-offset: 2px; min-width: 0; width: 100%; }
 /* inputs sharing a row with a trailing ↗ link (address, booking link) grow to
    fill the row so long values (full street addresses) stay visible */
 .opt .fld .lk input { flex: 1 1 auto; width: auto; min-width: 0; }
@@ -1425,14 +1499,13 @@ a { color: inherit; }
 .t-fld label { font-family: var(--sans); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-mute); }
 .t-line-inp {
   font-family: var(--sans); font-size: 14px; color: var(--ink);
-  border: none; border-bottom: 1px solid var(--line); background: transparent;
+  border: none; border-bottom: 1px solid var(--line-soft); background: transparent;
   padding: 4px 0; width: 100%; min-width: 0; outline: none;
   font-variant-numeric: tabular-nums;
 }
 .t-line-inp::placeholder { color: var(--ink-faint); }
-.t-line-inp:focus { border-bottom-color: var(--ink); }
 .t-transfer { text-align: center; }
-.t-cost-row { display: flex; align-items: baseline; gap: 4px; border-bottom: 1px solid var(--line); }
+.t-cost-row { display: flex; align-items: baseline; gap: 4px; border-bottom: 1px solid var(--line-soft); }
 .t-cost-row .t-line-inp { border-bottom: none; }
 .t-unit { font-family: var(--sans); font-size: 12px; color: var(--ink-soft); flex-shrink: 0; }
 .t-cost-row:focus-within { border-bottom-color: var(--ink); }
@@ -2226,7 +2299,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .ss-nights { display: inline-flex; align-items: baseline; gap: 3px; }
   .ss-nights input {
     width: 2.6em; text-align: center; padding: 0 2px 1px;
-    border: none; border-bottom: 1px solid var(--line); background: transparent;
+    border: none; border-bottom: 1px solid var(--line-soft); background: transparent;
     font-family: var(--sans); font-size: 12.5px; font-weight: 600; color: var(--green-dark);
   }
   .ss-nights input:focus { outline: none; border-bottom-color: var(--red); }
@@ -2962,7 +3035,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 }
 .map-leg-row .dur {
   font-family: var(--sans); font-size: 4.8cqw; color: var(--ink-soft);
-  border: none; border-bottom: 1px solid var(--line); background: transparent;
+  border: none; border-bottom: 1px solid var(--line-soft); background: transparent;
   padding: 1cqw; order: 9; flex-basis: 100%; min-width: 0; outline-offset: 1px;
 }
 .map-leg-row .cost-wrap { display: inline-flex; align-items: center; gap: 1.4cqw; }
