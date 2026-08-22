@@ -7136,7 +7136,7 @@
             <div class="t-booked">
               <button class="box${leg.booked ? ' done' : ''}" data-act="leg-booked" data-leg="${legIdx}"
                 aria-pressed="${!!leg.booked}" aria-label="Mark this leg booked"
-                title="${leg.booked ? 'Booked — click to un-book' : 'Mark as booked'}"></button>
+                title="${leg.booked ? 'Booked — click to un-book' : 'Mark as booked'}">${leg.booked ? svg(I.check, { w: 11, h: 11, sw: 3.5 }) : ''}</button>
               <span class="t-booked-lbl${leg.booked ? ' done' : ''}">Booked</span>
             </div>
             ${isFlight ? `

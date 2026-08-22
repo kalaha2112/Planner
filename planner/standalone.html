@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-22T02:20:29.620Z
+  Built: 2026-08-22T04:07:51.655Z
 -->
 
 <html lang="en">
@@ -1452,43 +1452,15 @@ a { color: inherit; }
 }
 
 /* ---- "Booked" toggles in the editors ----------------------------------- */
-.t-booked { display: flex; align-items: center; gap: 11px; }
-/* The Minimalism switch: a hairline track with a knob whose POSITION is the
-   state. It replaces a square checkbox that filled green when ticked — the
-   colour was doing the work, and here the travel of the dot does it instead,
-   so the control reads at a glance without a hue.
-   Still the same <button aria-pressed>, still the same .done contract; only
-   the drawing changed. The checklists (.todo .box, packing) deliberately stay
-   checkboxes: a task is ticked off, a setting is switched. */
+.t-booked { display: flex; align-items: center; gap: 9px; }
 .t-booked .box {
-  flex-shrink: 0; position: relative;
-  width: 34px; height: 14px; padding: 0;
-  border: none; border-radius: 0; background: transparent;
-  cursor: crosshair;
+  flex-shrink: 0; width: 18px; height: 18px; border-radius: var(--r-check);
+  border: 2px solid var(--dash); background: var(--surface); cursor: crosshair;
+  display: flex; align-items: center; justify-content: center; padding: 0; color: #fff;
 }
-/* the track */
-.t-booked .box::before {
-  content: ''; position: absolute; left: 0; right: 0; top: 50%;
-  height: 2px; margin-top: -1px; border-radius: 2px;
-  background: var(--line-soft);
-}
-/* the knob — left when off, right when on */
-.t-booked .box::after {
-  content: ''; position: absolute; top: 50%; left: 0;
-  width: 14px; height: 14px; margin-top: -7px; border-radius: 50%;
-  background: var(--surface); border: 1.5px solid var(--ink-faint);
-  box-sizing: border-box;
-  transition: left .22s cubic-bezier(.16, 1, .3, 1), background .18s ease, border-color .18s ease;
-}
-.t-booked .box.done::after {
-  left: calc(100% - 14px);
-  background: var(--ink); border-color: var(--ink);
-}
-@media (prefers-reduced-motion: reduce) { .t-booked .box::after { transition: none; } }
+.t-booked .box.done { background: var(--green); border-color: var(--green); }
 .t-booked-lbl { font-family: var(--sans); font-size: 12px; font-weight: 600; color: var(--ink-soft); }
-/* the switch carries the state now, so the label only firms up rather than
-   turning green */
-.t-booked-lbl.done { color: var(--ink); }
+.t-booked-lbl.done { color: var(--green); }
 /* the hotel row's version is a pill, since it sits beside the CHOSEN badge */
 /* a checklist line with no hotel behind it yet — the box shows the shape of the
    task without pretending to be a control */
@@ -12341,7 +12313,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
             <div class="t-booked">
               <button class="box${leg.booked ? ' done' : ''}" data-act="leg-booked" data-leg="${legIdx}"
                 aria-pressed="${!!leg.booked}" aria-label="Mark this leg booked"
-                title="${leg.booked ? 'Booked — click to un-book' : 'Mark as booked'}"></button>
+                title="${leg.booked ? 'Booked — click to un-book' : 'Mark as booked'}">${leg.booked ? svg(I.check, { w: 11, h: 11, sw: 3.5 }) : ''}</button>
               <span class="t-booked-lbl${leg.booked ? ' done' : ''}">Booked</span>
             </div>
             ${isFlight ? `
