@@ -2252,17 +2252,26 @@
          with the same --map-land the map uses (black in light, beige in
          dark) from the same 50m rings.
 
-         Near and far land are told apart in ONE draw call by gl_FrontFacing
-         rather than by two meshes with opposite culling: the sphere's own
-         winding already says which hemisphere a triangle is on, and reading
-         it in the fragment shader keeps this a single merged geometry.
-         Whichever way the winding falls, the two tones are just uNear/uFar
-         and can be swapped without touching geometry.
+         Near and far land are told apart per-vertex, not by gl_FrontFacing:
+         these triangles come out of the triangulator with no guaranteed winding
+         and the flag measured all-true across the whole globe here, so nothing
+         was ever being split. The sphere is centred on the pivot, so a land
+         vertex's outward normal is simply its own direction — dot it with the
+         direction back to the camera and the sign IS the hemisphere. Exact, and
+         it keeps meaning while the plate unrolls because it is taken from the
+         sphere position rather than the folded one.
+
+         The geometry is then drawn TWICE, far pass first, purely so the two are
+         ORDERED. Triangles inside one merged buffer come out in index order,
+         not depth order, so a single pass let far-side Australia paint over
+         Europe as soon as the far side stopped being a faint ghost. Two passes,
+         and the near hemisphere always lands on top however opaque the one
+         behind it gets.
 
          Triangulated in lng/lat and then lifted onto the sphere, so the
          triangles are chords — invisible at 50m density, where country
          rings already carry far more vertices than the curvature needs. ---- */
-      const tris = (polys, r, opacityNear, opacityFar) => {
+      const tris = (polys, r, nearAlpha) => {
         const T3 = T;
         const pos = [], mrc = [];
         for (const poly of polys) {
@@ -2331,33 +2340,53 @@
         const geo = new T.BufferGeometry();
         geo.setAttribute('position', new T.Float32BufferAttribute(pos, 3));
         geo.setAttribute('aMerc', new T.Float32BufferAttribute(mrc, 2));
-        const mat = new T.ShaderMaterial({
+        // uSide: +1 = the hemisphere turned toward the camera, -1 = the one behind.
+        const pass = (uSide) => new T.ShaderMaterial({
           transparent: true, depthTest: false, depthWrite: false, side: T.DoubleSide,
           uniforms: {
             uFold: g3.uFold, uMapC: g3.uMapC, uMapO: g3.uMapO, uMapS: g3.uMapS,
             uColor: { value: new T.Color(0xffffff) },
-            uNear: { value: opacityNear }, uFar: { value: opacityFar },
+            uAlpha: { value: uSide > 0 ? nearAlpha : 0 },
+            uSide: { value: uSide },
           },
           vertexShader: `
             attribute vec2 aMerc;
             uniform float uFold; uniform vec2 uMapC; uniform vec2 uMapO; uniform float uMapS;
+            varying float vFace;
             void main() {
               vec3 flatPos = vec3(uMapO.x + (aMerc.x - uMapC.x) * uMapS,
                                   uMapO.y - (aMerc.y - uMapC.y) * uMapS, 0.0);
+              // hemisphere test, taken from the SPHERE position so it survives the fold
+              vec3 n = normalize(normalMatrix * normalize(position));
+              vec3 sv = (modelViewMatrix * vec4(position, 1.0)).xyz;
+              vFace = dot(n, -normalize(sv));                // > 0 = turned toward the camera
               gl_Position = projectionMatrix * modelViewMatrix * vec4(mix(position, flatPos, uFold), 1.0);
             }`,
           fragmentShader: `
-            uniform vec3 uColor; uniform float uNear; uniform float uFar; uniform float uFold;
+            uniform vec3 uColor; uniform float uAlpha; uniform float uSide; uniform float uFold;
+            varying float vFace;
             void main() {
-              float a = gl_FrontFacing ? uNear : uFar;
-              if (uFold > 0.5) a = uNear;   // an unrolled map has no far side
+              bool wantNear = uSide > 0.0, isNear = vFace > 0.0;
+              // An unrolled map has no far side. Rather than popping at some
+              // threshold, the far tone cross-fades into the near one as the
+              // globe flattens: the far pass fades out, the near pass fades in
+              // over the same land, so the plate is never missing half itself.
+              float unroll = smoothstep(0.15, 0.5, uFold);
+              float a;
+              if (wantNear) a = uAlpha * (isNear ? 1.0 : unroll);
+              else { if (isNear) discard; a = uAlpha * (1.0 - unroll); }
+              if (a < 0.003) discard;
               gl_FragColor = vec4(uColor, a);
             }`,
         });
-        g3.mats.push(mat);
-        const mesh = new T.Mesh(geo, mat);
-        mesh.renderOrder = -3;              // under the occluder, so the far side shows through
-        return mesh;
+        const matFar = pass(-1), matNear = pass(1);
+        g3.mats.push(matFar, matNear);
+        const grp = new T.Group();
+        const far = new T.Mesh(geo, matFar), near = new T.Mesh(geo, matNear);
+        far.renderOrder = -4; near.renderOrder = -3;   // under the occluder, so the far side shows through
+        grp.add(far, near);
+        grp.userData.far = matFar; grp.userData.near = matNear;
+        return grp;
       };
       g3.tris = tris;
 
@@ -2757,11 +2786,16 @@
       for (const k of ['land', 'landFill']) {
         if (!g3[k]) continue;
         g3.pivot.remove(g3[k]);
-        g3.mats = g3.mats.filter(m => m !== g3[k].material);
-        g3[k].geometry.dispose(); g3[k].material.dispose();
+        // landFill is a two-pass Group; land is a single LineSegments.
+        const parts = g3[k].isGroup ? g3[k].children : [g3[k]];
+        for (const o of parts) {
+          g3.mats = g3.mats.filter(m => m !== o.material);
+          o.material.dispose();
+        }
+        parts[0].geometry.dispose();          // both passes share one geometry
       }
       // fill sits just under the borders so the outlines read on top of it
-      g3.landFill = g3.tris(fills, R * 1.002, .92, .28);
+      g3.landFill = g3.tris(fills, R * 1.002, .92);
       g3.land = g3.segs(rings, R * 1.004, 0xffffff, .85);
       g3.landRes = res;
       g3.pivot.add(g3.landFill);
@@ -2793,7 +2827,35 @@
       // while there was no fill underneath for them to sit on.
       const landLine = new T.Color(pick('--map-land-line', pick('--ink', '#1a1a1a')));
       if (g3.land) setLine(g3.land, landLine);
-      if (g3.landFill) g3.landFill.material.uniforms.uColor.value.copy(ink);
+      if (g3.landFill) {
+        /* The hemisphere behind is the SAME land in a lighter tone, so the two
+           sides read apart by colour rather than by fading one out. Fading only
+           works over white: drop the far side's alpha on the dark skin and it
+           sinks toward the page instead, which is darker, not lighter.
+           So aim at the composite rather than at the paint. Take the tone the
+           near land actually shows against the page, lift it LIFT of the way to
+           white, and solve back for the colour+alpha that lands there. On the
+           light skin that comes out translucent (black land over white paper is
+           already most of the way there); on the dark skin the only paint that
+           composites lighter than beige is a near-opaque warm white, which the
+           solver finds on its own — and which is safe because the near pass
+           always draws on top of it. */
+        const bg = new T.Color(pick('--shell', '#ffffff'));
+        const LIFT = 0.35, MIN_A = 0.62, EPS = 1e-4;
+        const nearA = g3.landFill.userData.near.uniforms.uAlpha.value;
+        const want = bg.clone().lerp(ink, nearA).lerp(new T.Color(0xffffff), LIFT);
+        let a = MIN_A;
+        for (const c of ['r', 'g', 'b']) {
+          // colour = (want - bg*(1-a)) / a must stay inside [0,1] on every channel
+          if (bg[c] < 1 - EPS) a = Math.max(a, (want[c] - bg[c]) / (1 - bg[c]));
+          if (bg[c] > EPS)     a = Math.max(a, (bg[c] - want[c]) / bg[c]);
+        }
+        a = Math.min(Math.max(a, 0.05), 0.97);
+        const far = new T.Color(...['r', 'g', 'b'].map(c => Math.min(1, Math.max(0, (want[c] - bg[c] * (1 - a)) / a))));
+        g3.landFill.userData.near.uniforms.uColor.value.copy(ink);
+        g3.landFill.userData.far.uniforms.uColor.value.copy(far);
+        g3.landFill.userData.far.uniforms.uAlpha.value = a;
+      }
       if (g3.arcs) g3.arcs.forEach(l => setLine(l, route));
       if (g3.stopsGroup) g3.stopsGroup.children.forEach(o => { if (o.isMesh && o.material) o.material.color.copy(red); });
       g3.inkColor = ink; g3.redColor = red;
