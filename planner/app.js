@@ -61,6 +61,23 @@
     'new york':[0,0],'nyc':[0,0],'jfk':[0,0],
   };
 
+  /* ---- day-map sanity rails ------------------------------------------
+     An activity row with no address is geocoded from its NAME, first with
+     the stop's city as a hint and then, if that misses, without one — which
+     is what makes a bare "Babylon Cinema" findable at all. The cost is that
+     an ambiguous name can come back as the same name on another continent.
+     One such point drags fitBounds out to a continental view, and at that
+     zoom the day map's filter has no street lines to separate from land, so
+     it renders solid black — a broken-looking map with no explanation.
+
+     DAY_PIN_MAX_KM: how far from the stop's own city a pin may plausibly sit.
+     Generous enough for a real day trip (Berlin-Potsdam 25km, Prague-Kutna
+     Hora 70km) and far short of a wrong-continent answer.
+     DAY_MIN_FIT_ZOOM: a floor under the automatic fit, so anything that still
+     slips through cannot park the map at world scale. ---- */
+  const DAY_PIN_MAX_KM = 150;
+  const DAY_MIN_FIT_ZOOM = 9;
+
   const STORAGE_KEY = 'europe-trip-state-v1';
   const WX_CACHE_KEY = 'europe-trip-weather-v1';       // cached daily weather per (coord, stay)
   /* ---- Day-map basemap: Esri Dark Gray Canvas -------------------------
@@ -4154,7 +4171,7 @@
         return { coord: this._geoCache.get(key), pending: false };
       };
 
-      const pts = []; let placed = 0, withAddr = 0, pending = 0, notFound = 0;
+      const pts = []; let placed = 0, withAddr = 0, pending = 0, notFound = 0, farOff = 0;
       items.forEach((it, ii) => {
         // use explicit address if set, otherwise fall back to the activity text as a place name
         const addr = (it.address || '').trim() || (it.text || '').trim();
@@ -4185,6 +4202,17 @@
           coord = r.coord;
         }
 
+        // A day's activities are in the city the day belongs to. Dropping the
+        // city hint above is what makes a bare name like "Archangels" or
+        // "Anti Spa" resolvable at all, but it also lets the geocoder answer
+        // with the same name on another continent — and one such point drags
+        // fitBounds out to a continental view, where the day map's filter has
+        // no street lines to separate from land and renders solid black. So
+        // the answer has to be plausible for THIS city, not merely non-null.
+        if (coord && cityCoord &&
+            this.haversine(coord, { lat: cityCoord[0], lng: cityCoord[1] }) > DAY_PIN_MAX_KM) {
+          farOff++; return;
+        }
         if (!coord) { notFound++; return; }
         placed++;
         pts.push([coord.lat, coord.lng]);
@@ -4233,14 +4261,26 @@
         }
       }
       if (routePts.length === 1) this.dayMap.setView(routePts[0], 14);
-      else if (routePts.length > 1) this.dayMap.fitBounds(routePts, { padding: [30, 30], maxZoom: 15 });
+      else if (routePts.length > 1) {
+        this.dayMap.fitBounds(routePts, { padding: [30, 30], maxZoom: 15 });
+        // maxZoom caps zooming IN; nothing capped zooming OUT, so a single
+        // stray point could park the map at z3 where the filter blacks it out.
+        // Belt and braces behind the distance check — the user can still zoom
+        // out by hand, this only floors the automatic fit.
+        if (this.dayMap.getZoom() < DAY_MIN_FIT_ZOOM) this.dayMap.setZoom(DAY_MIN_FIT_ZOOM);
+      }
       else if (cityCoord) this.dayMap.setView(cityCoord, 11);
-      const cap = this.modalEl.querySelector('.daymap-cap');
+      // same reach as the map holder above (see scheduleDayMap): the day block
+      // renders into modalEl on the phone but into the leaf on the web ledger,
+      // so a modalEl-only lookup left the caption permanently blank on web —
+      // which is exactly where a skipped pin most needs explaining.
+      const cap = this.modalEl.querySelector('.daymap-cap') || this.root.querySelector('.daymap-cap');
       if (cap) {
         if (withAddr === 0) cap.textContent = 'Add a place name or address to any activity to map it.';
         else if (pending > 0) cap.textContent = placed + ' of ' + withAddr + ' placed · locating' + (notFound ? ', ' + notFound + ' not found' : '') + '…';
         else if (placed === 0 && notFound > 0) cap.textContent = 'Could not locate ' + notFound + ' address' + (notFound > 1 ? 'es' : '') + ' — try a full street address or landmark name.';
-        else cap.textContent = placed + ' of ' + withAddr + ' placed' + (notFound ? ' · ' + notFound + ' not found' : '');
+        else cap.textContent = placed + ' of ' + withAddr + ' placed' + (notFound ? ' · ' + notFound + ' not found' : '')
+          + (farOff ? ' · ' + farOff + ' looked up outside ' + (stop.city || 'this city') + ', skipped' : '');
       }
     }
     /* How far the next hop is — metres while it is still a walk, kilometres once
