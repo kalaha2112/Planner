@@ -70,9 +70,12 @@
     <filter id="daymap-dilate" color-interpolation-filters="sRGB">
       <feMorphology operator="dilate" radius="0.75"/>
     </filter>
-    <!-- web version: lighter grid so it doesn't crowd the street labels -->
+    <!-- web version: lighter grid so it doesn't crowd the street labels.
+         Halved from 0.3 for the Esri basemap, whose street lines already come
+         in heavier than CARTO's did — at 0.3 the dilate was compounding that
+         rather than rescuing thin lines from the contrast step. -->
     <filter id="daymap-dilate-soft" color-interpolation-filters="sRGB">
-      <feMorphology operator="dilate" radius="0.3"/>
+      <feMorphology operator="dilate" radius="0.15"/>
     </filter>
   </svg>
   <!-- shared-post extractor (RedNote / TikTok / Instagram → itinerary rows);
