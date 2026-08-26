@@ -63,38 +63,31 @@
 
   const STORAGE_KEY = 'europe-trip-state-v1';
   const WX_CACHE_KEY = 'europe-trip-weather-v1';       // cached daily weather per (coord, stay)
-  const CARTO_KEY_STORE = 'carto-basemap-key';          // day-map tiles (see below)
+  /* ---- Day-map basemap: Esri Dark Gray Canvas -------------------------
+     Was CARTO, which moved its anonymous basemaps behind registration —
+     unkeyed requests started coming back as tiles stamped "API key
+     required", which is what the mini map was showing. Esri's Canvas
+     services are keyless and need no account.
 
-  /* ---- CARTO basemap credentials (the day map's tiles) ------------------
-     CARTO moved their anonymous basemaps behind registration, so unkeyed
-     requests come back as tiles stamped "API key required" — which is what
-     the mini map started showing. Nothing in this app changed; the provider's
-     terms did.
+     Same SHAPE as before, which is what preserves the look: a dark base
+     with light streets, plus labels as a separate service. So the existing
+     split (labels in their own pane on web, z-capped on phone) and the
+     grain/dilate filter chain in styles.css both carry over untouched.
 
-     The key lives in ONE place so the base and the label layer can never
-     drift apart. Two ways to set it, in priority order:
-       1. localStorage['carto-basemap-key'] — keeps it out of a public repo,
-          which matters here because the site is static and the source is on
-          GitHub. Per browser.
-       2. CARTO_KEY below — committed, shared by everyone opening the site.
-
-     With neither set the URL is byte-for-byte what it has always been, so an
-     unkeyed build behaves exactly as it does today rather than breaking
-     differently.
-
-     NOTE: `?api_key=` is CARTO's usual parameter, but confirm it against the
-     tile URL CARTO hands you on signup — if theirs differs, this one function
-     is the only thing to correct. ---- */
-  const CARTO_KEY = '';
-  const cartoKey = () => {
-    try { return (localStorage.getItem(CARTO_KEY_STORE) || CARTO_KEY || '').trim(); }
-    catch (e) { return CARTO_KEY; }
-  };
-  const cartoTiles = (style) => {
-    const k = cartoKey();
-    return 'https://{s}.basemaps.cartocdn.com/' + style + '/{z}/{x}/{y}{r}.png'
-      + (k ? '?api_key=' + encodeURIComponent(k) : '');
-  };
+     Two things differ from CARTO and both matter:
+       - The axis order is {z}/{y}/{x} — y BEFORE x. Getting that wrong
+         renders a scrambled map rather than an error, so it is checked
+         against computed tile coordinates rather than by eye.
+       - Canvas tiles stop at z16 where CARTO went to 19. maxNativeZoom
+         lets Leaflet upscale past that instead of requesting tiles that do
+         not exist and going blank. detectRetina is off for the same
+         reason: it asks for z+1, which falls off that same edge, and Esri
+         publishes no @2x variant to ask for.
+     ---- */
+  const ESRI_CANVAS = 'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/';
+  const ESRI_MAX_NATIVE = 16;                 // Canvas services top out here
+  const ESRI_ATTRIB = 'Tiles &copy; Esri';
+  const esriTiles = (service) => ESRI_CANVAS + service + '/MapServer/tile/{z}/{y}/{x}';
 
   /* ---- cross-device cloud sync (keyless, no-signup JSON stores) ----
      No single free bin service is reliable across every network, so we
@@ -4059,16 +4052,16 @@
       const L = window.L;
       this.dayMap = L.map(this.dayMapEl, { scrollWheelZoom: false, zoomSnap: .25, zoomDelta: .5, wheelPxPerZoomLevel: 120, inertia: true, attributionControl: false });
       // Labels differ by version (see _mobileMap):
-      //  · APP (phone): area names only — dark_nolabels base + a transparent
-      //    area-label overlay capped at z15. Street names (Carto puts them in
-      //    the label tiles ~z16+) stay below the cap and never load. UNCHANGED.
-      //  · WEB (desktop): full dark_all labels, i.e. street names shown — the
-      //    street-label setting from before the area-only overlay existed.
+      //  · APP (phone): area names only — the Dark Gray base plus the
+      //    Reference (label) service capped at z15, so the street names Esri
+      //    puts in the higher label tiles stay below the cap and never load.
+      //  · WEB (desktop): the same two services uncapped, i.e. street names
+      //    shown — the street-label setting the web version has always had.
       // NOTE: do not get clever with tileSize 512 / zoomOffset -1 here — that
       // combination broke tile loading and the map went blank-black.
       if (this._mobileMap()) {
-        L.tileLayer(cartoTiles('dark_nolabels'), { maxZoom: 19, detectRetina: true }).addTo(this.dayMap);
-        L.tileLayer(cartoTiles('dark_only_labels'), { maxZoom: 15, detectRetina: true }).addTo(this.dayMap);
+        L.tileLayer(esriTiles('World_Dark_Gray_Base'), { maxZoom: 19, maxNativeZoom: ESRI_MAX_NATIVE, attribution: ESRI_ATTRIB }).addTo(this.dayMap);
+        L.tileLayer(esriTiles('World_Dark_Gray_Reference'), { maxZoom: 15, maxNativeZoom: ESRI_MAX_NATIVE }).addTo(this.dayMap);
       } else {
         // Web: dilated bold-white street base, plus the labels (street names
         // included) in their OWN pane so the street-line dilate filter never
@@ -4079,8 +4072,8 @@
         const lp = this.dayMap.getPane('daylabels');
         lp.style.zIndex = 550;              // above tiles + grain, below markers (600)
         lp.style.pointerEvents = 'none';
-        L.tileLayer(cartoTiles('dark_nolabels'), { maxZoom: 19, detectRetina: true }).addTo(this.dayMap);
-        L.tileLayer(cartoTiles('dark_only_labels'), { maxZoom: 19, detectRetina: true, pane: 'daylabels' }).addTo(this.dayMap);
+        L.tileLayer(esriTiles('World_Dark_Gray_Base'), { maxZoom: 19, maxNativeZoom: ESRI_MAX_NATIVE, attribution: ESRI_ATTRIB }).addTo(this.dayMap);
+        L.tileLayer(esriTiles('World_Dark_Gray_Reference'), { maxZoom: 19, maxNativeZoom: ESRI_MAX_NATIVE, pane: 'daylabels' }).addTo(this.dayMap);
       }
       this.dayLines = L.layerGroup().addTo(this.dayMap);
       this.dayMarkers = L.layerGroup().addTo(this.dayMap);
