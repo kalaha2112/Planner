@@ -63,6 +63,38 @@
 
   const STORAGE_KEY = 'europe-trip-state-v1';
   const WX_CACHE_KEY = 'europe-trip-weather-v1';       // cached daily weather per (coord, stay)
+  const CARTO_KEY_STORE = 'carto-basemap-key';          // day-map tiles (see below)
+
+  /* ---- CARTO basemap credentials (the day map's tiles) ------------------
+     CARTO moved their anonymous basemaps behind registration, so unkeyed
+     requests come back as tiles stamped "API key required" — which is what
+     the mini map started showing. Nothing in this app changed; the provider's
+     terms did.
+
+     The key lives in ONE place so the base and the label layer can never
+     drift apart. Two ways to set it, in priority order:
+       1. localStorage['carto-basemap-key'] — keeps it out of a public repo,
+          which matters here because the site is static and the source is on
+          GitHub. Per browser.
+       2. CARTO_KEY below — committed, shared by everyone opening the site.
+
+     With neither set the URL is byte-for-byte what it has always been, so an
+     unkeyed build behaves exactly as it does today rather than breaking
+     differently.
+
+     NOTE: `?api_key=` is CARTO's usual parameter, but confirm it against the
+     tile URL CARTO hands you on signup — if theirs differs, this one function
+     is the only thing to correct. ---- */
+  const CARTO_KEY = '';
+  const cartoKey = () => {
+    try { return (localStorage.getItem(CARTO_KEY_STORE) || CARTO_KEY || '').trim(); }
+    catch (e) { return CARTO_KEY; }
+  };
+  const cartoTiles = (style) => {
+    const k = cartoKey();
+    return 'https://{s}.basemaps.cartocdn.com/' + style + '/{z}/{x}/{y}{r}.png'
+      + (k ? '?api_key=' + encodeURIComponent(k) : '');
+  };
 
   /* ---- cross-device cloud sync (keyless, no-signup JSON stores) ----
      No single free bin service is reliable across every network, so we
@@ -4035,8 +4067,8 @@
       // NOTE: do not get clever with tileSize 512 / zoomOffset -1 here — that
       // combination broke tile loading and the map went blank-black.
       if (this._mobileMap()) {
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', { maxZoom: 19, detectRetina: true }).addTo(this.dayMap);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', { maxZoom: 15, detectRetina: true }).addTo(this.dayMap);
+        L.tileLayer(cartoTiles('dark_nolabels'), { maxZoom: 19, detectRetina: true }).addTo(this.dayMap);
+        L.tileLayer(cartoTiles('dark_only_labels'), { maxZoom: 15, detectRetina: true }).addTo(this.dayMap);
       } else {
         // Web: dilated bold-white street base, plus the labels (street names
         // included) in their OWN pane so the street-line dilate filter never
@@ -4047,8 +4079,8 @@
         const lp = this.dayMap.getPane('daylabels');
         lp.style.zIndex = 550;              // above tiles + grain, below markers (600)
         lp.style.pointerEvents = 'none';
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', { maxZoom: 19, detectRetina: true }).addTo(this.dayMap);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', { maxZoom: 19, detectRetina: true, pane: 'daylabels' }).addTo(this.dayMap);
+        L.tileLayer(cartoTiles('dark_nolabels'), { maxZoom: 19, detectRetina: true }).addTo(this.dayMap);
+        L.tileLayer(cartoTiles('dark_only_labels'), { maxZoom: 19, detectRetina: true, pane: 'daylabels' }).addTo(this.dayMap);
       }
       this.dayLines = L.layerGroup().addTo(this.dayMap);
       this.dayMarkers = L.layerGroup().addTo(this.dayMap);
