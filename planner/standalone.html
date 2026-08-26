@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-26T14:21:18.620Z
+  Built: 2026-08-26T14:31:50.532Z
 -->
 
 <html lang="en">
@@ -1819,17 +1819,30 @@ a { color: inherit; }
      streets reading as light veins (city lights from orbit). */
 .daymap.map.leaflet-container { background: #f2f0ec; }   /* unloaded tile area, light */
 [data-theme="dark"] .daymap.map.leaflet-container { background: #0a0a0a; }
-/* brighten so the land/street midpoint lands on the contrast pivot, then hard
-   contrast splits them. Verified numerically on dark-matter tones: land and
-   water clip to pure black (0), all street classes + labels saturate to pure
-   white (255), and anti-aliased street edges land ~178 — so lines keep a
-   bright halo and read whiter AND thicker. (No blur — blurring 1px lines
-   drops their peak below the pivot and the contrast crushes them to black.) */
+/* Brighten so the land/street midpoint lands on the contrast pivot, then hard
+   contrast splits them: land and water clip to pure black (0), street classes
+   saturate to pure white (255), and anti-aliased edges land part-way — so
+   lines keep a bright halo and read whiter AND thicker. (No blur — blurring
+   1px lines drops their peak below the pivot and the contrast crushes them
+   to black.)
+
+   --daymap-gain IS THE CALIBRATION, and it is specific to the basemap's tones.
+   It was 2.8 against CARTO's dark-matter tones (land ~0.15, streets ~0.29).
+   The tiles are Esri Dark Gray Canvas now, whose land is considerably lighter
+   (~0.29): at 2.8 the land itself cleared the pivot and blew out to white,
+   leaving only the darkest features as black lines — the whole map came out
+   inverted. Halving the gain puts Esri's land back below the pivot and its
+   streets above it.
+
+   If the split still looks wrong this is the ONLY number to move: raise it if
+   the ground is too dark / streets are missing, lower it if the ground washes
+   out to white. Every rule below reads it. */
 /* …then feMorphology dilate (defined in index.html) rebuilds each street line
    from its pure-white core outward: white edge-to-edge and ~1.5px bolder.
    Unlike blur, dilation has no threshold that can drop a thin line. */
-.daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(2.8) contrast(8) url(#daymap-dilate) invert(1); }
-[data-theme="dark"] .daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(2.8) contrast(8) url(#daymap-dilate); }
+.daymap.map { --daymap-gain: 1.4; }
+.daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(var(--daymap-gain)) contrast(8) url(#daymap-dilate) invert(1); }
+[data-theme="dark"] .daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(var(--daymap-gain)) contrast(8) url(#daymap-dilate); }
 /* Web-only labels ride in their own pane (see ensureDayMap) so the street-line
    dilate above never touches the text. Gently whiten, then invert(1) in light
    theme so the names come out dark on the white ground; dark theme keeps the
@@ -1855,7 +1868,7 @@ a { color: inherit; }
   .daymap.map.leaflet-container,
   [data-theme="dark"] .daymap.map.leaflet-container { background: #0a0a0a; }
   .daymap.map .leaflet-tile-pane,
-  [data-theme="dark"] .daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(2.8) contrast(8) url(#daymap-dilate-soft); }
+  [data-theme="dark"] .daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(var(--daymap-gain)) contrast(8) url(#daymap-dilate-soft); }
   .daymap.map .leaflet-daylabels-pane,
   [data-theme="dark"] .daymap.map .leaflet-daylabels-pane { filter: saturate(0) brightness(1.7) contrast(1.15); }
   .daymap.map::after,
