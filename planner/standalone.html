@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-26T15:02:59.036Z
+  Built: 2026-08-26T16:08:04.595Z
 -->
 
 <html lang="en">
@@ -7454,6 +7454,121 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       const line = (latlngs, r, color, opacity) => segs([latlngs], r, color, opacity);
       g3.line = line;
 
+      /* ---- FILLED LAND -------------------------------------------------
+         The stop map draws land as filled shapes; the globe drew outlines
+         only, so the two never read as the same cartography. This fills it
+         with the same --map-land the map uses (black in light, beige in
+         dark) from the same 50m rings.
+
+         Near and far land are told apart in ONE draw call by gl_FrontFacing
+         rather than by two meshes with opposite culling: the sphere's own
+         winding already says which hemisphere a triangle is on, and reading
+         it in the fragment shader keeps this a single merged geometry.
+         Whichever way the winding falls, the two tones are just uNear/uFar
+         and can be swapped without touching geometry.
+
+         Triangulated in lng/lat and then lifted onto the sphere, so the
+         triangles are chords — invisible at 50m density, where country
+         rings already carry far more vertices than the curvature needs. ---- */
+      const tris = (polys, r, opacityNear, opacityFar) => {
+        const T3 = T;
+        const pos = [], mrc = [];
+        for (const poly of polys) {
+          if (!poly.length) continue;
+          // GeoJSON rings close on themselves; the triangulator wants them open.
+          // They are also UNWRAPPED as they go: Russia, Fiji and Antarctica each
+          // span a full 360 deg because they cross the antimeridian, and
+          // triangulating those raw in lng/lat throws a wedge clean across the
+          // globe. Walking the ring and keeping every step within 180 deg of the
+          // last unrolls it into one continuous strip. Longitudes then run past
+          // +/-180, which the sphere does not mind (the trig is periodic) and
+          // which puts the far side of Russia in the next world copy on the flat
+          // map — the same place Leaflet's own unwrapped vectors put it.
+          const open = (ring) => {
+            const a = [];
+            for (let i = 0; i < ring.length; i++) {
+              let lng = ring[i][0];
+              if (i) {
+                const prev = a[i - 1][0];
+                while (lng - prev > 180) lng -= 360;
+                while (prev - lng > 180) lng += 360;
+              }
+              a.push([lng, ring[i][1]]);
+            }
+            if (a.length > 1) {
+              const f = a[0], l = a[a.length - 1];
+              if (f[0] === l[0] && f[1] === l[1]) a.pop();
+            }
+            return a;
+          };
+          const contour = open(poly[0]);
+          if (contour.length < 3) continue;
+          const holes = poly.slice(1).map(open).filter(h => h.length >= 3);
+          const pt = (c) => new T3.Vector2(c[0], c[1]);            // x = lng, y = lat
+          let faces;
+          try { faces = T3.ShapeUtils.triangulateShape(contour.map(pt), holes.map(h => h.map(pt))); }
+          catch (e) { continue; }
+          const all = contour.concat(...holes);
+          // A triangle is straight in lng/lat but a CHORD on the sphere, so a
+          // wide one cuts through the globe instead of hugging it — which is
+          // what threw a hard wedge across the pole once Russia was unwrapped
+          // into one 170-deg-wide strip. Split anything too wide until its
+          // edges are short enough for the chord to disappear into the surface.
+          const MAX_EDGE_DEG = 6, MAX_SPLIT = 6;
+          const emit = (a, b, c, depth) => {
+            const e = Math.max(Math.hypot(a[0] - b[0], a[1] - b[1]),
+                               Math.hypot(b[0] - c[0], b[1] - c[1]),
+                               Math.hypot(c[0] - a[0], c[1] - a[1]));
+            if (e > MAX_EDGE_DEG && depth < MAX_SPLIT) {
+              const mid = (p, q) => [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+              const ab = mid(a, b), bc = mid(b, c), ca = mid(c, a);
+              emit(a, ab, ca, depth + 1); emit(ab, b, bc, depth + 1);
+              emit(ca, bc, c, depth + 1); emit(ab, bc, ca, depth + 1);
+              return;
+            }
+            for (const q of [a, b, c]) {
+              const w = v(q[1], q[0], r); pos.push(w.x, w.y, w.z);
+              const m = merc(q[1], q[0]);  mrc.push(m[0], m[1]);
+            }
+          };
+          for (const f of faces) {
+            const a = all[f[0]], b = all[f[1]], c = all[f[2]];
+            if (a && b && c) emit(a, b, c, 0);
+          }
+        }
+        const geo = new T.BufferGeometry();
+        geo.setAttribute('position', new T.Float32BufferAttribute(pos, 3));
+        geo.setAttribute('aMerc', new T.Float32BufferAttribute(mrc, 2));
+        const mat = new T.ShaderMaterial({
+          transparent: true, depthTest: false, depthWrite: false, side: T.DoubleSide,
+          uniforms: {
+            uFold: g3.uFold, uMapC: g3.uMapC, uMapO: g3.uMapO, uMapS: g3.uMapS,
+            uColor: { value: new T.Color(0xffffff) },
+            uNear: { value: opacityNear }, uFar: { value: opacityFar },
+          },
+          vertexShader: `
+            attribute vec2 aMerc;
+            uniform float uFold; uniform vec2 uMapC; uniform vec2 uMapO; uniform float uMapS;
+            void main() {
+              vec3 flatPos = vec3(uMapO.x + (aMerc.x - uMapC.x) * uMapS,
+                                  uMapO.y - (aMerc.y - uMapC.y) * uMapS, 0.0);
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(mix(position, flatPos, uFold), 1.0);
+            }`,
+          fragmentShader: `
+            uniform vec3 uColor; uniform float uNear; uniform float uFar; uniform float uFold;
+            void main() {
+              float a = gl_FrontFacing ? uNear : uFar;
+              if (uFold > 0.5) a = uNear;   // an unrolled map has no far side
+              gl_FragColor = vec4(uColor, a);
+            }`,
+        });
+        g3.mats.push(mat);
+        const mesh = new T.Mesh(geo, mat);
+        mesh.renderOrder = -3;              // under the occluder, so the far side shows through
+        return mesh;
+      };
+      g3.tris = tris;
+
       // ---- depth-only occluder: writes nothing to the colour buffer, only to
       //      depth, and renders before everything else. Without it the stop
       //      markers and route arcs on the FAR side of the globe are still
@@ -7834,23 +7949,30 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       const res = hi ? 50 : 110;
       if (g3.land && g3.landRes <= res) return false;      // already at this detail or better
       const R = g3.R;
-      const rings = [];
+      const rings = [], fills = [];
       const feats = topo.feature(world, world.objects.countries).features;
       for (const f of feats) {
         if (!f.geometry) continue;
         const polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
-        for (const poly of polys) for (const ring of poly) {
-          if (ring.length < 2) continue;
-          rings.push(ring.map(([lo, la]) => [la, lo]));
+        for (const poly of polys) {
+          fills.push(poly);                                  // [outer, ...holes], lng/lat — filled
+          for (const ring of poly) {
+            if (ring.length < 2) continue;
+            rings.push(ring.map(([lo, la]) => [la, lo]));    // borders, lat/lng
+          }
         }
       }
-      if (g3.land) {
-        g3.pivot.remove(g3.land);
-        g3.mats = g3.mats.filter(m => m !== g3.land.material);
-        g3.land.geometry.dispose(); g3.land.material.dispose();
+      for (const k of ['land', 'landFill']) {
+        if (!g3[k]) continue;
+        g3.pivot.remove(g3[k]);
+        g3.mats = g3.mats.filter(m => m !== g3[k].material);
+        g3[k].geometry.dispose(); g3[k].material.dispose();
       }
+      // fill sits just under the borders so the outlines read on top of it
+      g3.landFill = g3.tris(fills, R * 1.002, .92, .28);
       g3.land = g3.segs(rings, R * 1.004, 0xffffff, .85);
       g3.landRes = res;
+      g3.pivot.add(g3.landFill);
       g3.pivot.add(g3.land);
       this._themeGlobe3D();
       return true;
@@ -7873,7 +7995,13 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
         else l.material.color.copy(c);
       };
       if (g3.grat) setLine(g3.grat, ink);
-      if (g3.land) setLine(g3.land, ink);
+      // the globe is the stop map's cartography on a sphere: filled land in
+      // --map-land, country borders in --map-land-line, exactly as the map
+      // draws them. The borders used to share --map-land, which only worked
+      // while there was no fill underneath for them to sit on.
+      const landLine = new T.Color(pick('--map-land-line', pick('--ink', '#1a1a1a')));
+      if (g3.land) setLine(g3.land, landLine);
+      if (g3.landFill) g3.landFill.material.uniforms.uColor.value.copy(ink);
       if (g3.arcs) g3.arcs.forEach(l => setLine(l, route));
       if (g3.stopsGroup) g3.stopsGroup.children.forEach(o => { if (o.isMesh && o.material) o.material.color.copy(red); });
       g3.inkColor = ink; g3.redColor = red;
