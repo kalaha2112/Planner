@@ -4299,30 +4299,30 @@
       this._dayMapMobile = mobile;
       const L = window.L;
       this.dayMap = L.map(this.dayMapEl, { scrollWheelZoom: false, zoomSnap: .25, zoomDelta: .5, wheelPxPerZoomLevel: 120, inertia: true, attributionControl: false });
-      // Labels differ by version (see _mobileMap):
-      //  · APP (phone): area names only — the Dark Gray base plus the
-      //    Reference (label) service capped at z15, so the street names Esri
-      //    puts in the higher label tiles stay below the cap and never load.
-      //  · WEB (desktop): the same two services uncapped, i.e. street names
-      //    shown — the street-label setting the web version has always had.
+      // Names ride in their OWN pane in BOTH versions, and that is what keeps
+      // them thin: the tile pane's chain is built to binarise a street grid —
+      // contrast(8) welds a glyph's strokes shut and the dilate then fattens
+      // whatever survived. The app used to bake its labels into that pane and
+      // they came out as bold blobs. Their own pane takes the gentle
+      // whitening in .leaflet-daylabels-pane instead — no hard contrast, no
+      // dilate.
+      //
+      // What still differs by version (see _mobileMap):
+      //  · APP (phone): area names only — the Reference (label) service capped
+      //    at z15, so the street names Esri puts in the higher label tiles stay
+      //    below the cap and never load.
+      //  · WEB (desktop): the same service uncapped, i.e. street names shown —
+      //    the street-label setting the web version has always had.
       // NOTE: do not get clever with tileSize 512 / zoomOffset -1 here — that
       // combination broke tile loading and the map went blank-black.
-      if (mobile) {
-        L.tileLayer(esriTiles('World_Dark_Gray_Base'), { maxZoom: 19, maxNativeZoom: ESRI_MAX_NATIVE, attribution: ESRI_ATTRIB }).addTo(this.dayMap);
-        L.tileLayer(esriTiles('World_Dark_Gray_Reference'), { maxZoom: 15, maxNativeZoom: ESRI_MAX_NATIVE }).addTo(this.dayMap);
-      } else {
-        // Web: dilated bold-white street base, plus the labels (street names
-        // included) in their OWN pane so the street-line dilate filter never
-        // touches the text — dilating the baked-in labels made them unreadable
-        // blobs. The label pane gets its own gentle whitening filter (no
-        // dilate) via .leaflet-daylabels-pane in styles.css.
-        this.dayMap.createPane('daylabels');
-        const lp = this.dayMap.getPane('daylabels');
-        lp.style.zIndex = 550;              // above tiles + grain, below markers (600)
-        lp.style.pointerEvents = 'none';
-        L.tileLayer(esriTiles('World_Dark_Gray_Base'), { maxZoom: 19, maxNativeZoom: ESRI_MAX_NATIVE, attribution: ESRI_ATTRIB }).addTo(this.dayMap);
-        L.tileLayer(esriTiles('World_Dark_Gray_Reference'), { maxZoom: 19, maxNativeZoom: ESRI_MAX_NATIVE, pane: 'daylabels' }).addTo(this.dayMap);
-      }
+      this.dayMap.createPane('daylabels');
+      const lp = this.dayMap.getPane('daylabels');
+      lp.style.zIndex = 550;              // above tiles + grain, below markers (600)
+      lp.style.pointerEvents = 'none';
+      L.tileLayer(esriTiles('World_Dark_Gray_Base'),
+        { maxZoom: 19, maxNativeZoom: ESRI_MAX_NATIVE, attribution: ESRI_ATTRIB }).addTo(this.dayMap);
+      L.tileLayer(esriTiles('World_Dark_Gray_Reference'),
+        { maxZoom: mobile ? 15 : 19, maxNativeZoom: ESRI_MAX_NATIVE, pane: 'daylabels' }).addTo(this.dayMap);
       this.dayLines = L.layerGroup().addTo(this.dayMap);
       this.dayMarkers = L.layerGroup().addTo(this.dayMap);
       this.dayMap.setView([48, 10], 4);

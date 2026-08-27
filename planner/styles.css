@@ -1108,10 +1108,11 @@ a { color: inherit; }
 }
 .daymap.map .leaflet-tile-pane .leaflet-layer { filter: var(--daymap-tone); }
 .daymap.map .leaflet-tile-pane { filter: var(--daymap-thicken); }
-/* Web-only labels ride in their own pane (see ensureDayMap) so the street-line
-   dilate above never touches the text. Gently whiten, then invert(1) in light
-   theme so the names come out dark on the white ground; dark theme keeps the
-   whitened text on black. NO dilate, NO hard contrast — names stay thin.
+/* Labels ride in their own pane in both versions (see ensureDayMap) so the
+   street-line dilate above never touches the text. Gently whiten, then
+   invert(1) in light theme so the names come out dark on the white ground;
+   dark theme keeps the whitened text on black. NO dilate, NO hard contrast —
+   names stay thin.
 
    --daymap-label IS THE WEIGHT. A glyph's core is saturated at any gain here,
    so this does not change whether the name is legible — what it moves is the
@@ -1120,8 +1121,21 @@ a { color: inherit; }
    the core, so the strokes bloomed. Esri sets the names heavier to begin with
    and that compounded. At 1.15 the same edge lands 0.59 and the glyph reads
    thin again. Lower it further to thin more; raise it if the names get too
-   faint against the streets. */
+   faint against the streets.
+
+   The app takes .72 (in the max-width block above). 1.15 is a WHITENING, and
+   it saturates a glyph's core to pure white — fine on the web, where the
+   streets are pure white too, but the app has since pulled its streets down to
+   .62 and a pure-white name would then shout over them. At .72 the core lands
+   about level with the street lines and, more to the point, an edge at 0.5
+   drops to 0.34 against that core instead of riding just under it, so the
+   stroke reads thin rather than bloomed. */
 .daymap.map { --daymap-label: 1.15; }
+/* APP ONLY, and it must sit AFTER the line above: a media query adds no
+   specificity, so an override placed earlier in the file simply loses. */
+@media (max-width: 700px) {
+  .daymap.map { --daymap-label: .72; }
+}
 .daymap.map .leaflet-daylabels-pane { filter: saturate(0) brightness(var(--daymap-label)) contrast(1.15) invert(1); }
 [data-theme="dark"] .daymap.map .leaflet-daylabels-pane { filter: saturate(0) brightness(var(--daymap-label)) contrast(1.15); }
 /* film-grain overlay above the tiles, below the pins (Leaflet marker pane is z 600) */
