@@ -16,7 +16,7 @@
    ============================================================ */
 'use strict';
 
-const VERSION = 'v118';
+const VERSION = 'v119';
 const SHELL_CACHE = `planner-shell-${VERSION}`;
 const FONT_CACHE = 'planner-fonts';
 /* Versioned, unlike the fonts: the day map moved off CARTO, and a keyless

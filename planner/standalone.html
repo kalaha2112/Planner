@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-27T22:15:32.177Z
+  Built: 2026-08-27T23:47:29.594Z
 -->
 
 <html lang="en">
@@ -3018,19 +3018,13 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   /* ---- leaves — full-height sections stacked in one continuous scroll page.
      Each fills the screen (min-height:100dvh, so it re-fits on every resize) and
      the window scrolls between them. .active is a lightweight marker the scroll
-     observer sets for the tab highlight + folio — it no longer moves the leaf. ---- */
+     observer sets for the tab highlight — it no longer moves the leaf. ---- */
   .ledger-leaf {
     position: relative;
     min-height: 100vh; min-height: 100dvh;
     background: var(--shell);
   }
   .leaf-inner { position: relative; width: 100%; min-height: 100vh; min-height: 100dvh; }
-  .leaf-folio {
-    position: absolute; bottom: 10px; right: 20px;
-    font-family: var(--mono); font-size: 10px; letter-spacing: .28em;
-    color: var(--ink-mute); z-index: 6; pointer-events: none;
-  }
-  .leaf-route .leaf-folio { right: auto; left: 20px; z-index: 6; }
 
   /* ---- page 1 · map and info side by side, so the map is never covered ---- */
   .leaf-route .leaf-inner {
@@ -11278,7 +11272,6 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
           </aside>
           <div class="placed-stickers-layer">${this.renderPlacedStickers()}</div>
         </div>
-        <span class="leaf-folio">01 · 04</span>
       </section>`;
 
       // ---- page 2 · itinerary (calendar + closet | day planner + day map) ----
@@ -11305,7 +11298,6 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
           <p class="empty-note" style="margin:18px 4px">Add a stop on the route page first.</p>`}
           ${hasDay ? `<div class="placed-stickers-layer">${this.renderPlacedStickers('iti-' + iIdx + '-day-' + this.activeDay)}</div>` : ''}
         </div>
-        <span class="leaf-folio">02 · 04</span>
       </section>`;
 
       // ---- page 3 · transport & hotels — the city is controlled by the
@@ -11329,7 +11321,6 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
           <div class="placed-stickers-layer">${this.renderPlacedStickers('accom-' + pIdx)}</div>` : `
           <p class="empty-note" style="margin:18px 4px">Add a stop on the route page first.</p>`}
         </div>
-        <span class="leaf-folio">03 · 04</span>
       </section>`;
 
       /* ---- page 4 · packing blueprint + the pre-trip to-do list ----
@@ -11348,7 +11339,6 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
             <aside class="pack-side">${this.renderTodos(meta)}</aside>
           </div>
         </div>
-        <span class="leaf-folio">04 · 04</span>
       </section>`;
 
       // the Route tab reads as a house glyph (matches the design's line-icon

@@ -6006,7 +6006,6 @@
           </aside>
           <div class="placed-stickers-layer">${this.renderPlacedStickers()}</div>
         </div>
-        <span class="leaf-folio">01 · 04</span>
       </section>`;
 
       // ---- page 2 · itinerary (calendar + closet | day planner + day map) ----
@@ -6033,7 +6032,6 @@
           <p class="empty-note" style="margin:18px 4px">Add a stop on the route page first.</p>`}
           ${hasDay ? `<div class="placed-stickers-layer">${this.renderPlacedStickers('iti-' + iIdx + '-day-' + this.activeDay)}</div>` : ''}
         </div>
-        <span class="leaf-folio">02 · 04</span>
       </section>`;
 
       // ---- page 3 · transport & hotels — the city is controlled by the
@@ -6057,7 +6055,6 @@
           <div class="placed-stickers-layer">${this.renderPlacedStickers('accom-' + pIdx)}</div>` : `
           <p class="empty-note" style="margin:18px 4px">Add a stop on the route page first.</p>`}
         </div>
-        <span class="leaf-folio">03 · 04</span>
       </section>`;
 
       /* ---- page 4 · packing blueprint + the pre-trip to-do list ----
@@ -6076,7 +6073,6 @@
             <aside class="pack-side">${this.renderTodos(meta)}</aside>
           </div>
         </div>
-        <span class="leaf-folio">04 · 04</span>
       </section>`;
 
       // the Route tab reads as a house glyph (matches the design's line-icon

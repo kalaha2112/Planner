@@ -2240,19 +2240,13 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   /* ---- leaves — full-height sections stacked in one continuous scroll page.
      Each fills the screen (min-height:100dvh, so it re-fits on every resize) and
      the window scrolls between them. .active is a lightweight marker the scroll
-     observer sets for the tab highlight + folio — it no longer moves the leaf. ---- */
+     observer sets for the tab highlight — it no longer moves the leaf. ---- */
   .ledger-leaf {
     position: relative;
     min-height: 100vh; min-height: 100dvh;
     background: var(--shell);
   }
   .leaf-inner { position: relative; width: 100%; min-height: 100vh; min-height: 100dvh; }
-  .leaf-folio {
-    position: absolute; bottom: 10px; right: 20px;
-    font-family: var(--mono); font-size: 10px; letter-spacing: .28em;
-    color: var(--ink-mute); z-index: 6; pointer-events: none;
-  }
-  .leaf-route .leaf-folio { right: auto; left: 20px; z-index: 6; }
 
   /* ---- page 1 · map and info side by side, so the map is never covered ---- */
   .leaf-route .leaf-inner {
