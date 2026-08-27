@@ -113,17 +113,26 @@ function cacheable(res) {
   return res && (res.ok || res.type === 'opaque');
 }
 
-/* cache-first with FIFO trim — map tiles are immutable enough */
+/* cache-first with FIFO trim — map tiles are immutable enough.
+   Nothing in here may reject: this runs inside respondWith, so a throw does
+   not fall back to the network, it fails the <img> and leaves a hole in the
+   map. Cross-origin tiles come back OPAQUE, and an opaque response is charged
+   against storage quota at a large padded size, so cache.put is exactly the
+   call most likely to throw here — it is deliberately not awaited, and the
+   whole body is guarded. */
 async function tileCacheFirst(req) {
-  const cache = await caches.open(TILE_CACHE);
-  const hit = await cache.match(req);
-  if (hit) return hit;
-  const res = await fetch(req);
-  if (cacheable(res)) {
-    await cache.put(req, res.clone());
-    trimCache(cache); // fire and forget
+  try {
+    const cache = await caches.open(TILE_CACHE);
+    const hit = await cache.match(req);
+    if (hit) return hit;
+    const res = await fetch(req);
+    if (cacheable(res)) {
+      cache.put(req, res.clone()).then(() => trimCache(cache)).catch(() => {});
+    }
+    return res;
+  } catch (err) {
+    return fetch(req);           // caching is an optimisation, never a gate
   }
-  return res;
 }
 
 async function trimCache(cache) {
