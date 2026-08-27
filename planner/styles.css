@@ -1094,6 +1094,18 @@ a { color: inherit; }
   --daymap-tone: saturate(0) brightness(var(--daymap-gain)) contrast(8) brightness(var(--daymap-street));
   --daymap-thicken: url(#daymap-dilate);
 }
+/* APP ONLY. --daymap-street: .8 above is the WEB's calibration, tuned on a 1x
+   desktop where the soft 0.15 grow barely widens a line. The app grows lines
+   further and shows them on a 2-3x screen, so the same .8 reads as a glaring
+   white mesh there. Taking it to .62 pulls the line off pure white without
+   touching the ground — black stays black through any multiply. In the light
+   theme the pass ends on invert(1), so the same number lifts the streets off
+   pure black instead; less bold either way. Placed after the base declaration
+   so it wins on source order (media queries add no specificity), and outside
+   the min-width block below so the web keeps its own numbers. */
+@media (max-width: 700px) {
+  .daymap.map { --daymap-street: .62; }
+}
 .daymap.map .leaflet-tile-pane .leaflet-layer { filter: var(--daymap-tone); }
 .daymap.map .leaflet-tile-pane { filter: var(--daymap-thicken); }
 /* Web-only labels ride in their own pane (see ensureDayMap) so the street-line

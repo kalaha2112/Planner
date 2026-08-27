@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-27T16:28:30.289Z
+  Built: 2026-08-27T16:38:56.274Z
 -->
 
 <html lang="en">
@@ -1871,6 +1871,18 @@ a { color: inherit; }
 [data-theme="dark"] .daymap.map {
   --daymap-tone: saturate(0) brightness(var(--daymap-gain)) contrast(8) brightness(var(--daymap-street));
   --daymap-thicken: url(#daymap-dilate);
+}
+/* APP ONLY. --daymap-street: .8 above is the WEB's calibration, tuned on a 1x
+   desktop where the soft 0.15 grow barely widens a line. The app grows lines
+   further and shows them on a 2-3x screen, so the same .8 reads as a glaring
+   white mesh there. Taking it to .62 pulls the line off pure white without
+   touching the ground — black stays black through any multiply. In the light
+   theme the pass ends on invert(1), so the same number lifts the streets off
+   pure black instead; less bold either way. Placed after the base declaration
+   so it wins on source order (media queries add no specificity), and outside
+   the min-width block below so the web keeps its own numbers. */
+@media (max-width: 700px) {
+  .daymap.map { --daymap-street: .62; }
 }
 .daymap.map .leaflet-tile-pane .leaflet-layer { filter: var(--daymap-tone); }
 .daymap.map .leaflet-tile-pane { filter: var(--daymap-thicken); }
@@ -4622,9 +4634,12 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
   <!-- SVG filter used by the day-plan map: dilates the white street lines so
        they read bolder (referenced from styles.css as url(#daymap-dilate)) -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-    <!-- app version: bolder street grid -->
+    <!-- app version. 0.75 was cut against CARTO's hairline streets; Esri's come
+         in heavier already, and a phone rasterises the filter at its own pixel
+         ratio, so on a 3x screen that radius grew each line by ~1.5 CSS px a
+         side and the grid read as a bold white mesh. -->
     <filter id="daymap-dilate" color-interpolation-filters="sRGB">
-      <feMorphology operator="dilate" radius="0.75"/>
+      <feMorphology operator="dilate" radius="0.3"/>
     </filter>
     <!-- web version: lighter grid so it doesn't crowd the street labels.
          Halved from 0.3 for the Esri basemap, whose street lines already come
@@ -4637,7 +4652,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
          runs the streets are the DARK pixels. Growing them is erode (minimum),
          not dilate (maximum) — same 0.75 as the app's dilate. -->
     <filter id="daymap-erode" color-interpolation-filters="sRGB">
-      <feMorphology operator="erode" radius="0.75"/>
+      <feMorphology operator="erode" radius="0.3"/>
     </filter>
   </svg>
   <!-- shared-post extractor (RedNote / TikTok / Instagram → itinerary rows);

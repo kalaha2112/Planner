@@ -59,16 +59,19 @@
       try { localStorage.removeItem('europe-trip-skin-v1'); } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="styles.css?v=209">
+  <link rel="stylesheet" href="styles.css?v=210">
 </head>
 <body>
   <main id="app"></main>
   <!-- SVG filter used by the day-plan map: dilates the white street lines so
        they read bolder (referenced from styles.css as url(#daymap-dilate)) -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-    <!-- app version: bolder street grid -->
+    <!-- app version. 0.75 was cut against CARTO's hairline streets; Esri's come
+         in heavier already, and a phone rasterises the filter at its own pixel
+         ratio, so on a 3x screen that radius grew each line by ~1.5 CSS px a
+         side and the grid read as a bold white mesh. -->
     <filter id="daymap-dilate" color-interpolation-filters="sRGB">
-      <feMorphology operator="dilate" radius="0.75"/>
+      <feMorphology operator="dilate" radius="0.3"/>
     </filter>
     <!-- web version: lighter grid so it doesn't crowd the street labels.
          Halved from 0.3 for the Esri basemap, whose street lines already come
@@ -81,7 +84,7 @@
          runs the streets are the DARK pixels. Growing them is erode (minimum),
          not dilate (maximum) — same 0.75 as the app's dilate. -->
     <filter id="daymap-erode" color-interpolation-filters="sRGB">
-      <feMorphology operator="erode" radius="0.75"/>
+      <feMorphology operator="erode" radius="0.3"/>
     </filter>
   </svg>
   <!-- shared-post extractor (RedNote / TikTok / Instagram → itinerary rows);
