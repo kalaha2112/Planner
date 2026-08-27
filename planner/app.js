@@ -175,9 +175,6 @@
   const CLOUD_TABLE = 'shared_state';
   const SHARED_ID = 'kalaha-planner-shared';   // the single shared row every device syncs
 
-  // Startup page headline (editable in place; persisted in meta.introText and synced)
-  const DEFAULT_INTRO_TEXT = 'The best trips begin as a scribble on a map — a handful of cities, a stack of nights, and the quiet thrill of not quite knowing yet.';
-
   const _notFound = () => { const e = new Error('No data found for that code.'); e.code = 404; return e; };
   const _httpErr  = (name, status) => new Error('“' + name + '” error (HTTP ' + status + ').');
 
@@ -344,6 +341,14 @@
     meta: {
       travelers: 2, milesBalance: 150000, milesPerTicket: 25000,
       depart: '2026-09-14', returnDate: '2026-09-30', title: '',
+      // The startup headline, and the ONLY place that decides what a fresh
+      // copy of the file opens with — hand the html to someone and this is the
+      // headline they see until sync hands them ours. It used to be a constant
+      // the renderer fell back to, which meant an emptied headline could not
+      // ship: every fresh copy put the old sentence back. Empty is a designed
+      // state (.intro-empty centres the globe); write a sentence here if one
+      // should travel with the file.
+      introText: '',
       budget: { lodgingPerNight: 140, foodPerDayPP: 55, activitiesPerDayPP: 35, cityPassOverride: null, otherTotal: 0 },
       todos: [
         { text: 'Check passport valid 6+ months', done: false },
@@ -1392,10 +1397,10 @@
       document.documentElement.classList.add('intro-lock');
 
       const textEl = overlay.querySelector('.intro-text');
-      textEl.textContent = (this.data.meta.introText != null ? this.data.meta.introText : DEFAULT_INTRO_TEXT);
+      textEl.textContent = this._introTextShown = this.introText();
       this._syncIntroEmpty();
       textEl.addEventListener('input', () => {
-        this.data.meta.introText = textEl.innerText.replace(/\s+$/,'');
+        this.data.meta.introText = this._introTextShown = textEl.innerText.replace(/\s+$/,'');
         this._syncIntroEmpty();
         this.scheduleSave();
       });
@@ -1607,6 +1612,24 @@
        nothing written the globe takes the middle of the screen, and every line of
        headline pushes it down by half that line, the pair staying centred as one.
        CSS does the moving; this only says which of the two states we are in. */
+    introText() { const t = this.data.meta.introText; return t != null ? t : ''; }
+    /* The overlay is built ONCE, at startup, and its headline was written into
+       the DOM there and never looked at again — so anything that replaces
+       this.data afterwards left the headline behind. That is the whole bug
+       behind "I cleared it, they open it and the words are back": the copy
+       they open builds the overlay from its own state, THEN sync hands it ours,
+       and every other part of the page redrew except this one.
+       Cheap enough for render() because it compares against the string we last
+       wrote rather than reading back from the DOM, and it never touches the
+       node while the caret is in it. */
+    _syncIntroText() {
+      const el = this._introEl && this._introEl.querySelector('.intro-text');
+      if (!el) return;
+      const want = this.introText();
+      if (want === this._introTextShown || document.activeElement === el) return;
+      el.textContent = this._introTextShown = want;
+      this._syncIntroEmpty();
+    }
     _syncIntroEmpty() {
       const overlay = this._introEl;
       const textEl = overlay && overlay.querySelector('.intro-text');
@@ -3140,7 +3163,7 @@
         });
       });
       if (d.meta && d.meta.title == null) d.meta.title = '';
-      if (d.meta && d.meta.introText == null) d.meta.introText = DEFAULT_INTRO_TEXT;
+      if (d.meta && d.meta.introText == null) d.meta.introText = '';
       if (d.meta && !Array.isArray(d.meta.todos)) d.meta.todos = clone(DEFAULT_STATE.meta.todos);
       if (d.meta && !d.meta.budget) d.meta.budget = clone(DEFAULT_STATE.meta.budget);
       if (d.meta && d.meta.budget && d.meta.budget.cityPassOverride === 0) d.meta.budget.cityPassOverride = null;
@@ -5669,6 +5692,7 @@
       this.mountDayMap();
       this._watchPackSheet();     // (re)observe the packing sheet for its open animation
       this._watchLedgerSections();   // (re)observe the web scroll sections for active-tab / maps / entrance
+      this._syncIntroText();      // data may have been replaced under the intro overlay (sync, undo, other tab)
       this.paintSaved();
       this.updateTopActions();
       this._animateStats();     // count-up the summary figures when they change
