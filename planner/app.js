@@ -4286,7 +4286,17 @@
     }
     ensureDayMap(tries) {
       if (!this.dayMapEl.isConnected || !window.L) { if ((tries || 0) < 80) setTimeout(() => this.ensureDayMap((tries || 0) + 1), 100); return; }
+      // The two versions build DIFFERENT layer stacks (see below), and the map
+      // is only built once — so a window dragged across 700px kept whichever
+      // stack it started with while the CSS switched to the other version's
+      // filters. Rebuild when the threshold is actually crossed.
+      const mobile = this._mobileMap();
+      if (this.dayMap && mobile !== this._dayMapMobile) {
+        this.dayMap.remove();
+        this.dayMap = this.dayLines = this.dayMarkers = null;
+      }
       if (this.dayMap) { this.dayMap.invalidateSize(); this.renderDayMap(); return; }
+      this._dayMapMobile = mobile;
       const L = window.L;
       this.dayMap = L.map(this.dayMapEl, { scrollWheelZoom: false, zoomSnap: .25, zoomDelta: .5, wheelPxPerZoomLevel: 120, inertia: true, attributionControl: false });
       // Labels differ by version (see _mobileMap):
@@ -4297,7 +4307,7 @@
       //    shown — the street-label setting the web version has always had.
       // NOTE: do not get clever with tileSize 512 / zoomOffset -1 here — that
       // combination broke tile loading and the map went blank-black.
-      if (this._mobileMap()) {
+      if (mobile) {
         L.tileLayer(esriTiles('World_Dark_Gray_Base'), { maxZoom: 19, maxNativeZoom: ESRI_MAX_NATIVE, attribution: ESRI_ATTRIB }).addTo(this.dayMap);
         L.tileLayer(esriTiles('World_Dark_Gray_Reference'), { maxZoom: 15, maxNativeZoom: ESRI_MAX_NATIVE }).addTo(this.dayMap);
       } else {

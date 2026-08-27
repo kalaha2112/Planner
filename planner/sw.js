@@ -9,17 +9,23 @@
      no-cache metas: online you always run fresh code; offline
      the last-seen build boots from cache.
    - Google Fonts (css + woff2) ............... stale-while-revalidate.
-   - Map tiles (OSM / Carto) .................. cache-first, capped,
+   - Map tiles (OSM / Esri) ................... cache-first, capped,
      so previously seen map areas render offline.
    - Nominatim geocoding + sync backends ...... untouched (network
      only) — live APIs must never serve stale answers.
    ============================================================ */
 'use strict';
 
-const VERSION = 'v113';
+const VERSION = 'v114';
 const SHELL_CACHE = `planner-shell-${VERSION}`;
 const FONT_CACHE = 'planner-fonts';
-const TILE_CACHE = 'planner-tiles';
+/* Versioned, unlike the fonts: the day map moved off CARTO, and a keyless
+   CARTO request answers 200 with a grey "API key required" TILE — which the
+   cache-first rule below stored like any other tile and then served forever,
+   since nothing ever evicted this cache. Bump TILE_VERSION whenever the
+   basemap changes so those stale tiles actually go. */
+const TILE_VERSION = 'v2-esri';
+const TILE_CACHE = `planner-tiles-${TILE_VERSION}`;
 const TILE_CACHE_MAX = 400; // ~ a few city zoom levels; trimmed FIFO
 
 const SHELL_ASSETS = [
@@ -49,7 +55,10 @@ const SHELL_ASSETS = [
   './icons/apple-touch-icon.png',
 ];
 
-const TILE_HOSTS = ['tile.openstreetmap.org', 'basemaps.cartocdn.com'];
+// the route-modal map's OSM tiles + the day map's Esri Dark Gray Canvas.
+// cartocdn is gone: nothing requests it any more, and its cached tiles are
+// evicted by the TILE_VERSION bump above.
+const TILE_HOSTS = ['tile.openstreetmap.org', 'services.arcgisonline.com'];
 const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 
 self.addEventListener('install', (e) => {
@@ -65,7 +74,8 @@ self.addEventListener('activate', (e) => {
     caches.keys()
       .then((keys) => Promise.all(
         keys
-          .filter((k) => k.startsWith('planner-shell-') && k !== SHELL_CACHE)
+          .filter((k) => (k.startsWith('planner-shell-') && k !== SHELL_CACHE)
+                      || (k.startsWith('planner-tiles') && k !== TILE_CACHE))
           .map((k) => caches.delete(k))
       ))
       .then(() => self.clients.claim())
