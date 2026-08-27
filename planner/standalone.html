@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-27T16:16:40.925Z
+  Built: 2026-08-27T16:28:30.289Z
 -->
 
 <html lang="en">
@@ -1846,8 +1846,34 @@ a { color: inherit; }
    the light rule it sits BEFORE invert(1) for that reason — after the invert
    it would be dimming the white GROUND instead of the streets. */
 .daymap.map { --daymap-gain: 1.4; --daymap-street: .8; }
-.daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(var(--daymap-gain)) contrast(8) url(#daymap-dilate) brightness(var(--daymap-street)) invert(1); }
-[data-theme="dark"] .daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(var(--daymap-gain)) contrast(8) url(#daymap-dilate) brightness(var(--daymap-street)); }
+/* The chain runs in TWO stages on two elements, and the split is not cosmetic.
+   A CSS filter list is all-or-nothing: one function the browser will not honour
+   and the WHOLE declaration is dropped. url(#…) is the one function here that
+   some engines refuse inside a list, and when the single combined chain lost it
+   the map fell back to the raw grey basemap — reported from an Android browser
+   where the desktop rendered fine.
+
+   So the tone pass — the part that actually makes the map — uses nothing but
+   standard filter functions, and lives on each tile LAYER. The url() thickening
+   lives alone on the pane above it, reached through a custom property, so a
+   browser that cannot resolve it drops only that declaration: filter computes
+   to none there and the map is still black-and-white, just with unthickened
+   1px lines. Child filters render before the parent's, so layer-then-pane is
+   also the right ORDER: tone, then grow the lines it produced.
+
+   --daymap-thicken differs per theme because the light pass ends on invert(1):
+   the streets are the dark pixels by then, and growing dark is erode, not
+   dilate. */
+.daymap.map {
+  --daymap-tone: saturate(0) brightness(var(--daymap-gain)) contrast(8) brightness(var(--daymap-street)) invert(1);
+  --daymap-thicken: url(#daymap-erode);
+}
+[data-theme="dark"] .daymap.map {
+  --daymap-tone: saturate(0) brightness(var(--daymap-gain)) contrast(8) brightness(var(--daymap-street));
+  --daymap-thicken: url(#daymap-dilate);
+}
+.daymap.map .leaflet-tile-pane .leaflet-layer { filter: var(--daymap-tone); }
+.daymap.map .leaflet-tile-pane { filter: var(--daymap-thicken); }
 /* Web-only labels ride in their own pane (see ensureDayMap) so the street-line
    dilate above never touches the text. Gently whiten, then invert(1) in light
    theme so the names come out dark on the white ground; dark theme keeps the
@@ -1882,8 +1908,11 @@ a { color: inherit; }
 @media (min-width: 701px) {
   .daymap.map.leaflet-container,
   [data-theme="dark"] .daymap.map.leaflet-container { background: #0a0a0a; }
-  .daymap.map .leaflet-tile-pane,
-  [data-theme="dark"] .daymap.map .leaflet-tile-pane { filter: saturate(0) brightness(var(--daymap-gain)) contrast(8) url(#daymap-dilate-soft) brightness(var(--daymap-street)); }
+  .daymap.map,
+  [data-theme="dark"] .daymap.map {
+    --daymap-tone: saturate(0) brightness(var(--daymap-gain)) contrast(8) brightness(var(--daymap-street));
+    --daymap-thicken: url(#daymap-dilate-soft);
+  }
   .daymap.map .leaflet-daylabels-pane,
   [data-theme="dark"] .daymap.map .leaflet-daylabels-pane { filter: saturate(0) brightness(var(--daymap-label)) contrast(1.15); }
   .daymap.map::after,
@@ -4603,6 +4632,12 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
          rather than rescuing thin lines from the contrast step. -->
     <filter id="daymap-dilate-soft" color-interpolation-filters="sRGB">
       <feMorphology operator="dilate" radius="0.15"/>
+    </filter>
+    <!-- light theme: the tone pass ends with invert(1), so by the time this
+         runs the streets are the DARK pixels. Growing them is erode (minimum),
+         not dilate (maximum) — same 0.75 as the app's dilate. -->
+    <filter id="daymap-erode" color-interpolation-filters="sRGB">
+      <feMorphology operator="erode" radius="0.75"/>
     </filter>
   </svg>
   <!-- shared-post extractor (RedNote / TikTok / Instagram → itinerary rows);

@@ -59,7 +59,7 @@
       try { localStorage.removeItem('europe-trip-skin-v1'); } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="styles.css?v=208">
+  <link rel="stylesheet" href="styles.css?v=209">
 </head>
 <body>
   <main id="app"></main>
@@ -76,6 +76,12 @@
          rather than rescuing thin lines from the contrast step. -->
     <filter id="daymap-dilate-soft" color-interpolation-filters="sRGB">
       <feMorphology operator="dilate" radius="0.15"/>
+    </filter>
+    <!-- light theme: the tone pass ends with invert(1), so by the time this
+         runs the streets are the DARK pixels. Growing them is erode (minimum),
+         not dilate (maximum) — same 0.75 as the app's dilate. -->
+    <filter id="daymap-erode" color-interpolation-filters="sRGB">
+      <feMorphology operator="erode" radius="0.75"/>
     </filter>
   </svg>
   <!-- shared-post extractor (RedNote / TikTok / Instagram → itinerary rows);
