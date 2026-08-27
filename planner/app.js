@@ -118,7 +118,8 @@
   const CLOSET_SHUT_KEY = 'europe-trip-closet-shut-v1'; // is the outfit closet folded, per trip
   const READONLY_KEY = 'europe-trip-readonly-v1';       // view-only lock, per device
   const DAYFOLD_KEY = 'europe-trip-day-folded-v1';      // are the day's rows folded to their names, per device
-  const BOOKINGS_SHUT_KEY = 'europe-trip-bookings-shut-v1';   // is the app's Bookings list folded, per device
+  const BOOKINGS_SHUT_KEY = 'europe-trip-bookings-shut-v1';   // is the Bookings list folded, per device
+  const TODOS_SHUT_KEY = 'europe-trip-todos-shut-v1';         // is the To-do list folded, per device
 
   /* ---------- view-only lock ----------
      A planned trip gets read far more often than it gets edited — on a phone,
@@ -139,7 +140,7 @@
     'ledger-stop-plan', 'ledger-stop-days', 'stop-select', 'stop-iti', 'stop-accom',
     'stop-transport', 'cal-day', 'tab-select', 'trip-stack-toggle', 'open-web',
     // folding and opening — reading aids, they change no trip data
-    'accom-toggle', 'accom-toggle-all', 'accom-archive-toggle', 'closet-toggle', 'day-fold', 'bookings-toggle',
+    'accom-toggle', 'accom-toggle-all', 'accom-archive-toggle', 'closet-toggle', 'day-fold', 'bookings-toggle', 'todos-toggle',
     'item-note-open', 'note-pic-open', 'open-budget', 'pk-close', 'optimize-dismiss',
     'toggle-stickers', 'close-stickers',
     // closing whatever is open
@@ -5355,11 +5356,11 @@
       }
       return this._dayShut;
     }
-    /* The app stacks Bookings under the packing sheet and the pre-trip list, and
-       the list grows with the route — two lines a city, hotel names and all — so
-       a five-stop trip buries the bottom of the page. There it folds to its own
-       header, which still carries the count. The web page shows it beside the
-       suitcase with room to spare, so it stays open there. */
+    /* Both lists grow with the trip — Bookings runs two lines a city, hotel
+       names and all — so either can bury the bottom of a column. Each folds to
+       its own header, on both versions, and the header keeps its count so a
+       shut list still says how much is left. Folded state is per device, not
+       trip data: it rides in localStorage and is never synced. */
     bookingsShut() {
       if (this._bkShut == null) {
         try { this._bkShut = localStorage.getItem(BOOKINGS_SHUT_KEY) === '1'; } catch (e) { this._bkShut = false; }
@@ -5370,6 +5371,25 @@
       this._bkShut = !this.bookingsShut();
       try { localStorage.setItem(BOOKINGS_SHUT_KEY, this._bkShut ? '1' : '0'); } catch (e) {}
       this.render();
+    }
+    todosShut() {
+      if (this._todoShut == null) {
+        try { this._todoShut = localStorage.getItem(TODOS_SHUT_KEY) === '1'; } catch (e) { this._todoShut = false; }
+      }
+      return this._todoShut;
+    }
+    toggleTodos() {
+      this._todoShut = !this.todosShut();
+      try { localStorage.setItem(TODOS_SHUT_KEY, this._todoShut ? '1' : '0'); } catch (e) {}
+      this.render();
+    }
+    /* The whole header is the control, not just the caret — a comfortable tap
+       target on a phone. Shared so the two lists cannot drift apart. */
+    foldHead(o) {
+      const caret = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`;
+      const tip = o.shut ? o.show : o.fold;
+      return `<button class="hd" data-act="${o.act}" aria-expanded="${o.shut ? 'false' : 'true'}"
+            title="${escA(tip)}" aria-label="${escA(tip)}"><div class="t">${esc(o.title)}</div><div class="p">${esc(o.count)}</div><span class="bk-caret">${caret}</span></button>`;
     }
     toggleDayRows() {
       this._dayShut = !this.dayRowsShut();
@@ -6753,16 +6773,10 @@
             <span class="txt${r.booked ? ' done' : ''}">${esc(r.label)}</span>
           </div>`; }).join('')}
         </div>`).join('');
-      const foldable = !this._webMag();
-      const shut = foldable && this.bookingsShut();
-      const caret = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`;
-      const head = foldable
-        ? `<button class="hd" data-act="bookings-toggle" aria-expanded="${shut ? 'false' : 'true'}"
-            title="${shut ? 'Show what is left to book' : 'Fold the bookings away'}"
-            aria-label="${shut ? 'Show the bookings' : 'Fold the bookings'}"><div class="t">Bookings</div><div class="p">${done} / ${all}</div><span class="bk-caret">${caret}</span></button>`
-        : `<div class="hd"><div class="t">Bookings</div><div class="p">${done} / ${all}</div></div>`;
+      const shut = this.bookingsShut();
       return `<div class="todos bookings pack-block${shut ? ' shut' : ''}">
-        ${head}
+        ${this.foldHead({ act: 'bookings-toggle', shut, title: 'Bookings', count: `${done} / ${all}`,
+                          show: 'Show what is left to book', fold: 'Fold the bookings away' })}
         <div class="bk-body">${body}</div>
       </div>`;
     }
@@ -6785,10 +6799,14 @@
         <input class="txt${t.done ? ' done' : ''}" value="${escA(t.text)}" data-ch="todo-text" data-i="${i}" placeholder="New task…">
         <button class="x" data-act="todo-remove" data-i="${i}" aria-label="Remove task">✕</button>
       </div>`).join('');
-      return `<div class="todos">
-        <div class="hd"><div class="t">Pre-trip to-do</div><div class="p">${done} / ${todos.length}</div></div>
-        <div>${rows}</div>
-        <button class="add-todo" data-act="add-todo" title="Add task" aria-label="Add task">+</button>
+      const shut = this.todosShut();
+      return `<div class="todos${shut ? ' shut' : ''}">
+        ${this.foldHead({ act: 'todos-toggle', shut, title: 'To-do', count: `${done} / ${todos.length}`,
+                          show: 'Show the to-do list', fold: 'Fold the to-do list away' })}
+        <div class="bk-body">
+          <div>${rows}</div>
+          <button class="add-todo" data-act="add-todo" title="Add task" aria-label="Add task">+</button>
+        </div>
       </div>${this.renderBookings(this.currentTrip())}`;
     }
 
@@ -8017,6 +8035,7 @@
         case 'closet-toggle': this.toggleCloset(); break;
         case 'day-fold': this.toggleDayRows(); break;
         case 'bookings-toggle': this.toggleBookings(); break;
+        case 'todos-toggle': this.toggleTodos(); break;
         case 'closet-add': this.modalEl.querySelector('.closet-file').click(); break;
         case 'closet-paste': this.pasteImageFromClipboard('closet'); break;
         case 'outfit-delete': this.removeOutfitFromCloset(id); break;

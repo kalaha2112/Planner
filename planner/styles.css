@@ -573,11 +573,12 @@ a { color: inherit; }
 .todos .hd { display: flex; align-items: baseline; gap: 8px; margin-bottom: 13px; }
 .todos .hd .t { font-family: var(--sans); font-size: 14px; font-weight: 700; color: var(--ink); }
 .todos .hd .p { font-family: var(--sans); font-size: 10px; color: var(--ink-mute); margin-left: auto; font-variant-numeric: tabular-nums; }
-/* Bookings folds on the app, where it sits at the bottom of a scrolling column
-   and grows with the route. The whole header is the control — a comfortable tap
-   target on a phone, not just the caret — and the count stays on it while shut,
-   so a folded list still says how much is left to book. */
-.todos.bookings button.hd {
+/* Both lists fold — To-do and Bookings, on both versions. The whole header is
+   the control, a comfortable tap target on a phone rather than just the caret,
+   and the count stays on it while shut so a folded list still says how much is
+   left. Keyed on button.hd rather than on either list's own class, so a header
+   that is not a control (Packing) is untouched. */
+.todos button.hd {
   width: 100%; padding: 2px 0; border: none; background: none;
   align-items: center; text-align: left; color: inherit; cursor: crosshair;
 }
@@ -585,10 +586,10 @@ a { color: inherit; }
   flex-shrink: 0; display: flex; align-items: center; margin-left: 9px;
   color: var(--ink-mute); transition: transform .2s ease, color .15s ease;
 }
-.todos.bookings button.hd:hover .bk-caret { color: var(--ink); }
-.todos.bookings.shut .bk-caret { transform: rotate(-90deg); }
-.todos.bookings.shut .hd { margin-bottom: 0; }
-.todos.bookings.shut .bk-body { display: none; }
+.todos button.hd:hover .bk-caret { color: var(--ink); }
+.todos.shut .bk-caret { transform: rotate(-90deg); }
+.todos.shut .hd { margin-bottom: 0; }
+.todos.shut .bk-body { display: none; }
 .todo { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
 .todo .box {
   flex-shrink: 0; width: 19px; height: 19px; border-radius: var(--r-check);

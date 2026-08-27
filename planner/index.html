@@ -59,7 +59,7 @@
       try { localStorage.removeItem('europe-trip-skin-v1'); } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="styles.css?v=212">
+  <link rel="stylesheet" href="styles.css?v=213">
 </head>
 <body>
   <main id="app"></main>
@@ -90,7 +90,7 @@
   <!-- shared-post extractor (RedNote / TikTok / Instagram → itinerary rows);
        loads before app.js, which calls window.SocialImport -->
   <script src="social-import.js?v=1"></script>
-  <script src="app.js?v=202"></script>
+  <script src="app.js?v=203"></script>
   <!-- PWA: offline cache + install support (no-op on file:// and non-secure origins) -->
   <script>
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
