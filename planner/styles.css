@@ -3122,7 +3122,16 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .map-home   { bottom: 8px; right: 8px; }
 .map-ep input {
   font-family: var(--sans); font-size: 11px; font-weight: 700; color: var(--ink);
-  border: none; background: transparent; padding: 0; min-width: 88px; outline-offset: 2px;
+  border: none; background: transparent; padding: 0; outline-offset: 2px;
+  /* An explicit width, because min-width was never what sized this. An input
+     with no width takes its INTRINSIC size from the size attribute (20 chars by
+     default), which came out at 153px and set the card to 171px — the floor
+     never bound. 70px halves the card to ~88px; a long endpoint scrolls inside
+     the field rather than widening it. */
+  width: 70px;
+  /* a name too long for 70px now trails off instead of being sliced mid-word
+     ("New York…" rather than "New York (J") — inputs honour this while unfocused */
+  text-overflow: ellipsis;
 }
 .map-ep-date {
   font-family: var(--script); font-style: italic; font-size: 11px; color: var(--ink-soft);
@@ -3388,7 +3397,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    ============================================================ */
 .trip-stack {
   --card-w: 138px;
-  --card-h: 62px;
+  --card-h: 31px;
   --dx: 86px;           /* step right, per card back — wide enough to read each name */
   --rot: -7deg;         /* the lean the whole deck holds while fanned */
   position: relative; flex: none;
@@ -3404,7 +3413,11 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   position: absolute; left: 0; bottom: 0;
   width: var(--card-w); height: var(--card-h);
   display: flex; align-items: center; justify-content: center;
-  padding: 10px 14px; text-align: center;
+  /* 5px, not 10: at --card-h 31px a 10px pad left an 11px content box and the
+     15px/1.15 name (17.3px) was clipped by the overflow:hidden above. The app
+     overrides this whole shorthand in its own block, where the taller card
+     still has the room. */
+  padding: 5px 14px; text-align: center;
   border: none; border-radius: var(--r-card);
   /* frosted rather than a flat white fill; --card-glass / --card-blur are the
      same tokens the stop cards and map chips already use */
@@ -3520,7 +3533,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 @media (max-width: 700px) {
   .trip-stack {
     --card-w: 108px;
-    --card-h: 48px;
+    --card-h: 47px;
     --dx: 67px;
   }
   .trip-card { padding: 8px 11px; }
