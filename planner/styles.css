@@ -2598,7 +2598,12 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .ledger-book[data-page="3"] .ledger-edge.next { visibility: hidden; }
 
   /* ---- page 4 · packing blueprint + to-dos ---- */
-  .leaf-pack .leaf-inner { display: flex; flex-direction: column; }
+  /* An exact height, not just a min-height: the columns inside are measured
+     against it and scaled to fit (see .pack-fit), so the leaf has to be the
+     screen rather than whatever the content adds up to. With the fit doing the
+     work nothing overflows here, and the leaf stops being a scroller. */
+  .leaf-group .ledger-leaf.leaf-pack { overflow: hidden; }
+  .leaf-pack .leaf-inner { display: flex; flex-direction: column; height: 100%; min-height: 0; }
   /* The page carries no header, so the columns are the whole leaf: equal top and
      bottom padding puts their shared centre line on the centre of the page.
      54px on the right clears the page tabs; the 22px flex gap holds the to-do
@@ -2619,15 +2624,52 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
      typical line and a ceiling that stops it eating the sheet on a wide screen,
      and the margin that holds it off the right edge shrinks with it rather than
      staying at 76px while the column starves. */
+  /* Both side columns stretch to the full height of the row and hold their
+     content in a .pack-fit box that _fitPackColumns scales down until it clears
+     that height — the page fits the trip instead of the trip scrolling inside
+     the page. align-self:center is gone with it: the centring now happens on
+     .pack-fit's auto margins, which is the one form of centring that survives
+     inside a scroll container (justify-content:center clips the top). */
   .pack-side {
     flex: 0 1 clamp(240px, 27vw, 440px); min-width: 232px;
-    align-self: center; overflow-y: auto;
+    align-self: stretch; display: flex; flex-direction: column;
+    overflow-y: auto; overflow-x: hidden;
     padding: 4px 4px 10px 0; margin-right: clamp(14px, 4vw, 76px);
   }
   .pack-side .todos { background: none; border: none; border-radius: 0; padding: 0; }
   /* mirror the pre-trip to-do: a 76px left margin pulls the category checklist
      off the left edge; the 22px flex gap after it keeps it clear of the suitcase */
-  .pk-panel { order: -1; flex: 0 1 230px; min-width: 160px; align-self: center; overflow-y: auto; padding: 4px 0 10px; margin-left: 76px; display: flex; flex-direction: column; justify-content: center; }
+  .pk-panel { order: -1; flex: 0 1 230px; min-width: 160px; align-self: stretch; overflow-y: auto; overflow-x: hidden; padding: 4px 0 10px; margin-left: 76px; display: flex; flex-direction: column; }
+
+  /* ---- auto-fit: the packing page sizes itself to the screen ----
+     .pack-fit is the box the column reserves; .pack-fit-in is the content,
+     scaled by _fitPackColumns from its natural height down to whatever fits.
+     transform-origin is `top center` so the shrunken column stays centred in
+     its track, and the box's height is set to the SCALED height so the column
+     never keeps a scroll range it no longer needs.
+     No scrollbar on any of it. A long list still scrolls past the scale floor,
+     but the bar itself is gone on every engine: it was appearing and vanishing
+     on every re-render — adding a task rebuilds the tree and restoring the
+     column's scroll position woke the overlay bar for a moment — which read as
+     a flicker rather than an affordance. */
+  .pack-fit { margin: auto 0; width: 100%; flex: none; }
+  .pack-fit-in { transform-origin: top center; }
+  /* Step one of the fit is density, not scale: a long trip buys its extra
+     lines out of whitespace before any type is made smaller. Only then does
+     _fitPackColumns start scaling, and only down to PACK_FIT_MIN. */
+  .pack-fit-in.dense .todos .hd { margin-bottom: 7px; }
+  .pack-fit-in.dense .todo { padding: 2px 0; }
+  .pack-fit-in.dense .bookings { margin-top: 8px; }
+  .pack-fit-in.dense .bk-group + .bk-group { margin-top: 6px; }
+  .pack-fit-in.dense .bk-city { padding: 1px 0 0; }
+  .pack-fit-in.dense .bk-row { padding: 1px 0; }
+  .pack-fit-in.dense .add-todo { margin-top: 6px; padding: 4px 14px; }
+  .pack-fit-in.dense .pk-card .todo { padding: 1px 0; }
+  .pack-side, .pk-panel,
+  .leaf-group .ledger-leaf.leaf-pack { scrollbar-width: none; -ms-overflow-style: none; }
+  .pack-side::-webkit-scrollbar,
+  .pk-panel::-webkit-scrollbar,
+  .leaf-group .ledger-leaf.leaf-pack::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
 }
 
@@ -2642,7 +2684,10 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .pk-main { flex-direction: column; gap: 14px; justify-content: center; }
   .pk-wrap { flex: 0 1 auto; }
   .pk-panel { order: 0; flex: 0 1 auto; width: 100%; max-width: 460px; min-width: 0;
-              max-height: 42%; align-self: center; justify-content: flex-start; }
+              max-height: 42%; align-self: center; }
+  /* top of its band, not the middle of it — the same reading order the
+     stacked layout has everywhere else */
+  .pk-panel > .pack-fit { margin-top: 0; }
   /* the case has dropped to its own row here, so the column can take a bigger
      share of the width than it could beside it */
   .pack-side { flex: 0 1 clamp(220px, 34vw, 360px); min-width: 208px; margin-right: clamp(10px, 2.5vw, 40px); }
@@ -3171,12 +3216,25 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
      city title / date range / hotel name with it) reduced to ~2/3 so the card
      covers less of the small interactive map */
   .main-cards-overlay .map-stop { width: 123px; animation: mcPopIn .18s ease-out; }
+  /* No outline on the app's stop card. At 123px the 1px rule was a hard edge
+     drawn around type that is already sitting on a translucent panel with its
+     own shadow — the shadow is what separates the card from the map, and the
+     line only made the popup read as a box pasted over the drawing. With it
+     gone the card needs breathing room instead: the info steps further in from
+     the left and right edges on both faces (and the mode pip and the pinned
+     foot step in with it, so the inset is one margin all the way round). */
+  .main-cards-overlay .map-stop .mc-front,
+  .main-cards-overlay .map-stop .mc-back { border: none; }
+  .main-cards-overlay .map-stop .mc-front { padding: 4.3cqw 9cqw; }
+  .main-cards-overlay .map-stop .mc-back { padding: 4.3cqw 9cqw calc(3.35cqw + 22px); }
+  .main-cards-overlay .map-stop .mc-mode-pip { right: 9cqw; }
+  .main-cards-overlay .map-stop .mc-back .foot { left: 9cqw; right: 9cqw; }
   /* flipped to the edit face → keep the front's compact WIDTH (123px); don't
      shrink the controls, just tighten padding/gaps and let the box grow a touch
      taller to fit them (buttons, nights, trash, title all keep their size).
      Fixed px because at 123px the card's own cqw units would shrink them. */
   .map-stop.mc-editing .mc-flip { aspect-ratio: auto; height: 67px; }
-  .map-stop.mc-editing .mc-back { padding: 4px 6px 19px; }
+  .map-stop.mc-editing .mc-back { padding: 4px 11px 19px; }
   .map-stop.mc-editing .mc-back .head { gap: 3px; }
   .map-stop.mc-editing .mc-top-row { gap: 5px; }
   .map-stop.mc-editing .mc-btn-row { gap: 5px; }
@@ -3184,11 +3242,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .map-stop.mc-editing .mc-back .nights input { font-size: 10.5px; width: 20px; }
   .map-stop.mc-editing .mc-back .nights span { font-size: 8px; }
   .map-stop.mc-editing .mc-back .city { font-size: 7.8px; }   /* keep the current compact title size */
-  .map-stop.mc-editing .mc-back .foot { bottom: 2px; left: 6px; right: 6px; }
-  .main-cards-overlay .map-stop .mc-front,
-  .main-cards-overlay .map-stop .mc-back {
-    border-color: var(--line-3);
-  }
+  .map-stop.mc-editing .mc-back .foot { bottom: 2px; left: 11px; right: 11px; }
   /* no hover-flip on touch (iOS tap-hover is unreliable) — flip only via
      .mc-editing, toggled by tapping the open card. Selectors mirror the
      base hover rules' specificity so source order decides. */

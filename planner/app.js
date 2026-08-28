@@ -157,6 +157,7 @@
   const SYNC_POLL_MS  = 20000;                        // how often to pull while the tab is visible
   const CLOUD_PUSH_DEBOUNCE_MS = 900;                 // coalesce rapid edits into one upload
   const PACK_SNAP_MS = 700;                           // slow glide onto Packing, so the suitcase is seen opening
+  const PACK_FIT_MIN = 0.55;                          // how far the packing columns may shrink before the type stops reading
 
   // Public web build — the installable PWA served by GitHub Pages from the
   // planner/ folder on the main branch (redeployed on every merge). The Sync
@@ -5729,6 +5730,7 @@
       // re-attach the per-day itinerary map (it lives inside the modal root)
       this.mountDayMap();
       this._watchPackSheet();     // (re)observe the packing sheet for its open animation
+      this._watchPackFit();       // (re)observe the packing columns so they keep fitting the leaf
       this._watchLedgerSections();   // (re)observe the web scroll sections for active-tab / maps / entrance
       this._syncIntroText();      // data may have been replaced under the intro overlay (sync, undo, other tab)
       this.paintSaved();
@@ -5760,6 +5762,8 @@
       // are re-attached and the observers re-armed
       this.applyLock();          // fields go inert before anything can be typed into them
       this._restoreScrolls(scrollMem);
+      // last of all, with the tree final: size the packing columns to the leaf
+      this._fitPackColumns();
     }
 
     /* ============================================================
@@ -6106,9 +6110,9 @@
           <div class="pack-cols">
             <div class="pk-main">
               <div class="pk-wrap">${this.renderPackBody(trip)}</div>
-              <aside class="pk-panel">${this.renderPackPanel(trip)}</aside>
+              <aside class="pk-panel"><div class="pack-fit"><div class="pack-fit-in">${this.renderPackPanel(trip)}</div></div></aside>
             </div>
-            <aside class="pack-side">${this.renderTodos(meta)}</aside>
+            <aside class="pack-side"><div class="pack-fit"><div class="pack-fit-in">${this.renderTodos(meta)}</div></div></aside>
           </div>
         </div>
       </section>`;
@@ -6456,6 +6460,15 @@
         // horizontal slide in between is left alone. Skipped while our own snap runs.
         if (!this._snapAnimating) { clearTimeout(this._snapT); this._snapT = setTimeout(() => this._snapVertical(), 120); }
       }, { passive: true });
+      // The packing columns are sized against the leaf, so every resize re-fits
+      // them. The ResizeObserver in _watchPackFit catches most of this already;
+      // this covers the browsers without one, and the late webfont swap that
+      // changes the natural height of every row at once.
+      window.addEventListener('resize', () => {
+        clearTimeout(this._packFitT);
+        this._packFitT = setTimeout(() => this._fitPackColumns(), 120);
+      }, { passive: true });
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => this._fitPackColumns());
       // a real wheel/touch during our snap animation cancels it, so a snap never
       // fights the user (the failure mode of every previous scroll-assist here)
       const cancelSnap = () => { if (this._snapAnimating) this._snapAbort = true; };
@@ -6950,6 +6963,73 @@
       this._pkIO.disconnect();
       this.root.querySelectorAll('.pk-bp').forEach(el => this._pkIO.observe(el));
     }
+
+    /* ---------- packing page auto-fit ----------------------------------
+       The Packing leaf is exactly one screen tall, and the two side columns
+       carry whatever the trip happens to hold: a pre-trip to-do list that
+       grows every time you add a task, a Bookings checklist that grows with
+       the route (a five-city trip is ~10 lines under three city headings),
+       and a category checklist that swaps a one-line hint for a dozen rows
+       the moment you hover an object on the sheet. Any of those can outrun
+       the page.
+
+       Rather than hand the overflow to a scrollbar, each column is measured
+       at its natural size and scaled to whatever is left of the leaf. That
+       is what the eye wants here anyway — the page is a spread, and a spread
+       that reflows to fit reads better than one you scrub through — and it
+       is also what finally settles the bar that used to blink in and out of
+       the to-do column: with nothing overflowing there is nothing to scroll.
+
+       PACK_FIT_MIN is the floor. Below it the 13px rows stop being readable,
+       so anything past it keeps scrolling — silently, since the bar is hidden
+       in CSS on all three engines.
+       ---------- */
+    _fitPackColumns() {
+      if (!this._webMag()) return;
+      const cols = this.root.querySelectorAll('.pack-side, .pk-panel');
+      cols.forEach(col => {
+        const box = col.querySelector('.pack-fit');
+        const inner = box && box.querySelector('.pack-fit-in');
+        if (!inner) return;
+        // measure at natural size — transform does not affect layout metrics,
+        // but the box's pinned height and the dense rhythm do, so all three
+        // come off first
+        inner.classList.remove('dense');
+        inner.style.transform = '';
+        box.style.height = '';
+        const cs = getComputedStyle(col);
+        const avail = col.clientHeight - parseFloat(cs.paddingTop || 0) - parseFloat(cs.paddingBottom || 0);
+        let natural = inner.getBoundingClientRect().height;
+        if (!(avail > 0) || !(natural > 0)) return;
+        // tighten the rhythm before touching the type — whitespace is the
+        // cheaper thing to spend
+        if (natural > avail) {
+          inner.classList.add('dense');
+          natural = inner.getBoundingClientRect().height;
+        }
+        const scale = Math.max(PACK_FIT_MIN, Math.min(1, avail / natural));
+        if (scale > 0.995) return;                      // it already fits — leave it alone
+        inner.style.transform = 'scale(' + scale.toFixed(4) + ')';
+        box.style.height = (natural * scale) + 'px';
+      });
+    }
+    /* Re-fit whenever a column's own content changes size without a re-render:
+       typing into a task until it wraps, a fold animating open, a webfont
+       landing late. Scaling writes only a transform (no layout size) and a
+       height on the OUTER box, so this cannot feed itself. */
+    _watchPackFit() {
+      if (!('ResizeObserver' in window)) return;
+      if (!this._packFitRO) {
+        this._packFitRO = new ResizeObserver(() => {
+          if (this._packFitRaf) return;
+          this._packFitRaf = requestAnimationFrame(() => { this._packFitRaf = null; this._fitPackColumns(); });
+        });
+      }
+      this._packFitRO.disconnect();
+      if (!this._webMag()) return;                    // the phone twin has no fitted columns
+      this.root.querySelectorAll('.pack-side, .pk-panel, .pack-fit-in')
+        .forEach(el => this._packFitRO.observe(el));
+    }
     // the checklist panel docked in the empty space LEFT of the sheet (web
     // layout only), so it never covers the drawing. Hovering an object fills
     // it (and it stays); Escape, ✕ or a click elsewhere clears it back to the
@@ -6988,9 +7068,13 @@
     _paintPackPanel() {
       const panel = this.root.querySelector('.pk-panel');
       if (!panel) return;
-      panel.innerHTML = this.renderPackPanel(this.currentTrip());
+      // on the web ledger the panel wraps its content in the auto-fit box; on
+      // the phone it is the content's own element
+      const host = panel.querySelector('.pack-fit-in') || panel;
+      host.innerHTML = this.renderPackPanel(this.currentTrip());
       this.root.querySelectorAll('.pk-slot').forEach(el =>
         el.classList.toggle('open', el.dataset.slot === this.packOpen));
+      this._fitPackColumns();   // a category checklist is taller than the hint it replaced
     }
 
     renderStickerPanel() {
