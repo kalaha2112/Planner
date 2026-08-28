@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-28T15:39:56.101Z
+  Built: 2026-08-28T15:42:17.977Z
 -->
 
 <html lang="en">
@@ -3190,6 +3190,13 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .meta-range .saved { display: none; }
   .ledger-col .summary,
   .ledger-col .todos { flex-shrink: 0; }
+  /* Light mode paints --shell and --surface the same white and --shadow-card is
+     none, so the stats block was a white card on a white page with nothing at
+     all to separate the two — a run of figures floating in the column rather
+     than a panel. A translucent wash of ink gives it a body that reads at a
+     glance while the page still shows through it. Dark mode already has two
+     different blacks for page and card, so it keeps --surface. */
+  html:not([data-theme="dark"]) .ledger-col .summary { background: rgba(24, 22, 14, .04); }
   /* the split stat was sized for the app's 290px aside — trim its air here */
   .ledger-col .stat-split .stat-half:first-child { padding-right: 34px; }
 
