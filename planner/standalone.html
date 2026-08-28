@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-28T15:13:34.441Z
+  Built: 2026-08-28T15:24:43.808Z
 -->
 
 <html lang="en">
@@ -2415,15 +2415,37 @@ a { color: inherit; }
      page whose whole language is type on white, and the icon above the label
      said the same thing twice. What is left is the word, set large enough to
      be the tap target on its own. */
-  .app-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 18px 4px 20px; }
+  .app-cards {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 18px 4px 20px;
+    /* the two edges of the emboss: a hairline of light along the top of each
+       letter and a soft shadow beneath it, so the word stands off the page */
+    --btn-hi: rgba(255, 255, 255, .92);
+    --btn-lo: rgba(24, 22, 14, .24);
+  }
+  [data-theme="dark"] .app-cards { --btn-hi: rgba(255, 255, 255, .10); --btn-lo: rgba(0, 0, 0, .60); }
   .app-card {
     display: flex; align-items: center; justify-content: center;
-    padding: 12px 4px; border: none; border-radius: var(--r-card);
+    padding: 14px 4px; border: none; border-radius: var(--r-card);
     background: none; color: var(--ink);
-    font-family: var(--sans); font-size: 17px; font-weight: 600; letter-spacing: -.01em;
-    cursor: crosshair; transition: transform .1s ease, color .15s ease;
+    /* scales with the screen so "Transport" still fits a 320px phone at the
+       small end and reads properly on a big one */
+    font-family: var(--sans); font-size: clamp(17px, 5.4vw, 22px);
+    font-weight: 600; letter-spacing: -.01em;
+    text-shadow: 0 1px 0 var(--btn-hi), 0 2px 3px var(--btn-lo);
+    cursor: crosshair;
+    transition: transform .11s cubic-bezier(.2,.7,.3,1), text-shadow .11s ease, color .15s ease;
   }
-  .app-card:active { transform: scale(.97); color: var(--red); }
+  /* pressed: the word travels the height of its own shadow and the shadow
+     collapses under it, so the press is the lift going away rather than a
+     colour change standing in for one */
+  .app-card:active {
+    transform: translateY(2px) scale(.985);
+    text-shadow: 0 1px 0 var(--btn-hi);
+    color: var(--red);
+  }
+  /* The press itself stays under reduced motion — it is the answer to a tap,
+     not decoration — but it lands instantly instead of easing into place. */
+  @media (prefers-reduced-motion: reduce) { .app-card { transition: none; } }
 
   /* the tab bar: pinned to the top, only present once a sub-page is open. The
      right padding clears the fixed action cluster (undo/memories/theme). */
@@ -4254,6 +4276,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   --deck-sheen: linear-gradient(157deg, rgba(255, 255, 255, .55), rgba(255, 255, 255, 0) 58%);
   --card-w: 138px;
   --card-h: 38px;
+  --tc-padx: 14px;      /* the card's own side padding — the rules below derive from it */
   --dx: 86px;           /* step right, per card back — wide enough to read each name */
   --rot: -7deg;         /* the lean the whole deck holds while fanned */
   position: relative; flex: none;
@@ -4285,7 +4308,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
      box than the 15px/1.15 name needs (17.3px), which overflow:hidden above
      would clip. The type is NOT what shrank — only the box around it. The app
      overrides this whole shorthand in its own block. */
-  padding: 5px 14px; text-align: center;
+  padding: 5px var(--tc-padx); text-align: center;
   border: none; border-radius: var(--r-card);
   /* frosted rather than a flat white fill; --card-glass / --card-blur are the
      same tokens the stop cards and map chips already use */
@@ -4326,7 +4349,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    centres each name inside the strip that actually shows, rather than under
    the card in front of it. The front card is never covered. */
 .trip-card:not(.is-front) {
-  padding-left: calc(var(--card-w) - var(--dx) + 14px);
+  padding-left: calc(var(--card-w) - var(--dx) + var(--tc-padx));
 }
 
 /* the TRIP cover card sits over the deck until it is opened */
@@ -4411,6 +4434,22 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .trip-stack.is-muted:not(.is-fanned):hover .is-front .tc-x { opacity: 0; }
 }
 
+/* Full name on hover. A card is 138px and a fanned one shows only its right
+   --dx strip, so "Central Europe 2026" and "Central Europe 2027" both arrive as
+   "Central Eur…" — the deck stops telling one trip from another exactly when
+   you are trying to pick between them. Hovering already pulls a card clear of
+   the deck (lifted, straightened, z-index above everything), so there it takes
+   the width its name needs and drops the padding that was centring that name in
+   the covered strip. Pointer-only, like every other hover rule here; the title
+   attribute carries the full name on touch and to a screen reader. */
+@media (hover: hover) {
+  .trip-stack .trip-card:hover {
+    width: max-content; min-width: var(--card-w); max-width: 280px;
+    padding-left: var(--tc-padx); padding-right: var(--tc-padx);
+  }
+  .trip-stack .trip-card:hover .tc-name { overflow: visible; text-overflow: clip; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .trip-card, .trip-stack-cover { transition: none; }
 }
@@ -4426,11 +4465,11 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     --card-h: 40px;
     --dx: 67px;
   }
-  .trip-card { padding: 8px 11px; }
+  .trip-stack { --tc-padx: 11px; }
+  .trip-card { padding: 8px var(--tc-padx); }
   .tc-name { font-size: 12px; }
   .tc-x { font-size: 13px; top: 4px; right: 6px; }
   .trip-stack-cover { font-size: 20px; letter-spacing: .09em; }
-  .trip-card:not(.is-front) { padding-left: calc(var(--card-w) - var(--dx) + 11px); }
 }
 
 @media (max-width: 700px) {
@@ -11217,6 +11256,10 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
         if (cards.length) {
           g.from(cards, {
             opacity: 0, y: 24, scale: .95, duration: .5, ease: 'back.out(1.5)', stagger: .08,
+            // hand the transform back to CSS once the entrance has landed: the
+            // inline one GSAP leaves behind outranks any stylesheet rule, and it
+            // was swallowing the button's pressed state whole
+            clearProps: 'transform',
             immediateRender: false, scrollTrigger: reveal('.app-cards', 'top 92%')
           });
         }
@@ -11915,15 +11958,21 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       const cards = ordered.map((key, i) => {
         const lbl = (this.data.trips[key] || {}).label || '';
         const common = `draggable="true" data-drag="trip" data-drop="trip" data-key="${escA(key)}" style="--i:${i}"`;
+        // the name leads the tooltip: a card clips it, and on touch there is no
+        // hover to widen the card, so this is where the full name is readable
+        // name on its own line above the action, so a name that itself contains
+        // a dash does not run into the hint
+        const tip = (what) => escA(lbl ? lbl + '\n' + what[0].toUpperCase() + what.slice(1)
+                                       : what[0].toUpperCase() + what.slice(1));
         if (key === this.data.active) {
           // the front card carries the rename field, so it is a div (an input
           // cannot live inside a button) — same as the old .tab-active pill
-          return `<div class="trip-card is-front" ${common} title="Drag to reorder">
+          return `<div class="trip-card is-front" ${common} title="${tip('drag to reorder')}">
             <input class="tc-name" value="${escA(lbl)}" data-ch="tab-rename" data-key="${escA(key)}" aria-label="Trip name">
             ${keys.length > 1 ? `<button class="tc-x" data-act="tab-remove" data-key="${escA(key)}" title="Remove this trip" aria-label="Remove trip">−</button>` : ''}
           </div>`;
         }
-        return `<button class="trip-card" ${common} data-act="tab-select" title="Open this trip">
+        return `<button class="trip-card" ${common} data-act="tab-select" title="${tip('open this trip')}">
           <span class="tc-name">${esc(lbl)}</span>
         </button>`;
       }).join('');
