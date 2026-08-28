@@ -1655,9 +1655,13 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
        letter and a soft shadow beneath it, so the word stands off the page */
     --btn-hi: rgba(255, 255, 255, .92);
     --btn-lo: rgba(24, 22, 14, .24);
-    /* a step off black: the words are a way in, not the headline — the date
-       range above them is, and it should stay the darkest thing here */
+    /* Off black, but only part of the way: the words are a way in rather than
+       the headline — the date range above them is, and it should stay the
+       darkest thing here — while still reading as the controls they are. Half
+       a palette step, so the plain token below is the fallback for anything
+       without color-mix. */
     --btn-ink: var(--ink-soft);
+    --btn-ink: color-mix(in srgb, var(--ink-soft) 70%, var(--ink));
   }
   [data-theme="dark"] .app-cards {
     --btn-hi: rgba(255, 255, 255, .10); --btn-lo: rgba(0, 0, 0, .60);
@@ -1667,8 +1671,8 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
     display: flex; align-items: center; justify-content: center;
     padding: 14px 4px; border: none; border-radius: var(--r-card);
     background: none; color: var(--btn-ink);
-    /* two under the date range, so the pair reads as headline then entry */
-    font-family: var(--sans); font-size: calc(var(--app-date-size) - 2px);
+    /* one under the date range, so the pair reads as headline then entry */
+    font-family: var(--sans); font-size: calc(var(--app-date-size) - 1px);
     font-weight: 600; letter-spacing: -.01em;
     text-shadow: 0 1px 0 var(--btn-hi), 0 2px 3px var(--btn-lo);
     cursor: crosshair;
@@ -3011,6 +3015,14 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 /* phone app: the sheet lives in a .todos-style card — everything scales down,
    and the checklist opens inline UNDER the sheet instead of docked beside it */
 .pack-block { border: none; background: none; padding: 17px 0 13px; }
+/* The app's aside stacks Packing, To-do and Bookings. Two of the three are
+   .pack-block, which drops the side padding so their headlines and rows sit on
+   the page's own margin — the To-do list was the odd one out, indenting itself
+   and everything under it 18px against its neighbours. The web ledger already
+   zeroes all three (.pack-side .todos), so nothing moves there. */
+@media (max-width: 700px) {
+  .app-ov .todos { padding: 17px 0 13px; }
+}
 .pack-block .pk-bp { max-width: 100%; margin-top: 38px; }   /* headroom for icons rising above the topmost chips */
 .pack-block .pk-slot { width: 92px; height: 38px; }
 /* icon size comes from the base cqw rule (scales with .pk-bp's own width,
