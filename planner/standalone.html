@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-28T14:55:12.212Z
+  Built: 2026-08-28T15:13:34.441Z
 -->
 
 <html lang="en">
@@ -4123,13 +4123,17 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   top: max(12px, env(safe-area-inset-top));
   left: max(14px, env(safe-area-inset-left));
 }
-/* The lock takes the same top-left slot the sync button uses — on the phone,
-   where the lock lives, sync is hidden (see below), so the slot is free and the
-   two never meet. Out of the flex flow, so undo/memory/theme stay grouped right. */
-.top-actions .lock-toggle-btn {
-  position: fixed;
-  top: max(12px, env(safe-area-inset-top));
-  left: max(14px, env(safe-area-inset-left));
+/* On the phone the lock takes the same top-left slot the sync button uses:
+   sync is hidden there (see below), so the slot is free and the two never meet,
+   and pulling the lock out of the flex flow leaves undo/memory/theme grouped
+   right. On the web that slot belongs to sync — which shows on the intro — so
+   the lock stays in the cluster instead, where the two can never collide. */
+@media (max-width: 700px) {
+  .top-actions .lock-toggle-btn {
+    position: fixed;
+    top: max(12px, env(safe-area-inset-top));
+    left: max(14px, env(safe-area-inset-left));
+  }
 }
 /* app (phone) version: hide the sync-status button. Sync is fully automatic
    (initCloud + realtime + auto push/pull), so hiding the button only removes
@@ -4185,11 +4189,12 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .view-locked .add-outfit,
 .view-locked .add-todo,
 .view-locked .add-item,
-.view-locked .accom-add,
 .view-locked .map-add-btn,
 .view-locked .item-grip,
+.view-locked [data-act="accom-add"],
 .view-locked [data-act="add-stop"],
 .view-locked [data-act="insert-stop"],
+.view-locked [data-act="stop-delete"],
 .view-locked [data-act="add-pack"],
 .view-locked [data-act="add-trip"],
 .view-locked [data-act="optimize-day"],
@@ -10720,16 +10725,17 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       btn.classList.toggle('active', on);
       btn.setAttribute('aria-pressed', String(on));
       btn.title = on ? 'Locked — tap to edit again' : 'Lock the trip: read-only, nothing can be changed';
-      /* The lock is the phone app's control — the web ledger is a desk, not a
-         pocket — and within the app it belongs to the pages you arrive on: the
-         intro and the overview. The sub-pages are where you work, and a switch
-         parked over the field you are filling in is just clutter. You lock
-         before you set off, and unlock from the same two screens. */
-      const homeScreen = !this._introParked || this.appPage === 0;
+      /* The lock belongs on the pages you arrive on. In the app that is the
+         intro and the overview: the sub-pages are where you work, and a switch
+         parked over the field you are filling in is just clutter — you lock
+         before you set off and unlock from the same two screens. The web
+         ledger has no sub-pages to hide from; it is one scroll of four
+         sections, so the switch stays up across the whole of it. */
+      const onPage = this._webMag() || !this._introParked || this.appPage === 0;
       // _anyModalOpen covers the bill/sync/import/memories; the note sheet is its
       // own state and would otherwise leave the lock sitting over an open sheet
       const modal = this._anyModalOpen() || !!this._noteEdit;
-      btn.style.display = (this._webMag() || modal || !homeScreen) ? 'none' : '';
+      btn.style.display = (modal || !onPage) ? 'none' : '';
     }
 
     /* ---------- outfit closet ---------- */

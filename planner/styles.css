@@ -3345,13 +3345,17 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   top: max(12px, env(safe-area-inset-top));
   left: max(14px, env(safe-area-inset-left));
 }
-/* The lock takes the same top-left slot the sync button uses — on the phone,
-   where the lock lives, sync is hidden (see below), so the slot is free and the
-   two never meet. Out of the flex flow, so undo/memory/theme stay grouped right. */
-.top-actions .lock-toggle-btn {
-  position: fixed;
-  top: max(12px, env(safe-area-inset-top));
-  left: max(14px, env(safe-area-inset-left));
+/* On the phone the lock takes the same top-left slot the sync button uses:
+   sync is hidden there (see below), so the slot is free and the two never meet,
+   and pulling the lock out of the flex flow leaves undo/memory/theme grouped
+   right. On the web that slot belongs to sync — which shows on the intro — so
+   the lock stays in the cluster instead, where the two can never collide. */
+@media (max-width: 700px) {
+  .top-actions .lock-toggle-btn {
+    position: fixed;
+    top: max(12px, env(safe-area-inset-top));
+    left: max(14px, env(safe-area-inset-left));
+  }
 }
 /* app (phone) version: hide the sync-status button. Sync is fully automatic
    (initCloud + realtime + auto push/pull), so hiding the button only removes
@@ -3407,11 +3411,12 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .view-locked .add-outfit,
 .view-locked .add-todo,
 .view-locked .add-item,
-.view-locked .accom-add,
 .view-locked .map-add-btn,
 .view-locked .item-grip,
+.view-locked [data-act="accom-add"],
 .view-locked [data-act="add-stop"],
 .view-locked [data-act="insert-stop"],
+.view-locked [data-act="stop-delete"],
 .view-locked [data-act="add-pack"],
 .view-locked [data-act="add-trip"],
 .view-locked [data-act="optimize-day"],

@@ -5334,16 +5334,17 @@
       btn.classList.toggle('active', on);
       btn.setAttribute('aria-pressed', String(on));
       btn.title = on ? 'Locked — tap to edit again' : 'Lock the trip: read-only, nothing can be changed';
-      /* The lock is the phone app's control — the web ledger is a desk, not a
-         pocket — and within the app it belongs to the pages you arrive on: the
-         intro and the overview. The sub-pages are where you work, and a switch
-         parked over the field you are filling in is just clutter. You lock
-         before you set off, and unlock from the same two screens. */
-      const homeScreen = !this._introParked || this.appPage === 0;
+      /* The lock belongs on the pages you arrive on. In the app that is the
+         intro and the overview: the sub-pages are where you work, and a switch
+         parked over the field you are filling in is just clutter — you lock
+         before you set off and unlock from the same two screens. The web
+         ledger has no sub-pages to hide from; it is one scroll of four
+         sections, so the switch stays up across the whole of it. */
+      const onPage = this._webMag() || !this._introParked || this.appPage === 0;
       // _anyModalOpen covers the bill/sync/import/memories; the note sheet is its
       // own state and would otherwise leave the lock sitting over an open sheet
       const modal = this._anyModalOpen() || !!this._noteEdit;
-      btn.style.display = (this._webMag() || modal || !homeScreen) ? 'none' : '';
+      btn.style.display = (modal || !onPage) ? 'none' : '';
     }
 
     /* ---------- outfit closet ---------- */
