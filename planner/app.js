@@ -3953,10 +3953,11 @@
         const r = d ? d.stops[idx] : null;
         const chosenNames = (stop.accom && stop.accom.options || []).filter(o => o.booked && o.name && o.name.trim()).map(o => o.name.trim());
         const accomSet = chosenNames.length > 0;
-        // each stop's own .leg is the leg that arrives at it (legByIndex(idx+1)
-        // is the equivalent lookup) — index into the shifted `legs` array here
-        // was off by one and showed the PREVIOUS stop's transport color
-        const modeColor = MODE_HEX[(stop.leg || {}).mode] || '#7a7260';
+        // legs[i] is the leg INTO stop i — legs[0] is the outbound, and
+        // stops[k].leg is the leg into stop k+1 (see legByIndex). So a stop's
+        // OWN .leg is the one that LEAVES it: reading it here painted Gdansk
+        // with the train out of it rather than the flight into it.
+        const modeColor = MODE_HEX[(legs[idx] || {}).mode] || '#7a7260';
         const dim = this._dragStopIdx === idx ? 0.38 : 1;
         html += `<div class="stop map-stop" data-i="${idx}" style="opacity:${dim}">
           <div class="card mc-flip">
@@ -6835,7 +6836,9 @@
         return `<ul class="ss-list">${rows}</ul>`;
       }
       const r = d ? d.stops[idx] : null;
-      const leg = stop.leg || {};
+      // the leg that ARRIVES here, which is what the card is describing — not
+      // stop.leg, which is the one leaving for the next city
+      const leg = this.legByIndex(idx) || {};
       const modeLbl = (MODE_OPTIONS.find(o => o.value === leg.mode) || {}).label || '';
       const chosen = (stop.accom && stop.accom.options || []).filter(o => o.booked && o.name && o.name.trim()).map(o => o.name.trim());
       return `<div class="ss-card">
