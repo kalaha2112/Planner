@@ -3397,7 +3397,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    ============================================================ */
 .trip-stack {
   --card-w: 138px;
-  --card-h: 31px;
+  --card-h: 38px;
   --dx: 86px;           /* step right, per card back — wide enough to read each name */
   --rot: -7deg;         /* the lean the whole deck holds while fanned */
   position: relative; flex: none;
@@ -3413,12 +3413,14 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   position: absolute; left: 0; bottom: 0;
   width: var(--card-w); height: var(--card-h);
   display: flex; align-items: center; justify-content: center;
-  /* 5px, not 10: at --card-h 31px a 10px pad left an 11px content box and the
-     15px/1.15 name (17.3px) was clipped by the overflow:hidden above. The app
-     overrides this whole shorthand in its own block, where the taller card
-     still has the room. */
+  /* 5px, not 10: the card is short now, and a 10px pad would leave less content
+     box than the 15px/1.15 name needs (17.3px), which overflow:hidden above
+     would clip. The type is NOT what shrank — only the box around it. The app
+     overrides this whole shorthand in its own block. */
   padding: 5px 14px; text-align: center;
-  border: none; border-radius: var(--r-card);
+  /* square, not --r-card: the deck reads as a stack of straight-edged cards.
+     The cover below matches, so the two never disagree while it sits on top. */
+  border: none; border-radius: 0;
   /* frosted rather than a flat white fill; --card-glass / --card-blur are the
      same tokens the stop cards and map chips already use */
   background: var(--card-glass); color: var(--ink);
@@ -3462,7 +3464,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 /* the TRIP cover card sits over the deck until it is opened */
 .trip-stack-cover {
   position: absolute; inset: 0; z-index: 40;
-  border: none; border-radius: var(--r-card);
+  border: none; border-radius: 0;
   background: var(--card-glass); color: var(--ink);
   backdrop-filter: blur(var(--card-blur)) saturate(1.4);
   -webkit-backdrop-filter: blur(var(--card-blur)) saturate(1.4);
@@ -3533,7 +3535,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 @media (max-width: 700px) {
   .trip-stack {
     --card-w: 108px;
-    --card-h: 47px;
+    --card-h: 40px;
     --dx: 67px;
   }
   .trip-card { padding: 8px 11px; }
