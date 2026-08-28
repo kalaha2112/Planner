@@ -545,6 +545,14 @@ a { color: inherit; }
 .map-note { font-family: var(--sans); font-size: 10px; color: var(--ink-mute); padding: 0 2px; line-height: 1.4; }
 
 .summary { background: var(--surface); border-radius: var(--r-card); padding: 12px 18px; }
+/* Light mode paints --shell and --surface the same white and --shadow-card is
+   none, so the stats were a white card on a white page with nothing at all
+   separating the two — the figures read as loose items rather than one panel.
+   A translucent wash of ink gives the block a body that registers at a glance
+   while the page still shows through it. Both layouts, since it is the same
+   block in both. Dark mode already has two different blacks for page and card,
+   so it keeps --surface. */
+html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
 .stat { padding: 13px 0; border-bottom: 1px solid var(--line-soft); }
 .stat:last-child { border-bottom: none; }
 /* nights stat split into two halves: left = nights, right = travellers */
@@ -1614,10 +1622,14 @@ a { color: inherit; }
      lock on the left. The date range used to share that band and now clears it:
      the alternative was shrinking the type or letting it run under a button,
      and the dates are the headline of this page. */
+  /* the date range is the page's headline; --app-date-size is published on the
+     overview so the entry words below can be sized against it rather than
+     carrying a number that drifts the moment this one changes */
+  .app-ov { --app-date-size: 20px; }
   .app-ov .meta-range {
     display: flex; align-items: baseline; flex-wrap: wrap; gap: 0;
     margin: 40px 4px 12px; padding: 2px 0;
-    font-family: var(--serif); font-size: 20px; font-weight: 600; letter-spacing: -.01em;
+    font-family: var(--serif); font-size: var(--app-date-size); font-weight: 600; letter-spacing: -.01em;
     color: var(--green-dark);
   }
   .app-ov .meta-range .date-tail { white-space: nowrap; }
@@ -1643,15 +1655,20 @@ a { color: inherit; }
        letter and a soft shadow beneath it, so the word stands off the page */
     --btn-hi: rgba(255, 255, 255, .92);
     --btn-lo: rgba(24, 22, 14, .24);
+    /* a step off black: the words are a way in, not the headline — the date
+       range above them is, and it should stay the darkest thing here */
+    --btn-ink: var(--ink-soft);
   }
-  [data-theme="dark"] .app-cards { --btn-hi: rgba(255, 255, 255, .10); --btn-lo: rgba(0, 0, 0, .60); }
+  [data-theme="dark"] .app-cards {
+    --btn-hi: rgba(255, 255, 255, .10); --btn-lo: rgba(0, 0, 0, .60);
+    --btn-ink: var(--ink);      /* on a dark ground the softened ink goes dim, not quiet */
+  }
   .app-card {
     display: flex; align-items: center; justify-content: center;
     padding: 14px 4px; border: none; border-radius: var(--r-card);
-    background: none; color: var(--ink);
-    /* scales with the screen so "Transport" still fits a 320px phone at the
-       small end and reads properly on a big one */
-    font-family: var(--sans); font-size: clamp(17px, 5.4vw, 22px);
+    background: none; color: var(--btn-ink);
+    /* two under the date range, so the pair reads as headline then entry */
+    font-family: var(--sans); font-size: calc(var(--app-date-size) - 2px);
     font-weight: 600; letter-spacing: -.01em;
     text-shadow: 0 1px 0 var(--btn-hi), 0 2px 3px var(--btn-lo);
     cursor: crosshair;
@@ -2412,13 +2429,6 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .meta-range .saved { display: none; }
   .ledger-col .summary,
   .ledger-col .todos { flex-shrink: 0; }
-  /* Light mode paints --shell and --surface the same white and --shadow-card is
-     none, so the stats block was a white card on a white page with nothing at
-     all to separate the two — a run of figures floating in the column rather
-     than a panel. A translucent wash of ink gives it a body that reads at a
-     glance while the page still shows through it. Dark mode already has two
-     different blacks for page and card, so it keeps --surface. */
-  html:not([data-theme="dark"]) .ledger-col .summary { background: rgba(24, 22, 14, .04); }
   /* the split stat was sized for the app's 290px aside — trim its air here */
   .ledger-col .stat-split .stat-half:first-child { padding-right: 34px; }
 

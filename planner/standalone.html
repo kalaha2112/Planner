@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-28T15:42:17.977Z
+  Built: 2026-08-28T15:47:50.697Z
 -->
 
 <html lang="en">
@@ -1323,6 +1323,14 @@ a { color: inherit; }
 .map-note { font-family: var(--sans); font-size: 10px; color: var(--ink-mute); padding: 0 2px; line-height: 1.4; }
 
 .summary { background: var(--surface); border-radius: var(--r-card); padding: 12px 18px; }
+/* Light mode paints --shell and --surface the same white and --shadow-card is
+   none, so the stats were a white card on a white page with nothing at all
+   separating the two — the figures read as loose items rather than one panel.
+   A translucent wash of ink gives the block a body that registers at a glance
+   while the page still shows through it. Both layouts, since it is the same
+   block in both. Dark mode already has two different blacks for page and card,
+   so it keeps --surface. */
+html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
 .stat { padding: 13px 0; border-bottom: 1px solid var(--line-soft); }
 .stat:last-child { border-bottom: none; }
 /* nights stat split into two halves: left = nights, right = travellers */
@@ -2392,10 +2400,14 @@ a { color: inherit; }
      lock on the left. The date range used to share that band and now clears it:
      the alternative was shrinking the type or letting it run under a button,
      and the dates are the headline of this page. */
+  /* the date range is the page's headline; --app-date-size is published on the
+     overview so the entry words below can be sized against it rather than
+     carrying a number that drifts the moment this one changes */
+  .app-ov { --app-date-size: 20px; }
   .app-ov .meta-range {
     display: flex; align-items: baseline; flex-wrap: wrap; gap: 0;
     margin: 40px 4px 12px; padding: 2px 0;
-    font-family: var(--serif); font-size: 20px; font-weight: 600; letter-spacing: -.01em;
+    font-family: var(--serif); font-size: var(--app-date-size); font-weight: 600; letter-spacing: -.01em;
     color: var(--green-dark);
   }
   .app-ov .meta-range .date-tail { white-space: nowrap; }
@@ -2421,15 +2433,20 @@ a { color: inherit; }
        letter and a soft shadow beneath it, so the word stands off the page */
     --btn-hi: rgba(255, 255, 255, .92);
     --btn-lo: rgba(24, 22, 14, .24);
+    /* a step off black: the words are a way in, not the headline — the date
+       range above them is, and it should stay the darkest thing here */
+    --btn-ink: var(--ink-soft);
   }
-  [data-theme="dark"] .app-cards { --btn-hi: rgba(255, 255, 255, .10); --btn-lo: rgba(0, 0, 0, .60); }
+  [data-theme="dark"] .app-cards {
+    --btn-hi: rgba(255, 255, 255, .10); --btn-lo: rgba(0, 0, 0, .60);
+    --btn-ink: var(--ink);      /* on a dark ground the softened ink goes dim, not quiet */
+  }
   .app-card {
     display: flex; align-items: center; justify-content: center;
     padding: 14px 4px; border: none; border-radius: var(--r-card);
-    background: none; color: var(--ink);
-    /* scales with the screen so "Transport" still fits a 320px phone at the
-       small end and reads properly on a big one */
-    font-family: var(--sans); font-size: clamp(17px, 5.4vw, 22px);
+    background: none; color: var(--btn-ink);
+    /* two under the date range, so the pair reads as headline then entry */
+    font-family: var(--sans); font-size: calc(var(--app-date-size) - 2px);
     font-weight: 600; letter-spacing: -.01em;
     text-shadow: 0 1px 0 var(--btn-hi), 0 2px 3px var(--btn-lo);
     cursor: crosshair;
@@ -3190,13 +3207,6 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .meta-range .saved { display: none; }
   .ledger-col .summary,
   .ledger-col .todos { flex-shrink: 0; }
-  /* Light mode paints --shell and --surface the same white and --shadow-card is
-     none, so the stats block was a white card on a white page with nothing at
-     all to separate the two — a run of figures floating in the column rather
-     than a panel. A translucent wash of ink gives it a body that reads at a
-     glance while the page still shows through it. Dark mode already has two
-     different blacks for page and card, so it keeps --surface. */
-  html:not([data-theme="dark"]) .ledger-col .summary { background: rgba(24, 22, 14, .04); }
   /* the split stat was sized for the app's 290px aside — trim its air here */
   .ledger-col .stat-split .stat-half:first-child { padding-right: 34px; }
 
@@ -11965,23 +11975,20 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       const cards = ordered.map((key, i) => {
         const lbl = (this.data.trips[key] || {}).label || '';
         const common = `draggable="true" data-drag="trip" data-drop="trip" data-key="${escA(key)}" style="--i:${i}"`;
-        // The tooltip is the name: a card clips it, and on touch there is no
-        // hover to widen the card, so this is where the full name is readable.
-        // A back card carries nothing else — that clicking one opens it is
-        // plain from the deck, and the hint only got in the way of the name.
-        // The front card keeps its hint, because nothing about a card says it
-        // can be dragged.
-        const tip = lbl ? ` title="${escA(lbl)}"` : '';
-        const tipDrag = ` title="${escA(lbl ? lbl + '\nDrag to reorder' : 'Drag to reorder')}"`;
+        // No title on either card. The browser answers one with a black system
+        // tooltip that lands on top of the deck and belongs to no design here;
+        // the card widening under the cursor already shows the full name, and
+        // the name is in the DOM either way, so a screen reader reads it
+        // whether or not it fits the card.
         if (key === this.data.active) {
           // the front card carries the rename field, so it is a div (an input
           // cannot live inside a button) — same as the old .tab-active pill
-          return `<div class="trip-card is-front" ${common}${tipDrag}>
+          return `<div class="trip-card is-front" ${common}>
             <input class="tc-name" value="${escA(lbl)}" data-ch="tab-rename" data-key="${escA(key)}" aria-label="Trip name">
             ${keys.length > 1 ? `<button class="tc-x" data-act="tab-remove" data-key="${escA(key)}" title="Remove this trip" aria-label="Remove trip">−</button>` : ''}
           </div>`;
         }
-        return `<button class="trip-card" ${common} data-act="tab-select"${tip}>
+        return `<button class="trip-card" ${common} data-act="tab-select" aria-label="${escA(lbl ? 'Open ' + lbl : 'Open this trip')}">
           <span class="tc-name">${esc(lbl)}</span>
         </button>`;
       }).join('');
