@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-28T16:30:35.196Z
+  Built: 2026-08-28T19:51:50.416Z
 -->
 
 <html lang="en">
@@ -1648,10 +1648,11 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
   font-family: var(--sans); font-size: 8px; font-weight: 700; line-height: 12px;
   text-align: center; font-variant-numeric: tabular-nums;
 }
-/* a note exists — the icon carries the accent so a row's notes are visible
-   without opening anything */
-.note-btn.on { color: var(--gold); border-color: var(--gold-border); background: var(--gold-soft); }
-.note-btn.on:hover { background: var(--gold-hover); }
+/* A note exists: the icon goes gold and nothing else changes. The plate and
+   outline it used to wear made a 24px button shout louder than the activity it
+   belongs to — gold against a row of faint grey controls is already unmissable. */
+.note-btn.on { color: var(--gold); border-color: transparent; background: transparent; }
+.note-btn.on:hover { background: var(--hover-soft); border-color: var(--line-soft); }
 
 /* ---- pin: hold an activity at its slot in the day ----
    Same 24px square as the note button it sits beside. Red when set, because a
@@ -1664,17 +1665,35 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
   transition: color .15s ease, background .15s ease, border-color .15s ease;
 }
 .pin-btn:hover { color: var(--ink-soft); background: var(--hover-soft); border-color: var(--line-soft); }
-.pin-btn.on { color: var(--red); border-color: rgba(145, 4, 12, .30); background: rgba(145, 4, 12, .08); }
-.pin-btn.on:hover { background: rgba(145, 4, 12, .14); }
-/* dark runs a lifted red (--red is #C93A41 there); the light tints below it are
-   black over a black page, so the pinned state gets its own pair */
-[data-theme="dark"] .pin-btn.on { border-color: rgba(201, 58, 65, .55); background: rgba(201, 58, 65, .18); }
-[data-theme="dark"] .pin-btn.on:hover { background: rgba(201, 58, 65, .30); }
+/* Set: the icon goes red, same as the note goes gold. No plate, no outline, and
+   no ring around the row number either — three marks for one fact, on a row
+   whose actual content is the place name. The filled head below is what makes
+   the single mark carry. */
+.pin-btn.on { color: var(--red); border-color: transparent; background: transparent; }
+.pin-btn.on:hover { background: var(--hover-soft); border-color: var(--line-soft); }
 .pin-btn.on svg { fill: currentColor; }   /* solid head — a set pin reads at a glance */
 .pin-btn svg { display: block; }
-/* the row's number carries the same mark, so a pinned slot is visible while
-   scanning the left rail rather than only at the button */
-.item.pinned .item-num { box-shadow: 0 0 0 1.5px var(--surface), 0 0 0 3px var(--red); }
+
+/* ---- fold one activity down to its name ----
+   The day header folds all of them at once; this is the same move for a single
+   row, for when one place is settled and the rest still needs working out. */
+.item-fold {
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; padding: 0; border-radius: var(--r-sm);
+  border: 1px solid transparent; background: transparent;
+  color: var(--ink-faint); cursor: crosshair;
+  transition: color .15s ease, background .15s ease, border-color .15s ease;
+}
+.item-fold:hover { color: var(--ink-soft); background: var(--hover-soft); border-color: var(--line-soft); }
+.item-fold svg { display: block; transition: transform .22s cubic-bezier(.22,.61,.36,1); }
+.item-fold.shut svg { transform: rotate(-90deg); }
+[data-theme="dark"] .item-fold { color: var(--ink-soft); }
+.item.folded { padding-top: 7px; padding-bottom: 7px; }
+.item.folded .meta { display: none; }
+.item.folded .mid { gap: 0; }
+/* the whole-day fold already hides every meta line, so a per-row chevron under
+   it would be reporting a state you cannot see either way */
+.day-main.folded .item-fold { display: none; }
 
 /* ---- the note sheet ---- */
 .overlay:has(.note-dialog) { align-items: center; padding: 24px 20px; }
@@ -10389,6 +10408,20 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
         : null;
       this.bump();
     }
+    /* Fold one activity down to its name. The flag lives on the item rather than
+       in localStorage beside the day-wide fold, because the day's rows reorder
+       under you — a drag, or Optimize route — and a positional record of which
+       row was folded would end up describing a different one. Carried on the
+       item, it simply travels with it. */
+    toggleItemFold(itemIdx) {
+      if (this.openStopIdx == null || this.activeDay == null) return;
+      const stop = this.currentTrip().stops[this.openStopIdx];
+      const day = stop && (stop.itinerary || [])[this.activeDay];
+      const it = day && day.items && day.items[itemIdx];
+      if (!it) return;
+      it.folded = !it.folded;
+      this.bump();
+    }
     /* Reorder inside one day — the drop half of a grip drag. `insertAt` is a gap
        index in the list as it stands (0…len), which is what the drop marker sits
        on; pulling the row out first shifts every gap after it down one. */
@@ -12682,7 +12715,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
           const costHint = cpm.ambiguous
             ? { text: `${cpm.ambiguous.slice(0, 3).join('/')}?`, warn: true }
             : { text: (cpm.amount && !isCad(cpm.ccy)) ? '≈ ' + money(toCad(cpm.amount, cpm.ccy)) : '', warn: false };
-          return `<div class="item-leg" data-leg="${ii}" aria-hidden="true"></div><div class="item${ii === selIdx ? ' selected' : ''}${ii === flashIdx ? ' flash' : ''}${it.pinned ? ' pinned' : ''}" data-idx="${ii}" data-id="${this._rowKey(it)}">
+          return `<div class="item-leg" data-leg="${ii}" aria-hidden="true"></div><div class="item${ii === selIdx ? ' selected' : ''}${ii === flashIdx ? ' flash' : ''}${it.pinned ? ' pinned' : ''}${it.folded ? ' folded' : ''}" data-idx="${ii}" data-id="${this._rowKey(it)}">
           <span class="item-num${placed ? ' placed' : (hasAddr ? '' : ' empty')}" title="${it.pinned ? 'Pinned to slot ' + (ii + 1) : placed ? 'Mapped' : hasAddr ? 'Locating…' : 'Type a place name to map this'}">${ii + 1}</span>
           <span class="item-grip" data-drag="activity" data-i="${ii}" title="Drag up or down to reorder the day — or onto another day in the calendar">
             <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor" aria-hidden="true">
@@ -12701,6 +12734,9 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
               <button class="note-btn${noteFull ? ' on' : ''}" data-act="item-note-open" data-i="${ii}"
                 title="${escA(noteTip)}"
                 aria-label="${noteFull ? 'Edit note' : 'Add a note'}">${svg(I.msg, { w: 13, h: 13, stroke: 'currentColor' })}${picCount ? `<span class="pics">${picCount}</span>` : ''}</button>
+              <button class="item-fold${it.folded ? ' shut' : ''}" data-act="item-fold" data-i="${ii}" aria-expanded="${it.folded ? 'false' : 'true'}"
+                title="${it.folded ? 'Show this activity\'s time, address and cost' : 'Fold this activity down to its name'}"
+                aria-label="${it.folded ? 'Expand this activity' : 'Collapse this activity'}">${svg(I.chev, { w: 12, h: 12, sw: 2 })}</button>
             </div>
             <div class="meta">
               <div class="field field--time">${svg(I.clock, { w: 11, h: 11, stroke: 'currentColor' })}<input value="${escA(it.time)}" data-ch="item-time" data-i="${ii}" placeholder="Time"></div>
@@ -13631,6 +13667,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
         case 'add-item': this.addDayItem(trip.stops[this.openStopIdx], this.activeDay); break;
         case 'item-remove': this.removeDayItem(trip.stops[this.openStopIdx], this.activeDay, i); break;
         case 'item-pin': this.toggleItemPin(i); break;
+        case 'item-fold': this.toggleItemFold(i); break;
         case 'closet-toggle': this.toggleCloset(); break;
         case 'day-fold': this.toggleDayRows(); break;
         case 'bookings-toggle': this.toggleBookings(); break;

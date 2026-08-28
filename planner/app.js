@@ -4921,6 +4921,20 @@
         : null;
       this.bump();
     }
+    /* Fold one activity down to its name. The flag lives on the item rather than
+       in localStorage beside the day-wide fold, because the day's rows reorder
+       under you — a drag, or Optimize route — and a positional record of which
+       row was folded would end up describing a different one. Carried on the
+       item, it simply travels with it. */
+    toggleItemFold(itemIdx) {
+      if (this.openStopIdx == null || this.activeDay == null) return;
+      const stop = this.currentTrip().stops[this.openStopIdx];
+      const day = stop && (stop.itinerary || [])[this.activeDay];
+      const it = day && day.items && day.items[itemIdx];
+      if (!it) return;
+      it.folded = !it.folded;
+      this.bump();
+    }
     /* Reorder inside one day — the drop half of a grip drag. `insertAt` is a gap
        index in the list as it stands (0…len), which is what the drop marker sits
        on; pulling the row out first shifts every gap after it down one. */
@@ -7214,7 +7228,7 @@
           const costHint = cpm.ambiguous
             ? { text: `${cpm.ambiguous.slice(0, 3).join('/')}?`, warn: true }
             : { text: (cpm.amount && !isCad(cpm.ccy)) ? '≈ ' + money(toCad(cpm.amount, cpm.ccy)) : '', warn: false };
-          return `<div class="item-leg" data-leg="${ii}" aria-hidden="true"></div><div class="item${ii === selIdx ? ' selected' : ''}${ii === flashIdx ? ' flash' : ''}${it.pinned ? ' pinned' : ''}" data-idx="${ii}" data-id="${this._rowKey(it)}">
+          return `<div class="item-leg" data-leg="${ii}" aria-hidden="true"></div><div class="item${ii === selIdx ? ' selected' : ''}${ii === flashIdx ? ' flash' : ''}${it.pinned ? ' pinned' : ''}${it.folded ? ' folded' : ''}" data-idx="${ii}" data-id="${this._rowKey(it)}">
           <span class="item-num${placed ? ' placed' : (hasAddr ? '' : ' empty')}" title="${it.pinned ? 'Pinned to slot ' + (ii + 1) : placed ? 'Mapped' : hasAddr ? 'Locating…' : 'Type a place name to map this'}">${ii + 1}</span>
           <span class="item-grip" data-drag="activity" data-i="${ii}" title="Drag up or down to reorder the day — or onto another day in the calendar">
             <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor" aria-hidden="true">
@@ -7233,6 +7247,9 @@
               <button class="note-btn${noteFull ? ' on' : ''}" data-act="item-note-open" data-i="${ii}"
                 title="${escA(noteTip)}"
                 aria-label="${noteFull ? 'Edit note' : 'Add a note'}">${svg(I.msg, { w: 13, h: 13, stroke: 'currentColor' })}${picCount ? `<span class="pics">${picCount}</span>` : ''}</button>
+              <button class="item-fold${it.folded ? ' shut' : ''}" data-act="item-fold" data-i="${ii}" aria-expanded="${it.folded ? 'false' : 'true'}"
+                title="${it.folded ? 'Show this activity\'s time, address and cost' : 'Fold this activity down to its name'}"
+                aria-label="${it.folded ? 'Expand this activity' : 'Collapse this activity'}">${svg(I.chev, { w: 12, h: 12, sw: 2 })}</button>
             </div>
             <div class="meta">
               <div class="field field--time">${svg(I.clock, { w: 11, h: 11, stroke: 'currentColor' })}<input value="${escA(it.time)}" data-ch="item-time" data-i="${ii}" placeholder="Time"></div>
@@ -8163,6 +8180,7 @@
         case 'add-item': this.addDayItem(trip.stops[this.openStopIdx], this.activeDay); break;
         case 'item-remove': this.removeDayItem(trip.stops[this.openStopIdx], this.activeDay, i); break;
         case 'item-pin': this.toggleItemPin(i); break;
+        case 'item-fold': this.toggleItemFold(i); break;
         case 'closet-toggle': this.toggleCloset(); break;
         case 'day-fold': this.toggleDayRows(); break;
         case 'bookings-toggle': this.toggleBookings(); break;

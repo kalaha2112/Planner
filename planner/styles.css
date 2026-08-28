@@ -870,10 +870,11 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
   font-family: var(--sans); font-size: 8px; font-weight: 700; line-height: 12px;
   text-align: center; font-variant-numeric: tabular-nums;
 }
-/* a note exists — the icon carries the accent so a row's notes are visible
-   without opening anything */
-.note-btn.on { color: var(--gold); border-color: var(--gold-border); background: var(--gold-soft); }
-.note-btn.on:hover { background: var(--gold-hover); }
+/* A note exists: the icon goes gold and nothing else changes. The plate and
+   outline it used to wear made a 24px button shout louder than the activity it
+   belongs to — gold against a row of faint grey controls is already unmissable. */
+.note-btn.on { color: var(--gold); border-color: transparent; background: transparent; }
+.note-btn.on:hover { background: var(--hover-soft); border-color: var(--line-soft); }
 
 /* ---- pin: hold an activity at its slot in the day ----
    Same 24px square as the note button it sits beside. Red when set, because a
@@ -886,17 +887,35 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
   transition: color .15s ease, background .15s ease, border-color .15s ease;
 }
 .pin-btn:hover { color: var(--ink-soft); background: var(--hover-soft); border-color: var(--line-soft); }
-.pin-btn.on { color: var(--red); border-color: rgba(145, 4, 12, .30); background: rgba(145, 4, 12, .08); }
-.pin-btn.on:hover { background: rgba(145, 4, 12, .14); }
-/* dark runs a lifted red (--red is #C93A41 there); the light tints below it are
-   black over a black page, so the pinned state gets its own pair */
-[data-theme="dark"] .pin-btn.on { border-color: rgba(201, 58, 65, .55); background: rgba(201, 58, 65, .18); }
-[data-theme="dark"] .pin-btn.on:hover { background: rgba(201, 58, 65, .30); }
+/* Set: the icon goes red, same as the note goes gold. No plate, no outline, and
+   no ring around the row number either — three marks for one fact, on a row
+   whose actual content is the place name. The filled head below is what makes
+   the single mark carry. */
+.pin-btn.on { color: var(--red); border-color: transparent; background: transparent; }
+.pin-btn.on:hover { background: var(--hover-soft); border-color: var(--line-soft); }
 .pin-btn.on svg { fill: currentColor; }   /* solid head — a set pin reads at a glance */
 .pin-btn svg { display: block; }
-/* the row's number carries the same mark, so a pinned slot is visible while
-   scanning the left rail rather than only at the button */
-.item.pinned .item-num { box-shadow: 0 0 0 1.5px var(--surface), 0 0 0 3px var(--red); }
+
+/* ---- fold one activity down to its name ----
+   The day header folds all of them at once; this is the same move for a single
+   row, for when one place is settled and the rest still needs working out. */
+.item-fold {
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; padding: 0; border-radius: var(--r-sm);
+  border: 1px solid transparent; background: transparent;
+  color: var(--ink-faint); cursor: crosshair;
+  transition: color .15s ease, background .15s ease, border-color .15s ease;
+}
+.item-fold:hover { color: var(--ink-soft); background: var(--hover-soft); border-color: var(--line-soft); }
+.item-fold svg { display: block; transition: transform .22s cubic-bezier(.22,.61,.36,1); }
+.item-fold.shut svg { transform: rotate(-90deg); }
+[data-theme="dark"] .item-fold { color: var(--ink-soft); }
+.item.folded { padding-top: 7px; padding-bottom: 7px; }
+.item.folded .meta { display: none; }
+.item.folded .mid { gap: 0; }
+/* the whole-day fold already hides every meta line, so a per-row chevron under
+   it would be reporting a state you cannot see either way */
+.day-main.folded .item-fold { display: none; }
 
 /* ---- the note sheet ---- */
 .overlay:has(.note-dialog) { align-items: center; padding: 24px 20px; }
