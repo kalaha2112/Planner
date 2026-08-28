@@ -6354,10 +6354,13 @@
             </div>
             <button class="map-add-btn" data-act="add-stop" title="Add stop" aria-label="Add stop">+</button>
           </div>
+          <!-- The three ways into the trip. No icon and no card: the word is
+               the whole control, so it carries the tap target itself and the
+               row reads as type on the page rather than three tiles. -->
           <div class="app-cards">
-            <button class="app-card" data-act="app-goto" data-i="1"><span class="app-card-ico" data-obj3d-kind="calendar" data-obj3d-dist="4.6">${svg(I.calendar, { w: 20, h: 20, sw: 1.8 })}</span><span>Itinerary</span></button>
-            <button class="app-card" data-act="app-goto" data-i="2"><span class="app-card-ico" data-obj3d-kind="bed" data-obj3d-dist="4.2">${svg(I.bed, { w: 20, h: 20, sw: 1.8 })}</span><span>Hotel</span></button>
-            <button class="app-card" data-act="app-goto" data-i="3"><span class="app-card-ico" data-obj3d-kind="plane" data-obj3d-dist="4.0">${svg(I.route, { w: 20, h: 20, sw: 1.8 })}</span><span>Transport</span></button>
+            <button class="app-card" data-act="app-goto" data-i="1">Itinerary</button>
+            <button class="app-card" data-act="app-goto" data-i="2">Hotel</button>
+            <button class="app-card" data-act="app-goto" data-i="3">Transport</button>
           </div>
           <aside class="aside">
             ${this.renderSummary(nights, budget.grandTotal, budget.perPerson, milesNeeded, meta.milesBalance || 0, travelers)}

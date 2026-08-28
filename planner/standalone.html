@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-28T14:34:43.128Z
+  Built: 2026-08-28T14:55:12.212Z
 -->
 
 <html lang="en">
@@ -2410,17 +2410,20 @@ a { color: inherit; }
   .app-ov .meta-range .date-year { color: var(--green-dark); }
   .app-ov .meta-range .saved { display: none; }
 
-  /* entry cards: a row of tappable cards between the map and the stats box */
-  .app-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 4px 14px; }
+  /* The three ways into the trip — a row of words between the map and the
+     stats box. No tile, no icon: the card chrome was drawing three boxes on a
+     page whose whole language is type on white, and the icon above the label
+     said the same thing twice. What is left is the word, set large enough to
+     be the tap target on its own. */
+  .app-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 18px 4px 20px; }
   .app-card {
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
-    padding: 15px 8px; border: none; border-radius: var(--r-card);
-    background: var(--surface); color: var(--ink);
-    font-family: var(--sans); font-size: 12px; font-weight: 600;
-    cursor: crosshair; transition: transform .1s ease;
+    display: flex; align-items: center; justify-content: center;
+    padding: 12px 4px; border: none; border-radius: var(--r-card);
+    background: none; color: var(--ink);
+    font-family: var(--sans); font-size: 17px; font-weight: 600; letter-spacing: -.01em;
+    cursor: crosshair; transition: transform .1s ease, color .15s ease;
   }
-  .app-card svg { color: var(--red); }
-  .app-card:active { transform: scale(.97); }
+  .app-card:active { transform: scale(.97); color: var(--red); }
 
   /* the tab bar: pinned to the top, only present once a sub-page is open. The
      right padding clears the fixed action cluster (undo/memories/theme). */
@@ -2521,20 +2524,16 @@ a { color: inherit; }
 .intro-globe.has-globe-3d > svg { visibility: hidden; }
 
 /* ============================================================
-   3D PROPS — the three.js objects mounted into ordinary UI slots.
-   A canvas is added inside the host only when three.js + WebGL are
-   available; until then (and under reduced motion) the flat SVG
-   icon underneath is what shows. .is-3d is set by the mount, and
-   retires the fallback.
+   3D PROPS — the three.js objects mounted into ordinary UI slots
+   (_mountObject3D, keyed off data-obj3d-kind). A canvas is added
+   inside the host only when three.js + WebGL are available; until
+   then (and under reduced motion) the flat SVG icon underneath is
+   what shows. .is-3d is set by the mount, and retires the fallback.
+   The overview's entry buttons used to be the one caller; they are
+   plain words now, so the mechanism is idle until something else
+   asks for it.
    ============================================================ */
 .obj3d-canvas { display: block; width: 100%; height: 100%; }
-.app-card-ico {
-  position: relative;
-  width: 42px; height: 42px;
-  display: flex; align-items: center; justify-content: center;
-}
-.app-card-ico.is-3d > svg { display: none; }
-.app-card-ico .obj3d-canvas { position: absolute; inset: 0; }
 
 /* ============================================================
    PLACED STICKER LAYER
@@ -4725,7 +4724,6 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
 /* borderless panels lift on light instead of being outlined */
 .summary,
 .todos,
-.app-card,
 .opt,
 .accom-btn { box-shadow: var(--shadow-card); }
 .map-pop,
@@ -11742,10 +11740,13 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
             </div>
             <button class="map-add-btn" data-act="add-stop" title="Add stop" aria-label="Add stop">+</button>
           </div>
+          <!-- The three ways into the trip. No icon and no card: the word is
+               the whole control, so it carries the tap target itself and the
+               row reads as type on the page rather than three tiles. -->
           <div class="app-cards">
-            <button class="app-card" data-act="app-goto" data-i="1"><span class="app-card-ico" data-obj3d-kind="calendar" data-obj3d-dist="4.6">${svg(I.calendar, { w: 20, h: 20, sw: 1.8 })}</span><span>Itinerary</span></button>
-            <button class="app-card" data-act="app-goto" data-i="2"><span class="app-card-ico" data-obj3d-kind="bed" data-obj3d-dist="4.2">${svg(I.bed, { w: 20, h: 20, sw: 1.8 })}</span><span>Hotel</span></button>
-            <button class="app-card" data-act="app-goto" data-i="3"><span class="app-card-ico" data-obj3d-kind="plane" data-obj3d-dist="4.0">${svg(I.route, { w: 20, h: 20, sw: 1.8 })}</span><span>Transport</span></button>
+            <button class="app-card" data-act="app-goto" data-i="1">Itinerary</button>
+            <button class="app-card" data-act="app-goto" data-i="2">Hotel</button>
+            <button class="app-card" data-act="app-goto" data-i="3">Transport</button>
           </div>
           <aside class="aside">
             ${this.renderSummary(nights, budget.grandTotal, budget.perPerson, milesNeeded, meta.milesBalance || 0, travelers)}
