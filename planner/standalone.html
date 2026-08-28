@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-08-28T00:00:49.410Z
+  Built: 2026-08-28T00:09:01.749Z
 -->
 
 <html lang="en">
@@ -4173,7 +4173,27 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    another trip re-renders it at --i 0, which is what brings its
    card to the front, upright and full size.
    ============================================================ */
+/* The app is flat BY DESIGN — every rung of the elevation ladder resolves to
+   none (see the token block). The deck is the deliberate exception: these read
+   as physical cards you pick up, so they carry their own depth here rather than
+   switching the global ladder back on and putting a shadow under every surface
+   in the app.
+
+   Three layers are what make it read as glass rather than a drop shadow: a
+   tight contact shadow, a wide soft one for the lift, and an inset highlight
+   catching the light along the top edge. Dark theme keeps the same shape and
+   swaps the ground — highlight down, shadow up. */
 .trip-stack {
+  --deck-shadow:
+    0 1px 2px rgba(24, 22, 14, .06),
+    0 6px 16px -6px rgba(24, 22, 14, .16),
+    inset 0 1px 0 rgba(255, 255, 255, .85),
+    inset 0 -1px 0 rgba(24, 22, 14, .05);
+  --deck-shadow-lift:
+    0 2px 4px rgba(24, 22, 14, .08),
+    0 14px 30px -10px rgba(24, 22, 14, .26),
+    inset 0 1px 0 rgba(255, 255, 255, .9);
+  --deck-sheen: linear-gradient(157deg, rgba(255, 255, 255, .55), rgba(255, 255, 255, 0) 58%);
   --card-w: 138px;
   --card-h: 38px;
   --dx: 86px;           /* step right, per card back — wide enough to read each name */
@@ -4184,6 +4204,18 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   margin-top: 18px;                           /* room for the hover lift */
   margin-bottom: 16px;                        /* room for the lean's lower corner */
   margin-right: calc((var(--n) - 1) * var(--dx));  /* room to cascade rightward */
+}
+[data-theme="dark"] .trip-stack {
+  --deck-shadow:
+    0 1px 2px rgba(0, 0, 0, .40),
+    0 8px 20px -8px rgba(0, 0, 0, .60),
+    inset 0 1px 0 rgba(255, 255, 255, .07),
+    inset 0 -1px 0 rgba(0, 0, 0, .30);
+  --deck-shadow-lift:
+    0 2px 5px rgba(0, 0, 0, .50),
+    0 16px 34px -12px rgba(0, 0, 0, .70),
+    inset 0 1px 0 rgba(255, 255, 255, .10);
+  --deck-sheen: linear-gradient(157deg, rgba(255, 255, 255, .10), rgba(255, 255, 255, 0) 58%);
 }
 .trip-stack-cards { position: absolute; inset: 0; }
 
@@ -4196,16 +4228,16 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
      would clip. The type is NOT what shrank — only the box around it. The app
      overrides this whole shorthand in its own block. */
   padding: 5px 14px; text-align: center;
-  /* square, not --r-card: the deck reads as a stack of straight-edged cards.
-     The cover below matches, so the two never disagree while it sits on top. */
-  border: none; border-radius: 0;
+  border: none; border-radius: var(--r-card);
   /* frosted rather than a flat white fill; --card-glass / --card-blur are the
      same tokens the stop cards and map chips already use */
   background: var(--card-glass); color: var(--ink);
+  /* AFTER the shorthand above, which would otherwise clear it */
+  background-image: var(--deck-sheen);
   backdrop-filter: blur(var(--card-blur)) saturate(1.4);
   -webkit-backdrop-filter: blur(var(--card-blur)) saturate(1.4);
   cursor: crosshair; overflow: hidden;
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--deck-shadow);
   transform-origin: 50% 100%;
   /* stacked: barely offset, just enough to show there is a deck */
   transform:
@@ -4230,7 +4262,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   font-weight: 700; line-height: 1; padding: 2px 5px;
   opacity: 0; transition: opacity .2s ease;
 }
-.trip-card.is-front { box-shadow: var(--shadow-lift); }
+.trip-card.is-front { box-shadow: var(--deck-shadow-lift); }
 /* Cards are overlapped from the left, so only the right --dx of each one is
    visible. Reserving the covered part as padding means justify-content:center
    centres each name inside the strip that actually shows, rather than under
@@ -4242,14 +4274,18 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 /* the TRIP cover card sits over the deck until it is opened */
 .trip-stack-cover {
   position: absolute; inset: 0; z-index: 40;
-  border: none; border-radius: 0;
+  border: none; border-radius: var(--r-card);
   background: var(--card-glass); color: var(--ink);
+  background-image: var(--deck-sheen);
   backdrop-filter: blur(var(--card-blur)) saturate(1.4);
   -webkit-backdrop-filter: blur(var(--card-blur)) saturate(1.4);
   font-family: var(--caps); font-size: 26px; letter-spacing: .1em;
   text-transform: uppercase; line-height: 1;
   display: flex; align-items: center; justify-content: center;
-  cursor: crosshair; box-shadow: var(--shadow-pop);
+  /* one box-shadow, at the END of the rule — there used to be a second
+     declaration here (--shadow-pop, i.e. none) that silently won on source
+     order and left the cover flat while the deck under it had depth. */
+  cursor: crosshair; box-shadow: var(--deck-shadow-lift);
   transition: transform .46s cubic-bezier(.22,.61,.36,1), opacity .3s ease;
 }
 
@@ -4277,6 +4313,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   transform:
     translateX(calc(var(--i) * var(--dx))) translateY(-8px)
     rotate(0deg) scale(1.06);
+  box-shadow: var(--deck-shadow-lift);
   z-index: 35;
 }
 .trip-stack.is-fanned .is-front .tc-x { opacity: 1; }
@@ -4296,6 +4333,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     transform:
       translateX(calc(var(--i) * var(--dx))) translateY(-8px)
       rotate(0deg) scale(1.06);
+    box-shadow: var(--deck-shadow-lift);
     z-index: 35;
   }
   .trip-stack:hover .is-front .tc-x { opacity: 1; }
