@@ -3559,6 +3559,20 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     z-index: 35;
   }
   .trip-stack:hover .is-front .tc-x { opacity: 1; }
+  /* Just picked a trip: hold the deck shut under a cursor that has not moved
+     yet. :not(.is-fanned) keeps this out of the way of an explicit open —
+     without it these would outrank .trip-stack.is-fanned on specificity and
+     pin the deck closed even when the TRIP cover was tapped. */
+  .trip-stack.is-muted:not(.is-fanned):hover .trip-card {
+    transform:
+      translateX(calc(var(--i) * 5px))
+      rotate(calc(var(--i) * 1.2deg))
+      scale(calc(1 - var(--i) * 0.02));
+  }
+  .trip-stack.is-muted:not(.is-fanned):hover .trip-stack-cover {
+    opacity: 1; pointer-events: auto; transform: none;
+  }
+  .trip-stack.is-muted:not(.is-fanned):hover .is-front .tc-x { opacity: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

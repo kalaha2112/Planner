@@ -1445,6 +1445,23 @@
       overlay.addEventListener('drop', (e) => this.onDrop(e));
       overlay.addEventListener('dragend', (e) => this.onDragEnd(e));
       overlay.addEventListener('pointerdown', (e) => this.onPointerDown(e));   // touch drag-reorder (native DnD never fires from touch)
+      // Picking a trip mutes the hover fan so the deck does not spring open
+      // again under a cursor that never moved. Moving off the deck re-arms it.
+      //
+      // Position, not boundary events: selecting re-renders the tab row, so the
+      // node the pointer was over is gone by the time it moves and pointerout
+      // fires against a detached target (or none at all). Hit-testing the live
+      // stack's rect does not care that the node was replaced. Guarded on the
+      // flag first, so this is a no-op on every ordinary move.
+      overlay.addEventListener('pointermove', (e) => {
+        if (!this._deckMuted) return;
+        const stack = overlay.querySelector('.trip-stack');
+        if (!stack) return;
+        const r = stack.getBoundingClientRect();
+        if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) return;
+        this._deckMuted = false;
+        renderIntroTabs();
+      });
       // editing a tab name shouldn't start an ancestor drag (mirrors wireDelegation)
       overlay.addEventListener('focusin', (e) => {
         const t = e.target;
@@ -6508,8 +6525,9 @@
       // wiped by the next re-render — the deck silently snapped shut and the
       // TRIP cover went back to intercepting taps aimed at the cards.
       const fanned = this._tripDeckOpen ? ' is-fanned' : '';
+      const muted = this._deckMuted ? ' is-muted' : '';
       return `<button class="add-trip" data-act="add-trip" title="Add a trip" aria-label="Add a trip">+</button>
-        <div class="trip-stack${fanned}" style="--n:${keys.length}">
+        <div class="trip-stack${fanned}${muted}" style="--n:${keys.length}">
           <div class="trip-stack-cards">${cards}</div>
           <button class="trip-stack-cover" data-act="trip-stack-toggle" aria-expanded="${!!this._tripDeckOpen}" aria-label="Show trips">Trip</button>
         </div>`;
@@ -7929,14 +7947,27 @@
         // The class also pins the deck open on pointer devices once tapped.
         case 'trip-stack-toggle':
           this._tripDeckOpen = !this._tripDeckOpen;
+          if (this._tripDeckOpen) this._deckMuted = false;   // asked for it explicitly
           if (this._introTabsRefresh) this._introTabsRefresh();
           break;
         case 'tab-select': {
-          if (this.data.active !== key) { this.data.active = key; this._lastCoordKey = ''; this._openMapCardIdx = null; this._openMapCardFlipped = false; this.bump(); }
+          // Collapse BEFORE the re-render, not after. bump() is what redraws the
+          // tab row, so clearing the flag underneath it left the deck fanned
+          // until something else happened to render — the deck sat open on the
+          // trip you had just picked.
+          //
+          // Muting matters too: on a pointer device the cursor is still resting
+          // on the deck at this moment, and .trip-stack:hover would fan it
+          // straight back open however promptly the state cleared. The mute is
+          // lifted when the pointer leaves the deck (see the pointerout handler
+          // on the intro overlay).
+          this._tripDeckOpen = false;
+          this._deckMuted = true;
           // Selecting a trip only selects it — the globe respins to the new
           // region and the cover stays put. Entering the trip, and the unfold
           // that goes with it, is the scroll gesture's job.
-          this._tripDeckOpen = false;
+          if (this.data.active !== key) { this.data.active = key; this._lastCoordKey = ''; this._openMapCardIdx = null; this._openMapCardFlipped = false; this.bump(); }
+          else if (this._introTabsRefresh) this._introTabsRefresh();
           break;
         }
         case 'tab-remove': this.removeTrip(key); break;
