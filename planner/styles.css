@@ -1525,6 +1525,15 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
      nothing but whitespace. */
   .accom-body { padding: 8px 12px 18px; }
   .opt { padding: 13px 12px; }
+  /* The archive is a sibling of the option cards, so it sat flush with their
+     OUTER edge while everything inside them — labels, field rules, hotel names —
+     starts 12px further in. Its divider ran wider than every rule above it and
+     cut across them. Margin rather than padding, because the divider is a
+     border and padding would leave it where it was. The 2px insets on the rows
+     come off so the block lands on the content line exactly. */
+  .accom-arch { margin-left: 12px; margin-right: 12px; }
+  .accom-arch .arch-hd,
+  .accom-arch .arch-row { padding-left: 0; padding-right: 0; }
   .opt .top { gap: 8px; }
   /* Dark: a collapsed option is one line, and a --surface plate around one line
      is more box than content — it becomes a hairline-separated list instead.
