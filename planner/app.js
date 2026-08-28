@@ -6528,21 +6528,23 @@
       const cards = ordered.map((key, i) => {
         const lbl = (this.data.trips[key] || {}).label || '';
         const common = `draggable="true" data-drag="trip" data-drop="trip" data-key="${escA(key)}" style="--i:${i}"`;
-        // the name leads the tooltip: a card clips it, and on touch there is no
-        // hover to widen the card, so this is where the full name is readable
-        // name on its own line above the action, so a name that itself contains
-        // a dash does not run into the hint
-        const tip = (what) => escA(lbl ? lbl + '\n' + what[0].toUpperCase() + what.slice(1)
-                                       : what[0].toUpperCase() + what.slice(1));
+        // The tooltip is the name: a card clips it, and on touch there is no
+        // hover to widen the card, so this is where the full name is readable.
+        // A back card carries nothing else — that clicking one opens it is
+        // plain from the deck, and the hint only got in the way of the name.
+        // The front card keeps its hint, because nothing about a card says it
+        // can be dragged.
+        const tip = lbl ? ` title="${escA(lbl)}"` : '';
+        const tipDrag = ` title="${escA(lbl ? lbl + '\nDrag to reorder' : 'Drag to reorder')}"`;
         if (key === this.data.active) {
           // the front card carries the rename field, so it is a div (an input
           // cannot live inside a button) — same as the old .tab-active pill
-          return `<div class="trip-card is-front" ${common} title="${tip('drag to reorder')}">
+          return `<div class="trip-card is-front" ${common}${tipDrag}>
             <input class="tc-name" value="${escA(lbl)}" data-ch="tab-rename" data-key="${escA(key)}" aria-label="Trip name">
             ${keys.length > 1 ? `<button class="tc-x" data-act="tab-remove" data-key="${escA(key)}" title="Remove this trip" aria-label="Remove trip">−</button>` : ''}
           </div>`;
         }
-        return `<button class="trip-card" ${common} data-act="tab-select" title="${tip('open this trip')}">
+        return `<button class="trip-card" ${common} data-act="tab-select"${tip}>
           <span class="tc-name">${esc(lbl)}</span>
         </button>`;
       }).join('');
