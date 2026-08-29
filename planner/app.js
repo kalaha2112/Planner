@@ -159,6 +159,14 @@
   const CLOUD_PUSH_DEBOUNCE_MS = 900;                 // coalesce rapid edits into one upload
   const PACK_SNAP_MS = 700;                           // slow glide onto Packing, so the suitcase is seen opening
   const PACK_FIT_MIN = 0.55;                          // how far the packing columns may shrink before the type stops reading
+  /* TikTok's oEmbed: no key, no token, and — alone among the three platforms
+     here — it answers cross-origin, so the browser can ask it directly. The
+     caption comes back in `title`, which is exactly the text the parser wanted
+     and the share sheet did not send. Instagram's equivalent has needed a
+     Facebook app token since 2020 and RedNote publishes none, so those two
+     still depend on the sharer sending text. */
+  const OEMBED_TIKTOK = 'https://www.tiktok.com/oembed?url=';
+  const OEMBED_TIMEOUT_MS = 8000;
 
   // Public web build — the installable PWA served by GitHub Pages from the
   // planner/ folder on the main branch (redeployed on every merge). The Sync
@@ -5129,7 +5137,7 @@
     openImport(opts = {}) {
       const trip = this.currentTrip();
       // fresh text in the box means we are no longer working from a save
-      if (opts.raw != null) { this.importRaw = opts.raw; this.importResult = null; this.importMsg = ''; this.importFromInbox = null; }
+      if (opts.raw != null) { this.importRaw = opts.raw; this.importResult = null; this.importMsg = ''; this.importFromInbox = null; this._pastedRead = false; }
       const n = trip.stops.length;
       if (n) {
         // default target: whatever city/day is already in focus
@@ -5206,7 +5214,99 @@
       this.bump();
       const n = box.length;
       this.toast(`Saved${source && source !== 'note' ? ' from ' + (SRC_LABEL[source] || source) : ''} — ${n} waiting in Import`);
+      // you have already gone back to the feed, so the wait costs you nothing:
+      // if the share was only a link, go and read what is behind it
+      this.enrichFromLink(box[0].id);
       return true;
+    }
+    // the same read, for a link typed or pasted straight into the box rather
+    // than arriving as a save
+    async readPastedLink(url) {
+      let caption = '';
+      try {
+        const ctl = typeof AbortController === 'function' ? new AbortController() : null;
+        const timer = ctl ? setTimeout(() => ctl.abort(), OEMBED_TIMEOUT_MS) : null;
+        const r = await fetch(OEMBED_TIKTOK + encodeURIComponent(url), ctl ? { signal: ctl.signal } : undefined);
+        if (timer) clearTimeout(timer);
+        if (r && r.ok) caption = String(((await r.json()) || {}).title || '').trim();
+      } catch (e) { /* fall through to the paste-the-caption advice below */ }
+      if (!this.importOpen) return;
+      if (!caption) {
+        this.importMsg = 'No places stood out — only the link came through, and the post would not hand over its caption. Paste the caption text for a full read.';
+        this.bumpModal(); return;
+      }
+      this.importRaw = this._captionToLines(caption) + '\n' + (this.importRaw || '');
+      this.runImportExtract();
+    }
+
+    /* ---------- reading a link ----------
+       A share is usually just a URL: the platforms hand the share sheet a link
+       and nothing else, so the queue fills with saves the parser can say
+       nothing about. This asks TikTok for the caption behind one.
+
+       Everything about it is best-effort and silent. Offline, blocked by CORS,
+       rate-limited, endpoint moved, response reshaped — every one of those
+       lands in the same place, which is the save exactly as it already was.
+       The app works with no network by design and that does not change here:
+       this only ever ADDS text that was not there. ---------- */
+    _thinSave(raw) {
+      // what is left once the links are gone — a caption came through, or it didn't
+      const words = (raw || '').replace(/https?:\/\/\S+/gi, ' ').replace(/\s+/g, ' ').trim();
+      return words.length < 25;
+    }
+    /* One caption, one line. oEmbed hands the whole thing back as a single
+       string however it was typed, and the parser reads a post as LINES —
+       a place per line is the shape these lists actually have. So put the
+       breaks back in front of the markers people number their picks with.
+       Conservative on purpose: prose carrying no markers comes back untouched
+       rather than shredded, and "9.00" is not mistaken for item 9. */
+    _captionToLines(caption) {
+      return String(caption || '')
+        .replace(/\s*(?=📍|📌|✅|🔖)/gu, '\n')                    // a pin starts an item
+        .replace(/\s+(?=\d{1,2}\s*[.)、](?!\d)\s*\S)/g, '\n')      // …so does "1." or "2)"
+        .replace(/\n{2,}/g, '\n')
+        .trim();
+    }
+    _oembedFor(entry) {
+      if (!entry || entry.source !== 'tiktok') return null;      // the only one that answers us
+      const u = (entry.url || '').trim();
+      if (!/^https?:\/\//i.test(u)) return null;
+      return OEMBED_TIKTOK + encodeURIComponent(u);
+    }
+    async enrichFromLink(id) {
+      const entry = this.inbox().find(e => e.id === id);
+      if (!entry || entry.enrich) return;                        // done, failed or already running
+      if (!this._thinSave(entry.raw)) return;                    // the caption already came through
+      const endpoint = this._oembedFor(entry);
+      if (!endpoint) return;
+      entry.enrich = 'reading';
+      this.bumpModal();
+      let caption = '', author = '';
+      try {
+        const ctl = typeof AbortController === 'function' ? new AbortController() : null;
+        const timer = ctl ? setTimeout(() => ctl.abort(), OEMBED_TIMEOUT_MS) : null;
+        const r = await fetch(endpoint, ctl ? { signal: ctl.signal } : undefined);
+        if (timer) clearTimeout(timer);
+        if (r && r.ok) {
+          const j = await r.json();
+          caption = String((j && j.title) || '').trim();
+          author = String((j && j.author_name) || '').trim();
+        }
+      } catch (e) { /* no network, no CORS, no answer — the save stands as it is */ }
+      // the entry can be discarded while we are waiting
+      const still = this.inbox().find(e => e.id === id);
+      if (!still) return;
+      if (!caption) { still.enrich = 'failed'; this.bumpModal(); return; }
+      // the caption goes ABOVE the link, broken back into lines. The author
+      // handle is deliberately left out: it is not a place, and as a line of
+      // its own it scored as one.
+      still.raw = this._captionToLines(caption) + '\n' + (still.raw || '');
+      still.title = caption;
+      still.author = author;
+      still.enrich = 'read';
+      this.bump();
+      // the save is open in the box right now — re-read it with the new text
+      if (this.importFromInbox === id) { this.importRaw = still.raw; this.runImportExtract(); }
     }
     removeFromInbox(id) {
       const box = this.inbox();
@@ -5232,6 +5332,9 @@
       this.importResult = null;
       this.importMsg = '';
       this.openImport({ extract: true });
+      // a save that arrived offline never got its caption — now is a fine time
+      if (entry.enrich === 'failed') { entry.enrich = null; }
+      this.enrichFromLink(id);
     }
 
     /* A confirmation that does not stop you: the share sheet lands you back in
@@ -5300,7 +5403,15 @@
       }
       this.importUseDays = res.dayCount > 1;
       if (res.activities.length === 1 && res.activities[0].signals.indexOf('link') >= 0) {
-        this.importMsg = 'No places stood out — only the link came through. Paste the post’s caption or note text for a full read.';
+        // a bare TikTok link can still be read — ask for its caption and, if one
+        // comes back, run this again over the fuller text
+        if (res.source === 'tiktok' && res.url && !this._pastedRead) {
+          this._pastedRead = true;
+          this.importMsg = 'Only the link came through — reading the post…';
+          this.readPastedLink(res.url);
+        } else {
+          this.importMsg = 'No places stood out — only the link came through. Paste the post’s caption or note text for a full read.';
+        }
       }
       this.bumpModal();
     }
@@ -7975,10 +8086,15 @@
       const rows = box.map(e => {
         const label = SRC_LABEL[e.source] || 'Shared note';
         const line = (e.title || '').trim() || (e.url || '').trim() || 'Shared post';
+        // a save that came through as nothing but a link says so, so the queue
+        // does not look like it caught something it did not
+        const state = e.enrich === 'reading' ? '<span class="inb-state">reading…</span>'
+          : (this._thinSave(e.raw) ? '<span class="inb-state inb-state--bare">link only</span>' : '');
         return `<div class="inb-row${this.importFromInbox === e.id ? ' on' : ''}">
           <button class="inb-open" data-act="inbox-open" data-id="${escA(e.id)}" title="Read this one and pick its places">
             <span class="imp-src imp-src--${escA(e.source)}">${esc(label)}</span>
             <span class="inb-line">${esc(line)}</span>
+            ${state}
             <span class="inb-ago">${esc(ago(e.savedAt))}</span>
           </button>
           <button class="inb-x" data-act="inbox-remove" data-id="${escA(e.id)}" title="Discard this save" aria-label="Discard this save">✕</button>
@@ -8436,7 +8552,7 @@
         case 'pack-text': { const L = this.packList(trip, t.dataset.slot); if (L[i]) L[i].text = v; this.packOpen = t.dataset.slot; this.bump(); break; }
         case 'sync-code-in': this._syncCodeDraft = v; break;
         // social import
-        case 'import-raw': this.importRaw = v; this.importFromInbox = null; this.runImportExtract(); break;
+        case 'import-raw': this.importRaw = v; this.importFromInbox = null; this._pastedRead = false; this.runImportExtract(); break;
         case 'import-stop': {
           this.importStopIdx = Math.max(0, Math.min(trip.stops.length - 1, Number(v) || 0));
           this.importDay = Math.max(0, Math.min(this.importStopDays() - 1, this.importDay));

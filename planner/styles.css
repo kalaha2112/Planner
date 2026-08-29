@@ -3919,6 +3919,14 @@ html { -webkit-tap-highlight-color: transparent; }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .inb-ago { flex-shrink: 0; font-family: var(--sans); font-size: 10px; color: var(--ink-mute); }
+/* what the save actually holds: still being read, or a link with no caption
+   behind it — either way, better said here than discovered after opening it */
+.inb-state {
+  flex-shrink: 0; font-family: var(--sans); font-size: 9px; font-weight: 600;
+  letter-spacing: .04em; color: var(--gold); background: var(--gold-soft);
+  border-radius: var(--r-pill); padding: 2px 7px; line-height: 1.3;
+}
+.inb-state--bare { color: var(--ink-mute); background: var(--line-2); }
 .inb-x {
   flex-shrink: 0; border: none; background: transparent; color: var(--ink-faint);
   font-family: var(--sans); font-size: 11px; line-height: 1; padding: 5px; cursor: crosshair;
