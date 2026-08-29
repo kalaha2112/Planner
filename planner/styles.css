@@ -3880,6 +3880,51 @@ html { -webkit-tap-highlight-color: transparent; }
 .imp-actions .sync-btn { flex: 1; text-align: center; }
 .imp-msg { font-family: var(--sans); font-size: 12px; line-height: 1.45; color: var(--ink-soft); margin: 0; }
 
+/* ---- the inbox: shares caught, not yet sorted ----
+   A share from the feed is saved, not triaged, so this is the first thing the
+   dialog shows: what is waiting, newest first. Tapping a row loads it into the
+   box below; it leaves the list once its places have actually landed on a day. */
+.imp-inbox {
+  display: flex; flex-direction: column; gap: 6px;
+  border: 1px solid var(--line-soft); border-radius: var(--r-sm); padding: 10px 10px 8px;
+}
+.inb-hd { display: flex; align-items: center; gap: 8px; padding: 0 2px 2px; }
+.inb-t {
+  font-family: var(--caps); font-size: 12px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--ink-mute);
+}
+.inb-n {
+  font-family: var(--sans); font-size: 10px; font-weight: 700; line-height: 1;
+  color: var(--gold); background: var(--green-bg); border-radius: var(--r-pill); padding: 3px 7px;
+  font-variant-numeric: tabular-nums;
+}
+.inb-clear {
+  margin-left: auto; font-family: var(--sans); font-size: 11px; font-weight: 600;
+  color: var(--ink-mute); background: transparent; border: none; cursor: crosshair; padding: 3px 2px;
+}
+.inb-clear:hover { color: var(--red); }
+.inb-rows { display: flex; flex-direction: column; gap: 2px; max-height: 190px; overflow-y: auto; scrollbar-width: none; }
+.inb-rows::-webkit-scrollbar { width: 0; }
+.inb-row { display: flex; align-items: center; gap: 4px; border-radius: var(--r-xs); }
+.inb-row:hover { background: var(--hover-soft); }
+.inb-row.on { background: var(--green-bg); }
+.inb-open {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;
+  border: none; background: transparent; cursor: crosshair; padding: 6px 4px; text-align: left;
+}
+/* the source chip rides at list scale here, not the found-header's */
+.inb-open .imp-src { flex-shrink: 0; font-size: 9px; letter-spacing: .1em; padding: 3px 7px 2px; }
+.inb-line {
+  flex: 1; min-width: 0; font-family: var(--sans); font-size: 12.5px; font-weight: 500; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.inb-ago { flex-shrink: 0; font-family: var(--sans); font-size: 10px; color: var(--ink-mute); }
+.inb-x {
+  flex-shrink: 0; border: none; background: transparent; color: var(--ink-faint);
+  font-family: var(--sans); font-size: 11px; line-height: 1; padding: 5px; cursor: crosshair;
+}
+.inb-x:hover { color: var(--red); }
+
 .imp-found { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--line-soft); padding-top: 14px; }
 .imp-found-hd { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .imp-src {
@@ -3966,6 +4011,34 @@ html { -webkit-tap-highlight-color: transparent; }
   padding: 6px 13px 6px 11px; cursor: crosshair; transition: background .15s, color .15s;
 }
 .import-btn:hover { background: var(--line-2); color: var(--ink); }
+/* how many shares are waiting — the button is the way back to them, so it is
+   the thing that should say there is something to come back to */
+.imp-badge {
+  min-width: 16px; height: 16px; padding: 0 4px; border-radius: var(--r-pill);
+  background: var(--red); color: var(--on-accent);
+  font-family: var(--sans); font-size: 10px; font-weight: 700; line-height: 16px;
+  text-align: center; font-variant-numeric: tabular-nums;
+}
+
+/* ---- the share confirmation ----
+   The share sheet drops you back in the app, so something has to say the post
+   was caught — but a dialog would make you dismiss it before you could return
+   to the feed. This says it and goes. */
+.share-toast {
+  /* clears the fixed action row above it (34px buttons at 12px) rather than
+     landing across the undo and theme icons */
+  position: fixed; left: 50%; top: calc(max(12px, env(safe-area-inset-top)) + 44px);
+  transform: translate(-50%, -14px); z-index: 1700;
+  max-width: min(92vw, 460px);
+  font-family: var(--sans); font-size: 13px; font-weight: 500; line-height: 1.35;
+  color: var(--on-brown); background: var(--brown);
+  border-radius: var(--r-pill); padding: 10px 18px;
+  box-shadow: var(--shadow-modal);
+  opacity: 0; pointer-events: none;
+  transition: opacity .22s ease, transform .28s cubic-bezier(.22,.61,.36,1);
+}
+.share-toast.on { opacity: 1; transform: translate(-50%, 0); }
+@media (prefers-reduced-motion: reduce) { .share-toast { transition: opacity .22s ease; } }
 
 /* fold the day down to its running order — a bare chevron next to the date,
    because it changes what you see, not what the trip holds */

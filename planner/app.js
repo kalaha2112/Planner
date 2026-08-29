@@ -142,6 +142,7 @@
     // folding and opening — reading aids, they change no trip data
     'accom-toggle', 'accom-toggle-all', 'accom-archive-toggle', 'closet-toggle', 'day-fold', 'bookings-toggle', 'todos-toggle',
     'item-note-open', 'note-pic-open', 'open-budget', 'pk-close', 'optimize-dismiss',
+    'inbox-open',
     'toggle-stickers', 'close-stickers',
     // closing whatever is open
     'close-budget', 'overlay-budget', 'close-note', 'overlay-note',
@@ -1060,6 +1061,8 @@
       this.importDay = 0;          // which day of that stay
       this.importUseDays = true;   // honour "Day 1 / Day 2" headers found in the post
       this.importMsg = '';         // one-line status under the paste box
+      this.importFromInbox = null; // which saved post is loaded in the box, if any
+      this._toast = null;          // transient confirmation, top of the screen
       // ---- web ledger (≥701px): a vertical stack of full-width leaves —
       // scrolling down slides the next page up from below, the same motion
       // as the intro→trip scroll. Which leaf is open + the slide lock are
@@ -5125,7 +5128,8 @@
     }
     openImport(opts = {}) {
       const trip = this.currentTrip();
-      if (opts.raw != null) { this.importRaw = opts.raw; this.importResult = null; this.importMsg = ''; }
+      // fresh text in the box means we are no longer working from a save
+      if (opts.raw != null) { this.importRaw = opts.raw; this.importResult = null; this.importMsg = ''; this.importFromInbox = null; }
       const n = trip.stops.length;
       if (n) {
         // default target: whatever city/day is already in focus
@@ -5152,8 +5156,110 @@
       if (url && !text.includes(url)) parts.push(url);
       const raw = parts.join('\n').trim();
       if (!raw) return false;
-      this.openImport({ raw, extract: true });
+      /* A share is SAVED, not triaged. You are three reels deep in a feed when
+         you send one over; stopping you there to pick a city and a day is the
+         wrong moment to ask, and a second share would land on top of the first
+         one's unreviewed rows. So it goes in the inbox, the app says so, and
+         you go back to scrolling. Sorting them onto days is a separate sitting,
+         which is what the Import button is for. */
+      this.saveToInbox(raw);
       return true;
+    }
+
+    /* ============================================================
+       THE INBOX — shared posts waiting to be sorted
+       ------------------------------------------------------------
+       Saves live on the account, not on a trip: a reel arrives long
+       before you know which trip it belongs to, and often before the
+       trip exists at all. Nothing here needs a stop, a day, or even a
+       route — that is the whole point of catching it now and placing
+       it later.
+       ============================================================ */
+    inbox() {
+      const d = this.data;
+      if (!Array.isArray(d.inbox)) d.inbox = [];
+      return d.inbox;
+    }
+    saveToInbox(raw) {
+      raw = (raw || '').trim();
+      if (!raw) return false;
+      const box = this.inbox();
+      // the same post shared twice is one save, moved back to the top
+      const dupe = box.findIndex(e => (e.raw || '').trim() === raw);
+      if (dupe >= 0) box.splice(dupe, 1);
+      // read the source and the link now, while we are here — the list needs a
+      // label and a title to show, and the full parse can wait for the review
+      let source = 'note', title = '', url = '';
+      const SI = window.SocialImport;
+      if (SI) {
+        try {
+          const res = SI.parse(raw, { cities: this.importCityList() });
+          source = res.source || 'note';
+          title = (res.title || '').trim();
+          url = (res.url || '').trim();
+        } catch (e) { /* an unreadable post is still worth keeping */ }
+      }
+      if (!title) title = raw.split(/\n/).map(l => l.trim()).find(l => l && !/^https?:\/\//i.test(l)) || '';
+      box.unshift({ id: 'sv' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+                    raw, source, title, url, savedAt: Date.now() });
+      if (box.length > 60) box.length = 60;   // a queue, not an archive
+      this.bump();
+      const n = box.length;
+      this.toast(`Saved${source && source !== 'note' ? ' from ' + (SRC_LABEL[source] || source) : ''} — ${n} waiting in Import`);
+      return true;
+    }
+    removeFromInbox(id) {
+      const box = this.inbox();
+      const i = box.findIndex(e => e.id === id);
+      if (i < 0) return;
+      box.splice(i, 1);
+      if (this.importFromInbox === id) this.importFromInbox = null;
+      this.bump();
+    }
+    clearInbox() {
+      if (!this.inbox().length) return;
+      this.snapshot();
+      this.data.inbox = [];
+      this.importFromInbox = null;
+      this.bump();
+    }
+    // load one saved post into the review box and read it straight away
+    openInboxItem(id) {
+      const entry = this.inbox().find(e => e.id === id);
+      if (!entry) return;
+      this.importFromInbox = id;
+      this.importRaw = entry.raw;
+      this.importResult = null;
+      this.importMsg = '';
+      this.openImport({ extract: true });
+    }
+
+    /* A confirmation that does not stop you: the share sheet lands you back in
+       the app, so something has to say the post was caught, but a dialog would
+       make you dismiss it before returning to the feed. */
+    toast(text) {
+      this._toast = { text, at: Date.now() };
+      clearTimeout(this._toastTimer);
+      this._toastTimer = setTimeout(() => { this._toast = null; this.paintToast(); }, 3400);
+      this.paintToast();
+    }
+    paintToast() {
+      let el = document.querySelector('.share-toast');
+      if (!this._toast) { if (el) el.classList.remove('on'); return; }
+      if (!el) {
+        el = document.createElement('div');
+        el.className = 'share-toast';
+        el.setAttribute('role', 'status');
+        document.body.appendChild(el);
+      }
+      el.textContent = this._toast.text;
+      // A freshly appended node has no computed style yet, so adding the class
+      // in the next frame gives the transition nothing to start from and it
+      // never runs. Force the layout read first — the same trick nudgeLock()
+      // uses to restart its animation — so the browser has the closed state on
+      // record before the open one arrives.
+      void el.offsetWidth;
+      el.classList.add('on');
     }
     // PWA share target: Android's share sheet opens the app at
     // ?title=…&text=…&url=… (see manifest.webmanifest). Consume the payload,
@@ -5275,6 +5381,14 @@
         });
         added++;
       });
+      // the save has done its job — take it out of the queue so the count means
+      // "still to sort" rather than "ever shared"
+      if (this.importFromInbox) {
+        const box = this.inbox();
+        const bi = box.findIndex(e => e.id === this.importFromInbox);
+        if (bi >= 0) box.splice(bi, 1);
+        this.importFromInbox = null;
+      }
       const landedOn = this.importDay;
       this.importOpen = false;
       this.importResult = null;
@@ -7269,6 +7383,7 @@
           <div class="daymap-cap"></div>
         </aside>` : '';
         const note = this._optimizeNote;
+        const inboxN = this.inbox().length;   // shares caught but not yet sorted
         const wx = this.dayWeather(stop, range, activeDay);
         const wxChip = (wx && wx.hi != null) ? (() => {
           const info = wxInfo(wx.code);
@@ -7287,7 +7402,7 @@
                   aria-label="${folded ? 'Expand the activities' : 'Collapse the activities'}"
                   title="${folded ? 'Show each activity\'s time, address and cost' : 'Fold every activity down to its name'}">${svg(I.chev, { w: 13, h: 13, sw: 2 })}</button>` : ''}
                 <div class="day-head-acts">
-                <button class="import-btn" data-act="open-import" data-stop="${sIdx}" data-day="${activeDay}" title="Add places from a shared RedNote / TikTok / Instagram post">${svg(I.inbox, { w: 13, h: 13, sw: 1.7 })}<span>Import post</span></button>
+                <button class="import-btn" data-act="open-import" data-stop="${sIdx}" data-day="${activeDay}" title="${inboxN ? inboxN + ' shared ' + (inboxN === 1 ? 'post is' : 'posts are') + ' waiting to be sorted' : 'Add places from a shared RedNote / TikTok / Instagram post'}">${svg(I.inbox, { w: 13, h: 13, sw: 1.7 })}<span>Import post</span>${inboxN ? `<span class="imp-badge">${inboxN}</span>` : ''}</button>
                 <button class="optimize-btn" data-act="optimize-day" ${placedCount < 2 ? 'disabled' : ''} title="${placedCount < 2 ? 'Add an address to at least 2 activities first' : 'Reorder the day around your hotel and any pinned stops'}">${svg(I.spark, { w: 13, h: 13, sw: 1.6 })}<span>Optimize route</span></button>
                 </div>
               </div>
@@ -7841,6 +7956,44 @@
     // Review sheet for a shared post: the raw text on top, everything the
     // extractor found below it — editable, tickable, and aimed at one day of
     // one stay before anything is committed.
+    /* What the share sheet has caught and nobody has sorted yet. Newest first,
+       because the reel you sent thirty seconds ago is the one you came here
+       for. Tapping a save loads it into the box below and reads it; the row
+       stays until its places actually land on a day. */
+    renderInbox() {
+      const box = this.inbox();
+      if (!box.length) return '';
+      const ago = (t) => {
+        const m = Math.max(0, Math.round((Date.now() - t) / 60000));
+        if (m < 1) return 'just now';
+        if (m < 60) return m + 'm ago';
+        const h = Math.round(m / 60);
+        if (h < 24) return h + 'h ago';
+        const d = Math.round(h / 24);
+        return d === 1 ? 'yesterday' : d + 'd ago';
+      };
+      const rows = box.map(e => {
+        const label = SRC_LABEL[e.source] || 'Shared note';
+        const line = (e.title || '').trim() || (e.url || '').trim() || 'Shared post';
+        return `<div class="inb-row${this.importFromInbox === e.id ? ' on' : ''}">
+          <button class="inb-open" data-act="inbox-open" data-id="${escA(e.id)}" title="Read this one and pick its places">
+            <span class="imp-src imp-src--${escA(e.source)}">${esc(label)}</span>
+            <span class="inb-line">${esc(line)}</span>
+            <span class="inb-ago">${esc(ago(e.savedAt))}</span>
+          </button>
+          <button class="inb-x" data-act="inbox-remove" data-id="${escA(e.id)}" title="Discard this save" aria-label="Discard this save">✕</button>
+        </div>`;
+      }).join('');
+      return `<div class="imp-inbox">
+        <div class="inb-hd">
+          <span class="inb-t">Waiting</span>
+          <span class="inb-n">${box.length}</span>
+          <button class="inb-clear" data-act="inbox-clear" title="Discard every save">Clear all</button>
+        </div>
+        <div class="inb-rows">${rows}</div>
+      </div>`;
+    }
+
     renderImportModal() {
       if (!this.importOpen) return '';
       const trip = this.currentTrip();
@@ -7920,11 +8073,12 @@
             <div style="flex:1;min-width:0">
               <div class="eyebrow">Import</div>
               <div class="imp-title">From a shared post</div>
-              <div class="imp-sub">RedNote · TikTok · Instagram — share straight to Planner, or paste it here.</div>
+              <div class="imp-sub">RedNote · TikTok · Instagram — share straight to Planner and it waits here, or paste one in.</div>
             </div>
             <button class="modal-x" data-act="close-import">✕</button>
           </div></div>
           <div class="imp-body">
+            ${this.renderInbox()}
             <textarea class="imp-paste" data-ch="import-raw" data-drop="import" rows="5"
               placeholder="Paste the caption, the copied note, or just the link…">${esc(this.importRaw)}</textarea>
             <div class="imp-actions">
@@ -8163,6 +8317,9 @@
           break;
         }
         case 'import-paste': this.importPasteFromClipboard(); break;
+        case 'inbox-open': this.openInboxItem(t.dataset.id); break;
+        case 'inbox-remove': this.removeFromInbox(t.dataset.id); break;
+        case 'inbox-clear': this.clearInbox(); break;
         case 'import-toggle': this.importToggle(id); break;
         case 'import-toggle-all': this.importToggleAll(); break;
         case 'import-apply': this.importApply(); break;
@@ -8279,7 +8436,7 @@
         case 'pack-text': { const L = this.packList(trip, t.dataset.slot); if (L[i]) L[i].text = v; this.packOpen = t.dataset.slot; this.bump(); break; }
         case 'sync-code-in': this._syncCodeDraft = v; break;
         // social import
-        case 'import-raw': this.importRaw = v; this.runImportExtract(); break;
+        case 'import-raw': this.importRaw = v; this.importFromInbox = null; this.runImportExtract(); break;
         case 'import-stop': {
           this.importStopIdx = Math.max(0, Math.min(trip.stops.length - 1, Number(v) || 0));
           this.importDay = Math.max(0, Math.min(this.importStopDays() - 1, this.importDay));
