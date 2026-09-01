@@ -3476,6 +3476,55 @@
 
     /* ---------- dates ---------- */
     formatDate(d) { if (!d || isNaN(d.getTime())) return '—'; return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
+    /* Hours past midnight for a time as people actually type it — "17:30",
+       "5pm", "9.15", "0730". null when there is nothing readable in it, which
+       is the answer that leaves every date exactly where it was. */
+    _clockHours(v) {
+      const s = String(v == null ? '' : v).trim().toLowerCase();
+      if (!s) return null;
+      const m = s.match(/(\d{1,2})(?:[:.h]\s*(\d{2}))?\s*(am|pm)?/);
+      if (!m) return null;
+      let h = Number(m[1]);
+      const min = Number(m[2] || 0);
+      const ap = m[3] || '';
+      if (ap === 'pm' && h < 12) h += 12;
+      if (ap === 'am' && h === 12) h = 0;
+      if (!isFinite(h) || h > 24 || min > 59) return null;
+      return h + min / 60;
+    }
+    /* Whose day is the one you travel on?
+
+       A stay runs check-in to check-out, but the day you move is shared, and
+       the date alone cannot say who got more of it. Leave Berlin at 17:00 and
+       reach Prague at 21:00 and the day was Berlin's — you had the whole of it
+       there — yet the stay dates hand it to Prague, because that is the morning
+       Prague's booking starts.
+
+       So ask the clock: the hours before departure belong to the city you are
+       leaving, the hours after arrival to the one you are reaching, and the
+       larger share takes the day. One time alone is enough to judge it; with
+       neither, nothing moves and the arrival day stays the destination's, as
+       it always was. */
+    _arrivalDayIsHere(leg) {
+      if (!leg) return true;
+      // an overnight train already lands on the NEXT date (the extra day below),
+      // so the morning it arrives is unambiguously the destination's
+      if (leg.mode === 'overnight-train') return true;
+      const dep = this._clockHours(leg.departure);
+      const arr = this._clockHours(leg.arrival);
+      if (dep != null && arr != null) return (24 - arr) >= dep;
+      if (dep != null) return dep < 12;
+      if (arr != null) return arr < 14;
+      return true;
+    }
+    _departureDayIsHere(leg) {
+      if (!leg) return false;
+      // an overnight train leaves in the evening and the night is spent moving:
+      // the day it goes on was this city's from end to end
+      if (leg.mode === 'overnight-train') return true;
+      return !this._arrivalDayIsHere(leg);
+    }
+
     computeDates(trip) {
       const dep = new Date((trip.depart || this.data.meta.depart) + 'T00:00:00');
       if (isNaN(dep.getTime())) return null;
@@ -3487,6 +3536,27 @@
         stopRanges.push({ start, end });
         cursor = new Date(end);
         if (stop.leg.mode === 'overnight-train') cursor.setDate(cursor.getDate() + 1);
+      });
+      /* start/end are the STAY and stay put — the hotel rows, the date lines and
+         the stop cards all mean check-in to check-out by them. dayStart/dayCount
+         are the other question: which days did I actually spend here. They are
+         what the calendar highlights and what the day planner is indexed by. */
+      trip.stops.forEach((stop, i) => {
+        const r = stopRanges[i];
+        const nights = Math.max(1, Number(stop.nights) || 1);
+        const ownsArr = this._arrivalDayIsHere(i === 0 ? trip.outboundLeg : trip.stops[i - 1].leg);
+        const ownsDep = this._departureDayIsHere(stop.leg);
+        const dayStart = new Date(r.start);
+        if (!ownsArr) dayStart.setDate(dayStart.getDate() + 1);
+        // gained the departure evening, lost the arrival night, or neither
+        let dayCount = nights + (ownsArr && ownsDep ? 1 : 0) - (!ownsArr && !ownsDep ? 1 : 0);
+        /* A day someone has already planned something on never disappears off
+           the end of the calendar because a time was typed into a leg. The
+           times move the window; they do not throw work away. */
+        const planned = (stop.itinerary || []).reduce(
+          (n, day, di) => (day && (((day.items || []).length) || ((day.outfits || []).length))) ? di + 1 : n, 0);
+        r.dayStart = dayStart;
+        r.dayCount = Math.max(1, planned, dayCount);
       });
       return { origin: dep, stops: stopRanges, home: cursor };
     }
@@ -4257,7 +4327,7 @@
       if (!coord) return null;
       const entry = this._weatherForStay(coord, range.start, range.end);
       if (!entry) return null;
-      const dt = new Date(range.start); dt.setDate(dt.getDate() + dayIdx);
+      const dt = new Date(range.dayStart || range.start); dt.setDate(dt.getDate() + dayIdx);
       const wx = entry.days[this._wxISO(dt)];
       return wx ? Object.assign({ typical: entry.kind === 'typical' }, wx) : null;
     }
@@ -5131,8 +5201,13 @@
       return names;
     }
     importStopDays() {
-      const stop = this.importStopIdx != null ? this.currentTrip().stops[this.importStopIdx] : null;
-      return stop ? Math.max(1, Number(stop.nights) || 1) : 1;
+      if (this.importStopIdx == null) return 1;
+      const trip = this.currentTrip();
+      const stop = trip.stops[this.importStopIdx];
+      if (!stop) return 1;
+      const d = this.computeDates(trip);
+      const r = d && d.stops[this.importStopIdx];
+      return Math.max(1, (r && r.dayCount) || Number(stop.nights) || 1);
     }
     openImport(opts = {}) {
       const trip = this.currentTrip();
@@ -7407,10 +7482,13 @@
       const sIdx = this.openStopIdx; const stop = trip.stops[sIdx];
       const nightsN = Math.max(1, Number(stop.nights) || 1);
       this.ensureItinerary(stop);
-      const hasDay = this.activeDay != null && this.activeDay >= 0 && this.activeDay < nightsN;
-      const activeDay = hasDay ? this.activeDay : -1;
       const range = d ? d.stops[sIdx] : null;
-      const calStart = range ? range.start : new Date();
+      // days on the ground, which a leg's clock can make one more or one fewer
+      // than the nights booked (see computeDates)
+      const daysN = range ? range.dayCount : nightsN;
+      const hasDay = this.activeDay != null && this.activeDay >= 0 && this.activeDay < daysN;
+      const activeDay = hasDay ? this.activeDay : -1;
+      const calStart = range ? range.dayStart : new Date();
       const closet = this.ensureCloset();
       // The closet is a strip of outfit thumbnails between the calendar and the
       // day planner. Once it has a few outfits it is the tallest thing on the
@@ -7418,8 +7496,8 @@
       // is remembered across reloads like the hotel rows are.
       const closetShut = this.closetShut();
       const caret = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`;
-      const cal = this.buildCalendar(calStart, nightsN, stop.itinerary, activeDay, closet);
-      const dayDate = (i) => { if (!range) return ''; const dt = new Date(range.start); dt.setDate(dt.getDate() + i); return fmt(dt); };
+      const cal = this.buildCalendar(calStart, daysN, stop.itinerary, activeDay, closet);
+      const dayDate = (i) => { if (!range) return ''; const dt = new Date(range.dayStart); dt.setDate(dt.getDate() + i); return fmt(dt); };
 
       const stripCells = closet.map(o => `<div class="outfit" draggable="true" data-drag="closet" data-id="${escA(o.id)}" title="Drag onto a date">
         <img src="${escA(o.image)}"><button class="del" data-act="outfit-delete" data-id="${escA(o.id)}" title="Remove from closet">−</button></div>`).join('');
@@ -7557,7 +7635,7 @@
       const sIdx = this.openStopIdx; const stop = trip.stops[sIdx];
       const nightsN = Math.max(1, Number(stop.nights) || 1);
       const range = d ? d.stops[sIdx] : null;
-      const hasDay = this.activeDay != null && this.activeDay >= 0 && this.activeDay < nightsN;
+      const hasDay = this.activeDay != null && this.activeDay >= 0 && this.activeDay < (range ? range.dayCount : nightsN);
       const activeDay = hasDay ? this.activeDay : -1;
       return `<div class="overlay" data-act="overlay-iti">
         <div class="dialog iti-dialog" data-stop data-sticker-target="iti-${sIdx}">
