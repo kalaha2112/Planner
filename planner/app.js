@@ -117,7 +117,6 @@
   const ACCOM_SHUT_KEY = 'europe-trip-accom-shut-v1'; // which lodging options are collapsed, per trip+stop
   const CLOSET_SHUT_KEY = 'europe-trip-closet-shut-v1'; // is the outfit closet folded, per trip
   const READONLY_KEY = 'europe-trip-readonly-v1';       // view-only lock, per device
-  const DAYFOLD_KEY = 'europe-trip-day-folded-v1';      // are the day's rows folded to their names, per device
   const BOOKINGS_SHUT_KEY = 'europe-trip-bookings-shut-v1';   // is the Bookings list folded, per device
   const TODOS_SHUT_KEY = 'europe-trip-todos-shut-v1';         // is the To-do list folded, per device
 
@@ -5700,15 +5699,6 @@
       try { localStorage.setItem(CLOSET_SHUT_KEY, JSON.stringify(this._closetShutStore)); } catch (e) {}
       this.bumpModal();
     }
-    /* A planned day is read far more often than it is edited, and three fields
-       per row is a lot to scroll past when all you want is the running order.
-       Folded, a row is its number, its name and the hop to the next one. */
-    dayRowsShut() {
-      if (this._dayShut == null) {
-        try { this._dayShut = localStorage.getItem(DAYFOLD_KEY) === '1'; } catch (e) { this._dayShut = false; }
-      }
-      return this._dayShut;
-    }
     /* Both lists grow with the trip — Bookings runs two lines a city, hotel
        names and all — so either can bury the bottom of a column. Each folds to
        its own header, on both versions, and the header keeps its count so a
@@ -5744,10 +5734,24 @@
       return `<button class="hd" data-act="${o.act}" aria-expanded="${o.shut ? 'false' : 'true'}"
             title="${escA(tip)}" aria-label="${escA(tip)}"><div class="t">${esc(o.title)}</div><div class="p">${esc(o.count)}</div><span class="bk-caret">${caret}</span></button>`;
     }
+    /* Folding the day is every row folded at once — it writes the same flag the
+       per-row chevrons write, rather than laying a class over the top of them.
+       That is what lets a row still be opened on its own afterwards: under the
+       old class the chevrons could not say anything true while it was on, so
+       they had to be hidden, and folding the day cost you the ability to look
+       at any single thing in it. */
     toggleDayRows() {
-      this._dayShut = !this.dayRowsShut();
-      try { localStorage.setItem(DAYFOLD_KEY, this._dayShut ? '1' : '0'); } catch (e) {}
-      this.bumpModal();
+      const items = this.activeDayItems();
+      if (!items.length) return;
+      const shut = !items.every(it => it.folded);
+      items.forEach(it => { it.folded = shut; });
+      this.bump();
+    }
+    activeDayItems() {
+      if (this.openStopIdx == null || this.activeDay == null) return [];
+      const stop = this.currentTrip().stops[this.openStopIdx];
+      const day = stop && (stop.itinerary || [])[this.activeDay];
+      return (day && Array.isArray(day.items)) ? day.items : [];
     }
     dayOutfits(stop, dayIdx) { this.ensureItinerary(stop); const d = stop.itinerary[dayIdx] || (stop.itinerary[dayIdx] = { items: [], outfits: [] }); if (!Array.isArray(d.outfits)) d.outfits = []; return d.outfits; }
     toggleOutfitOnDay(id, stopIdx, dayIdx) { const arr = this.dayOutfits(this.currentTrip().stops[stopIdx], dayIdx); const i = arr.findIndex(e => e.id === id); if (i >= 0) arr.splice(i, 1); this.bump(); }
@@ -7551,7 +7555,8 @@
         const flashIdx = this._flashItem; this._flashItem = null;
         const selIdx = this._selectedItem;
         const placedCount = this.countPlaced(stop, itemList);
-        const folded = this.dayRowsShut();
+        // the day reads as folded when every row in it is
+        const folded = itemList.length > 0 && itemList.every(it => it.folded);
         const items = itemList.map((it, ii) => {
           const geoQuery = (it.address || '').trim() || (it.text || '').trim();
           const geoCity = geoQuery.includes(',') ? '' : (stop.city || '');
@@ -7601,9 +7606,7 @@
               <div class="field">${svg(I.pin, { w: 11, h: 11, stroke: 'currentColor' })}<input value="${escA(it.address)}" data-ch="item-address" data-i="${ii}" placeholder="Address"></div>
               <div class="cost-field"><span class="d">${esc(ccySym(cpm.ccy))}</span><input value="${escA(it.cost)}" data-ch="item-cost" data-i="${ii}" inputmode="decimal" title="Type the currency if it isn't dollars — &quot;15 eur&quot;, &quot;3800 jpy&quot;">${ccyPicker('item-ccy', `data-i="${ii}"`, cpm.ccy, cpm.fromText)}</div>
               ${costHint.text ? `<span class="cad-hint${costHint.warn ? ' cad-hint--warn' : ''}" title="${escA(cadHint(cpm.amount, cpm.ccy))}">${esc(costHint.text)}</span>` : ''}
-              ${it.src ? (it.srcUrl
-                ? `<a class="item-src src--${escA(it.src)}" href="${escA(it.srcUrl)}" target="_blank" rel="noopener noreferrer" title="Open the post this came from">${esc(SRC_LABEL[it.src] || it.src)} ↗</a>`
-                : `<span class="item-src src--${escA(it.src)}">${esc(SRC_LABEL[it.src] || it.src)}</span>`) : ''}
+              ${it.src ? `<span class="item-src src--${escA(it.src)}" title="Came from a shared ${escA(SRC_LABEL[it.src] || it.src)} post">${esc(SRC_LABEL[it.src] || it.src)}</span>` : ''}
             </div>
           </div>
           <button class="x" data-act="item-remove" data-i="${ii}" title="Remove">✕</button>

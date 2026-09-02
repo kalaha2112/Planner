@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-09-02T17:42:51.511Z
+  Built: 2026-09-02T18:32:58.271Z
 -->
 
 <html lang="en">
@@ -1709,9 +1709,6 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
 .item.folded { padding-top: 7px; padding-bottom: 7px; }
 .item.folded .meta { display: none; }
 .item.folded .mid { gap: 0; }
-/* the whole-day fold already hides every meta line, so a per-row chevron under
-   it would be reporting a state you cannot see either way */
-.day-main.folded .item-fold { display: none; }
 
 /* ---- the note sheet ---- */
 .overlay:has(.note-dialog) { align-items: center; padding: 24px 20px; }
@@ -1785,16 +1782,22 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
   padding: 9px 20px; border: none; border-radius: var(--r-btn);
   background: var(--grad-accent); color: var(--on-grad); cursor: crosshair;
 }
-.item .meta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.item .field { flex: 1; display: flex; align-items: center; gap: 5px; min-width: 120px; }
+/* One cluster, not four things adrift. The address took flex:1 and the cost box
+   reserved its width whether or not it held a number, so on a wide row an empty
+   price left "$" marooned a hundred pixels from its own currency and the line
+   read as scattered debris. Everything sizes to what it holds now and sits
+   together from the left; the slack collects at the end of the row where it is
+   quiet. */
+.item .meta { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.item .field { flex: 0 1 200px; display: flex; align-items: center; gap: 5px; min-width: 0; }
 .item .field > svg { color: var(--ink-mute); }   /* icons use currentColor -> theme-aware */
 .item .field input { font-family: var(--sans); font-size: 12px; color: var(--ink-soft); border: none; background: transparent; padding: 2px 0; flex: 1; min-width: 0; outline-offset: 2px; }
 .item .maps { flex-shrink: 0; display: flex; align-items: center; color: var(--gold); text-decoration: none; font-family: var(--sans); font-size: 11px; font-weight: 700; }
-/* wide enough for a five-figure amount *and* the currency beside it — at 72px
-   the picker ate the number and "3800" rendered as "380(" */
-.item .cost-field { flex: 0 1 112px; display: flex; align-items: center; gap: 3px; }
+/* the amount sizes to the amount: the picker sits after the input rather than
+   sharing a slot with it, so the box no longer has to be wide enough for both */
+.item .cost-field { flex: 0 0 auto; display: flex; align-items: center; gap: 3px; }
 .item .cost-field .d { font-family: var(--sans); font-size: 10px; font-weight: 500; color: var(--ink-mute); flex-shrink: 0; }
-.item .cost-field input { font-family: var(--sans); font-size: 10.5px; color: var(--ink-soft); border: none; background: transparent; padding: 2px 0; width: 100%; min-width: 0; font-variant-numeric: tabular-nums; }
+.item .cost-field input { font-family: var(--sans); font-size: 10.5px; color: var(--ink-soft); border: none; background: transparent; padding: 2px 0; width: 48px; min-width: 0; font-variant-numeric: tabular-nums; }
 /* the currency picker rides in the same slot as the amount, so it has to be
    smaller than the one beside a hotel price — the row is a meta line, not a field */
 .item .cost-field .ccy-sel { font-size: 9.5px; padding: 0 10px 0 0; }
@@ -4867,10 +4870,10 @@ html { -webkit-tap-highlight-color: transparent; }
 .day-fold svg { display: block; transition: transform .22s cubic-bezier(.22,.61,.36,1); }
 .day-fold.shut svg { transform: rotate(-90deg); }
 
-/* folded: number, name, the map arrow and the row's own controls — nothing else */
-.day-main.folded .item { padding-top: 7px; padding-bottom: 7px; }
-.day-main.folded .item .meta { display: none; }
-.day-main.folded .item .mid { gap: 0; }
+/* Folded rows are the number, the name, the map arrow and the row's own
+   controls — nothing else. There is no day-wide override any more: folding the
+   day sets every row's own flag, so .item.folded is the only state there is and
+   each chevron keeps working after it. */
 .day-main.folded .item-leg { padding-top: 3px; padding-bottom: 3px; }
 
 /* the Google Maps arrow rides beside the name now: same gold, a slightly bigger
@@ -4878,14 +4881,16 @@ html { -webkit-tap-highlight-color: transparent; }
 .item .name-row .maps { font-size: 12px; padding: 0 3px; line-height: 1; text-decoration: none; }
 .item .name-row .maps:hover { color: var(--red); }
 
-/* provenance chip on an imported activity row */
+/* Provenance mark on an imported activity row — a label, not a link. It used to
+   open the post it came from, which put a fifth thing to click on a row that is
+   already a name, a pin, a note, a fold and a delete. Where the row came from is
+   worth knowing; it is not worth another button. */
 .item-src {
   flex-shrink: 0; font-family: var(--sans); font-size: 9.5px; font-weight: 600;
-  letter-spacing: .06em; text-transform: uppercase; text-decoration: none;
+  letter-spacing: .06em; text-transform: uppercase;
   color: var(--ink-mute); border: 1px solid var(--line-soft); border-radius: var(--r-pill);
   padding: 2px 7px; line-height: 1.5;
 }
-a.item-src:hover { color: var(--red); border-color: var(--red); }
 .item .field--time { flex: 0 0 74px; min-width: 74px; }
 
 /* ============================================================
@@ -5713,7 +5718,6 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
   const ACCOM_SHUT_KEY = 'europe-trip-accom-shut-v1'; // which lodging options are collapsed, per trip+stop
   const CLOSET_SHUT_KEY = 'europe-trip-closet-shut-v1'; // is the outfit closet folded, per trip
   const READONLY_KEY = 'europe-trip-readonly-v1';       // view-only lock, per device
-  const DAYFOLD_KEY = 'europe-trip-day-folded-v1';      // are the day's rows folded to their names, per device
   const BOOKINGS_SHUT_KEY = 'europe-trip-bookings-shut-v1';   // is the Bookings list folded, per device
   const TODOS_SHUT_KEY = 'europe-trip-todos-shut-v1';         // is the To-do list folded, per device
 
@@ -11296,15 +11300,6 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       try { localStorage.setItem(CLOSET_SHUT_KEY, JSON.stringify(this._closetShutStore)); } catch (e) {}
       this.bumpModal();
     }
-    /* A planned day is read far more often than it is edited, and three fields
-       per row is a lot to scroll past when all you want is the running order.
-       Folded, a row is its number, its name and the hop to the next one. */
-    dayRowsShut() {
-      if (this._dayShut == null) {
-        try { this._dayShut = localStorage.getItem(DAYFOLD_KEY) === '1'; } catch (e) { this._dayShut = false; }
-      }
-      return this._dayShut;
-    }
     /* Both lists grow with the trip — Bookings runs two lines a city, hotel
        names and all — so either can bury the bottom of a column. Each folds to
        its own header, on both versions, and the header keeps its count so a
@@ -11340,10 +11335,24 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       return `<button class="hd" data-act="${o.act}" aria-expanded="${o.shut ? 'false' : 'true'}"
             title="${escA(tip)}" aria-label="${escA(tip)}"><div class="t">${esc(o.title)}</div><div class="p">${esc(o.count)}</div><span class="bk-caret">${caret}</span></button>`;
     }
+    /* Folding the day is every row folded at once — it writes the same flag the
+       per-row chevrons write, rather than laying a class over the top of them.
+       That is what lets a row still be opened on its own afterwards: under the
+       old class the chevrons could not say anything true while it was on, so
+       they had to be hidden, and folding the day cost you the ability to look
+       at any single thing in it. */
     toggleDayRows() {
-      this._dayShut = !this.dayRowsShut();
-      try { localStorage.setItem(DAYFOLD_KEY, this._dayShut ? '1' : '0'); } catch (e) {}
-      this.bumpModal();
+      const items = this.activeDayItems();
+      if (!items.length) return;
+      const shut = !items.every(it => it.folded);
+      items.forEach(it => { it.folded = shut; });
+      this.bump();
+    }
+    activeDayItems() {
+      if (this.openStopIdx == null || this.activeDay == null) return [];
+      const stop = this.currentTrip().stops[this.openStopIdx];
+      const day = stop && (stop.itinerary || [])[this.activeDay];
+      return (day && Array.isArray(day.items)) ? day.items : [];
     }
     dayOutfits(stop, dayIdx) { this.ensureItinerary(stop); const d = stop.itinerary[dayIdx] || (stop.itinerary[dayIdx] = { items: [], outfits: [] }); if (!Array.isArray(d.outfits)) d.outfits = []; return d.outfits; }
     toggleOutfitOnDay(id, stopIdx, dayIdx) { const arr = this.dayOutfits(this.currentTrip().stops[stopIdx], dayIdx); const i = arr.findIndex(e => e.id === id); if (i >= 0) arr.splice(i, 1); this.bump(); }
@@ -13147,7 +13156,8 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
         const flashIdx = this._flashItem; this._flashItem = null;
         const selIdx = this._selectedItem;
         const placedCount = this.countPlaced(stop, itemList);
-        const folded = this.dayRowsShut();
+        // the day reads as folded when every row in it is
+        const folded = itemList.length > 0 && itemList.every(it => it.folded);
         const items = itemList.map((it, ii) => {
           const geoQuery = (it.address || '').trim() || (it.text || '').trim();
           const geoCity = geoQuery.includes(',') ? '' : (stop.city || '');
@@ -13197,9 +13207,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
               <div class="field">${svg(I.pin, { w: 11, h: 11, stroke: 'currentColor' })}<input value="${escA(it.address)}" data-ch="item-address" data-i="${ii}" placeholder="Address"></div>
               <div class="cost-field"><span class="d">${esc(ccySym(cpm.ccy))}</span><input value="${escA(it.cost)}" data-ch="item-cost" data-i="${ii}" inputmode="decimal" title="Type the currency if it isn't dollars — &quot;15 eur&quot;, &quot;3800 jpy&quot;">${ccyPicker('item-ccy', `data-i="${ii}"`, cpm.ccy, cpm.fromText)}</div>
               ${costHint.text ? `<span class="cad-hint${costHint.warn ? ' cad-hint--warn' : ''}" title="${escA(cadHint(cpm.amount, cpm.ccy))}">${esc(costHint.text)}</span>` : ''}
-              ${it.src ? (it.srcUrl
-                ? `<a class="item-src src--${escA(it.src)}" href="${escA(it.srcUrl)}" target="_blank" rel="noopener noreferrer" title="Open the post this came from">${esc(SRC_LABEL[it.src] || it.src)} ↗</a>`
-                : `<span class="item-src src--${escA(it.src)}">${esc(SRC_LABEL[it.src] || it.src)}</span>`) : ''}
+              ${it.src ? `<span class="item-src src--${escA(it.src)}" title="Came from a shared ${escA(SRC_LABEL[it.src] || it.src)} post">${esc(SRC_LABEL[it.src] || it.src)}</span>` : ''}
             </div>
           </div>
           <button class="x" data-act="item-remove" data-i="${ii}" title="Remove">✕</button>

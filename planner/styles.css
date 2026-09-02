@@ -931,9 +931,6 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
 .item.folded { padding-top: 7px; padding-bottom: 7px; }
 .item.folded .meta { display: none; }
 .item.folded .mid { gap: 0; }
-/* the whole-day fold already hides every meta line, so a per-row chevron under
-   it would be reporting a state you cannot see either way */
-.day-main.folded .item-fold { display: none; }
 
 /* ---- the note sheet ---- */
 .overlay:has(.note-dialog) { align-items: center; padding: 24px 20px; }
@@ -1007,16 +1004,22 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
   padding: 9px 20px; border: none; border-radius: var(--r-btn);
   background: var(--grad-accent); color: var(--on-grad); cursor: crosshair;
 }
-.item .meta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.item .field { flex: 1; display: flex; align-items: center; gap: 5px; min-width: 120px; }
+/* One cluster, not four things adrift. The address took flex:1 and the cost box
+   reserved its width whether or not it held a number, so on a wide row an empty
+   price left "$" marooned a hundred pixels from its own currency and the line
+   read as scattered debris. Everything sizes to what it holds now and sits
+   together from the left; the slack collects at the end of the row where it is
+   quiet. */
+.item .meta { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.item .field { flex: 0 1 200px; display: flex; align-items: center; gap: 5px; min-width: 0; }
 .item .field > svg { color: var(--ink-mute); }   /* icons use currentColor -> theme-aware */
 .item .field input { font-family: var(--sans); font-size: 12px; color: var(--ink-soft); border: none; background: transparent; padding: 2px 0; flex: 1; min-width: 0; outline-offset: 2px; }
 .item .maps { flex-shrink: 0; display: flex; align-items: center; color: var(--gold); text-decoration: none; font-family: var(--sans); font-size: 11px; font-weight: 700; }
-/* wide enough for a five-figure amount *and* the currency beside it — at 72px
-   the picker ate the number and "3800" rendered as "380(" */
-.item .cost-field { flex: 0 1 112px; display: flex; align-items: center; gap: 3px; }
+/* the amount sizes to the amount: the picker sits after the input rather than
+   sharing a slot with it, so the box no longer has to be wide enough for both */
+.item .cost-field { flex: 0 0 auto; display: flex; align-items: center; gap: 3px; }
 .item .cost-field .d { font-family: var(--sans); font-size: 10px; font-weight: 500; color: var(--ink-mute); flex-shrink: 0; }
-.item .cost-field input { font-family: var(--sans); font-size: 10.5px; color: var(--ink-soft); border: none; background: transparent; padding: 2px 0; width: 100%; min-width: 0; font-variant-numeric: tabular-nums; }
+.item .cost-field input { font-family: var(--sans); font-size: 10.5px; color: var(--ink-soft); border: none; background: transparent; padding: 2px 0; width: 48px; min-width: 0; font-variant-numeric: tabular-nums; }
 /* the currency picker rides in the same slot as the amount, so it has to be
    smaller than the one beside a hotel price — the row is a meta line, not a field */
 .item .cost-field .ccy-sel { font-size: 9.5px; padding: 0 10px 0 0; }
@@ -4089,10 +4092,10 @@ html { -webkit-tap-highlight-color: transparent; }
 .day-fold svg { display: block; transition: transform .22s cubic-bezier(.22,.61,.36,1); }
 .day-fold.shut svg { transform: rotate(-90deg); }
 
-/* folded: number, name, the map arrow and the row's own controls — nothing else */
-.day-main.folded .item { padding-top: 7px; padding-bottom: 7px; }
-.day-main.folded .item .meta { display: none; }
-.day-main.folded .item .mid { gap: 0; }
+/* Folded rows are the number, the name, the map arrow and the row's own
+   controls — nothing else. There is no day-wide override any more: folding the
+   day sets every row's own flag, so .item.folded is the only state there is and
+   each chevron keeps working after it. */
 .day-main.folded .item-leg { padding-top: 3px; padding-bottom: 3px; }
 
 /* the Google Maps arrow rides beside the name now: same gold, a slightly bigger
@@ -4100,14 +4103,16 @@ html { -webkit-tap-highlight-color: transparent; }
 .item .name-row .maps { font-size: 12px; padding: 0 3px; line-height: 1; text-decoration: none; }
 .item .name-row .maps:hover { color: var(--red); }
 
-/* provenance chip on an imported activity row */
+/* Provenance mark on an imported activity row — a label, not a link. It used to
+   open the post it came from, which put a fifth thing to click on a row that is
+   already a name, a pin, a note, a fold and a delete. Where the row came from is
+   worth knowing; it is not worth another button. */
 .item-src {
   flex-shrink: 0; font-family: var(--sans); font-size: 9.5px; font-weight: 600;
-  letter-spacing: .06em; text-transform: uppercase; text-decoration: none;
+  letter-spacing: .06em; text-transform: uppercase;
   color: var(--ink-mute); border: 1px solid var(--line-soft); border-radius: var(--r-pill);
   padding: 2px 7px; line-height: 1.5;
 }
-a.item-src:hover { color: var(--red); border-color: var(--red); }
 .item .field--time { flex: 0 0 74px; min-width: 74px; }
 
 /* ============================================================
