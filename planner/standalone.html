@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-09-01T23:47:11.290Z
+  Built: 2026-09-02T01:09:39.297Z
 -->
 
 <html lang="en">
@@ -1570,6 +1570,24 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
   border: 1px solid var(--stay-line); transition: background .15s;
 }
 .cal-cell:hover { background: var(--cal-hover); }
+/* The day you arrive and the day you leave belong to this city AND the one
+   either side of it — you get an evening in one and a morning in the other. In
+   a grid of identical squares that half day reads as a whole one, so the fill
+   falls away towards the edge it is shared across: the arrival day fades in
+   from its left, the departure day fades out to its right. */
+.cal-cell.half--in {
+  background: linear-gradient(100deg, transparent 6%, var(--stay-fill) 58%);
+}
+.cal-cell.half--out {
+  background: linear-gradient(100deg, var(--stay-fill) 42%, transparent 94%);
+}
+.cal-cell.half--in:hover { background: linear-gradient(100deg, transparent 6%, var(--cal-hover) 58%); }
+.cal-cell.half--out:hover { background: linear-gradient(100deg, var(--cal-hover) 42%, transparent 94%); }
+/* which half of a shared day this actually is — "from 21:00", "until 17:00" */
+.day-half {
+  margin-left: 8px; font-family: var(--sans); font-size: 11px; font-weight: 500;
+  font-style: normal; letter-spacing: .02em; color: var(--ink-mute);
+}
 .cal-cell.active {
   border: 3px solid var(--brown); color: var(--ink);
   transform: scale(1.05);
@@ -9063,37 +9081,24 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       if (!isFinite(h) || h > 24 || min > 59) return null;
       return h + min / 60;
     }
-    /* Whose day is the one you travel on?
+    /* The day you travel is BOTH cities' day.
 
-       A stay runs check-in to check-out, but the day you move is shared, and
-       the date alone cannot say who got more of it. Leave Berlin at 17:00 and
-       reach Prague at 21:00 and the day was Berlin's — you had the whole of it
-       there — yet the stay dates hand it to Prague, because that is the morning
-       Prague's booking starts.
+       Leave Berlin at 17:00 and reach Prague at 21:00 and you were in Berlin
+       for most of it and Prague for the end of it — you can plan a last
+       morning in one and a dinner in the other, and neither calendar should
+       pretend the day was not yours. So a stop runs from the day it is reached
+       to the day it is left, inclusive, and the travel day appears on both
+       sides of it. No clock decides who "wins"; nobody does.
 
-       So ask the clock: the hours before departure belong to the city you are
-       leaving, the hours after arrival to the one you are reaching, and the
-       larger share takes the day. One time alone is enough to judge it; with
-       neither, nothing moves and the arrival day stays the destination's, as
-       it always was. */
-    _arrivalDayIsHere(leg) {
-      if (!leg) return true;
-      // an overnight train already lands on the NEXT date (the extra day below),
-      // so the morning it arrives is unambiguously the destination's
-      if (leg.mode === 'overnight-train') return true;
+       What the clock is still for is honesty about the halves: a day you reach
+       at 21:00 looks like a whole day in the grid, so the times label it. */
+    _legClock(leg) {
+      if (!leg) return null;
       const dep = this._clockHours(leg.departure);
       const arr = this._clockHours(leg.arrival);
-      if (dep != null && arr != null) return (24 - arr) >= dep;
-      if (dep != null) return dep < 12;
-      if (arr != null) return arr < 14;
-      return true;
-    }
-    _departureDayIsHere(leg) {
-      if (!leg) return false;
-      // an overnight train leaves in the evening and the night is spent moving:
-      // the day it goes on was this city's from end to end
-      if (leg.mode === 'overnight-train') return true;
-      return !this._arrivalDayIsHere(leg);
+      if (dep == null && arr == null) return null;
+      return { dep, arr, depText: (leg.departure || '').trim(), arrText: (leg.arrival || '').trim(),
+               overnight: leg.mode === 'overnight-train' };
     }
 
     computeDates(trip) {
@@ -9110,24 +9115,27 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       });
       /* start/end are the STAY and stay put — the hotel rows, the date lines and
          the stop cards all mean check-in to check-out by them. dayStart/dayCount
-         are the other question: which days did I actually spend here. They are
-         what the calendar highlights and what the day planner is indexed by. */
+         are the other question: which days did I set foot here. They are what
+         the calendar highlights and what the day planner is indexed by.
+
+         A stop runs arrival day → departure day inclusive, which is one more
+         day than it has nights, and the extra one is shared with the neighbour
+         you travelled from or to. arriveLeg/departLeg carry that leg's clock so
+         the two half-days can say which halves they are. */
       trip.stops.forEach((stop, i) => {
         const r = stopRanges[i];
         const nights = Math.max(1, Number(stop.nights) || 1);
-        const ownsArr = this._arrivalDayIsHere(i === 0 ? trip.outboundLeg : trip.stops[i - 1].leg);
-        const ownsDep = this._departureDayIsHere(stop.leg);
-        const dayStart = new Date(r.start);
-        if (!ownsArr) dayStart.setDate(dayStart.getDate() + 1);
-        // gained the departure evening, lost the arrival night, or neither
-        let dayCount = nights + (ownsArr && ownsDep ? 1 : 0) - (!ownsArr && !ownsDep ? 1 : 0);
-        /* A day someone has already planned something on never disappears off
-           the end of the calendar because a time was typed into a leg. The
-           times move the window; they do not throw work away. */
+        const lastDay = new Date(r.end);
+        // an overnight train pushes the NEXT arrival a day on; the night itself
+        // is the last thing you do here, so the day it leaves on is still yours
+        const dayCount = Math.round((lastDay - r.start) / 86400000) + 1;
+        // a day already planned on never falls off the end of the calendar
         const planned = (stop.itinerary || []).reduce(
           (n, day, di) => (day && (((day.items || []).length) || ((day.outfits || []).length))) ? di + 1 : n, 0);
-        r.dayStart = dayStart;
-        r.dayCount = Math.max(1, planned, dayCount);
+        r.dayStart = new Date(r.start);
+        r.dayCount = Math.max(1, planned, dayCount, nights + 1);
+        r.arriveLeg = this._legClock(i === 0 ? trip.outboundLeg : trip.stops[i - 1].leg);
+        r.departLeg = this._legClock(stop.leg);
       });
       return { origin: dep, stops: stopRanges, home: cursor };
     }
@@ -13014,7 +13022,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
     }
 
     /* ----- calendar + itinerary modal ----- */
-    buildCalendar(startDate, nights, itinerary, activeDay, closet) {
+    buildCalendar(startDate, nights, itinerary, activeDay, closet, range) {
       const key = d => d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
       const stayMap = {}; const stay = [];
       for (let i = 0; i < nights; i++) { const dt = new Date(startDate); dt.setDate(dt.getDate() + i); stay.push(dt); stayMap[key(dt)] = i; }
@@ -13036,7 +13044,12 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
           const outfits = (itinerary[idx] && Array.isArray(itinerary[idx].outfits)) ? itinerary[idx].outfits : [];
           const img = outfits[0] ? outfits[0].image : null;
           const hasOotd = !!img;
-          cells += `<button class="cal-cell${active ? ' active' : ''}" data-act="cal-day" data-drop="cell" data-i="${idx}"${hasOotd ? ` draggable="true" data-drag="cell" data-i="${idx}"` : ''}>
+          // the day you arrive and the day you leave are shared with the city
+          // either side — a corner is cut off them so a half day never reads as
+          // a whole one
+          const half = (idx === 0 && range && range.arriveLeg) ? ' half half--in'
+            : (idx === nights - 1 && range && range.departLeg) ? ' half half--out' : '';
+          cells += `<button class="cal-cell${active ? ' active' : ''}${half}" data-act="cal-day" data-drop="cell" data-i="${idx}"${hasOotd ? ` draggable="true" data-drag="cell" data-i="${idx}"` : ''}>
             <span>${dd}</span>${img ? `<img src="${escA(img)}" draggable="false">` : ''}</button>`;
         }
         const dow = WEEK.map(l => `<div class="cal-dow">${l}</div>`).join('');
@@ -13067,8 +13080,17 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       // is remembered across reloads like the hotel rows are.
       const closetShut = this.closetShut();
       const caret = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`;
-      const cal = this.buildCalendar(calStart, daysN, stop.itinerary, activeDay, closet);
+      const cal = this.buildCalendar(calStart, daysN, stop.itinerary, activeDay, closet, range);
       const dayDate = (i) => { if (!range) return ''; const dt = new Date(range.dayStart); dt.setDate(dt.getDate() + i); return fmt(dt); };
+      /* The first and last days are shared with the city either side, so they
+         are not whole days here however whole they look in the grid. Say which
+         half you actually have, when the leg knows. */
+      const dayHalf = (i) => {
+        if (!range) return '';
+        if (i === 0 && range.arriveLeg && range.arriveLeg.arrText) return 'from ' + range.arriveLeg.arrText;
+        if (i === daysN - 1 && range.departLeg && range.departLeg.depText) return 'until ' + range.departLeg.depText;
+        return '';
+      };
 
       const stripCells = closet.map(o => `<div class="outfit" draggable="true" data-drag="closet" data-id="${escA(o.id)}" title="Drag onto a date">
         <img src="${escA(o.image)}"><button class="del" data-act="outfit-delete" data-id="${escA(o.id)}" title="Remove from closet">−</button></div>`).join('');
@@ -13157,7 +13179,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
           <div class="day-cols">
             <div class="day-main${folded ? ' folded' : ''}">
               <div class="day-head">
-                <div class="day-title">Day ${activeDay + 1}${dayDate(activeDay) ? ' · ' + esc(dayDate(activeDay)) : ''}</div>${wxChip}
+                <div class="day-title">Day ${activeDay + 1}${dayDate(activeDay) ? ' · ' + esc(dayDate(activeDay)) : ''}${dayHalf(activeDay) ? `<span class="day-half">${esc(dayHalf(activeDay))}</span>` : ''}</div>${wxChip}
                 ${itemList.length ? `<button class="day-fold${folded ? ' shut' : ''}" data-act="day-fold" aria-expanded="${folded ? 'false' : 'true'}"
                   aria-label="${folded ? 'Expand the activities' : 'Collapse the activities'}"
                   title="${folded ? 'Show each activity\'s time, address and cost' : 'Fold every activity down to its name'}">${svg(I.chev, { w: 13, h: 13, sw: 2 })}</button>` : ''}

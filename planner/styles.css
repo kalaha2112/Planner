@@ -792,6 +792,24 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
   border: 1px solid var(--stay-line); transition: background .15s;
 }
 .cal-cell:hover { background: var(--cal-hover); }
+/* The day you arrive and the day you leave belong to this city AND the one
+   either side of it — you get an evening in one and a morning in the other. In
+   a grid of identical squares that half day reads as a whole one, so the fill
+   falls away towards the edge it is shared across: the arrival day fades in
+   from its left, the departure day fades out to its right. */
+.cal-cell.half--in {
+  background: linear-gradient(100deg, transparent 6%, var(--stay-fill) 58%);
+}
+.cal-cell.half--out {
+  background: linear-gradient(100deg, var(--stay-fill) 42%, transparent 94%);
+}
+.cal-cell.half--in:hover { background: linear-gradient(100deg, transparent 6%, var(--cal-hover) 58%); }
+.cal-cell.half--out:hover { background: linear-gradient(100deg, var(--cal-hover) 42%, transparent 94%); }
+/* which half of a shared day this actually is — "from 21:00", "until 17:00" */
+.day-half {
+  margin-left: 8px; font-family: var(--sans); font-size: 11px; font-weight: 500;
+  font-style: normal; letter-spacing: .02em; color: var(--ink-mute);
+}
 .cal-cell.active {
   border: 3px solid var(--brown); color: var(--ink);
   transform: scale(1.05);
