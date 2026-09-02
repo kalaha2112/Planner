@@ -8738,7 +8738,7 @@
         Object.assign(di.style, {
           position: 'fixed', top: '-200px', left: '-200px', maxWidth: '220px',
           padding: '7px 12px', borderRadius: '8px', background: 'var(--brown)', color: 'var(--on-brown)',
-          fontFamily: 'var(--sans)', fontSize: '12px', fontWeight: '600',
+          fontFamily: 'var(--sans)', fontSize: '13px', fontWeight: '600',
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           boxShadow: '0 4px 14px rgba(35,20,12,.3)',
         });
