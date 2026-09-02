@@ -109,8 +109,12 @@
   --display-alt: 'Space Grotesk', system-ui, sans-serif;   /* stop-card city names + route headings */
 
   /* ---- radii (from spec) ---- */
-  --r-pill: 999px; --r-modal: 26px; --r-card: 20px; --r-cell: 14px;
-  --r-btn: 12px; --r-sm: 10px; --r-xs: 9px; --r-check: 7px;
+  /* Square corners. The page is an editorial print — rules, type and white
+     space — and rounded boxes were the one thing on it behaving like software.
+     Everything rectangular sits at 0; --r-pill stays a pill, because that is a
+     shape a chip has rather than a corner it rounds. */
+  --r-pill: 999px; --r-modal: 0; --r-card: 0; --r-cell: 0;
+  --r-btn: 0; --r-sm: 0; --r-xs: 0; --r-check: 0;
 
   /* ---- surface treatment knobs, read by the SURFACE TREATMENT block ---- */
   --border-w:  1px;      /* frame weight on cards / modals */
@@ -821,7 +825,7 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
    the width below the day number (kept in normal flow, so it never overlaps). */
 @media (max-width: 700px) {
   .cal-cell { min-height: 76px; padding: 5px 3px 4px; font-size: 12px; }
-  .cal-cell img { object-fit: cover; border-radius: 5px; margin-top: 3px; margin-bottom: 0; }
+  .cal-cell img { object-fit: cover; border-radius: 0; margin-top: 3px; margin-bottom: 0; }
 }
 
 .iti-foot { padding: 0; }
@@ -854,7 +858,7 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
 .drag-ghost {
   position: fixed; z-index: 1200; pointer-events: none;
   transform: translate(-50%, -150%);
-  max-width: 220px; padding: 7px 12px; border-radius: 8px;
+  max-width: 220px; padding: 7px 12px; border-radius: 0;
   background: var(--brown); color: var(--on-brown);
   font-family: var(--sans); font-size: 12px; font-weight: 600;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -1309,7 +1313,7 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
 .day-pin-hotel span svg { transform: rotate(45deg); display: block; }
 
 /* click-a-pin highlight on the matching activity row */
-.item.selected { background: rgba(145,4,12,.07); border-radius: 6px; outline: 1.5px solid rgba(145,4,12,.22); }
+.item.selected { background: rgba(145,4,12,.07); outline: 1.5px solid rgba(145,4,12,.22); }
 [data-theme="dark"] .item.selected { background: rgba(201,58,65,.14); outline-color: rgba(201,58,65,.40); }
 .item.flash { animation: itemFlash 1.3s ease; }
 @keyframes itemFlash { 0% { background: rgba(145,4,12,.14); } 100% { background: transparent; } }
@@ -1768,7 +1772,7 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
   .app-tab {
     flex: 1; min-width: 0;
     display: flex; flex-direction: column; align-items: center; gap: 3px;
-    padding: 7px 2px; border: 1px solid transparent; border-radius: 12px;
+    padding: 7px 2px; border: 1px solid transparent; border-radius: 0;
     background: none; color: var(--ink-soft);
     font-family: var(--sans); font-size: 10px; font-weight: 600; letter-spacing: .01em;
     cursor: crosshair; transition: background .15s ease, color .15s ease;
@@ -2153,7 +2157,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .main-map-leaflet {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
-  border-radius: 8px;
+  border-radius: 0;
   border: 1px solid var(--line);
 }
 .main-map-leaflet.leaflet-container { background: var(--map-sea); font-family: var(--sans); }
@@ -2390,7 +2394,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     margin: 24px 12px 24px 24px;
     height: calc(100% - 48px);          /* fill the row minus top+bottom margin */
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: 0;
     overflow: hidden;
   }
   .leaf-route .main-map-wrap { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: unset; }
@@ -2682,7 +2686,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     font-family: var(--caps); font-size: 12.5px; letter-spacing: .15em; text-transform: uppercase;
     color: var(--ink-soft); background: var(--surface);
     border: 1px solid var(--line); border-right: none;
-    border-radius: 9px 0 0 9px;
+    border-radius: 0;
     padding: 14px 5px; cursor: crosshair;
     box-shadow: var(--shadow-page);
     transition: transform .18s, color .15s, background .15s;
@@ -2923,7 +2927,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 
 /* the checklist card inside the panel */
 .pk-card {
-  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 0;
   padding: 13px 15px 11px; text-align: left;
   animation: pkCardIn .18s ease both;
 }
@@ -3055,7 +3059,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 @keyframes wxBreathe { 0%, 100% { transform: rotate(-4deg) scale(1); } 50% { transform: rotate(4deg) scale(1.08); } }
 
 /* itinerary: row ↔ pin hover link (row highlight + pin bounce) */
-.item.hl { background: rgba(145, 4, 12, .06); border-radius: 6px; outline: 1.5px solid rgba(145, 4, 12, .20); }
+.item.hl { background: rgba(145, 4, 12, .06); outline: 1.5px solid rgba(145, 4, 12, .20); }
 [data-theme="dark"] .item.hl { background: rgba(201,58,65,.12); outline-color: rgba(201,58,65,.36); }
 .day-pin.pulse { z-index: 600; }
 .day-pin.pulse span { outline: 2.5px solid var(--red); outline-offset: 1px; animation: pinPulse .9s ease-in-out infinite; }
@@ -3072,7 +3076,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .day-pin.pulse span { animation: none; }   /* keep the outline highlight, drop the bounce */
 }
 .pk-hint {
-  border: 1.5px dashed var(--line); border-radius: 12px;
+  border: 1.5px dashed var(--line); border-radius: 0;
   padding: 22px 18px; text-align: center;
   font-family: var(--sans); font-size: 12px; line-height: 1.5; color: var(--ink-mute);
 }
