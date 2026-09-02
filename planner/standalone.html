@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-09-02T01:09:39.297Z
+  Built: 2026-09-02T02:36:50.718Z
 -->
 
 <html lang="en">
@@ -5748,6 +5748,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
   const CLOUD_PUSH_DEBOUNCE_MS = 900;                 // coalesce rapid edits into one upload
   const PACK_SNAP_MS = 700;                           // slow glide onto Packing, so the suitcase is seen opening
   const PACK_FIT_MIN = 0.55;                          // how far the packing columns may shrink before the type stops reading
+  const MIN_STOP_HOURS = 5;                           // below this, a travel day was not really spent in that city
   /* TikTok's oEmbed: no key, no token, and — alone among the three platforms
      here — it answers cross-origin, so the browser can ask it directly. The
      caption comes back in `title`, which is exactly the text the parser wanted
@@ -9125,17 +9126,36 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       trip.stops.forEach((stop, i) => {
         const r = stopRanges[i];
         const nights = Math.max(1, Number(stop.nights) || 1);
-        const lastDay = new Date(r.end);
-        // an overnight train pushes the NEXT arrival a day on; the night itself
-        // is the last thing you do here, so the day it leaves on is still yours
-        const dayCount = Math.round((lastDay - r.start) / 86400000) + 1;
-        // a day already planned on never falls off the end of the calendar
-        const planned = (stop.itinerary || []).reduce(
-          (n, day, di) => (day && (((day.items || []).length) || ((day.outfits || []).length))) ? di + 1 : n, 0);
-        r.dayStart = new Date(r.start);
-        r.dayCount = Math.max(1, planned, dayCount, nights + 1);
         r.arriveLeg = this._legClock(i === 0 ? trip.outboundLeg : trip.stops[i - 1].leg);
         r.departLeg = this._legClock(stop.leg);
+
+        /* A travel day is shared, but it only counts where you were there long
+           enough to do anything with it. Land at 23:00 and the day was not
+           yours in any useful sense; leave at 06:00 and neither was that one.
+           MIN_STOP_HOURS is where the line sits. With no time on the leg there
+           is nothing to judge, so the day stays. */
+        const hoursOnArrival = (r.arriveLeg && r.arriveLeg.arr != null) ? 24 - r.arriveLeg.arr : null;
+        const hoursOnDeparture = (r.departLeg && r.departLeg.dep != null) ? r.departLeg.dep : null;
+        const dayHas = (di) => { const day = (stop.itinerary || [])[di];
+                                 return !!(day && (((day.items || []).length) || ((day.outfits || []).length))); };
+        const anyPlans = (stop.itinerary || []).some((_, di) => dayHas(di));
+
+        // offsets from r.start; a stop spans arrival → departure, nights + 1 days
+        let first = 0, last = nights;
+        /* Dropping the ARRIVAL day renumbers every day behind it — day 2 would
+           come up on day 1's date — so it only happens while there is nothing
+           planned here to renumber. Dropping the LAST day moves nothing, so it
+           only has to be empty itself. Either way no plan is ever re-dated and
+           none is ever hidden. */
+        if (hoursOnArrival != null && hoursOnArrival < MIN_STOP_HOURS && !anyPlans) first = 1;
+        if (hoursOnDeparture != null && hoursOnDeparture < MIN_STOP_HOURS && !dayHas(last)) last -= 1;
+        if (last < first) last = first;
+
+        const dayStart = new Date(r.start); dayStart.setDate(dayStart.getDate() + first);
+        r.dayStart = dayStart;
+        r.dayCount = Math.max(1, last - first + 1);
+        r.skipArrival = first > 0;      // the arrival day went to the other city alone
+        r.skipDeparture = last < nights;
       });
       return { origin: dep, stops: stopRanges, home: cursor };
     }
@@ -13047,8 +13067,8 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
           // the day you arrive and the day you leave are shared with the city
           // either side — a corner is cut off them so a half day never reads as
           // a whole one
-          const half = (idx === 0 && range && range.arriveLeg) ? ' half half--in'
-            : (idx === nights - 1 && range && range.departLeg) ? ' half half--out' : '';
+          const half = (idx === 0 && range && range.arriveLeg && !range.skipArrival) ? ' half half--in'
+            : (idx === nights - 1 && range && range.departLeg && !range.skipDeparture) ? ' half half--out' : '';
           cells += `<button class="cal-cell${active ? ' active' : ''}${half}" data-act="cal-day" data-drop="cell" data-i="${idx}"${hasOotd ? ` draggable="true" data-drag="cell" data-i="${idx}"` : ''}>
             <span>${dd}</span>${img ? `<img src="${escA(img)}" draggable="false">` : ''}</button>`;
         }
@@ -13087,8 +13107,8 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
          half you actually have, when the leg knows. */
       const dayHalf = (i) => {
         if (!range) return '';
-        if (i === 0 && range.arriveLeg && range.arriveLeg.arrText) return 'from ' + range.arriveLeg.arrText;
-        if (i === daysN - 1 && range.departLeg && range.departLeg.depText) return 'until ' + range.departLeg.depText;
+        if (i === 0 && !range.skipArrival && range.arriveLeg && range.arriveLeg.arrText) return 'from ' + range.arriveLeg.arrText;
+        if (i === daysN - 1 && !range.skipDeparture && range.departLeg && range.departLeg.depText) return 'until ' + range.departLeg.depText;
         return '';
       };
 
