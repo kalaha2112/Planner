@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-09-02T18:32:58.271Z
+  Built: 2026-09-02T18:43:53.927Z
 -->
 
 <html lang="en">
@@ -1699,13 +1699,17 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
   flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
   width: 24px; height: 24px; padding: 0; border-radius: var(--r-sm);
   border: 1px solid transparent; background: transparent;
-  color: var(--ink-faint); cursor: crosshair;
+  /* A rung darker than the pin and the note beside it, on purpose. Those are
+     closed outlines that hold their own at --ink-faint; a chevron is two
+     strokes and at the same value it simply was not there — the only sign of
+     it was the gap it left before the ✕. */
+  color: var(--ink-mute); cursor: crosshair;
   transition: color .15s ease, background .15s ease, border-color .15s ease;
 }
-.item-fold:hover { color: var(--ink-soft); background: var(--hover-soft); border-color: var(--line-soft); }
+.item-fold:hover { color: var(--ink); background: var(--hover-soft); border-color: var(--line-soft); }
 .item-fold svg { display: block; transition: transform .22s cubic-bezier(.22,.61,.36,1); }
 .item-fold.shut svg { transform: rotate(-90deg); }
-[data-theme="dark"] .item-fold { color: var(--ink-soft); }
+[data-theme="dark"] .item-fold { color: var(--ink-mid); }
 .item.folded { padding-top: 7px; padding-bottom: 7px; }
 .item.folded .meta { display: none; }
 .item.folded .mid { gap: 0; }
@@ -13200,7 +13204,7 @@ html { -webkit-tap-highlight-color: transparent; }
                 aria-label="${noteFull ? 'Edit note' : 'Add a note'}">${svg(I.msg, { w: 13, h: 13, stroke: 'currentColor' })}${picCount ? `<span class="pics">${picCount}</span>` : ''}</button>
               <button class="item-fold${it.folded ? ' shut' : ''}" data-act="item-fold" data-i="${ii}" aria-expanded="${it.folded ? 'false' : 'true'}"
                 title="${it.folded ? 'Show this activity\'s time, address and cost' : 'Fold this activity down to its name'}"
-                aria-label="${it.folded ? 'Expand this activity' : 'Collapse this activity'}">${svg(I.chev, { w: 12, h: 12, sw: 2 })}</button>
+                aria-label="${it.folded ? 'Expand this activity' : 'Collapse this activity'}">${svg(I.chev, { w: 13, h: 13, sw: 2.6 })}</button>
             </div>
             <div class="meta">
               <div class="field field--time">${svg(I.clock, { w: 11, h: 11, stroke: 'currentColor' })}<input value="${escA(it.time)}" data-ch="item-time" data-i="${ii}" placeholder="Time"></div>

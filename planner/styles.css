@@ -921,13 +921,17 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
   flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
   width: 24px; height: 24px; padding: 0; border-radius: var(--r-sm);
   border: 1px solid transparent; background: transparent;
-  color: var(--ink-faint); cursor: crosshair;
+  /* A rung darker than the pin and the note beside it, on purpose. Those are
+     closed outlines that hold their own at --ink-faint; a chevron is two
+     strokes and at the same value it simply was not there — the only sign of
+     it was the gap it left before the ✕. */
+  color: var(--ink-mute); cursor: crosshair;
   transition: color .15s ease, background .15s ease, border-color .15s ease;
 }
-.item-fold:hover { color: var(--ink-soft); background: var(--hover-soft); border-color: var(--line-soft); }
+.item-fold:hover { color: var(--ink); background: var(--hover-soft); border-color: var(--line-soft); }
 .item-fold svg { display: block; transition: transform .22s cubic-bezier(.22,.61,.36,1); }
 .item-fold.shut svg { transform: rotate(-90deg); }
-[data-theme="dark"] .item-fold { color: var(--ink-soft); }
+[data-theme="dark"] .item-fold { color: var(--ink-mid); }
 .item.folded { padding-top: 7px; padding-bottom: 7px; }
 .item.folded .meta { display: none; }
 .item.folded .mid { gap: 0; }
