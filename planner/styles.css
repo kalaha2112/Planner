@@ -869,6 +869,12 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
    place, and a one-line input three fields deep meant long notes were typed blind */
 .item .name-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .item .name-row .text { flex: 1; min-width: 0; }
+/* The activity name is the one line of an activity row that has to hold a full
+   place name, and on the phone it crowds the controls beside it. A pixel back
+   only in the app layout — the web layout has the width to carry 15px. */
+@media (max-width: 700px) {
+  .item .text { font-size: 14px; }
+}
 .note-btn {
   flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
   width: 24px; height: 24px; padding: 0; border-radius: var(--r-sm);
