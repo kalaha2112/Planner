@@ -1482,6 +1482,13 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
 .opt .choose { flex-shrink: 0; width: 20px; height: 20px; border-radius: var(--r-check); border: 2px solid var(--dash); background: var(--surface); cursor: crosshair; display: flex; align-items: center; justify-content: center; padding: 0; }
 .opt.chosen .choose { border-color: var(--green); background: var(--green); }
 .opt .name { font-family: var(--sans); font-size: 18px; font-weight: 700; color: var(--ink); border: none; background: transparent; padding: 0; flex: 1; min-width: 0; outline-offset: 2px; }
+/* The wide layout gives both of these more room than the phone does, and at 700
+   they read heavier than the rows they head. The app layout is fine as it is, so
+   the step down is scoped to the web breakpoint rather than the base rule. */
+@media (min-width: 701px) {
+  .opt .name { font-weight: 600; }   /* hotel name in a hotel option */
+  .iti-city  { font-weight: 600; }   /* stop name on the stop page */
+}
 .opt .badge { font-family: var(--sans); font-size: 10px; font-weight: 700; color: var(--green); background: var(--green-bg); border-radius: var(--r-pill); padding: 3px 9px; letter-spacing: .06em; text-transform: uppercase; flex-shrink: 0; }
 .opt .rm { flex-shrink: 0; width: 28px; height: 28px; border: none; background: transparent; color: var(--ink-faint); cursor: crosshair; display: flex; align-items: center; justify-content: center; border-radius: var(--r-xs); transition: color .15s, background .15s; }
 .opt .rm:hover { color: var(--red); background: var(--rm-hover); }
