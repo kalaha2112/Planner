@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-09-02T02:46:34.557Z
+  Built: 2026-09-02T17:32:55.460Z
 -->
 
 <html lang="en">
@@ -3415,6 +3415,16 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   .leaf-days .iti-body { flex: none; overflow: visible; margin-top: 8px; }
   .leaf-days .iti-left { padding-left: 0; overflow-y: visible; }
   .leaf-days .iti-right { overflow-y: visible; }
+  /* The calendar is seven columns of a day number — it has a natural size and
+     stops earning anything past it, while the activity list next to it is where
+     the words are and was the column being starved: at 1024 the place-name
+     field had collapsed to almost nothing. So the calendar takes a share that
+     is capped rather than a flat 40% of whatever the screen happens to be, and
+     everything it gives up goes to the list. */
+  .leaf-days .iti-left { flex: 0 0 clamp(296px, 28%, 384px); }
+  /* narrower columns want shorter cells, or the week reads as seven tall slots
+     with a number adrift at the top of each */
+  .leaf-days .cal-cell { min-height: 86px; }
   .leaf-days .cal { margin-top: 10px; }
 
   /* ---- section tabs, pinned to the viewport's lower-right edge (fixed, so they
