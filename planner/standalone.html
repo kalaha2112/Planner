@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-09-02T18:43:53.927Z
+  Built: 2026-09-02T18:49:49.145Z
 -->
 
 <html lang="en">
@@ -1807,7 +1807,20 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
 .item .cost-field .ccy-sel { font-size: 9.5px; padding: 0 10px 0 0; }
 .item .cost-field .ccy-sel--read { padding-right: 0; }
 .item .meta .cad-hint { flex: 0 0 auto; font-size: 9.5px; }
-.item .x { font-family: var(--sans); font-size: 13px; line-height: 1; color: var(--ink-faint); border: none; background: transparent; cursor: crosshair; padding: 5px; flex-shrink: 0; }
+/* The delete used to sit outside .mid, so it answered to the row's 12px gap
+   while the four controls beside it answered to the name row's 6px — two
+   rhythms meeting in the middle of one cluster, and the ✕ drifted away from
+   the rest. It joins them now, on their spacing and in the same 24px box, so
+   the five read as one set of targets. */
+.item .x {
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; padding: 0; border-radius: var(--r-sm);
+  border: none; background: transparent;
+  font-family: var(--sans); font-size: 13px; line-height: 1;
+  color: var(--ink-faint); cursor: crosshair;
+  transition: color .15s ease, background .15s ease;
+}
+.item .x:hover { color: var(--red); background: var(--hover-soft); }
 .add-item, .add-option {
   font-family: var(--sans); font-size: 18px; font-weight: 800; line-height: 1;
   color: var(--ink); background: transparent; border: 1px dashed var(--dash);
@@ -13205,6 +13218,7 @@ html { -webkit-tap-highlight-color: transparent; }
               <button class="item-fold${it.folded ? ' shut' : ''}" data-act="item-fold" data-i="${ii}" aria-expanded="${it.folded ? 'false' : 'true'}"
                 title="${it.folded ? 'Show this activity\'s time, address and cost' : 'Fold this activity down to its name'}"
                 aria-label="${it.folded ? 'Expand this activity' : 'Collapse this activity'}">${svg(I.chev, { w: 13, h: 13, sw: 2.6 })}</button>
+              <button class="x" data-act="item-remove" data-i="${ii}" title="Remove" aria-label="Remove this activity">✕</button>
             </div>
             <div class="meta">
               <div class="field field--time">${svg(I.clock, { w: 11, h: 11, stroke: 'currentColor' })}<input value="${escA(it.time)}" data-ch="item-time" data-i="${ii}" placeholder="Time"></div>
@@ -13214,7 +13228,6 @@ html { -webkit-tap-highlight-color: transparent; }
               ${it.src ? `<span class="item-src src--${escA(it.src)}" title="Came from a shared ${escA(SRC_LABEL[it.src] || it.src)} post">${esc(SRC_LABEL[it.src] || it.src)}</span>` : ''}
             </div>
           </div>
-          <button class="x" data-act="item-remove" data-i="${ii}" title="Remove">✕</button>
         </div>`;
         }).join('');
         const mapAside = SHOW_MAP ? `<aside class="day-aside">

@@ -7600,6 +7600,7 @@
               <button class="item-fold${it.folded ? ' shut' : ''}" data-act="item-fold" data-i="${ii}" aria-expanded="${it.folded ? 'false' : 'true'}"
                 title="${it.folded ? 'Show this activity\'s time, address and cost' : 'Fold this activity down to its name'}"
                 aria-label="${it.folded ? 'Expand this activity' : 'Collapse this activity'}">${svg(I.chev, { w: 13, h: 13, sw: 2.6 })}</button>
+              <button class="x" data-act="item-remove" data-i="${ii}" title="Remove" aria-label="Remove this activity">✕</button>
             </div>
             <div class="meta">
               <div class="field field--time">${svg(I.clock, { w: 11, h: 11, stroke: 'currentColor' })}<input value="${escA(it.time)}" data-ch="item-time" data-i="${ii}" placeholder="Time"></div>
@@ -7609,7 +7610,6 @@
               ${it.src ? `<span class="item-src src--${escA(it.src)}" title="Came from a shared ${escA(SRC_LABEL[it.src] || it.src)} post">${esc(SRC_LABEL[it.src] || it.src)}</span>` : ''}
             </div>
           </div>
-          <button class="x" data-act="item-remove" data-i="${ii}" title="Remove">✕</button>
         </div>`;
         }).join('');
         const mapAside = SHOW_MAP ? `<aside class="day-aside">
