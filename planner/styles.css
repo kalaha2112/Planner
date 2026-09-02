@@ -535,8 +535,9 @@ a { color: inherit; }
    ============================================================ */
 .aside { flex: 0 1 280px; min-width: 240px; display: flex; flex-direction: column; gap: 16px; }
 
+/* every map frame is square — a plate the page prints, not a card it stacks */
 .map {
-  height: 264px; width: 100%; border-radius: var(--r-card);
+  height: 264px; width: 100%; border-radius: 0;
   border: 1px solid var(--line); overflow: hidden; background: var(--map-bg);
 }
 /* harmonise OSM tiles with the paper aesthetic */
@@ -783,8 +784,10 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
 .cal-dow { text-align: center; font-family: var(--sans); font-size: 10px; font-weight: 600; letter-spacing: .05em; color: var(--ink-mute); padding: 2px 0; }
 .cal-off { height: auto; display: flex; align-items: flex-start; justify-content: center; padding-top: 8px; font-family: var(--sans); font-size: 12px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+/* square corners: the stay fill reads as a block of days on a grid, not a row
+   of chips, so the highlighted box keeps the grid's own right angles */
 .cal-cell {
-  position: relative; min-height: 120px; border-radius: var(--r-cell);
+  position: relative; min-height: 120px; border-radius: 0;
   background: var(--stay-fill); color: var(--ink-soft);
   font-family: var(--script); font-style: italic; font-weight: 300; font-size: 19px; letter-spacing: .01em;
   cursor: crosshair; display: flex; flex-direction: column; align-items: center;
@@ -2153,7 +2156,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 .main-map-leaflet {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
-  border-radius: 8px;
+  border-radius: 0;                    /* the map is a framed plate, not a card */
   border: 1px solid var(--line);
 }
 .main-map-leaflet.leaflet-container { background: var(--map-sea); font-family: var(--sans); }
@@ -2390,7 +2393,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
     margin: 24px 12px 24px 24px;
     height: calc(100% - 48px);          /* fill the row minus top+bottom margin */
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: 0;
     overflow: hidden;
   }
   .leaf-route .main-map-wrap { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: unset; }
