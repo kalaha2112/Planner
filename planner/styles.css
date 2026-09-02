@@ -101,12 +101,12 @@
   --shadow-page:  none;   /* ledger page edge */
 
   /* ---- type ---- */
-  --serif: 'Space Grotesk', system-ui, sans-serif;
+  --serif: 'Clash Display', 'Space Grotesk', system-ui, sans-serif;
   --mono:   ui-monospace, 'SF Mono', Menlo, Consolas, 'Courier New', monospace;   /* receipt */
   --sans: 'Sora', system-ui, sans-serif;
   --caps: 'Bebas Neue', 'DM Sans', sans-serif;
   --script: 'Instrument Serif', Georgia, serif;
-  --display-alt: 'Space Grotesk', system-ui, sans-serif;   /* stop-card city names + route headings */
+  --display-alt: 'Clash Display', 'Space Grotesk', system-ui, sans-serif;   /* stop-card city names + route headings */
 
   /* ---- radii (from spec) ---- */
   --r-pill: 999px; --r-modal: 26px; --r-card: 20px; --r-cell: 14px;

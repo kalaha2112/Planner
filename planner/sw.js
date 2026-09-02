@@ -8,7 +8,7 @@
      cache fallback. Mirrors the "always get the latest build"
      no-cache metas: online you always run fresh code; offline
      the last-seen build boots from cache.
-   - Google Fonts (css + woff2) ............... stale-while-revalidate.
+   - Google Fonts + Fontshare (css + woff2) ... stale-while-revalidate.
    - Map tiles (OSM / Esri) ................... cache-first, capped,
      so previously seen map areas render offline.
    - Nominatim geocoding + sync backends ...... untouched (network
@@ -59,7 +59,8 @@ const SHELL_ASSETS = [
 // cartocdn is gone: nothing requests it any more, and its cached tiles are
 // evicted by the TILE_VERSION bump above.
 const TILE_HOSTS = ['tile.openstreetmap.org', 'services.arcgisonline.com'];
-const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
+const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com',
+                    'api.fontshare.com', 'cdn.fontshare.com'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
