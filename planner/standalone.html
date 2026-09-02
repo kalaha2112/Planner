@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-09-02T02:36:50.718Z
+  Built: 2026-09-02T02:46:34.557Z
 -->
 
 <html lang="en">
@@ -5748,7 +5748,13 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
   const CLOUD_PUSH_DEBOUNCE_MS = 900;                 // coalesce rapid edits into one upload
   const PACK_SNAP_MS = 700;                           // slow glide onto Packing, so the suitcase is seen opening
   const PACK_FIT_MIN = 0.55;                          // how far the packing columns may shrink before the type stops reading
-  const MIN_STOP_HOURS = 5;                           // below this, a travel day was not really spent in that city
+  /* A day is not 24 usable hours. The ones before you are up and after you are
+     done are not time in a city, so a travel day is measured against the waking
+     part of it: leave at 07:00 and you had none of the day, whatever the clock
+     says about midnight. */
+  const DAY_STARTS_AT = 8;                            // a day you can do something with begins about here
+  const DAY_ENDS_AT = 23;                             // …and is over about here
+  const MIN_STOP_HOURS = 5;                           // below this, the day was not really spent in that city
   /* TikTok's oEmbed: no key, no token, and — alone among the three platforms
      here — it answers cross-origin, so the browser can ask it directly. The
      caption comes back in `title`, which is exactly the text the parser wanted
@@ -9130,12 +9136,15 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
         r.departLeg = this._legClock(stop.leg);
 
         /* A travel day is shared, but it only counts where you were there long
-           enough to do anything with it. Land at 23:00 and the day was not
-           yours in any useful sense; leave at 06:00 and neither was that one.
-           MIN_STOP_HOURS is where the line sits. With no time on the leg there
-           is nothing to judge, so the day stays. */
-        const hoursOnArrival = (r.arriveLeg && r.arriveLeg.arr != null) ? 24 - r.arriveLeg.arr : null;
-        const hoursOnDeparture = (r.departLeg && r.departLeg.dep != null) ? r.departLeg.dep : null;
+           enough to do anything with it — and that is measured in waking hours,
+           not clock hours. Land at 21:00 and two of the day are left; leave at
+           07:00 and none of it was yours, though midnight to seven looks like
+           seven. MIN_STOP_HOURS is where the line sits. With no time on the leg
+           there is nothing to measure, so the day stays. */
+        const hoursOnArrival = (r.arriveLeg && r.arriveLeg.arr != null)
+          ? Math.max(0, DAY_ENDS_AT - r.arriveLeg.arr) : null;
+        const hoursOnDeparture = (r.departLeg && r.departLeg.dep != null)
+          ? Math.max(0, r.departLeg.dep - DAY_STARTS_AT) : null;
         const dayHas = (di) => { const day = (stop.itinerary || [])[di];
                                  return !!(day && (((day.items || []).length) || ((day.outfits || []).length))); };
         const anyPlans = (stop.itinerary || []).some((_, di) => dayHas(di));
@@ -13047,18 +13056,28 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
       const stayMap = {}; const stay = [];
       for (let i = 0; i < nights; i++) { const dt = new Date(startDate); dt.setDate(dt.getDate() + i); stay.push(dt); stayMap[key(dt)] = i; }
       const first = stay[0], last = stay[stay.length - 1];
+      /* ONE grid per stop, never one per month. A stay that runs Sep 28 → Oct 2
+         is a single unbroken stretch of days, and splitting it across two month
+         tables made it read as two separate visits — you lost the run of it at
+         exactly the point it mattered. So the grid opens on the Sunday of the
+         week the stay starts and closes on the Saturday of the week it ends,
+         and the month boundary passes through the middle of it like any other
+         day. The heading names both months when it does. */
+      const gridStart = new Date(first); gridStart.setDate(gridStart.getDate() - gridStart.getDay());
+      const gridEnd = new Date(last); gridEnd.setDate(gridEnd.getDate() + (6 - gridEnd.getDay()));
+      const monthName = (dt, withYear) =>
+        dt.toLocaleDateString('en-US', withYear ? { month: 'long', year: 'numeric' } : { month: 'long' });
+      const sameMonth = first.getFullYear() === last.getFullYear() && first.getMonth() === last.getMonth();
+      const label = sameMonth ? monthName(first, true)
+        : (first.getFullYear() === last.getFullYear()
+            ? monthName(first, false) + ' – ' + monthName(last, true)
+            : monthName(first, true) + ' – ' + monthName(last, true));
       let months = '';
-      let cur = new Date(first.getFullYear(), first.getMonth(), 1);
-      const end = new Date(last.getFullYear(), last.getMonth(), 1);
-      while (cur <= end) {
-        const y = cur.getFullYear(), m = cur.getMonth();
-        const label = cur.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-        const firstDow = new Date(y, m, 1).getDay();
-        const daysIn = new Date(y, m + 1, 0).getDate();
+      {
         let cells = '';
-        for (let b = 0; b < firstDow; b++) cells += '<div></div>';
-        for (let dd = 1; dd <= daysIn; dd++) {
-          const date = new Date(y, m, dd); const idx = stayMap[key(date)];
+        for (let date = new Date(gridStart); date <= gridEnd; date.setDate(date.getDate() + 1)) {
+          const dd = date.getDate();
+          const idx = stayMap[key(date)];
           if (idx == null) { cells += `<div class="cal-off">${dd}</div>`; continue; }
           const active = idx === activeDay;
           const outfits = (itinerary[idx] && Array.isArray(itinerary[idx].outfits)) ? itinerary[idx].outfits : [];
@@ -13073,8 +13092,7 @@ a.item-src:hover { color: var(--red); border-color: var(--red); }
             <span>${dd}</span>${img ? `<img src="${escA(img)}" draggable="false">` : ''}</button>`;
         }
         const dow = WEEK.map(l => `<div class="cal-dow">${l}</div>`).join('');
-        months += `<div class="cal-month"><div class="label">${esc(label)}</div><div class="cal-grid">${dow}${cells}</div></div>`;
-        cur = new Date(y, m + 1, 1);
+        months = `<div class="cal-month"><div class="label">${esc(label)}</div><div class="cal-grid">${dow}${cells}</div></div>`;
       }
       return months;
     }
