@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-09-02T22:12:11.067Z
+  Built: 2026-09-02T22:20:06.228Z
 -->
 
 <html lang="en">
@@ -17,22 +17,24 @@
   <title>Trip Planner</title>
 
 
-  <!-- Night Market type stack — Clash Display (display headings + stop-card city
-       names, from Fontshare), Sora (UI), Bebas Neue (caps), Instrument Serif (the
-       italic date/sub lines). Space Grotesk stays in the CSS fallback chain but is
-       no longer downloaded — it only shows if Fontshare is unreachable AND the
-       machine happens to have it installed. Loaded async so fonts never block
-       first paint. -->
+  <!-- Night Market type stack — Clash Display (from Fontshare) now carries both
+       the display headings and the UI text, Bebas Neue the caps, Instrument Serif
+       the italic date/sub lines. Weights 300-700: Clash Display has no 800, so the
+       nine 800 rules resolve down to 700 by normal CSS weight matching.
+       Sora and Space Grotesk stay in the CSS fallback chains but are no longer
+       downloaded — they only show if Fontshare is unreachable AND the machine
+       happens to have them installed. Loaded async so fonts never block first
+       paint; the service worker caches them for offline. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://api.fontshare.com">
   <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin>
-  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=Sora:wght@400;500;600;700;800&display=swap">
-  <link rel="preload" as="style" href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&display=swap">
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-  <link href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-  <noscript><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-  <noscript><link href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&display=swap" rel="stylesheet"></noscript>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&display=swap">
+  <link rel="preload" as="style" href="https://api.fontshare.com/v2/css?f[]=clash-display@300,400,500,600,700&display=swap">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <link href="https://api.fontshare.com/v2/css?f[]=clash-display@300,400,500,600,700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"></noscript>
+  <noscript><link href="https://api.fontshare.com/v2/css?f[]=clash-display@300,400,500,600,700&display=swap" rel="stylesheet"></noscript>
 
   <!-- Leaflet (interactive route map) — vendored locally so it loads without a CDN -->
   <style>
@@ -889,7 +891,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   /* ---- type ---- */
   --serif: 'Clash Display', 'Space Grotesk', system-ui, sans-serif;
   --mono:   ui-monospace, 'SF Mono', Menlo, Consolas, 'Courier New', monospace;   /* receipt */
-  --sans: 'Sora', system-ui, sans-serif;
+  --sans: 'Clash Display', 'Sora', system-ui, sans-serif;
   --caps: 'Bebas Neue', 'DM Sans', sans-serif;
   --script: 'Instrument Serif', Georgia, serif;
   --display-alt: 'Clash Display', 'Space Grotesk', system-ui, sans-serif;   /* stop-card city names + route headings */
@@ -14367,7 +14369,7 @@ html { -webkit-tap-highlight-color: transparent; }
         Object.assign(di.style, {
           position: 'fixed', top: '-200px', left: '-200px', maxWidth: '220px',
           padding: '7px 12px', borderRadius: '8px', background: 'var(--brown)', color: 'var(--on-brown)',
-          fontFamily: 'Sora, system-ui, sans-serif', fontSize: '12px', fontWeight: '600',
+          fontFamily: 'var(--sans)', fontSize: '12px', fontWeight: '600',
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           boxShadow: '0 4px 14px rgba(35,20,12,.3)',
         });

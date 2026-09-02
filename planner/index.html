@@ -19,22 +19,24 @@
   <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 
-  <!-- Night Market type stack — Clash Display (display headings + stop-card city
-       names, from Fontshare), Sora (UI), Bebas Neue (caps), Instrument Serif (the
-       italic date/sub lines). Space Grotesk stays in the CSS fallback chain but is
-       no longer downloaded — it only shows if Fontshare is unreachable AND the
-       machine happens to have it installed. Loaded async so fonts never block
-       first paint. -->
+  <!-- Night Market type stack — Clash Display (from Fontshare) now carries both
+       the display headings and the UI text, Bebas Neue the caps, Instrument Serif
+       the italic date/sub lines. Weights 300-700: Clash Display has no 800, so the
+       nine 800 rules resolve down to 700 by normal CSS weight matching.
+       Sora and Space Grotesk stay in the CSS fallback chains but are no longer
+       downloaded — they only show if Fontshare is unreachable AND the machine
+       happens to have them installed. Loaded async so fonts never block first
+       paint; the service worker caches them for offline. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://api.fontshare.com">
   <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin>
-  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=Sora:wght@400;500;600;700;800&display=swap">
-  <link rel="preload" as="style" href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&display=swap">
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-  <link href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-  <noscript><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-  <noscript><link href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&display=swap" rel="stylesheet"></noscript>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&display=swap">
+  <link rel="preload" as="style" href="https://api.fontshare.com/v2/css?f[]=clash-display@300,400,500,600,700&display=swap">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <link href="https://api.fontshare.com/v2/css?f[]=clash-display@300,400,500,600,700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"></noscript>
+  <noscript><link href="https://api.fontshare.com/v2/css?f[]=clash-display@300,400,500,600,700&display=swap" rel="stylesheet"></noscript>
 
   <!-- Leaflet (interactive route map) — vendored locally so it loads without a CDN -->
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
@@ -67,7 +69,7 @@
       try { localStorage.removeItem('europe-trip-skin-v1'); } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="styles.css?v=218">
+  <link rel="stylesheet" href="styles.css?v=219">
 </head>
 <body>
   <main id="app"></main>
@@ -98,7 +100,7 @@
   <!-- shared-post extractor (RedNote / TikTok / Instagram → itinerary rows);
        loads before app.js, which calls window.SocialImport -->
   <script src="social-import.js?v=1"></script>
-  <script src="app.js?v=205"></script>
+  <script src="app.js?v=206"></script>
   <!-- PWA: offline cache + install support (no-op on file:// and non-secure origins) -->
   <script>
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
