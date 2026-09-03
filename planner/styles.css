@@ -1715,7 +1715,8 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
 /* inputs sharing a row with a trailing ↗ link (address, booking link) grow to
    fill the row so long values (full street addresses) stay visible */
 .opt .fld .lk input { flex: 1 1 auto; width: auto; min-width: 0; }
-.opt .fld input.price { font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.opt .fld input.price { font-weight: 400; color: var(--ink); font-variant-numeric: tabular-nums; }   /* not bold: it sits at the same weight as the address and distance fields
+      beside it, and keeps its lining figures to stay readable as a number */
 .opt .fld .lk a { color: var(--gold); font-family: var(--sans); font-size: 13px; font-weight: 800; text-decoration: none; flex-shrink: 0; }
 /* phone/app: stack the fields one per row so nothing is cramped or clipped —
    every field (address included) gets the full card width */
@@ -3763,6 +3764,9 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   --deck-shadow-lift:
     inset 0 1px 0 rgba(255, 255, 255, .9);
   --deck-sheen: linear-gradient(157deg, rgba(255, 255, 255, .55), rgba(255, 255, 255, 0) 58%);
+  /* the olive the deck's greens are mixed from — the palette's own --ink-soft,
+     so the tints land in the family the rest of the app already speaks */
+  --deck-green: #6B8040;
   --card-w: 138px;
   --card-h: 38px;
   --tc-padx: 14px;      /* the card's own side padding — the rules below derive from it */
@@ -3827,6 +3831,23 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   color: var(--ink-mute); font-family: var(--sans); font-size: 17px;
   font-weight: 700; line-height: 1; padding: 2px 5px;
   opacity: 0; transition: opacity .2s ease;
+}
+/* Light only: each card sits a step deeper in green than the one in front of
+   it, so the deck reads as a stack rather than one card with edges. The step is
+   driven off --i, the same index the transforms use, so it holds for any number
+   of trips instead of running out of nth-child rules.
+
+   background-COLOR, never the shorthand: the rule above sets --deck-sheen as a
+   background-image immediately after its own shorthand precisely because a
+   shorthand clears it, and a shorthand here would undo that all over again.
+
+   Dark is left alone — these tints are mixed toward white, and the dark deck
+   already separates its cards against a dark ground. */
+html:not([data-theme="dark"]) .trip-card {
+  /* capped: the ramp has to stop somewhere or a tenth trip would be near-solid
+     olive with near-black --ink on it. 48% is the deepest tint that still
+     carries the card's own text. */
+  background-color: color-mix(in srgb, var(--deck-green) min(52%, calc(16% + var(--i) * 9%)), #FFFFFF);
 }
 .trip-card.is-front { box-shadow: var(--deck-shadow-lift); }
 /* Cards are overlapped from the left, so only the right --dx of each one is
