@@ -610,7 +610,7 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
   cursor: crosshair; display: flex; align-items: center; justify-content: center; padding: 0;
 }
 .todo .box.done { background: var(--green); border-color: var(--green); }
-.todo input.txt { flex: 1; min-width: 0; font-family: var(--sans); font-size: 14px; font-weight: 600; color: var(--ink); border: none; background: transparent; padding: 2px 0; outline-offset: 2px; }
+.todo input.txt { flex: 1; min-width: 0; font-family: var(--sans); font-size: 14px; font-weight: 500; color: var(--ink); border: none; background: transparent; padding: 2px 0; outline-offset: 2px; }
 .todo input.txt.done { color: var(--ink-mute); text-decoration: line-through; text-decoration-color: var(--green); animation: strikeThrough .3s cubic-bezier(0.16,1,0.3,1) both; }
 .todo .x { flex-shrink: 0; font-family: var(--sans); font-size: 13px; line-height: 1; color: var(--ink-faint); border: none; background: transparent; cursor: crosshair; padding: 4px; }
 
@@ -675,7 +675,7 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
 }
 .bk-row { padding: 4px 0; }
 .bk-row .txt {
-  flex: 1; min-width: 0; font-family: var(--sans); font-size: 14px; font-weight: 600;
+  flex: 1; min-width: 0; font-family: var(--sans); font-size: 14px; font-weight: 500;
   color: var(--ink); padding: 2px 0;
   /* hotel names arrive as typed and can be one long token — wrap inside a word
      rather than letting it overflow the column */
@@ -793,8 +793,6 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
   .cal-month .label { font-weight: 600; }   /* calendar month title */
   .stat .cap        { font-weight: 500; }   /* stats block wording */
   .todos .hd .t     { font-weight: 600; }   /* To-do + Bookings titles */
-  .todo input.txt   { font-weight: 500; }   /* to-do task text */
-  .bk-row .txt      { font-weight: 500; }   /* booking row text */
 }
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
 .cal-dow { text-align: center; font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: .05em; color: var(--ink-mute); padding: 2px 0; }
@@ -1696,6 +1694,12 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
   .iti-body { flex-direction: column; overflow-y: auto; }
   .iti-left { width: 100%; overflow-y: visible; }
   .iti-right { overflow-y: visible; padding: 20px 18px 28px; animation: none; }
+}
+/* Stacked, the two columns are no longer side by side, so .iti-left's 28px
+   column inset stops being a gutter and just pushes the calendar and closet
+   10px in from the day title and its activities. Match .iti-right above. */
+@media (max-width: 700px) {
+  .iti-left { padding-left: 18px; padding-right: 18px; }
 }
 
 /* tablet-portrait web (iPad, 701–950px): the ledger's two-column itinerary
@@ -3633,14 +3637,11 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    catching the light along the top edge. Dark theme keeps the same shape and
    swaps the ground — highlight down, shadow up. */
 .trip-stack {
+  /* no cast shadow — only the inset edges that give the card its frosted rim */
   --deck-shadow:
-    0 1px 2px rgba(24, 22, 14, .06),
-    0 6px 16px -6px rgba(24, 22, 14, .16),
     inset 0 1px 0 rgba(255, 255, 255, .85),
     inset 0 -1px 0 rgba(24, 22, 14, .05);
   --deck-shadow-lift:
-    0 2px 4px rgba(24, 22, 14, .08),
-    0 14px 30px -10px rgba(24, 22, 14, .26),
     inset 0 1px 0 rgba(255, 255, 255, .9);
   --deck-sheen: linear-gradient(157deg, rgba(255, 255, 255, .55), rgba(255, 255, 255, 0) 58%);
   --card-w: 138px;
@@ -3657,13 +3658,9 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 }
 [data-theme="dark"] .trip-stack {
   --deck-shadow:
-    0 1px 2px rgba(0, 0, 0, .40),
-    0 8px 20px -8px rgba(0, 0, 0, .60),
     inset 0 1px 0 rgba(255, 255, 255, .07),
     inset 0 -1px 0 rgba(0, 0, 0, .30);
   --deck-shadow-lift:
-    0 2px 5px rgba(0, 0, 0, .50),
-    0 16px 34px -12px rgba(0, 0, 0, .70),
     inset 0 1px 0 rgba(255, 255, 255, .10);
   --deck-sheen: linear-gradient(157deg, rgba(255, 255, 255, .10), rgba(255, 255, 255, 0) 58%);
 }
