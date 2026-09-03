@@ -2449,7 +2449,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   }
   .ss-card input.city {
     flex: 1; min-width: 0; border: none; background: transparent; padding: 2px 0;
-    font-family: var(--serif); font-size: 22px; font-weight: 700; letter-spacing: -.01em; color: var(--ink);
+    font-family: var(--serif); font-size: 22px; font-weight: 600; letter-spacing: -.01em; color: var(--ink);
   }
   .ss-card input.city::placeholder { color: var(--ink-faint); font-weight: 500; }
   .ss-x { flex-shrink: 0; border: none; background: transparent; color: var(--ink-faint); cursor: crosshair; padding: 4px; font-size: 15px; line-height: 1; }
