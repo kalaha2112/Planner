@@ -581,6 +581,10 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
 .todos { background: var(--surface); border-radius: var(--r-card); padding: 17px 18px; }
 .todos .hd { display: flex; align-items: baseline; gap: 8px; margin-bottom: 13px; }
 .todos .hd .t { font-family: var(--sans); font-size: 15px; font-weight: 700; color: var(--ink); }
+/* Packing shares the .todos header with To-do and Bookings, but was asked for on
+   both layouts where those two are web-only — this is the selector that tells it
+   apart (Bookings carries pack-block as well, and .bookings on top of it). */
+.todos.pack-block:not(.bookings) .hd .t { font-weight: 600; }
 .todos .hd .p { font-family: var(--sans); font-size: 11px; color: var(--ink-mute); margin-left: auto; font-variant-numeric: tabular-nums; }
 /* Both lists fold — To-do and Bookings, on both versions. The whole header is
    the control, a comfortable tap target on a phone rather than just the caret,
@@ -781,6 +785,17 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
 .cal { margin-top: 18px; }
 .cal-month { margin-bottom: 6px; }
 .cal-month .label { font-family: var(--sans); font-size: 15px; font-weight: 800; color: var(--ink); margin-bottom: 10px; letter-spacing: -.01em; }
+/* Web-only easing. The month label was set at 800, which Clash Display has no
+   face for and already rendered as 700 — so it goes to 600 to actually move.
+   The to-do and bookings titles share one header (foldHead), so .todos .hd .t
+   covers both lists. The app layout keeps its weights. */
+@media (min-width: 701px) {
+  .cal-month .label { font-weight: 600; }   /* calendar month title */
+  .stat .cap        { font-weight: 500; }   /* stats block wording */
+  .todos .hd .t     { font-weight: 600; }   /* To-do + Bookings titles */
+  .todo input.txt   { font-weight: 500; }   /* to-do task text */
+  .bk-row .txt      { font-weight: 500; }   /* booking row text */
+}
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
 .cal-dow { text-align: center; font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: .05em; color: var(--ink-mute); padding: 2px 0; }
 .cal-off { height: auto; display: flex; align-items: flex-start; justify-content: center; padding-top: 8px; font-family: var(--sans); font-size: 13px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
@@ -1253,6 +1268,9 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
   font-family: var(--sans); font-size: 10px; font-weight: 600;
   letter-spacing: .09em; text-transform: uppercase;
   color: var(--ink-mute); font-variant-numeric: tabular-nums;
+}
+@media (min-width: 701px) {
+  .item-leg { font-weight: 500; }   /* distance between activity rows */
 }
 /* dark's --ink-mute is a dim olive that all but disappears at 9px on the near-
    black page — the label steps up a rung so it stays readable */
@@ -3097,6 +3115,11 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
 }
 .pk-hd { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
 .pk-hd .t { font-family: var(--sans); font-size: 14px; font-weight: 700; color: var(--ink); }
+/* Must sit after the rule above, not with the other web easings further up: same
+   specificity, so whichever is declared last wins. */
+@media (min-width: 701px) {
+  .pk-hd .t { font-weight: 600; }   /* packing category title */
+}
 .pk-hd .p { font-family: var(--mono); font-size: 11px; color: var(--ink-mute); margin-left: auto; font-variant-numeric: tabular-nums; }
 .pk-hd .x { border: none; background: transparent; color: var(--ink-faint); font-size: 13px; line-height: 1; cursor: crosshair; padding: 2px 4px; }
 .pk-hd .x:hover { color: var(--ink); }
