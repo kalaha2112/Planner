@@ -1026,8 +1026,24 @@
     route: '<rect x="3" y="4" width="18" height="14" rx="3"/><path d="M3 10h18"/><rect x="7" y="6" width="4" height="3" rx="1"/><rect x="13" y="6" width="4" height="3" rx="1"/><path d="M7 18l-2 3"/><path d="M17 18l2 3"/>',
     home: '<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 9.5V20a1 1 0 0 0 1 1H10v-6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v6h3.5a1 1 0 0 0 1-1V9.5"/>',
     clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 1.9"/>',
+    shopping: '<path d="M6 2 3 6.5V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.5L18 2z"/><path d="M3 6.5h18"/><path d="M16 10.5a4 4 0 0 1-8 0"/>',
+    coffee: '<path d="M17 8.5h1.5a3.5 3.5 0 0 1 0 7H17"/><path d="M3 8.5h14V16a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5z"/><path d="M7 2v3"/><path d="M11 2v3"/>',
+    food: '<path d="M4 2v6a3 3 0 0 0 6 0V2"/><path d="M7 11v11"/><path d="M20 2c-2 1.7-3 4.1-3 6.6 0 2 .9 3.3 2 3.8V22"/>',
+    museum: '<path d="M3 22h18"/><path d="M12 2.5 20.5 8h-17z"/><path d="M6 11.5v7"/><path d="M10 11.5v7"/><path d="M14 11.5v7"/><path d="M18 11.5v7"/>',
     inbox: '<path d="M4 13h4l1.6 3h4.8l1.6-3h4"/><path d="M5.4 5.6 3.2 12.3A2 2 0 0 0 3 13v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4a2 2 0 0 0-.2-.7l-2.2-6.7A2 2 0 0 0 16.7 4H7.3a2 2 0 0 0-1.9 1.6z"/>'
   };
+  /* What an activity IS, picked in its note sheet and worn by the note button on
+     the row — so a day reads as shapes before it reads as words. Optional: with
+     nothing picked the button stays the speech bubble it has always been. The key
+     is what lands on the item; the icon name indexes I above. */
+  const ACT_CATS = [
+    { k: 'shopping', label: 'Shopping', icon: 'shopping' },
+    { k: 'coffee',   label: 'Coffee',   icon: 'coffee' },
+    { k: 'food',     label: 'Food',     icon: 'food' },
+    { k: 'museum',   label: 'Museum',   icon: 'museum' },
+  ];
+  const ACT_CAT = Object.fromEntries(ACT_CATS.map(c => [c.k, c]));
+
   const svg = (paths, opt = {}) => {
     const { w = 16, h = 16, sw = 2, fill = 'none', stroke = 'currentColor' } = opt;
     return `<svg width="${w}" height="${h}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
@@ -7569,10 +7585,12 @@
           const noteTxt = /\S/.test(it.note || '');
           const picCount = (it.notePics || []).length;
           const noteFull = noteTxt || picCount > 0;
+          const cat = ACT_CAT[it.cat];
           const picTip = picCount ? picCount + (picCount === 1 ? ' reference picture' : ' reference pictures') : '';
-          const noteTip = noteTxt
+          const noteBody = noteTxt
             ? String(it.note).slice(0, 120) + (picTip ? ' · ' + picTip : '')
             : (picTip || 'Add a note or a reference picture');
+          const noteTip = cat ? cat.label + ' · ' + noteBody : noteBody;
           // the full hint ("≈ $35 CAD · 1 JPY = $0.00910") belongs under a price
           // field; an activity row is a meta line, so it gets the conversion only
           const costHint = cpm.ambiguous
@@ -7594,9 +7612,9 @@
               <button class="pin-btn${it.pinned ? ' on' : ''}" data-act="item-pin" data-i="${ii}" aria-pressed="${it.pinned ? 'true' : 'false'}"
                 title="${it.pinned ? 'Pinned to slot ' + (ii + 1) + ' — Optimize route plans around it. Click to unpin.' : 'Pin to slot ' + (ii + 1) + ' so Optimize route keeps it here'}"
                 aria-label="${it.pinned ? 'Unpin from this position' : 'Pin to this position'}">${svg(I.pushpin, { w: 12, h: 12, sw: 1.7 })}</button>
-              <button class="note-btn${noteFull ? ' on' : ''}" data-act="item-note-open" data-i="${ii}"
+              <button class="note-btn${noteFull ? ' on' : ''}${cat ? ' has-cat' : ''}" data-act="item-note-open" data-i="${ii}"
                 title="${escA(noteTip)}"
-                aria-label="${noteFull ? 'Edit note' : 'Add a note'}">${svg(I.msg, { w: 13, h: 13, stroke: 'currentColor' })}${picCount ? `<span class="pics">${picCount}</span>` : ''}</button>
+                aria-label="${cat ? cat.label + ' — edit note' : (noteFull ? 'Edit note' : 'Add a note')}">${svg(cat ? I[cat.icon] : I.msg, { w: 13, h: 13, stroke: 'currentColor' })}${picCount ? `<span class="pics">${picCount}</span>` : ''}</button>
               <button class="item-fold${it.folded ? ' shut' : ''}" data-act="item-fold" data-i="${ii}" aria-expanded="${it.folded ? 'false' : 'true'}"
                 title="${it.folded ? 'Show this activity\'s time, address and cost' : 'Fold this activity down to its name'}"
                 aria-label="${it.folded ? 'Expand this activity' : 'Collapse this activity'}">${svg(I.chev, { w: 13, h: 13, sw: 2.6 })}</button>
@@ -8051,6 +8069,9 @@
             <button class="modal-x" data-act="close-note" title="Done">✕</button>
           </div></div>
           <div class="note-body">
+            <div class="note-cats" role="group" aria-label="What kind of activity is this">
+              ${ACT_CATS.map(c => `<button class="note-cat${it.cat === c.k ? ' on' : ''}" data-act="item-cat" data-key="${c.k}" aria-pressed="${it.cat === c.k ? 'true' : 'false'}" title="${it.cat === c.k ? c.label + ' — click again to clear it' : 'Mark as ' + c.label.toLowerCase()}">${svg(I[c.icon], { w: 15, h: 15, sw: 1.8 })}<span>${c.label}</span></button>`).join('')}
+            </div>
             <textarea class="note-area" data-ch="note-text" rows="5"
               placeholder="Anything worth remembering — booking reference, what to order, which entrance, why it made the list…">${esc(it.note || '')}</textarea>
             ${this.renderNoteRefs(it)}
@@ -8556,6 +8577,11 @@
         case 'note-pic-add': { const f = this.modalEl.querySelector('.note-file'); if (f) f.click(); break; }
         case 'note-pic-remove': this.removeNotePic(id); break;
         case 'note-pic-open': this._notePicOpen = this._notePicOpen === id ? null : id; this.bumpModal(); break;
+        case 'item-cat': {
+          const ci = this.noteEditItem();
+          if (ci) { this.snapshot(); ci.cat = ci.cat === key ? '' : key; this.bump(); }
+          break;
+        }
         case 'note-refs-toggle': this._noteRefsOpen = !this._noteRefsOpen; this._notePicOpen = null; this.bumpModal(); break;
         case 'overlay-note': if (e.target === t) this.closeNote(); break;
         case 'close-sync': this.syncOpen = false; this.bumpModal(); break;

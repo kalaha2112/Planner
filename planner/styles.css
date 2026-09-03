@@ -913,7 +913,11 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
 /* A note exists: the icon goes gold and nothing else changes. The plate and
    outline it used to wear made a 24px button shout louder than the activity it
    belongs to — gold against a row of faint grey controls is already unmissable. */
+/* a category is something you chose, so the button carries it in ink even when
+   the note itself is still empty */
+.note-btn.has-cat { color: var(--ink-soft); }
 .note-btn.on { color: var(--gold); border-color: transparent; background: transparent; }
+.note-btn.on.has-cat { color: var(--gold); }
 .note-btn.on:hover { background: var(--hover-soft); border-color: var(--line-soft); }
 
 /* ---- pin: hold an activity at its slot in the day ----
@@ -982,6 +986,26 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
 .note-area::placeholder { color: var(--ink-faint); }
 .note-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
 .note-hint { font-family: var(--sans); font-size: 12px; color: var(--ink-mute); }
+
+/* ---- what kind of activity this is ----
+   Four chips at the top of the note sheet. Picking one puts its symbol on the
+   activity's note button; picking it again clears it, which is why there is no
+   fifth "none" chip. */
+.note-cats { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 12px; }
+.note-cat {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px 6px 10px; border-radius: var(--r-pill);
+  border: 1px solid var(--line); background: var(--surface);
+  font-family: var(--sans); font-size: 12px; font-weight: 500;
+  color: var(--ink-soft); cursor: crosshair;
+  transition: color .15s ease, background .15s ease, border-color .15s ease;
+}
+.note-cat svg { display: block; flex: 0 0 auto; }
+.note-cat:hover { color: var(--ink); border-color: var(--ink-mute); }
+.note-cat.on {
+  color: var(--on-brown); background: var(--brown); border-color: var(--brown);
+}
+.note-cat.on:hover { color: var(--on-brown); border-color: var(--brown); }
 
 /* ---- reference pictures under the typed note ----
    A note is either something you write or something you saw. The strip holds
