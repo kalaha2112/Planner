@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-09-03T20:59:44.628Z
+  Built: 2026-09-03T21:17:32.294Z
 -->
 
 <html lang="en">
@@ -811,6 +811,15 @@ svg.leaflet-image-layer.leaflet-interactive path {
   --gold-border: #E2CF95;
   --gold-hover: #F0E6C6;
   --green: #A8861F;   /* yellow gold: saved, train, booked */
+  /* Activity categories. Shopping and food borrow the red and gold the palette
+     already carries; coffee and museum are the only new hues, and are muted to
+     sit with them rather than shout over them. The soft fill each chip wears
+     when picked is mixed from these against --surface, so it follows the theme
+     without a second set of tokens to keep in step. */
+  --cat-shopping: #91040C;
+  --cat-coffee:   #6F4A24;
+  --cat-food:     #A8861F;
+  --cat-museum:   #3E5A6B;
   /* Dates keep their own hue — --date for the sub-lines, --green-dark and
      --mc-dates for the range on the overview and the map cards. They are the one
      thing deliberately left green while everything else went dark gold. */
@@ -942,6 +951,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
   --gold-border: #665420;
   --gold-hover: #453917;
   --green: #E3C04A;
+  /* the four category hues, lifted the way --red and --gold are above */
+  --cat-shopping: #C93A41;
+  --cat-coffee:   #C79A62;
+  --cat-food:     #E3C04A;
+  --cat-museum:   #86AEC4;
   /* Dates stay green — the one hue held back from the gold reskin — but a
      deeper, denser green than the neon it was: it reads as bold ink on the dark
      page instead of glowing off it. */
@@ -1702,11 +1716,16 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
 /* A note exists: the icon goes gold and nothing else changes. The plate and
    outline it used to wear made a 24px button shout louder than the activity it
    belongs to — gold against a row of faint grey controls is already unmissable. */
-/* a category is something you chose, so the button carries it in ink even when
-   the note itself is still empty */
-.note-btn.has-cat { color: var(--ink-soft); }
 .note-btn.on { color: var(--gold); border-color: transparent; background: transparent; }
-.note-btn.on.has-cat { color: var(--gold); }
+/* A category is something you chose, so the button carries it in its own colour
+   even when the note is still empty. This follows .note-btn.on deliberately:
+   both are two classes, so source order is what lets a category outrank the
+   generic "has something written in it" gold. */
+.cat-shopping { --cat-color: var(--cat-shopping); }
+.cat-coffee   { --cat-color: var(--cat-coffee); }
+.cat-food     { --cat-color: var(--cat-food); }
+.cat-museum   { --cat-color: var(--cat-museum); }
+.note-btn.has-cat { color: var(--cat-color); }
 .note-btn.on:hover { background: var(--hover-soft); border-color: var(--line-soft); }
 
 /* ---- pin: hold an activity at its slot in the day ----
@@ -1780,21 +1799,49 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
    Four chips at the top of the note sheet. Picking one puts its symbol on the
    activity's note button; picking it again clears it, which is why there is no
    fifth "none" chip. */
-.note-cats { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 12px; }
+/* Four across, always: the row never wraps, it shrinks. Everything that takes
+   horizontal space — gap, padding, type, glyph — is a clamp, so the pills give
+   ground as the sheet narrows and stop giving it once they are comfortable. The
+   label is last to yield and truncates rather than pushing a pill onto a second
+   line, which is the one thing this row must not do. */
+.note-cats {
+  display: flex; flex-wrap: nowrap; align-items: stretch;
+  gap: clamp(4px, 1.4vw, 7px); margin-bottom: 12px;
+}
 .note-cat {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 12px 6px 10px; border-radius: var(--r-pill);
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: 0 1 auto; min-width: 0;
+  /* coefficients, not the floors, are what bind on a phone: at 360px 2vw is
+     already 7.2px, well clear of any sensible floor, so the row only stops
+     truncating its labels once the vw terms themselves come down */
+  gap: clamp(3px, .8vw, 6px);
+  padding: 6px clamp(6px, 1.8vw, 12px) 6px clamp(5px, 1.6vw, 10px);
+  border-radius: var(--r-pill);
   border: 1px solid var(--line); background: var(--surface);
-  font-family: var(--sans); font-size: 12px; font-weight: 500;
-  color: var(--ink-soft); cursor: crosshair;
+  font-family: var(--sans); font-size: clamp(10px, 2.7vw, 12px); font-weight: 500;
+  color: var(--ink-soft); cursor: crosshair; white-space: nowrap;
   transition: color .15s ease, background .15s ease, border-color .15s ease;
 }
-.note-cat svg { display: block; flex: 0 0 auto; }
-.note-cat:hover { color: var(--ink); border-color: var(--ink-mute); }
-.note-cat.on {
-  color: var(--on-brown); background: var(--brown); border-color: var(--brown);
+.note-cat span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.note-cat svg {
+  display: block; flex: 0 0 auto;
+  width: clamp(13px, 3.4vw, 15px); height: auto;
 }
-.note-cat.on:hover { color: var(--on-brown); border-color: var(--brown); }
+.note-cat svg { color: var(--cat-color); }
+.note-cat:hover { color: var(--ink); border-color: var(--ink-mute); }
+/* Picked: the category's own colour on a wash of itself. Mixing against
+   --surface rather than hardcoding a tint means the fill re-derives in dark,
+   where these hues are the light ones and the ground is the dark one. */
+.note-cat.on {
+  color: var(--cat-color);
+  background: color-mix(in srgb, var(--cat-color) 13%, var(--surface));
+  border-color: color-mix(in srgb, var(--cat-color) 42%, var(--surface));
+}
+.note-cat.on:hover {
+  color: var(--cat-color);
+  background: color-mix(in srgb, var(--cat-color) 20%, var(--surface));
+  border-color: var(--cat-color);
+}
 
 /* ---- reference pictures under the typed note ----
    A note is either something you write or something you saw. The strip holds
@@ -13352,7 +13399,7 @@ html { -webkit-tap-highlight-color: transparent; }
               <button class="pin-btn${it.pinned ? ' on' : ''}" data-act="item-pin" data-i="${ii}" aria-pressed="${it.pinned ? 'true' : 'false'}"
                 title="${it.pinned ? 'Pinned to slot ' + (ii + 1) + ' — Optimize route plans around it. Click to unpin.' : 'Pin to slot ' + (ii + 1) + ' so Optimize route keeps it here'}"
                 aria-label="${it.pinned ? 'Unpin from this position' : 'Pin to this position'}">${svg(I.pushpin, { w: 12, h: 12, sw: 1.7 })}</button>
-              <button class="note-btn${noteFull ? ' on' : ''}${cat ? ' has-cat' : ''}" data-act="item-note-open" data-i="${ii}"
+              <button class="note-btn${noteFull ? ' on' : ''}${cat ? ' has-cat cat-' + cat.k : ''}" data-act="item-note-open" data-i="${ii}"
                 title="${escA(noteTip)}"
                 aria-label="${cat ? cat.label + ' — edit note' : (noteFull ? 'Edit note' : 'Add a note')}">${svg(cat ? I[cat.icon] : I.msg, { w: 13, h: 13, stroke: 'currentColor' })}${picCount ? `<span class="pics">${picCount}</span>` : ''}</button>
               <button class="item-fold${it.folded ? ' shut' : ''}" data-act="item-fold" data-i="${ii}" aria-expanded="${it.folded ? 'false' : 'true'}"
@@ -13810,7 +13857,7 @@ html { -webkit-tap-highlight-color: transparent; }
           </div></div>
           <div class="note-body">
             <div class="note-cats" role="group" aria-label="What kind of activity is this">
-              ${ACT_CATS.map(c => `<button class="note-cat${it.cat === c.k ? ' on' : ''}" data-act="item-cat" data-key="${c.k}" aria-pressed="${it.cat === c.k ? 'true' : 'false'}" title="${it.cat === c.k ? c.label + ' — click again to clear it' : 'Mark as ' + c.label.toLowerCase()}">${svg(I[c.icon], { w: 15, h: 15, sw: 1.8 })}<span>${c.label}</span></button>`).join('')}
+              ${ACT_CATS.map(c => `<button class="note-cat cat-${c.k}${it.cat === c.k ? ' on' : ''}" data-act="item-cat" data-key="${c.k}" aria-pressed="${it.cat === c.k ? 'true' : 'false'}" title="${it.cat === c.k ? c.label + ' — click again to clear it' : 'Mark as ' + c.label.toLowerCase()}">${svg(I[c.icon], { w: 15, h: 15, sw: 1.8 })}<span>${c.label}</span></button>`).join('')}
             </div>
             <textarea class="note-area" data-ch="note-text" rows="5"
               placeholder="Anything worth remembering — booking reference, what to order, which entrance, why it made the list…">${esc(it.note || '')}</textarea>

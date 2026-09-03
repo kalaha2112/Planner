@@ -7612,7 +7612,7 @@
               <button class="pin-btn${it.pinned ? ' on' : ''}" data-act="item-pin" data-i="${ii}" aria-pressed="${it.pinned ? 'true' : 'false'}"
                 title="${it.pinned ? 'Pinned to slot ' + (ii + 1) + ' — Optimize route plans around it. Click to unpin.' : 'Pin to slot ' + (ii + 1) + ' so Optimize route keeps it here'}"
                 aria-label="${it.pinned ? 'Unpin from this position' : 'Pin to this position'}">${svg(I.pushpin, { w: 12, h: 12, sw: 1.7 })}</button>
-              <button class="note-btn${noteFull ? ' on' : ''}${cat ? ' has-cat' : ''}" data-act="item-note-open" data-i="${ii}"
+              <button class="note-btn${noteFull ? ' on' : ''}${cat ? ' has-cat cat-' + cat.k : ''}" data-act="item-note-open" data-i="${ii}"
                 title="${escA(noteTip)}"
                 aria-label="${cat ? cat.label + ' — edit note' : (noteFull ? 'Edit note' : 'Add a note')}">${svg(cat ? I[cat.icon] : I.msg, { w: 13, h: 13, stroke: 'currentColor' })}${picCount ? `<span class="pics">${picCount}</span>` : ''}</button>
               <button class="item-fold${it.folded ? ' shut' : ''}" data-act="item-fold" data-i="${ii}" aria-expanded="${it.folded ? 'false' : 'true'}"
@@ -8070,7 +8070,7 @@
           </div></div>
           <div class="note-body">
             <div class="note-cats" role="group" aria-label="What kind of activity is this">
-              ${ACT_CATS.map(c => `<button class="note-cat${it.cat === c.k ? ' on' : ''}" data-act="item-cat" data-key="${c.k}" aria-pressed="${it.cat === c.k ? 'true' : 'false'}" title="${it.cat === c.k ? c.label + ' — click again to clear it' : 'Mark as ' + c.label.toLowerCase()}">${svg(I[c.icon], { w: 15, h: 15, sw: 1.8 })}<span>${c.label}</span></button>`).join('')}
+              ${ACT_CATS.map(c => `<button class="note-cat cat-${c.k}${it.cat === c.k ? ' on' : ''}" data-act="item-cat" data-key="${c.k}" aria-pressed="${it.cat === c.k ? 'true' : 'false'}" title="${it.cat === c.k ? c.label + ' — click again to clear it' : 'Mark as ' + c.label.toLowerCase()}">${svg(I[c.icon], { w: 15, h: 15, sw: 1.8 })}<span>${c.label}</span></button>`).join('')}
             </div>
             <textarea class="note-area" data-ch="note-text" rows="5"
               placeholder="Anything worth remembering — booking reference, what to order, which entrance, why it made the list…">${esc(it.note || '')}</textarea>
