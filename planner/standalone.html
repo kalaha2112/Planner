@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-09-03T17:12:21.172Z
+  Built: 2026-09-03T19:47:53.679Z
 -->
 
 <html lang="en">
@@ -1789,7 +1789,9 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
 .note-ref-grid { display: flex; flex-wrap: wrap; gap: 8px; }
 .note-ref {
   position: relative; flex: 0 0 auto; width: var(--ref-tile); height: var(--ref-tile);
-  border: 1px solid var(--line-soft); border-radius: var(--r-sm);
+  /* no outline: the picture is its own edge, and the rounded corner is enough
+     to read it as a tile */
+  border: none; border-radius: var(--r-sm);
   overflow: hidden; background: var(--hover-soft); cursor: crosshair;
 }
 .note-ref img { display: block; width: 100%; height: 100%; object-fit: cover; }
@@ -1812,6 +1814,52 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
   color: var(--ink-mute); cursor: crosshair;
   transition: background .15s ease, color .15s ease;
 }
+/* ---- stacked ----------------------------------------------------
+   Collapsed, the pictures overlap into a deck instead of filling a strip;
+   clicking it fans them out into the grid above. The transform mirrors
+   .trip-card so the two decks in the app read as the same gesture. */
+.note-ref-deck {
+  position: relative; flex: 0 0 auto;
+  width: var(--ref-tile); height: var(--ref-tile);
+  cursor: crosshair; background: none; border: none; padding: 0;
+}
+.note-ref-grid.is-stacked .note-ref {
+  position: absolute; left: 0; top: 0;
+  transform-origin: 50% 100%;
+  transform:
+    translateX(calc(var(--i) * 5px))
+    rotate(calc(var(--i) * 1.2deg))
+    scale(calc(1 - var(--i) * 0.02));
+  z-index: calc(30 - var(--i));
+  /* a ring in the sheet's own colour, so overlapping photos stay separable
+     without putting a box back around any one of them */
+  box-shadow: 0 0 0 2px var(--surface), 0 1px 3px rgba(24, 22, 14, .13);
+  transition: transform .46s cubic-bezier(.22,.61,.36,1);
+}
+[data-theme="dark"] .note-ref-grid.is-stacked .note-ref {
+  box-shadow: 0 0 0 2px var(--surface), 0 1px 3px rgba(0, 0, 0, .5);
+}
+.note-ref-deck:hover .note-ref { transform:
+    translateX(calc(var(--i) * 8px))
+    rotate(calc(var(--i) * 1.6deg))
+    scale(calc(1 - var(--i) * 0.02)); }
+/* removing a picture you cannot single out yet would be a guess */
+.note-ref-grid.is-stacked .del { display: none; }
+.note-ref-more {
+  /* inside the front card, not hanging off the deck: outside it depends on no
+     ancestor ever clipping its overflow */
+  position: absolute; right: 8px; bottom: 8px; z-index: 40;
+  min-width: 22px; height: 22px; padding: 0 6px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 999px; background: var(--ink); color: var(--surface);
+  font-family: var(--sans); font-size: 11px; font-weight: 600;
+  font-variant-numeric: tabular-nums; pointer-events: none;
+}
+/* the header count doubles as the way back to the deck */
+.note-refs-hd .lbl.as-toggle {
+  border: none; background: transparent; padding: 0; cursor: crosshair;
+}
+.note-refs-hd .lbl.as-toggle:hover { color: var(--ink); }
 .note-ref-add:hover { background: var(--hover-soft); color: var(--ink); }
 .note-ref-add svg { display: block; }
 .note-done {
@@ -5808,7 +5856,7 @@ html { -webkit-tap-highlight-color: transparent; }
     'stop-transport', 'cal-day', 'tab-select', 'trip-stack-toggle', 'open-web',
     // folding and opening — reading aids, they change no trip data
     'accom-toggle', 'accom-toggle-all', 'accom-archive-toggle', 'closet-toggle', 'day-fold', 'bookings-toggle', 'todos-toggle',
-    'item-note-open', 'note-pic-open', 'open-budget', 'pk-close', 'optimize-dismiss',
+    'item-note-open', 'note-pic-open', 'note-refs-toggle', 'open-budget', 'pk-close', 'optimize-dismiss',
     'inbox-open',
     'toggle-stickers', 'close-stickers',
     // closing whatever is open
@@ -13737,17 +13785,31 @@ html { -webkit-tap-highlight-color: transparent; }
     renderNoteRefs(it) {
       const pics = Array.isArray(it.notePics) ? it.notePics : [];
       const open = this._notePicOpen;
-      const tiles = pics.map(p => `<div class="note-ref${p.id === open ? ' open' : ''}" data-act="note-pic-open" data-id="${escA(p.id)}" title="${p.id === open ? 'Shrink' : 'Tap to enlarge'}">
+      /* Two or more pictures read as a deck rather than a row of tiles: the top
+         few sit overlapped the way the trip deck stacks its cards, and a click
+         lays them all out. Like that deck, openness is app state and not a class
+         on the node — bumpModal() replaces this markup wholesale, so a class
+         would be wiped by the next re-render. One picture has nothing to stack. */
+      const stacked = pics.length > 1 && !this._noteRefsOpen;
+      const shown = stacked ? pics.slice(0, 4) : pics;
+      const tiles = shown.map((p, i) => `<div class="note-ref${!stacked && p.id === open ? ' open' : ''}" style="--i:${i}" data-act="${stacked ? 'note-refs-toggle' : 'note-pic-open'}" data-id="${escA(p.id)}" title="${stacked ? 'Show all ' + pics.length + ' pictures' : (p.id === open ? 'Shrink' : 'Tap to enlarge')}">
         <img src="${escA(p.image)}" alt="Reference picture">
         <button class="del" data-act="note-pic-remove" data-id="${escA(p.id)}" title="Remove this picture" aria-label="Remove this picture">✕</button>
       </div>`).join('');
+      const deck = stacked
+        ? `<div class="note-ref-deck" data-act="note-refs-toggle" role="button" tabindex="0" aria-expanded="false" aria-label="Show all ${pics.length} pictures">${tiles}<span class="note-ref-more">${pics.length}</span></div>`
+        : tiles;
+      // once fanned out, the count in the header is the way back to the deck
+      const lbl = pics.length > 1
+        ? `<button class="lbl as-toggle" data-act="note-refs-toggle" aria-expanded="${!stacked}" title="${stacked ? 'Show all pictures' : 'Stack them back up'}">Reference · ${pics.length}</button>`
+        : `<span class="lbl">Reference${pics.length ? ' · ' + pics.length : ''}</span>`;
       return `<div class="note-refs">
         <div class="note-refs-hd">
-          <span class="lbl">Reference${pics.length ? ' · ' + pics.length : ''}</span>
+          ${lbl}
           <span class="hint">drop or paste a picture here</span>
         </div>
-        <div class="note-ref-grid" data-drop="note-zone">
-          ${tiles}
+        <div class="note-ref-grid${stacked ? ' is-stacked' : ''}" data-drop="note-zone">
+          ${deck}
           <button class="note-ref-add" data-act="note-pic-add" data-drop="note-zone" title="Add a picture — or drop / paste one here">${svg(I.plus, { w: 14, h: 14, sw: 2 })}<span>picture</span></button>
         </div>
         <input type="file" accept="image/*" multiple class="note-file" data-ch="note-file" style="display:none">
@@ -13813,11 +13875,12 @@ html { -webkit-tap-highlight-color: transparent; }
     openNote(i) {
       if (this.openStopIdx == null || this.activeDay == null) return;
       this._noteEdit = { stop: this.openStopIdx, day: this.activeDay, i };
+      this._noteRefsOpen = false;
       this.bumpModal();
       const ta = this.modalEl.querySelector('.note-area');
       if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
     }
-    closeNote() { this._noteEdit = null; this._notePicOpen = null; this.bumpModal(); }
+    closeNote() { this._noteEdit = null; this._notePicOpen = null; this._noteRefsOpen = false; this.bumpModal(); }
 
     renderSyncModal() {
       if (!this.syncOpen) return '';
@@ -14209,6 +14272,7 @@ html { -webkit-tap-highlight-color: transparent; }
         case 'note-pic-add': { const f = this.modalEl.querySelector('.note-file'); if (f) f.click(); break; }
         case 'note-pic-remove': this.removeNotePic(id); break;
         case 'note-pic-open': this._notePicOpen = this._notePicOpen === id ? null : id; this.bumpModal(); break;
+        case 'note-refs-toggle': this._noteRefsOpen = !this._noteRefsOpen; this._notePicOpen = null; this.bumpModal(); break;
         case 'overlay-note': if (e.target === t) this.closeNote(); break;
         case 'close-sync': this.syncOpen = false; this.bumpModal(); break;
         case 'overlay-sync': if (e.target === t) { this.syncOpen = false; this.bumpModal(); } break;
