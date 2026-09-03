@@ -3764,9 +3764,12 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   --deck-shadow-lift:
     inset 0 1px 0 rgba(255, 255, 255, .9);
   --deck-sheen: linear-gradient(157deg, rgba(255, 255, 255, .55), rgba(255, 255, 255, 0) 58%);
-  /* the red the deck's tints are mixed from — the palette's own --red, so the
-     shades land in the family the rest of the app already speaks */
-  --deck-tint: #91040C;
+  /* The deck's two ends. Mixing one red toward WHITE is what made the cards
+     pink — a pale tint of red is pink by definition — so the ramp now runs
+     between two reds instead, from a brick front card to a deep back one, and
+     every card stays saturated enough to read as red. */
+  --deck-red-front: #C0392B;
+  --deck-red-back:  #63080B;
   --card-w: 138px;
   --card-h: 38px;
   --tc-padx: 14px;      /* the card's own side padding — the rules below derive from it */
@@ -3844,11 +3847,16 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    Dark is left alone — these tints are mixed toward white, and the dark deck
    already separates its cards against a dark ground. */
 html:not([data-theme="dark"]) .trip-card {
-  /* capped: the ramp has to stop somewhere or a tenth trip would be near-solid
-     red with near-black --ink on it. 52% is the deepest tint that still carries
-     the card's own text. */
-  background-color: color-mix(in srgb, var(--deck-tint) min(52%, calc(16% + var(--i) * 9%)), #FFFFFF);
+  /* capped: without a ceiling a tenth trip would be indistinguishable from the
+     ninth, and darker than white text wants underneath it */
+  background-color: color-mix(in srgb, var(--deck-red-back) min(78%, calc(var(--i) * 15%)), var(--deck-red-front));
 }
+/* The cards are now dark enough that --ink would disappear into them, so the
+   deck's own text goes light. Scoped to the same light-mode selector: in dark
+   the cards keep --card-glass and --ink is already the light one. */
+html:not([data-theme="dark"]) .trip-card .tc-name { color: #FFF6F4; }
+html:not([data-theme="dark"]) .trip-card .tc-x { color: rgba(255, 246, 244, .72); }
+html:not([data-theme="dark"]) .trip-card .tc-x:hover { color: #FFF6F4; }
 .trip-card.is-front { box-shadow: var(--deck-shadow-lift); }
 /* Cards are overlapped from the left, so only the right --dx of each one is
    visible. Reserving the covered part as padding means justify-content:center
