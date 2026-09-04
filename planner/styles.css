@@ -3821,7 +3821,7 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
               box-shadow .3s ease, border-color .3s ease, opacity .3s ease;
 }
 .tc-name {
-  font-family: var(--serif); font-weight: 700; font-size: 16px;
+  font-family: var(--serif); font-weight: 700; font-size: 13px;
   line-height: 1.15; color: var(--ink); text-align: center;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   border: none; background: transparent; padding: 0; width: 100%;
@@ -3989,7 +3989,7 @@ html:not([data-theme="dark"]) .trip-card .tc-x:hover { color: #F4FAEE; }
   }
   .trip-stack { --tc-padx: 11px; }
   .trip-card { padding: 8px var(--tc-padx); }
-  .tc-name { font-size: 13px; }
+  .tc-name { font-size: 10px; }
   .tc-x { font-size: 14px; top: 4px; right: 6px; }
   .trip-stack-cover { font-size: 21px; letter-spacing: .09em; }
 }
