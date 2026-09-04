@@ -3764,12 +3764,11 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   --deck-shadow-lift:
     inset 0 1px 0 rgba(255, 255, 255, .9);
   --deck-sheen: linear-gradient(157deg, rgba(255, 255, 255, .55), rgba(255, 255, 255, 0) 58%);
-  /* The deck's two ends. Mixing one red toward WHITE is what made the cards
-     pink — a pale tint of red is pink by definition — so the ramp now runs
-     between two reds instead, from a brick front card to a deep back one, and
-     every card stays saturated enough to read as red. */
-  --deck-red-front: #7A160E;
-  --deck-red-back:  #2E0407;
+  /* The deck's two ends. The ramp runs between two greens rather than mixing one
+     toward white: a pale tint reads as a wash rather than the colour itself, so
+     both ends stay saturated and every card in between reads as green. */
+  --deck-green-front: #1F5117;
+  --deck-green-back:  #0A1D06;
   --card-w: 138px;
   --card-h: 38px;
   --tc-padx: 14px;      /* the card's own side padding — the rules below derive from it */
@@ -3835,8 +3834,8 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
   font-weight: 700; line-height: 1; padding: 2px 5px;
   opacity: 0; transition: opacity .2s ease;
 }
-/* Light only: each card sits a step deeper in red than the one in front of it,
-   so the deck reads as a stack rather than one card with edges. The step is
+/* Light only: each card sits a step deeper in green than the one in front of
+   it, so the deck reads as a stack rather than one card with edges. The step is
    driven off --i, the same index the transforms use, so it holds for any number
    of trips instead of running out of nth-child rules.
 
@@ -3853,7 +3852,7 @@ html:not([data-theme="dark"]) .trip-card {
      `transparent` gives the fill an alpha, so the blur underneath finally has
      something to do — including against the cards it overlaps. */
   background-color: color-mix(in srgb,
-    color-mix(in srgb, var(--deck-red-back) min(78%, calc(var(--i) * 15%)), var(--deck-red-front))
+    color-mix(in srgb, var(--deck-green-back) min(78%, calc(var(--i) * 15%)), var(--deck-green-front))
     80%, transparent);
   /* deeper blur and a firmer saturate than the shared tokens, so the deck reads
      as thicker glass than the flat card faces elsewhere */
@@ -3863,9 +3862,9 @@ html:not([data-theme="dark"]) .trip-card {
 /* The cards are now dark enough that --ink would disappear into them, so the
    deck's own text goes light. Scoped to the same light-mode selector: in dark
    the cards keep --card-glass and --ink is already the light one. */
-html:not([data-theme="dark"]) .trip-card .tc-name { color: #FFF6F4; }
-html:not([data-theme="dark"]) .trip-card .tc-x { color: rgba(255, 246, 244, .72); }
-html:not([data-theme="dark"]) .trip-card .tc-x:hover { color: #FFF6F4; }
+html:not([data-theme="dark"]) .trip-card .tc-name { color: #F4FAEE; }
+html:not([data-theme="dark"]) .trip-card .tc-x { color: rgba(244, 250, 238, .72); }
+html:not([data-theme="dark"]) .trip-card .tc-x:hover { color: #F4FAEE; }
 .trip-card.is-front { box-shadow: var(--deck-shadow-lift); }
 /* Cards are overlapped from the left, so only the right --dx of each one is
    visible. Reserving the covered part as padding means justify-content:center
