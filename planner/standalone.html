@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-09-04T14:25:37.470Z
+  Built: 2026-09-04T15:05:38.648Z
 -->
 
 <html lang="en">
@@ -811,15 +811,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
   --gold-border: #E2CF95;
   --gold-hover: #F0E6C6;
   --green: #A8861F;   /* yellow gold: saved, train, booked */
-  /* Activity categories. Shopping and food borrow the red and gold the palette
-     already carries; coffee and museum are the only new hues, and are muted to
-     sit with them rather than shout over them. The soft fill each chip wears
-     when picked is mixed from these against --surface, so it follows the theme
-     without a second set of tokens to keep in step. */
-  --cat-shopping: #91040C;
-  --cat-coffee:   #6F4A24;
-  --cat-food:     #A8861F;
-  --cat-museum:   #3E5A6B;
   /* Dates keep their own hue — --date for the sub-lines, --green-dark and
      --mc-dates for the range on the overview and the map cards. They are the one
      thing deliberately left green while everything else went dark gold. */
@@ -951,11 +942,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
   --gold-border: #665420;
   --gold-hover: #453917;
   --green: #E3C04A;
-  /* the four category hues, lifted the way --red and --gold are above */
-  --cat-shopping: #C93A41;
-  --cat-coffee:   #C79A62;
-  --cat-food:     #E3C04A;
-  --cat-museum:   #86AEC4;
   /* Dates stay green — the one hue held back from the gold reskin — but a
      deeper, denser green than the neon it was: it reads as bold ink on the dark
      page instead of glowing off it. */
@@ -1724,11 +1710,7 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
    even when the note is still empty. This follows .note-btn.on deliberately:
    both are two classes, so source order is what lets a category outrank the
    generic "has something written in it" gold. */
-.cat-shopping { --cat-color: var(--cat-shopping); }
-.cat-coffee   { --cat-color: var(--cat-coffee); }
-.cat-food     { --cat-color: var(--cat-food); }
-.cat-museum   { --cat-color: var(--cat-museum); }
-.note-btn.has-cat { color: var(--cat-color); }
+.note-btn.has-cat .cat-glyph { font-size: 13px; line-height: 1; display: block; }
 .note-btn.on:hover { background: var(--hover-soft); border-color: var(--line-soft); }
 
 /* ---- pin: hold an activity at its slot in the day ----
@@ -1799,52 +1781,22 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
 .note-hint { font-family: var(--sans); font-size: 12px; color: var(--ink-mute); }
 
 /* ---- what kind of activity this is ----
-   Four chips at the top of the note sheet. Picking one puts its symbol on the
-   activity's note button; picking it again clears it, which is why there is no
-   fifth "none" chip. */
-/* Four across, always: the row never wraps, it shrinks. Everything that takes
-   horizontal space — gap, padding, type, glyph — is a clamp, so the pills give
-   ground as the sheet narrows and stop giving it once they are comfortable. The
-   label is last to yield and truncates rather than pushing a pill onto a second
-   line, which is the one thing this row must not do. */
-.note-cats {
-  display: flex; flex-wrap: nowrap; align-items: stretch;
-  gap: clamp(4px, 1.4vw, 7px); margin-bottom: 12px;
-}
+   Thirty-seven of them, so the picker wraps into a grid rather than trying to
+   hold one line the way four labelled chips did. The emoji carries both the
+   meaning and the colour, so the chip around it is only a target and a
+   selected state — no label to shrink, no per-category hue to define. */
+.note-cats { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
 .note-cat {
+  flex: 0 0 auto; width: 34px; height: 34px;
   display: inline-flex; align-items: center; justify-content: center;
-  flex: 0 1 auto; min-width: 0;
-  /* coefficients, not the floors, are what bind on a phone: at 360px 2vw is
-     already 7.2px, well clear of any sensible floor, so the row only stops
-     truncating its labels once the vw terms themselves come down */
-  gap: clamp(3px, .8vw, 6px);
-  padding: 6px clamp(6px, 1.8vw, 12px) 6px clamp(5px, 1.6vw, 10px);
-  border-radius: var(--r-pill);
-  border: 1px solid var(--line); background: var(--surface);
-  font-family: var(--sans); font-size: clamp(10px, 2.7vw, 12px); font-weight: 500;
-  color: var(--ink-soft); cursor: crosshair; white-space: nowrap;
-  transition: color .15s ease, background .15s ease, border-color .15s ease;
+  padding: 0; border-radius: var(--r-sm);
+  border: 1px solid transparent; background: transparent;
+  font-size: 19px; line-height: 1; cursor: crosshair;
+  transition: background .15s ease, border-color .15s ease, transform .12s ease;
 }
-.note-cat span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.note-cat svg {
-  display: block; flex: 0 0 auto;
-  width: clamp(13px, 3.4vw, 15px); height: auto;
-}
-.note-cat svg { color: var(--cat-color); }
-.note-cat:hover { color: var(--ink); border-color: var(--ink-mute); }
-/* Picked: the category's own colour on a wash of itself. Mixing against
-   --surface rather than hardcoding a tint means the fill re-derives in dark,
-   where these hues are the light ones and the ground is the dark one. */
-.note-cat.on {
-  color: var(--cat-color);
-  background: color-mix(in srgb, var(--cat-color) 13%, var(--surface));
-  border-color: color-mix(in srgb, var(--cat-color) 42%, var(--surface));
-}
-.note-cat.on:hover {
-  color: var(--cat-color);
-  background: color-mix(in srgb, var(--cat-color) 20%, var(--surface));
-  border-color: var(--cat-color);
-}
+.note-cat:hover { background: var(--hover-soft); }
+.note-cat:active { transform: scale(.92); }
+.note-cat.on { border-color: var(--brown); background: var(--hover-soft); }
 
 /* ---- reference pictures under the typed note ----
    A note is either something you write or something you saw. The strip holds
@@ -6851,23 +6803,62 @@ html { -webkit-tap-highlight-color: transparent; }
     clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 1.9"/>',
     arrowUR: '<path d="M7 17 17 7"/><path d="M8 7h9v9"/>',
     close: '<path d="M18 6 6 18"/><path d="M6 6l12 12"/>',
-    shopping: '<path d="M6 2 3 6.5V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.5L18 2z"/><path d="M3 6.5h18"/><path d="M16 10.5a4 4 0 0 1-8 0"/>',
-    coffee: '<path d="M17 8.5h1.5a3.5 3.5 0 0 1 0 7H17"/><path d="M3 8.5h14V16a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5z"/><path d="M7 2v3"/><path d="M11 2v3"/>',
-    food: '<path d="M4 2v6a3 3 0 0 0 6 0V2"/><path d="M7 11v11"/><path d="M20 2c-2 1.7-3 4.1-3 6.6 0 2 .9 3.3 2 3.8V22"/>',
-    museum: '<path d="M3 22h18"/><path d="M12 2.5 20.5 8h-17z"/><path d="M6 11.5v7"/><path d="M10 11.5v7"/><path d="M14 11.5v7"/><path d="M18 11.5v7"/>',
     inbox: '<path d="M4 13h4l1.6 3h4.8l1.6-3h4"/><path d="M5.4 5.6 3.2 12.3A2 2 0 0 0 3 13v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4a2 2 0 0 0-.2-.7l-2.2-6.7A2 2 0 0 0 16.7 4H7.3a2 2 0 0 0-1.9 1.6z"/>'
   };
   /* What an activity IS, picked in its note sheet and worn by the note button on
-     the row — so a day reads as shapes before it reads as words. Optional: with
-     nothing picked the button stays the speech bubble it has always been. The key
-     is what lands on the item; the icon name indexes I above. */
+     the row — so a day reads as pictures before it reads as words. Optional: with
+     nothing picked the button stays the speech bubble it has always been.
+
+     The emoji IS the stored value, so there is no key-to-glyph table to keep in
+     step and an unknown value simply fails to match and falls back. */
   const ACT_CATS = [
-    { k: 'shopping', label: 'Shopping', icon: 'shopping' },
-    { k: 'coffee',   label: 'Coffee',   icon: 'coffee' },
-    { k: 'food',     label: 'Food',     icon: 'food' },
-    { k: 'museum',   label: 'Museum',   icon: 'museum' },
+    '☕️',
+    '🍵',
+    '🍝',
+    '🍣',
+    '🍽️',
+    '🌭',
+    '🍔',
+    '🍕',
+    '🥞',
+    '🥐',
+    '🥨',
+    '🍞',
+    '🌮',
+    '🌯',
+    '🍜',
+    '🍛',
+    '🥟',
+    '🍙',
+    '🍨',
+    '🍿',
+    '🎧',
+    '🏰',
+    '🏯',
+    '🗽',
+    '🏟️',
+    '🎡',
+    '🎠',
+    '⛲️',
+    '🏛️',
+    '🗼',
+    '📸',
+    '🛍️',
+    '🛒',
+    '🧋',
+    '🎫',
+    '🎬',
+    '🎷',
   ];
-  const ACT_CAT = Object.fromEntries(ACT_CATS.map(c => [c.k, c]));
+  const ACT_CAT = new Set(ACT_CATS);
+  /* The first four categories shipped as named keys before this was a set of
+     emoji. Map them across so activities tagged then keep their mark. */
+  const ACT_CAT_LEGACY = { shopping: '🛍️', coffee: '☕️', food: '🍽️', museum: '🏛️' };
+  const actCat = (it) => {
+    const v = it && it.cat;
+    if (!v) return '';
+    return ACT_CAT.has(v) ? v : (ACT_CAT_LEGACY[v] || '');
+  };
 
   const svg = (paths, opt = {}) => {
     const { w = 16, h = 16, sw = 2, fill = 'none', stroke = 'currentColor' } = opt;
@@ -13410,12 +13401,12 @@ html { -webkit-tap-highlight-color: transparent; }
           const noteTxt = /\S/.test(it.note || '');
           const picCount = (it.notePics || []).length;
           const noteFull = noteTxt || picCount > 0;
-          const cat = ACT_CAT[it.cat];
+          const cat = actCat(it);
           const picTip = picCount ? picCount + (picCount === 1 ? ' reference picture' : ' reference pictures') : '';
           const noteBody = noteTxt
             ? String(it.note).slice(0, 120) + (picTip ? ' · ' + picTip : '')
             : (picTip || 'Add a note or a reference picture');
-          const noteTip = cat ? cat.label + ' · ' + noteBody : noteBody;
+          const noteTip = cat ? cat + ' · ' + noteBody : noteBody;
           // the full hint ("≈ $35 CAD · 1 JPY = $0.00910") belongs under a price
           // field; an activity row is a meta line, so it gets the conversion only
           const costHint = cpm.ambiguous
@@ -13437,9 +13428,9 @@ html { -webkit-tap-highlight-color: transparent; }
               <button class="pin-btn${it.pinned ? ' on' : ''}" data-act="item-pin" data-i="${ii}" aria-pressed="${it.pinned ? 'true' : 'false'}"
                 title="${it.pinned ? 'Pinned to slot ' + (ii + 1) + ' — Optimize route plans around it. Click to unpin.' : 'Pin to slot ' + (ii + 1) + ' so Optimize route keeps it here'}"
                 aria-label="${it.pinned ? 'Unpin from this position' : 'Pin to this position'}">${svg(I.pushpin, { w: 13, h: 13, sw: 1.7 })}</button>
-              <button class="note-btn${noteFull ? ' on' : ''}${cat ? ' has-cat cat-' + cat.k : ''}" data-act="item-note-open" data-i="${ii}"
+              <button class="note-btn${noteFull ? ' on' : ''}${cat ? ' has-cat' : ''}" data-act="item-note-open" data-i="${ii}"
                 title="${escA(noteTip)}"
-                aria-label="${cat ? cat.label + ' — edit note' : (noteFull ? 'Edit note' : 'Add a note')}">${svg(cat ? I[cat.icon] : I.msg, { w: 13, h: 13, stroke: 'currentColor' })}${picCount ? `<span class="pics">${picCount}</span>` : ''}</button>
+                aria-label="${noteFull ? 'Edit note' : 'Add a note'}">${cat ? `<span class="cat-glyph" aria-hidden="true">${cat}</span>` : svg(I.msg, { w: 13, h: 13, stroke: 'currentColor' })}${picCount ? `<span class="pics">${picCount}</span>` : ''}</button>
               <button class="item-fold${it.folded ? ' shut' : ''}" data-act="item-fold" data-i="${ii}" aria-expanded="${it.folded ? 'false' : 'true'}"
                 title="${it.folded ? 'Show this activity\'s time, address and cost' : 'Fold this activity down to its name'}"
                 aria-label="${it.folded ? 'Expand this activity' : 'Collapse this activity'}">${svg(I.chev, { w: 13, h: 13, sw: 2.6 })}</button>
@@ -13884,6 +13875,7 @@ html { -webkit-tap-highlight-color: transparent; }
       const it = this.noteEditItem();
       if (!it) return '';
       const name = (it.text || '').trim();
+      const cat = actCat(it);   // read through the legacy map, same as the row does
       return `<div class="overlay" data-act="overlay-note">
         <div class="dialog note-dialog" data-stop>
           <div class="head"><div class="row">
@@ -13895,7 +13887,7 @@ html { -webkit-tap-highlight-color: transparent; }
           </div></div>
           <div class="note-body">
             <div class="note-cats" role="group" aria-label="What kind of activity is this">
-              ${ACT_CATS.map(c => `<button class="note-cat cat-${c.k}${it.cat === c.k ? ' on' : ''}" data-act="item-cat" data-key="${c.k}" aria-pressed="${it.cat === c.k ? 'true' : 'false'}" title="${it.cat === c.k ? c.label + ' — click again to clear it' : 'Mark as ' + c.label.toLowerCase()}">${svg(I[c.icon], { w: 15, h: 15, sw: 1.8 })}<span>${c.label}</span></button>`).join('')}
+              ${ACT_CATS.map(e => `<button class="note-cat${cat === e ? ' on' : ''}" data-act="item-cat" data-key="${e}" aria-pressed="${cat === e ? 'true' : 'false'}" title="${cat === e ? 'Tap again to clear' : 'Mark this activity'}">${e}</button>`).join('')}
             </div>
             <textarea class="note-area" data-ch="note-text" rows="5"
               placeholder="Anything worth remembering — booking reference, what to order, which entrance, why it made the list…">${esc(it.note || '')}</textarea>
