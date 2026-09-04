@@ -921,7 +921,16 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
    even when the note is still empty. This follows .note-btn.on deliberately:
    both are two classes, so source order is what lets a category outrank the
    generic "has something written in it" gold. */
-.note-btn.has-cat .cat-glyph { font-size: 13px; line-height: 1; display: block; }
+/* An emoji sits low in its line box in a way a stroked icon does not — its ink
+   hangs toward the baseline while the SVGs are centred in their viewBox — so
+   centring the two the same way still leaves the emoji reading low against the
+   four beside it. A pixel of lift puts it on their line. Bigger too: the glyph
+   is doing the work an icon was, and at 13px it was the quietest thing in the
+   cluster. */
+.note-btn.has-cat .cat-glyph {
+  display: block; font-size: 16px; line-height: 1;
+  transform: translateY(-1px);
+}
 .note-btn.on:hover { background: var(--hover-soft); border-color: var(--line-soft); }
 
 /* ---- pin: hold an activity at its slot in the day ----
@@ -1002,12 +1011,30 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
    are the ones the device already draws everywhere else, rather than something
    substituted underneath us. font-variant-emoji pins colour presentation for the
    few that can still resolve to their monochrome text form. */
-.note-cats, .note-btn .cat-glyph {
+.note-cats, .note-btn .cat-glyph, .note-cats-wrap .hd .p {
   font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji",
                "Twemoji Mozilla", "EmojiOne Color", "Android Emoji", sans-serif;
   font-variant-emoji: emoji;
 }
-.note-cats { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
+/* Same fold idiom as the to-do and bookings lists — whole header as the target,
+   caret turning when shut — but styled here rather than by joining .todos, whose
+   block carries a card background and padding this picker does not want. */
+.note-cats-wrap { margin-bottom: 12px; }
+.note-cats-wrap button.hd {
+  width: 100%; padding: 2px 0; border: none; background: none;
+  display: flex; align-items: center; gap: 8px; margin-bottom: 9px;
+  text-align: left; color: inherit; cursor: crosshair;
+}
+.note-cats-wrap .hd .t {
+  font-family: var(--sans); font-size: 10.5px; font-weight: 600;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink-mute);
+}
+/* the pick itself rides on the header, so a folded picker still says what is set */
+.note-cats-wrap .hd .p { margin-left: auto; font-size: 15px; line-height: 1; }
+.note-cats-wrap.shut button.hd { margin-bottom: 0; }
+.note-cats-wrap.shut .note-cats { display: none; }
+.note-cats-wrap.shut .bk-caret { transform: rotate(-90deg); }
+.note-cats { display: flex; flex-wrap: wrap; gap: 4px; }
 .note-cat {
   flex: 0 0 auto; width: 34px; height: 34px;
   display: inline-flex; align-items: center; justify-content: center;

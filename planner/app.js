@@ -119,6 +119,7 @@
   const READONLY_KEY = 'europe-trip-readonly-v1';       // view-only lock, per device
   const BOOKINGS_SHUT_KEY = 'europe-trip-bookings-shut-v1';   // is the Bookings list folded, per device
   const TODOS_SHUT_KEY = 'europe-trip-todos-shut-v1';         // is the To-do list folded, per device
+  const NOTE_CATS_SHUT_KEY = 'europe-trip-note-cats-shut-v1'; // is the note's category grid folded, per device
 
   /* ---------- view-only lock ----------
      A planned trip gets read far more often than it gets edited — on a phone,
@@ -140,7 +141,7 @@
     'stop-transport', 'cal-day', 'tab-select', 'trip-stack-toggle', 'open-web',
     // folding and opening — reading aids, they change no trip data
     'accom-toggle', 'accom-toggle-all', 'accom-archive-toggle', 'closet-toggle', 'day-fold', 'bookings-toggle', 'todos-toggle',
-    'item-note-open', 'note-pic-open', 'note-refs-toggle', 'open-budget', 'pk-close', 'optimize-dismiss',
+    'item-note-open', 'note-pic-open', 'note-refs-toggle', 'note-cats-toggle', 'open-budget', 'pk-close', 'optimize-dismiss',
     'inbox-open',
     'toggle-stickers', 'close-stickers',
     // closing whatever is open
@@ -5778,6 +5779,20 @@
       }
       return this._todoShut;
     }
+    /* Thirty-seven emoji is a lot of sheet to scroll past when all you came to do
+       is type. Folded state rides in localStorage like the other lists, so a
+       person who does not use categories folds it once and it stays folded. */
+    noteCatsShut() {
+      if (this._noteCatsShut == null) {
+        try { this._noteCatsShut = localStorage.getItem(NOTE_CATS_SHUT_KEY) === '1'; } catch (e) { this._noteCatsShut = false; }
+      }
+      return this._noteCatsShut;
+    }
+    toggleNoteCats() {
+      this._noteCatsShut = !this.noteCatsShut();
+      try { localStorage.setItem(NOTE_CATS_SHUT_KEY, this._noteCatsShut ? '1' : '0'); } catch (e) {}
+      this.render();
+    }
     toggleTodos() {
       this._todoShut = !this.todosShut();
       try { localStorage.setItem(TODOS_SHUT_KEY, this._todoShut ? '1' : '0'); } catch (e) {}
@@ -8101,6 +8116,7 @@
       if (!it) return '';
       const name = (it.text || '').trim();
       const cat = actCat(it);   // read through the legacy map, same as the row does
+      const catsShut = this.noteCatsShut();
       return `<div class="overlay" data-act="overlay-note">
         <div class="dialog note-dialog" data-stop>
           <div class="head"><div class="row">
@@ -8111,8 +8127,12 @@
             <button class="modal-x" data-act="close-note" title="Done">✕</button>
           </div></div>
           <div class="note-body">
+            <div class="note-cats-wrap${catsShut ? ' shut' : ''}">
+            ${this.foldHead({ act: 'note-cats-toggle', shut: catsShut, title: 'Category', count: cat || '',
+                              show: 'Show the categories', fold: 'Fold the categories away' })}
             <div class="note-cats" role="group" aria-label="What kind of activity is this">
               ${ACT_CATS.map(e => `<button class="note-cat${cat === e ? ' on' : ''}" data-act="item-cat" data-key="${e}" aria-pressed="${cat === e ? 'true' : 'false'}" title="${cat === e ? 'Tap again to clear' : 'Mark this activity'}">${e}</button>`).join('')}
+            </div>
             </div>
             <textarea class="note-area" data-ch="note-text" rows="5"
               placeholder="Anything worth remembering — booking reference, what to order, which entrance, why it made the list…">${esc(it.note || '')}</textarea>
@@ -8624,6 +8644,7 @@
           if (ci) { this.snapshot(); ci.cat = ci.cat === key ? '' : key; this.bump(); }
           break;
         }
+        case 'note-cats-toggle': this.toggleNoteCats(); break;
         case 'note-refs-toggle': this._noteRefsOpen = !this._noteRefsOpen; this._notePicOpen = null; this.bumpModal(); break;
         case 'overlay-note': if (e.target === t) this.closeNote(); break;
         case 'close-sync': this.syncOpen = false; this.bumpModal(); break;

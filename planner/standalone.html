@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-09-04T15:56:13.044Z
+  Built: 2026-09-04T20:49:26.070Z
 -->
 
 <html lang="en">
@@ -1710,7 +1710,16 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
    even when the note is still empty. This follows .note-btn.on deliberately:
    both are two classes, so source order is what lets a category outrank the
    generic "has something written in it" gold. */
-.note-btn.has-cat .cat-glyph { font-size: 13px; line-height: 1; display: block; }
+/* An emoji sits low in its line box in a way a stroked icon does not — its ink
+   hangs toward the baseline while the SVGs are centred in their viewBox — so
+   centring the two the same way still leaves the emoji reading low against the
+   four beside it. A pixel of lift puts it on their line. Bigger too: the glyph
+   is doing the work an icon was, and at 13px it was the quietest thing in the
+   cluster. */
+.note-btn.has-cat .cat-glyph {
+  display: block; font-size: 16px; line-height: 1;
+  transform: translateY(-1px);
+}
 .note-btn.on:hover { background: var(--hover-soft); border-color: var(--line-soft); }
 
 /* ---- pin: hold an activity at its slot in the day ----
@@ -1791,12 +1800,30 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
    are the ones the device already draws everywhere else, rather than something
    substituted underneath us. font-variant-emoji pins colour presentation for the
    few that can still resolve to their monochrome text form. */
-.note-cats, .note-btn .cat-glyph {
+.note-cats, .note-btn .cat-glyph, .note-cats-wrap .hd .p {
   font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji",
                "Twemoji Mozilla", "EmojiOne Color", "Android Emoji", sans-serif;
   font-variant-emoji: emoji;
 }
-.note-cats { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
+/* Same fold idiom as the to-do and bookings lists — whole header as the target,
+   caret turning when shut — but styled here rather than by joining .todos, whose
+   block carries a card background and padding this picker does not want. */
+.note-cats-wrap { margin-bottom: 12px; }
+.note-cats-wrap button.hd {
+  width: 100%; padding: 2px 0; border: none; background: none;
+  display: flex; align-items: center; gap: 8px; margin-bottom: 9px;
+  text-align: left; color: inherit; cursor: crosshair;
+}
+.note-cats-wrap .hd .t {
+  font-family: var(--sans); font-size: 10.5px; font-weight: 600;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink-mute);
+}
+/* the pick itself rides on the header, so a folded picker still says what is set */
+.note-cats-wrap .hd .p { margin-left: auto; font-size: 15px; line-height: 1; }
+.note-cats-wrap.shut button.hd { margin-bottom: 0; }
+.note-cats-wrap.shut .note-cats { display: none; }
+.note-cats-wrap.shut .bk-caret { transform: rotate(-90deg); }
+.note-cats { display: flex; flex-wrap: wrap; gap: 4px; }
 .note-cat {
   flex: 0 0 auto; width: 34px; height: 34px;
   display: inline-flex; align-items: center; justify-content: center;
@@ -5905,6 +5932,7 @@ html { -webkit-tap-highlight-color: transparent; }
   const READONLY_KEY = 'europe-trip-readonly-v1';       // view-only lock, per device
   const BOOKINGS_SHUT_KEY = 'europe-trip-bookings-shut-v1';   // is the Bookings list folded, per device
   const TODOS_SHUT_KEY = 'europe-trip-todos-shut-v1';         // is the To-do list folded, per device
+  const NOTE_CATS_SHUT_KEY = 'europe-trip-note-cats-shut-v1'; // is the note's category grid folded, per device
 
   /* ---------- view-only lock ----------
      A planned trip gets read far more often than it gets edited — on a phone,
@@ -5926,7 +5954,7 @@ html { -webkit-tap-highlight-color: transparent; }
     'stop-transport', 'cal-day', 'tab-select', 'trip-stack-toggle', 'open-web',
     // folding and opening — reading aids, they change no trip data
     'accom-toggle', 'accom-toggle-all', 'accom-archive-toggle', 'closet-toggle', 'day-fold', 'bookings-toggle', 'todos-toggle',
-    'item-note-open', 'note-pic-open', 'note-refs-toggle', 'open-budget', 'pk-close', 'optimize-dismiss',
+    'item-note-open', 'note-pic-open', 'note-refs-toggle', 'note-cats-toggle', 'open-budget', 'pk-close', 'optimize-dismiss',
     'inbox-open',
     'toggle-stickers', 'close-stickers',
     // closing whatever is open
@@ -11564,6 +11592,20 @@ html { -webkit-tap-highlight-color: transparent; }
       }
       return this._todoShut;
     }
+    /* Thirty-seven emoji is a lot of sheet to scroll past when all you came to do
+       is type. Folded state rides in localStorage like the other lists, so a
+       person who does not use categories folds it once and it stays folded. */
+    noteCatsShut() {
+      if (this._noteCatsShut == null) {
+        try { this._noteCatsShut = localStorage.getItem(NOTE_CATS_SHUT_KEY) === '1'; } catch (e) { this._noteCatsShut = false; }
+      }
+      return this._noteCatsShut;
+    }
+    toggleNoteCats() {
+      this._noteCatsShut = !this.noteCatsShut();
+      try { localStorage.setItem(NOTE_CATS_SHUT_KEY, this._noteCatsShut ? '1' : '0'); } catch (e) {}
+      this.render();
+    }
     toggleTodos() {
       this._todoShut = !this.todosShut();
       try { localStorage.setItem(TODOS_SHUT_KEY, this._todoShut ? '1' : '0'); } catch (e) {}
@@ -13887,6 +13929,7 @@ html { -webkit-tap-highlight-color: transparent; }
       if (!it) return '';
       const name = (it.text || '').trim();
       const cat = actCat(it);   // read through the legacy map, same as the row does
+      const catsShut = this.noteCatsShut();
       return `<div class="overlay" data-act="overlay-note">
         <div class="dialog note-dialog" data-stop>
           <div class="head"><div class="row">
@@ -13897,8 +13940,12 @@ html { -webkit-tap-highlight-color: transparent; }
             <button class="modal-x" data-act="close-note" title="Done">✕</button>
           </div></div>
           <div class="note-body">
+            <div class="note-cats-wrap${catsShut ? ' shut' : ''}">
+            ${this.foldHead({ act: 'note-cats-toggle', shut: catsShut, title: 'Category', count: cat || '',
+                              show: 'Show the categories', fold: 'Fold the categories away' })}
             <div class="note-cats" role="group" aria-label="What kind of activity is this">
               ${ACT_CATS.map(e => `<button class="note-cat${cat === e ? ' on' : ''}" data-act="item-cat" data-key="${e}" aria-pressed="${cat === e ? 'true' : 'false'}" title="${cat === e ? 'Tap again to clear' : 'Mark this activity'}">${e}</button>`).join('')}
+            </div>
             </div>
             <textarea class="note-area" data-ch="note-text" rows="5"
               placeholder="Anything worth remembering — booking reference, what to order, which entrance, why it made the list…">${esc(it.note || '')}</textarea>
@@ -14410,6 +14457,7 @@ html { -webkit-tap-highlight-color: transparent; }
           if (ci) { this.snapshot(); ci.cat = ci.cat === key ? '' : key; this.bump(); }
           break;
         }
+        case 'note-cats-toggle': this.toggleNoteCats(); break;
         case 'note-refs-toggle': this._noteRefsOpen = !this._noteRefsOpen; this._notePicOpen = null; this.bumpModal(); break;
         case 'overlay-note': if (e.target === t) this.closeNote(); break;
         case 'close-sync': this.syncOpen = false; this.bumpModal(); break;
