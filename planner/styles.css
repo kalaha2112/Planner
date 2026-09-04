@@ -4286,8 +4286,12 @@ html { -webkit-tap-highlight-color: transparent; }
 .item .name-row .maps {
   flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
   width: 24px; height: 24px; padding: 0;
-  font-size: 13px; line-height: 1; text-decoration: none;
+  line-height: 1; text-decoration: none;
 }
+/* every control in the cluster now centres an SVG of the same size, so the
+   optical rhythm follows the boxes instead of five different side bearings */
+.item .name-row .maps svg,
+.item .name-row .x svg { display: block; }
 .item .name-row .maps:hover { color: var(--red); }
 /* App layout only: the row is ~370px wide there and five controls at a 6px gap
    were pushing the activity's name into an ellipsis. The controls read as one

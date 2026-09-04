@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-09-04T14:22:03.344Z
+  Built: 2026-09-04T14:25:37.470Z
 -->
 
 <html lang="en">
@@ -5075,8 +5075,12 @@ html { -webkit-tap-highlight-color: transparent; }
 .item .name-row .maps {
   flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
   width: 24px; height: 24px; padding: 0;
-  font-size: 13px; line-height: 1; text-decoration: none;
+  line-height: 1; text-decoration: none;
 }
+/* every control in the cluster now centres an SVG of the same size, so the
+   optical rhythm follows the boxes instead of five different side bearings */
+.item .name-row .maps svg,
+.item .name-row .x svg { display: block; }
 .item .name-row .maps:hover { color: var(--red); }
 /* App layout only: the row is ~370px wide there and five controls at a 6px gap
    were pushing the activity's name into an ellipsis. The controls read as one
@@ -6845,6 +6849,8 @@ html { -webkit-tap-highlight-color: transparent; }
     route: '<rect x="3" y="4" width="18" height="14" rx="3"/><path d="M3 10h18"/><rect x="7" y="6" width="4" height="3" rx="1"/><rect x="13" y="6" width="4" height="3" rx="1"/><path d="M7 18l-2 3"/><path d="M17 18l2 3"/>',
     home: '<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 9.5V20a1 1 0 0 0 1 1H10v-6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v6h3.5a1 1 0 0 0 1-1V9.5"/>',
     clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 1.9"/>',
+    arrowUR: '<path d="M7 17 17 7"/><path d="M8 7h9v9"/>',
+    close: '<path d="M18 6 6 18"/><path d="M6 6l12 12"/>',
     shopping: '<path d="M6 2 3 6.5V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.5L18 2z"/><path d="M3 6.5h18"/><path d="M16 10.5a4 4 0 0 1-8 0"/>',
     coffee: '<path d="M17 8.5h1.5a3.5 3.5 0 0 1 0 7H17"/><path d="M3 8.5h14V16a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5z"/><path d="M7 2v3"/><path d="M11 2v3"/>',
     food: '<path d="M4 2v6a3 3 0 0 0 6 0V2"/><path d="M7 11v11"/><path d="M20 2c-2 1.7-3 4.1-3 6.6 0 2 .9 3.3 2 3.8V22"/>',
@@ -13427,17 +13433,17 @@ html { -webkit-tap-highlight-color: transparent; }
           <div class="mid">
             <div class="name-row">
               <input class="text" value="${escA(it.text)}" data-ch="item-text" data-i="${ii}" placeholder="">
-              ${hasAddr ? `<a class="maps" href="https://maps.google.com/?q=${encodeURIComponent(geoQuery)}" target="_blank" rel="noopener" title="Open ${escA(geoQuery)} in Google Maps" aria-label="Open in Google Maps">↗</a>` : ''}
+              ${hasAddr ? `<a class="maps" href="https://maps.google.com/?q=${encodeURIComponent(geoQuery)}" target="_blank" rel="noopener" title="Open ${escA(geoQuery)} in Google Maps" aria-label="Open in Google Maps">${svg(I.arrowUR, { w: 13, h: 13, sw: 2 })}</a>` : ''}
               <button class="pin-btn${it.pinned ? ' on' : ''}" data-act="item-pin" data-i="${ii}" aria-pressed="${it.pinned ? 'true' : 'false'}"
                 title="${it.pinned ? 'Pinned to slot ' + (ii + 1) + ' — Optimize route plans around it. Click to unpin.' : 'Pin to slot ' + (ii + 1) + ' so Optimize route keeps it here'}"
-                aria-label="${it.pinned ? 'Unpin from this position' : 'Pin to this position'}">${svg(I.pushpin, { w: 12, h: 12, sw: 1.7 })}</button>
+                aria-label="${it.pinned ? 'Unpin from this position' : 'Pin to this position'}">${svg(I.pushpin, { w: 13, h: 13, sw: 1.7 })}</button>
               <button class="note-btn${noteFull ? ' on' : ''}${cat ? ' has-cat cat-' + cat.k : ''}" data-act="item-note-open" data-i="${ii}"
                 title="${escA(noteTip)}"
                 aria-label="${cat ? cat.label + ' — edit note' : (noteFull ? 'Edit note' : 'Add a note')}">${svg(cat ? I[cat.icon] : I.msg, { w: 13, h: 13, stroke: 'currentColor' })}${picCount ? `<span class="pics">${picCount}</span>` : ''}</button>
               <button class="item-fold${it.folded ? ' shut' : ''}" data-act="item-fold" data-i="${ii}" aria-expanded="${it.folded ? 'false' : 'true'}"
                 title="${it.folded ? 'Show this activity\'s time, address and cost' : 'Fold this activity down to its name'}"
                 aria-label="${it.folded ? 'Expand this activity' : 'Collapse this activity'}">${svg(I.chev, { w: 13, h: 13, sw: 2.6 })}</button>
-              <button class="x" data-act="item-remove" data-i="${ii}" title="Remove" aria-label="Remove this activity">✕</button>
+              <button class="x" data-act="item-remove" data-i="${ii}" title="Remove" aria-label="Remove this activity">${svg(I.close, { w: 13, h: 13, sw: 2 })}</button>
             </div>
             <div class="meta">
               <div class="field field--time">${svg(I.clock, { w: 11, h: 11, stroke: 'currentColor' })}<input value="${escA(it.time)}" data-ch="item-time" data-i="${ii}" placeholder="Time"></div>
