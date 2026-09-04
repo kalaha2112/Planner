@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-09-03T22:59:50.642Z
+  Built: 2026-09-04T00:22:18.691Z
 -->
 
 <html lang="en">
@@ -4557,8 +4557,8 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
      pink — a pale tint of red is pink by definition — so the ramp now runs
      between two reds instead, from a brick front card to a deep back one, and
      every card stays saturated enough to read as red. */
-  --deck-red-front: #C0392B;
-  --deck-red-back:  #63080B;
+  --deck-red-front: #7A160E;
+  --deck-red-back:  #2E0407;
   --card-w: 138px;
   --card-h: 38px;
   --tc-padx: 14px;      /* the card's own side padding — the rules below derive from it */
@@ -4636,9 +4636,18 @@ a.open-web-btn { padding: 10px 16px; box-sizing: border-box; }
    Dark is left alone — these tints are mixed toward white, and the dark deck
    already separates its cards against a dark ground. */
 html:not([data-theme="dark"]) .trip-card {
-  /* capped: without a ceiling a tenth trip would be indistinguishable from the
-     ninth, and darker than white text wants underneath it */
-  background-color: color-mix(in srgb, var(--deck-red-back) min(78%, calc(var(--i) * 15%)), var(--deck-red-front));
+  /* Held short of opaque, which is what makes the glass real: the card already
+     asks for backdrop-filter, but an opaque fill sits on top of the blur and
+     nothing behind the card ever shows through it. Mixing the ramp with
+     `transparent` gives the fill an alpha, so the blur underneath finally has
+     something to do — including against the cards it overlaps. */
+  background-color: color-mix(in srgb,
+    color-mix(in srgb, var(--deck-red-back) min(78%, calc(var(--i) * 15%)), var(--deck-red-front))
+    80%, transparent);
+  /* deeper blur and a firmer saturate than the shared tokens, so the deck reads
+     as thicker glass than the flat card faces elsewhere */
+  backdrop-filter: blur(26px) saturate(1.9);
+  -webkit-backdrop-filter: blur(26px) saturate(1.9);
 }
 /* The cards are now dark enough that --ink would disappear into them, so the
    deck's own text goes light. Scoped to the same light-mode selector: in dark
