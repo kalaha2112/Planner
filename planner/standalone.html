@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-09-04T15:05:38.648Z
+  Built: 2026-09-04T15:56:13.044Z
 -->
 
 <html lang="en">
@@ -1785,6 +1785,17 @@ html:not([data-theme="dark"]) .summary { background: rgba(24, 22, 14, .022); }
    hold one line the way four labelled chips did. The emoji carries both the
    meaning and the colour, so the chip around it is only a target and a
    selected state — no label to shrink, no per-category hue to define. */
+/* Draw these with the platform's own emoji font, not whatever the UI stack
+   falls back to. --sans leads with a webfont that has no emoji coverage, so the
+   browser picks a fallback on its own; naming the system faces means the glyphs
+   are the ones the device already draws everywhere else, rather than something
+   substituted underneath us. font-variant-emoji pins colour presentation for the
+   few that can still resolve to their monochrome text form. */
+.note-cats, .note-btn .cat-glyph {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji",
+               "Twemoji Mozilla", "EmojiOne Color", "Android Emoji", sans-serif;
+  font-variant-emoji: emoji;
+}
 .note-cats { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
 .note-cat {
   flex: 0 0 auto; width: 34px; height: 34px;
