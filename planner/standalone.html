@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
   Built from index.html + styles.css + app.js + vendor/leaflet + vendor/topojson by build.js.
   Edit those sources and re-run:  node build.js   (or: node build.js --watch)
-  Built: 2026-09-04T04:49:44.339Z
+  Built: 2026-09-04T14:17:36.063Z
 -->
 
 <html lang="en">
@@ -5067,6 +5067,19 @@ html { -webkit-tap-highlight-color: transparent; }
    tap target, and it stays put when the name is long */
 .item .name-row .maps { font-size: 13px; padding: 0 3px; line-height: 1; text-decoration: none; }
 .item .name-row .maps:hover { color: var(--red); }
+/* App layout only: the row is ~370px wide there and five controls at a 6px gap
+   were pushing the activity's name into an ellipsis. The controls read as one
+   cluster, so they close up, and the name keeps its distance from them with a
+   margin of its own rather than through the shared gap. The wide layout has the
+   room and keeps its original spacing.
+
+   Placed after the .maps rule above rather than with the other app-layout
+   blocks: same specificity, so whichever is declared last wins. */
+@media (max-width: 700px) {
+  .item .name-row { gap: 2px; }
+  .item .name-row .text { margin-right: 6px; }
+  .item .name-row .maps { padding: 0 1px; }
+}
 
 /* Provenance mark on an imported activity row — a label, not a link. It used to
    open the post it came from, which put a fifth thing to click on a row that is
